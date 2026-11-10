@@ -91,6 +91,13 @@ namespace MotionDesk
                 return;
             }
 
+            if (args.Length == 2 && args[0] == "--test-container-window")
+            {
+                ApplicationConfiguration.Initialize();
+                Environment.Exit(Services.DesktopDiagnostics.TestContainerWindow(args[1]));
+                return;
+            }
+
             if (args.Length == 2 && args[0] == "--test-covered")
             {
                 ApplicationConfiguration.Initialize();

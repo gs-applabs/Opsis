@@ -137,6 +137,82 @@ namespace MotionDesk.Services
             return report.Any(l => l.StartsWith("EXCEPTION")) ? 1 : 0;
         }
 
+        /// <summary>
+        /// A real CONTAINER window (layered host + glass pane, own title-bar colour / height / font) over a synthetic moving background in my own window. Saves screenshots (glass on,
+        /// scrolled, rolled up) and checks that the title bar really has its own colour. Nothing from the desktop of the user is captured.
+        /// </summary>
+        public static int TestContainerWindow(string folder)
+        {
+            Directory.CreateDirectory(folder);
+            var report = new System.Collections.Generic.List<string>();
+            void Pump(int ms) { var end = DateTime.UtcNow.AddMilliseconds(ms); while (DateTime.UtcNow < end) { Application.DoEvents(); System.Threading.Thread.Sleep(10); } }
+            var settings = AppSettings.Load(); settings.UseGpuGlass = true; settings.Save();
+            var t0 = Stopwatch.StartNew();
+            using var stage = new StageForm { FormBorderStyle = FormBorderStyle.None, StartPosition = FormStartPosition.Manual, Bounds = new Rectangle(0, 0, 1000, 700), TopMost = true, ShowInTaskbar = false, BackColor = Color.FromArgb(5, 7, 13) };
+            stage.Paint += (_, e) =>
+            {
+                var g = e.Graphics; g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias; var t = t0.Elapsed.TotalSeconds;
+                for (int layer = 0; layer < 3; layer++)
+                {
+                    var pts = new System.Collections.Generic.List<PointF>();
+                    for (int x = 0; x <= stage.Width; x += 8) pts.Add(new PointF(x, (float)(stage.Height * (0.45 + layer * 0.13) - 40 * Math.Sin(x * 0.004 + t * (0.8 + layer * 0.3) + layer))));
+                    var poly = new System.Collections.Generic.List<PointF>(pts) { new PointF(stage.Width, stage.Height), new PointF(0, stage.Height) };
+                    using var fill = new SolidBrush(Color.FromArgb(70, 30 + layer * 25, 80 + layer * 30, 160 + layer * 25)); g.FillPolygon(fill, poly.ToArray());
+                    using var pen = new Pen(Color.FromArgb(230, 0, 230, 255), 2.2f); g.DrawLines(pen, pts.ToArray());
+                }
+            };
+            var anim = new System.Windows.Forms.Timer { Interval = 33 }; anim.Tick += (_, _) => stage.Invalidate(); anim.Start();
+            stage.Show(); Pump(800);
+            stage.TopMost = false; stage.TopMost = true; stage.BringToFront(); Pump(300);     // make sure my stand-in really covers the area (so nothing of the desktop is captured)
+            MotionDesk.Containers.ContainerWindow? win = null;
+            try
+            {
+                string sys = Environment.GetFolderPath(Environment.SpecialFolder.System), win32 = Environment.GetFolderPath(Environment.SpecialFolder.Windows);
+                var model = new Opsis.Containers.Container { Title = "Tools", Locked = false };
+                model.TitleBar = new Opsis.Containers.TitleBarStyle { Color = "#C2561A", Opacity = 92, Height = 44, FontSize = 13, Bold = true };
+                foreach (var f in new[] { "notepad.exe", "mspaint.exe", "calc.exe", "charmap.exe", "cmd.exe", "mstsc.exe", "taskmgr.exe", "regedit.exe", "control.exe", "msinfo32.exe", "dxdiag.exe", "magnify.exe", "osk.exe", "perfmon.exe" })
+                {
+                    var p = System.IO.File.Exists(Path.Combine(sys, f)) ? Path.Combine(sys, f) : Path.Combine(win32, f);
+                    model.Items.Add(new Opsis.Containers.ContainerItem { Path = p, DisplayName = Path.GetFileNameWithoutExtension(f) });
+                }
+                win = new MotionDesk.Containers.ContainerWindow(model) { Bounds = new Rectangle(300, 200, 420, 330), TopMost = true };
+                win.Show(); Pump(3500);
+                report.Add($"container window: bounds={win.Bounds} glassOn={win.GlassOn} items={model.Items.Count}");
+                var mgr = GlassService.Manager;
+                if (mgr != null) report.Add($"glass: panes={mgr.Stats.Panes} captures={mgr.Stats.Captures} renders={mgr.Stats.Renders} errors='{mgr.Stats.LastError}'");
+
+                // the title bar has its OWN colour: render to a bitmap and compare the title bar pixel with a frame pixel
+                using (var bmp = new Bitmap(win.Width, win.Height, System.Drawing.Imaging.PixelFormat.Format32bppPArgb))
+                {
+                    using (var g = Graphics.FromImage(bmp)) win.RenderTo(g);
+                    var bar = bmp.GetPixel(win.Width / 4, 8); var body = bmp.GetPixel(2, win.Height - 40);
+                    report.Add($"title bar pixel={bar} (expected orange, alpha~{92 * 255 / 100}); frame pixel={body}; own colour: {(bar.R > 150 && bar.B < 90 && bar.A > 200)}");
+                }
+
+                void Shot(string name)
+                {
+                    GlassService.Hold = true; mgr?.SetConditions(new Opsis.Glass.GlassConditions { Frozen = true }); Pump(300);
+                    mgr?.SetVisibleToCaptureTools(true); Pump(500);
+                    var r = Rectangle.Intersect(new Rectangle(0, 0, 1000, 700), Rectangle.Inflate(win!.Bounds, 60, 60));
+                    using var bmp = new Bitmap(r.Width, r.Height);
+                    using (var g = Graphics.FromImage(bmp)) g.CopyFromScreen(r.Location, Point.Empty, r.Size);
+                    // privacy guard: the corner of the shot must be the colour of my stand-in (5,7,13); anything else means something from the real desktop is in the picture -> do not save it
+                    var corner = bmp.GetPixel(2, 2);
+                    if (Math.Abs(corner.R - 5) + Math.Abs(corner.G - 7) + Math.Abs(corner.B - 13) > 12) report.Add("screenshot " + name + " NOT saved: the stand-in does not cover the area (corner=" + corner + ")");
+                    else { bmp.Save(Path.Combine(folder, name + ".png"), System.Drawing.Imaging.ImageFormat.Png); report.Add("screenshot " + name + ".png"); }
+                    mgr?.SetVisibleToCaptureTools(false); GlassService.Hold = false; GlassService.Refresh(); Pump(200);
+                }
+                Shot("container-glass");
+                win.ScrollBy(260); Pump(400); Shot("container-scrolled");
+                win.ToggleRollUp(); Pump(600); report.Add($"rolled up: height={win.Height} (title bar 44)"); Shot("container-rolled");
+                win.ToggleRollUp(); Pump(400); report.Add($"unrolled: height={win.Height}");
+            }
+            catch (Exception ex) { report.Add("EXCEPTION: " + ex); }
+            finally { win?.Close(); anim.Stop(); GlassService.Shutdown(); }
+            File.WriteAllLines(Path.Combine(folder, "container-window.txt"), report);
+            return report.Any(l => l.StartsWith("EXCEPTION")) ? 1 : 0;
+        }
+
         private sealed class StageForm : Form
         {
             public StageForm() { SetStyle(ControlStyles.OptimizedDoubleBuffer | ControlStyles.AllPaintingInWmPaint | ControlStyles.UserPaint, true); }

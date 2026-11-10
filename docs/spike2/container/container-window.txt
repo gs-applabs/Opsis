@@ -1,0 +1,8 @@
+container window: bounds={X=300,Y=200,Width=420,Height=330} glassOn=True items=14
+glass: panes=1 captures=45 renders=45 errors=''
+title bar pixel=Color [A=234, R=193, G=86, B=26] (expected orange, alpha~234); frame pixel=Color [A=0, R=0, G=0, B=0]; own colour: True
+screenshot container-glass.png
+screenshot container-scrolled.png
+rolled up: height=44 (title bar 44)
+screenshot container-rolled.png
+unrolled: height=330
