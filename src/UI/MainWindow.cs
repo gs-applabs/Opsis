@@ -119,6 +119,7 @@ namespace MotionDesk.UI
             Flicker.Attach(this);   // κάθε container/παιδί (τωρινό και μελλοντικό) με double buffering
             var appSettings = AppSettings.Load();
             UiTheme.ApplyScale(appSettings.UiScalePercent);
+            GlassHost.Install(appSettings.Glass);
             WidgetSnapEngine.EnableGridSnap = appSettings.GridSnap;
             WidgetSnapEngine.SnapThreshold = Math.Clamp(appSettings.SnapThreshold, 5, 50);
             WidgetSnapEngine.GridSize = Math.Clamp(appSettings.GridSize, 5, 100);
@@ -135,6 +136,7 @@ namespace MotionDesk.UI
             _pageBuilders["Dashboard"] = () => SafeBuildPage("Dashboard", ShowDashboard);
             _pageBuilders["Widgets"] = () => SafeBuildPage("Widgets", ShowWidgets);
             _pageBuilders["DeskZones"] = () => SafeBuildPage("DeskZones", ShowDeskZones);
+            _pageBuilders["Theme"] = () => SafeBuildPage("Theme", ShowTheme);
             _pageBuilders["DeskContainers"] = () => SafeBuildPage("DeskContainers", ShowDeskContainers);
             _pageBuilders["DeskStrip"] = () => SafeBuildPage("DeskStrip", ShowDeskStrip);
             _pageBuilders["Wallpaper"] = () => SafeBuildPage("Wallpaper", ShowWallpaper);
@@ -530,6 +532,7 @@ namespace MotionDesk.UI
             AddNavButton(_nav, LocalizationManager.T("Nav.Settings"), "Settings", ShowSettings, 6);
             AddNavButton(_nav, LocalizationManager.T("Nav.Automation"), "Automation", ShowAutomation, 8);
             AddNavButton(_nav, LocalizationManager.T("Nav.Personalization"), "Personalization", ShowPersonalization, 0);
+            AddNavButton(_nav, OpsisStrings.T("ui.theme.title"), "Theme", ShowTheme, (string?)null);
             // Ζητήθηκε ρητά: αντί για απλό "Audio Visualizer", νέα καρτέλα "Διαχείριση Ήχου" με
             // presets ενίσχυσης + ζωντανό visualizer, εμπνευσμένη από τη λογική του FXSound.
             // "Audio management" (equalizer for all system audio) is an extra feature: offered only when Opsis Media Suite (the former Waveframe) is installed
@@ -2503,6 +2506,18 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
 
 
             SetPage("DeskZones.SectionContainers", panel);
+        }
+
+        // 2.6.0: the shared Theme page (Opsis.UI.GlassSettingsPage): Solid / Glass dropdown, a SEPARATE colours card with its own Reset, and a collapsed Advanced group.
+        // Changes apply live (GlassManager -> GlassHost -> ThemeManager.Changed) and are saved in settings.json.
+        private void ShowTheme()
+        {
+            _currentPageKey = "Theme";
+            var settings = AppSettings.Load();
+            var page = new GlassSettingsPage(settings.Glass) { Dock = DockStyle.Fill };
+            page.SettingsChanged += (_, _) => { var a = AppSettings.Load(); a.Glass = page.Settings; a.Save(); };
+            _pageTitle.Text = OpsisStrings.T("ui.theme.title");
+            Flicker.BatchRedraw(_content, () => SetPageCore(page));
         }
 
         private void ShowCommandPalette()

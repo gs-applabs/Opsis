@@ -140,6 +140,9 @@ namespace MotionDesk.Services
         /// <summary>2.6.0: UI scale / text size of the main window in percent (100, 125, 150).</summary>
         public int UiScalePercent { get; set; } = 100;
 
+        /// <summary>2.6.0: the shared Glass theme choices (Opsis.UI.GlassSettings): Solid by default.</summary>
+        public GlassSettings Glass { get; set; } = new();
+
         private static string ConfigPath => Path.Combine(AppPaths.AppDataFolder, "settings.json");
 
         // 2.6.0: the shared settings file of the Opsis family (Opsis.UI.SettingsStore): "schemaVersion" in the file, step migrations (none yet: version 1 is the
