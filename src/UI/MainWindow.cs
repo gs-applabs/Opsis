@@ -118,6 +118,7 @@ namespace MotionDesk.UI
             DoubleBuffered = true;
             Flicker.Attach(this);   // κάθε container/παιδί (τωρινό και μελλοντικό) με double buffering
             var appSettings = AppSettings.Load();
+            UiTheme.ApplyScale(appSettings.UiScalePercent);
             WidgetSnapEngine.EnableGridSnap = appSettings.GridSnap;
             WidgetSnapEngine.SnapThreshold = Math.Clamp(appSettings.SnapThreshold, 5, 50);
             WidgetSnapEngine.GridSize = Math.Clamp(appSettings.GridSize, 5, 100);
@@ -4418,6 +4419,7 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                 stack.Controls.Add(Checkbox(LocalizationManager.T("Settings.FollowWindowsAccent"), AppSettings.Load().FollowWindowsAccent,
                     v => ThemeManager.SetFollowWindowsAccent(v)));
                 stack.Controls.Add(BuildLanguageRow());
+                stack.Controls.Add(BuildUiScaleRow());
                 stack.Controls.Add(BuildOpacityRow());
                 stack.Controls.Add(BuildDarkIntensityRow());
                 stack.Controls.Add(Checkbox(LocalizationManager.T("Settings.UiSoundCues"), AppSettings.Load().UiSoundsEnabled,
@@ -4604,6 +4606,24 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                     }
                 };
                 row.Controls.Add(changeBtn);
+                return row;
+            }
+
+            // 2.6.0: UI scale / text size. Applies to the shared fonts (headings, body, icons); pages are rebuilt so it shows at once. Text with a fixed size inside a control stays as it is.
+            private static Panel BuildUiScaleRow()
+            {
+                var row = new FlowLayoutPanel { AutoSize = true, WrapContents = false, Margin = new Padding(0, 2, 0, 10) };
+                row.Controls.Add(new Label { Text = OpsisStrings.T("ui.uiScale") + ":", AutoSize = true, ForeColor = UiTheme.TextSecondary, Font = UiTheme.FontBody, Padding = new Padding(0, 6, 12, 0) });
+                var combo = new FlatComboBox { Width = 200 };
+                var labels = UiScale.Presets.Select(p => p + "%").ToArray();
+                var cur = Array.IndexOf(UiScale.Presets, AppSettings.Load().UiScalePercent); if (cur < 0) cur = 0;
+                combo.SetItems(labels, labels[cur]);
+                combo.SelectedIndexChanged += (_, _) =>
+                {
+                    var percent = UiScale.Presets[Math.Max(0, combo.SelectedIndex)];
+                    ApplySetting(OpsisStrings.T("ui.uiScale"), () => { var a = AppSettings.Load(); a.UiScalePercent = percent; a.Save(); UiTheme.ApplyScale(percent); ThemeManager.NotifyChanged(); });
+                };
+                row.Controls.Add(combo);
                 return row;
             }
 

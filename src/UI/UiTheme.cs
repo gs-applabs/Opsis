@@ -34,10 +34,26 @@ namespace MotionDesk.UI
         // ρητά SeelenUI-inspired βελτίωση γραμματοσειρών. Σε Windows 10, όπου δεν υπάρχει
         // εγκατεστημένη, το GDI+ κάνει σιωπηλά fallback (δεν πετάει exception) σε προεπιλεγμένη
         // γραμματοσειρά — ασφαλές και στις δύο εκδόσεις των Windows.
-        public static readonly Font FontHeading = new("Segoe UI Variable Display", 20f, FontStyle.Bold);
-        public static readonly Font FontSubheading = new("Segoe UI Variable Display", 12f, FontStyle.Bold);
-        public static readonly Font FontBody = new("Segoe UI Variable Text", 10f);
-        public static readonly Font FontIcon16 = new("Segoe Fluent Icons", 15f);
+        // 2.6.0: "UI scale / text size" (100 / 125 / 150 %). The four shared fonts are properties now; ApplyScale builds them again from the BASE sizes (never compounding).
+        // The old fonts are not disposed: controls built earlier may still draw with them until the pages are rebuilt (a few small objects per change).
+        private const float BaseHeading = 20f, BaseSubheading = 12f, BaseBody = 10f, BaseIcon = 15f;
+        public static Font FontHeading { get; private set; } = new("Segoe UI Variable Display", BaseHeading, FontStyle.Bold);
+        public static Font FontSubheading { get; private set; } = new("Segoe UI Variable Display", BaseSubheading, FontStyle.Bold);
+        public static Font FontBody { get; private set; } = new("Segoe UI Variable Text", BaseBody);
+        public static Font FontIcon16 { get; private set; } = new("Segoe Fluent Icons", BaseIcon);
+        public static int ScalePercent { get; private set; } = 100;
+
+        public static void ApplyScale(int percent)
+        {
+            percent = Math.Clamp(percent, 80, 200);
+            if (percent == ScalePercent) return;
+            ScalePercent = percent;
+            var k = percent / 100f;
+            FontHeading = new Font("Segoe UI Variable Display", BaseHeading * k, FontStyle.Bold);
+            FontSubheading = new Font("Segoe UI Variable Display", BaseSubheading * k, FontStyle.Bold);
+            FontBody = new Font("Segoe UI Variable Text", BaseBody * k);
+            FontIcon16 = new Font("Segoe Fluent Icons", BaseIcon * k);
+        }
 
         public static GraphicsPath RoundedPath(Rectangle bounds, int radius)
         {
