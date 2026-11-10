@@ -134,19 +134,20 @@ namespace MotionDesk.Services
         public bool QuickHideKeepRecycleBin { get; set; } = true;
         public List<string> QuickHideExtraKept { get; set; } = new();
 
+        /// <summary>2.6.0: size and position of the main window remembered per screen (Opsis.UI.WindowMemory); a missing screen falls back to a safe place.</summary>
+        public WindowMemoryData WindowMemory { get; set; } = new();
+
         private static string ConfigPath => Path.Combine(AppPaths.AppDataFolder, "settings.json");
-        public static AppSettings Load()
-        {
-            try { if (File.Exists(ConfigPath)) return JsonSerializer.Deserialize<AppSettings>(MotionDesk.Services.AtomicFile.ReadAllText(ConfigPath)) ?? new AppSettings(); }
-            catch (JsonException) { }
-            catch (IOException) { }
-            return new AppSettings();
-        }
-        public void Save()
-        {
-            try { Directory.CreateDirectory(Path.GetDirectoryName(ConfigPath)!); MotionDesk.Services.AtomicFile.WriteAllText(ConfigPath, JsonSerializer.Serialize(this, new JsonSerializerOptions { WriteIndented = true })); }
-            catch (IOException) { }
-        }
+
+        // 2.6.0: the shared settings file of the Opsis family (Opsis.UI.SettingsStore): "schemaVersion" in the file, step migrations (none yet: version 1 is the
+        // first numbered shape), atomic write with a .bak of the last good file, and a damaged file is moved to .corrupt instead of being silently ignored.
+        // The store is cheap to create, so it follows AppPaths.AppDataFolder (tests / OPSIS_APPDATA) on every call.
+        public const int SchemaVersion = 1;
+        private static SettingsStore<AppSettings> Store() => new(ConfigPath, SchemaVersion);
+
+        public static AppSettings Load() => Store().Load();
+
+        public void Save() => Store().Save(this);
     }
 
     public static class PerformanceModeManager

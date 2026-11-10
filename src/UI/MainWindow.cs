@@ -37,12 +37,19 @@ namespace MotionDesk.UI
         private Panel _headerRule = null!;
         private Panel _content = null!;
         private Label _pageTitle = null!;
-        private StatusStrip _status = null!;
-        private readonly ToolStripStatusLabel _statusLabel = new("Opsis ready") { Spring = true, TextAlign = ContentAlignment.MiddleLeft };
+        // 2.6.0: the shared status bar of Opsis.UI (permanent text + transient message with severity). The old ToolStripStatusLabel API is kept by a thin shim so
+        // the ~20 call sites (`_statusLabel.Text = ...`) behave as before: a plain Text is the permanent text, overwritten by the next 5-second system-load update.
+        private OpsisStatusBar _status = null!;
+        private readonly StatusTextShim _statusLabel = new();
+
+        private sealed class StatusTextShim
+        {
+            public OpsisStatusBar? Bar;
+            public string Text { get => Bar?.CurrentText ?? ""; set { if (Bar != null) Bar.Status = value ?? ""; } }
+            public Color ForeColor { get; set; }
+        }
 
         internal enum StatusKind { Info, Success, Error }
-        private System.Windows.Forms.Timer? _msgTimer;
-        private bool _msgActive;        // a message is showing: the 5-second system-load text must not overwrite it
 
         /// <summary>A message in the status bar for a change the user just made (saved / failed): green or red, back to the normal text after a few seconds. Safe from any thread.</summary>
         internal static void ReportStatus(string text, StatusKind kind = StatusKind.Success)
@@ -65,22 +72,7 @@ namespace MotionDesk.UI
         {
             if (IsDisposed) return;
             if (InvokeRequired) { try { BeginInvoke(new Action(() => ShowStatus(text, kind))); } catch (Exception) { } return; }
-            _msgActive = true;
-            _statusLabel.Text = text;
-            _statusLabel.ForeColor = kind switch { StatusKind.Success => Color.FromArgb(72, 200, 120), StatusKind.Error => Color.FromArgb(235, 90, 80), _ => UiTheme.TextSecondary };
-            _msgTimer ??= new System.Windows.Forms.Timer { Interval = 6000 };
-            _msgTimer.Stop();
-            _msgTimer.Tick -= StatusTimerTick;
-            _msgTimer.Tick += StatusTimerTick;
-            _msgTimer.Start();
-        }
-
-        private void StatusTimerTick(object? sender, EventArgs e)
-        {
-            _msgTimer?.Stop();
-            _msgActive = false;
-            _statusLabel.ForeColor = UiTheme.TextSecondary;
-            UpdateStatus();                          // back to the normal system-load text
+            _status.ShowMessage(text, kind switch { StatusKind.Success => StatusSeverity.Success, StatusKind.Error => StatusSeverity.Error, _ => StatusSeverity.Info }, 6000);
         }
         private readonly System.Windows.Forms.Timer _statusTimer;
         private readonly System.Windows.Forms.Timer _brandPulseTimer;
@@ -136,6 +128,7 @@ namespace MotionDesk.UI
             // "Audio Enhancement" (equalizer bands + πολλαπλές ρυθμίσεις + visualizer μαζί).
             MinimumSize = new Size(1040, 680);
             Size = new Size(1280, 800);
+            try { Opsis.UI.WindowMemory.Restore(this, appSettings.WindowMemory, MinimumSize); } catch (Exception ex) { RotatingLogger.Write($"WindowMemory.Restore: {ex.Message}"); }
             Opacity = Math.Clamp(appSettings.WindowOpacity, 0.6, 1.0);
 
             _pageBuilders["Dashboard"] = () => SafeBuildPage("Dashboard", ShowDashboard);
@@ -446,8 +439,8 @@ namespace MotionDesk.UI
             _headerWaveTimer.Tick += (_, _) => { _headerWaveT += 0.03; _header.Invalidate(); };
             _headerWaveTimer.Start();
 
-            _status = new StatusStrip { Dock = DockStyle.Bottom, SizingGrip = false };
-            _status.Items.Add(_statusLabel);
+            _status = new OpsisStatusBar { Dock = DockStyle.Bottom, Status = "Opsis ready" };
+            _statusLabel.Bar = _status;
 
             Controls.Add(_content);
             Controls.Add(_header);
@@ -482,6 +475,7 @@ namespace MotionDesk.UI
                 // Φεύγουμε από βαριές σελίδες (live equalizer: WASAPI capture + timer 25Hz) ώστε να μην
                 // τρέχουν αόρατες στο παρασκήνιο.
                 if (_currentPageKey is "AudioEnhancement" or "Performance") NavigateTo("Dashboard");
+                SaveWindowPlacement();
                 Hide();
                 return;
             }
@@ -490,7 +484,21 @@ namespace MotionDesk.UI
             {
                 try { WorkspaceProfileService.Save("Last Session"); WorkspaceProfileService.ExitSaveDone = true; } catch { }
             }
+            SaveWindowPlacement();
             base.OnFormClosing(e);
+        }
+
+        /// <summary>2.6.0: remembers where the window was, per screen (restored on the next start; a removed screen falls back to the primary one).</summary>
+        private void SaveWindowPlacement()
+        {
+            try
+            {
+                if (WindowState == FormWindowState.Minimized) return;
+                var s = AppSettings.Load();
+                Opsis.UI.WindowMemory.Capture(this, s.WindowMemory);
+                s.Save();
+            }
+            catch (Exception ex) { RotatingLogger.Write($"WindowMemory.Capture: {ex.Message}"); }
         }
 
         protected override void OnVisibleChanged(EventArgs e) { base.OnVisibleChanged(e); UpdateAnimationTimers(); }
@@ -4320,7 +4328,6 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
 
         private void UpdateStatus()
         {
-            if (_msgActive) return;
             var m = SystemMonitorService.Instance.GetSnapshot();
             _statusLabel.Text = string.Format(LocalizationManager.T("Status.SystemFormat"), m.CpuPercent.ToString("0.0"), m.AvailableMemoryMb.ToString("0"), RamUsedPercent(m.AvailableMemoryMb, m.TotalMemoryMb));
         }
@@ -4608,7 +4615,16 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                     BackColor = UiTheme.Background,
                     Margin = new Padding(0, 2, 0, 2)
                 };
-                box.CheckedChanged += (_, _) => ApplySetting(text, () => onChange(box.Checked));
+                box.CheckedChanged += (_, _) =>
+                {
+                    ApplySetting(text, () => onChange(box.Checked));
+                    if (restart)
+                    {
+                        // 2.6.0: the shared mechanism of Opsis.UI - "Restart now / Later" and an automatic relaunch (through the normal exit path: save session, stop plugins, hotkeys).
+                        RestartCoordinator.Require(CleanLabel(text));
+                        RestartPrompt.AskIfPending(box.FindForm(), MotionDesk.Widgets.TrayApplicationContext.RequestExit);
+                    }
+                };
                 return box;
             }
 

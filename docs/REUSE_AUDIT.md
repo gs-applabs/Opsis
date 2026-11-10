@@ -1,6 +1,6 @@
 # Phase 0A: reuse audit (2026-11-10) - licences checked against the real LICENSE files
 
-Clones (shallow, read only, never built or run) live in `C:\w\reuse-src\` (outside the repo). Rule: MIT / Apache-2.0 / BSD may be reused with attribution; MPL-2.0 only with its files kept under MPL; GPL = idea only (clean-room). Everything below is a first classification; the actual port decisions come with the Phase 0 design.
+Clones (shallow, read only, never built or run) live in `<workspace>\reuse-src\` (outside the repo). Rule: MIT / Apache-2.0 / BSD may be reused with attribution; MPL-2.0 only with its files kept under MPL; GPL = idea only (clean-room). Everything below is a first classification; the actual port decisions come with the Phase 0 design.
 
 | Source | Real licence (file) | Language | What is in it for Opsis | Classification | Rule |
 |---|---|---|---|---|---|
