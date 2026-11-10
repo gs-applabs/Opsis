@@ -251,3 +251,24 @@ The wallpaper itself is outside this budget but needs its own tier caps (section
 3. Real Opsis wallpaper behind the desktop icons: panes show it live; icons behind a pane are refracted; no flicker.
 4. An AMD and an NVIDIA machine (or Remote Desktop): glass still shows, or falls back to the static tint without errors.
 5. Lock and unlock, and Win+L / UAC prompt while glass is on: no black or frozen panes afterwards.
+
+
+---
+
+## 7. The animated wallpaper must cost less WITHOUT losing quality or stability (user request, 2026-11-10)
+
+Finding: on the test machine the Waves wallpaper alone held 31-39 % GPU (Intel UHD 630, 1700x900 page, Balanced profile, 30 fps) and 3 % CPU, more than all the glass together. Three measures, in order of safety:
+
+| # | Measure | Quality | Stability | Measured |
+|---|---|---|---|---|
+| 1 | **Pause where the desktop is fully covered** (`DesktopCoverage` + `AppActivity`, setting `PauseWhenDesktopCovered`, default on): a maximized / fullscreen opaque window on a monitor means the wallpaper there is invisible, so it is paused (the existing heavy pause freezes the WebView2 processes when every monitor is covered) and resumes within one second when the desktop shows. Tiled windows never count as covering. | none lost (nothing visible is changed) | needs two equal samples to pause, resumes at once; ignores Opsis' own windows, the shell, tool/layered/click-through windows | not measured live in an Opsis run (unit test of the geometry only); expected ~0 % while covered, i.e. most of a working day |
+| 2 | **Cheaper drawing of the same picture** (`wallpaper/index.html`, Ribbons style): the full-resolution `blur()` filter for the shadow between folds is drawn on a quarter-resolution layer; the glow of the bright line (was `shadowBlur` at full resolution) is five wide transparent strokes; point arrays are reused (no per-frame allocation). `cfg.exactBlur = true` restores the old path. | visually the same (see `docs/spike2/wallpaper/waves-before.png` / `waves-after.png`); the glow is slightly softer; my first attempt (quarter-resolution glow) looked beaded and was rejected | only the Ribbons style changed; Aurora, TechGrid, Particles, Weather untouched | GPU **33-39 % -> 20-26 %** (same page, same fps) in 3 paired runs, CPU unchanged |
+| 3 | Already there, kept: tier profiles (layers, glow, fps, render scale), battery / fullscreen / lock / RDP pauses | | | |
+
+Not done (and why): lowering the frame rate below the tier value would change the motion; moving all the drawing to WebGL would be a rewrite of every style; video wallpapers keep their own decoder cost (hardware decode is the lever there).
+The GPU counters on Intel are bursty; the paired runs agree in direction, not in the last digit.
+
+## 8. Product library `glass/Opsis.Glass` (phase 1, written 2026-11-10)
+`GlassManager`: one thread owns the devices and the windows; DXGI duplication per monitor with ONE union texture; Direct2D glass (blur, refraction at the bezel, tint, specular sheen from the glossy intensity, rim); DirectComposition panes with premultiplied alpha; `GlassPolicy` decides all work (capture only on change, 60 / 30 / 20 fps by tier and battery, Low = static tint, suspended on lock / remote / fullscreen / hidden / safe mode); bounded cache of displacement maps; device-lost and duplication-lost recovery; stats for the baseline. Pure logic has 15 unit tests (`glass/Opsis.Glass.Tests`). Smoke run `glass/Opsis.Glass.Demo` over the live wallpaper page (`docs/spike2/product/`): live High, 4 panes: ~36 captures/s (one per changed frame for all panes), ~145 pane-renders/s, **0.5-2.9 % CPU**, ~37-40 MB private memory of the whole demo process (it also hosts the WebView2 stage); static background, Low tier and locked: **0 captures, 0 renders, ~0 % CPU**; resume after unlock works.
+Caveat: panes are excluded from capture so they never see themselves; the price is that screenshot and recording tools do not show them. `SetVisibleToCaptureTools` exists for a moment (the demo freezes the glass while taking a shot). To decide with the user whether a "show in screenshots" mode is wanted.
+Not done yet in the library: per-monitor DPI scaling of panes (panes use the pixel size given), multiple adapters, hit-testing/click handling (panes are visual only; content windows come in phase 2), integration into DeskStrip and the widgets (their windows still use the DWM acrylic path in Opsis; the first integration is the next step).

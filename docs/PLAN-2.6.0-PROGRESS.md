@@ -27,7 +27,7 @@ Updated 2026-11-10. Rule of this file: if a session is cut off, the next one sta
 ## New core (option A, approved 2026-11-10) - phases
 | Phase | Status |
 |---|---|
-| 1. Opsis.Glass: layered host + shared capture + GPU glass | PROOF DONE (`spikes/GlassGpu`, `docs/spike2/gpu/`, design doc section 6). The product library `src/Opsis.Glass` (device-lost recovery, caches, tiers, multi-monitor) is NOT written yet |
+| 1. Opsis.Glass: layered host + shared capture + GPU glass | PRODUCT LIBRARY WRITTEN (`glass/Opsis.Glass`, 15 tests, demo measured, design doc 8). Not yet integrated into DeskStrip/widgets. Earlier: PROOF DONE (`spikes/GlassGpu`, `docs/spike2/gpu/`, design doc section 6). The product library `src/Opsis.Glass` (device-lost recovery, caches, tiers, multi-monitor) is NOT written yet |
 | Glossy intensity + presets | DONE in Opsis.UI 0.4.5 (Theme page) |
 | Requests table (old containers -> new core) | DONE, design doc section 5 (older chat transcripts are unreadable, so more items may exist) |
 | 4 data model/importer, 6 windows, 2 rendering, 3 shell, 5/9 rules+integration, 7/8 a11y+DPI, switch off the fork | NOT started |
@@ -35,5 +35,8 @@ Updated 2026-11-10. Rule of this file: if a session is cut off, the next one sta
 ## Asked from the user (manual tests, steps in design doc 6.6)
 Two monitors with different DPI; DPI 150/200 %; real wallpaper behind the icons; AMD/NVIDIA or Remote Desktop; lock/unlock and UAC while glass is on. Also: run `tools/resource-logger.ps1` on 2.4.6.1 for the baseline that fixes the RAM/CPU budgets.
 
+## Wallpaper cost (user request: less resources, same quality and stability)
+Done: pause when the desktop is fully covered (`DesktopCoverage`, setting on by default) and a cheaper drawing of the Ribbons wallpaper (GPU -35-40 %, same look). Details and what was not done: design doc section 7. NOT verified live: the covered-desktop pause inside a running Opsis (only the geometry is unit-tested); the new Ribbons drawing on the real wallpaper window at other resolutions / tiers.
+
 ## Where I stopped
-Phase 1 proof done and documented; next is writing the product `src/Opsis.Glass` (change-driven capture manager, bounded caches, tier throttle, device-lost and multi-monitor handling) with its unit tests, then phase 4.
+Library written and smoke-tested. Next: first integration into DeskStrip and widgets (replace their DWM acrylic with `GlassManager` panes behind a setting, with the Low tier as fallback), then phase 4 (data model + importer).

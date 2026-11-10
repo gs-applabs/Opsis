@@ -1,0 +1,9 @@
+14:56:13.690 stage loaded
+14:56:25.943 LIVE High, 4 panes: 145,2 pane-renders/s, 36,2 captures/s (ONE per frame for all panes), CPU 2,9%, private 37 MB, errors=''
+14:56:30.495 LIVE Balanced (blur only, 30 fps cap): 21,5 captures/s, CPU 0,8%
+14:56:35.866 STATIC background (nothing changing): 0,00 captures/s, 0,00 renders/s, CPU 0,00%
+14:56:39.688 LOW tier: 0,00 captures/s (static frosted tint), CPU 0,00%
+14:56:44.052 LOCKED (suspended): 0,00 captures/s, CPU 0,09%
+14:56:48.068 RESUMED: 36,6 captures/s
+14:56:48.583 stats: captures 634, renders 2536, static renders 0, skipped 21, device resets 0, panes 4, lastError=''
+14:56:48.583 done

@@ -55,6 +55,10 @@
     <Compile Remove="tests\**" />
     <!-- spikes\: throw-away experiments of the 2.6.0 design phase (own projects), never part of Opsis.exe -->
     <Compile Remove="spikes\**" />
+    <!-- glass\: Opsis.Glass (GPU glass layer) and its tests are their own projects -->
+    <Compile Remove="glass\**" />
+    <EmbeddedResource Remove="glass\**" />
+    <None Remove="glass\**" />
     <EmbeddedResource Remove="spikes\**" />
     <None Remove="spikes\**" />
     <!-- containers\: DesktopFences (WPF, MIT) built as its own project (OpsisContainers.csproj) and shipped next to Opsis.exe. -->

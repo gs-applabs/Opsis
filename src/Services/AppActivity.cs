@@ -23,6 +23,10 @@ public static class AppActivity
     private static bool _fullscreen, _locked, _remote, _batterySaver, _screensaver, _highLoad, _awake;
     private static int _loadHits;
     private static string? _fullscreenDevice;
+    // 2.6.0: monitors whose desktop is fully covered by an opaque window (see DesktopCoverage): the wallpaper there is invisible, so it is paused (no quality loss).
+    private static HashSet<string> _covered = new(StringComparer.OrdinalIgnoreCase);
+    private static string _coveredKey = "";
+    private static int _coverHits;
 
     /// <summary>True όταν υπάρχει οποιοσδήποτε λόγος παύσης (fullscreen, lock, RDP, battery saver).</summary>
     public static bool IsFullscreenAppActive { get; private set; }
@@ -35,6 +39,7 @@ public static class AppActivity
     public static bool IsPausedFor(Screen? screen)
     {
         if (_locked || _remote || _batterySaver || _screensaver || _highLoad) return true;
+        if (screen != null && _covered.Contains(screen.DeviceName)) return true;
         if (!_fullscreen) return false;
         return _fullscreenDevice == null || screen == null || string.Equals(_fullscreenDevice, screen.DeviceName, StringComparison.OrdinalIgnoreCase);
     }
@@ -80,11 +85,28 @@ public static class AppActivity
                 UpdateLoad(settings);
             }
             if (!settings.PauseOnLock) _locked = false;
+            UpdateCovered(settings);
             _fullscreen = fullscreen;
             Publish();
             UpdateKeepAwake(settings);
         }
         catch (Exception ex) { RotatingLogger.Write("AppActivity: " + ex.Message); }
+    }
+
+    private static string _lastCoveredKey = "";
+
+    // 2.6.0: needs two equal samples (2 s) to START pausing a covered monitor and one sample to resume (the desktop shows again at once).
+    private static void UpdateCovered(AppSettings settings)
+    {
+        if (!settings.PauseWhenDesktopCovered) { if (_covered.Count > 0) { _covered = new(StringComparer.OrdinalIgnoreCase); _coveredKey = ""; } return; }
+        var now = DesktopCoverage.Compute();
+        // resume at once: anything no longer covered leaves the set immediately; a newly covered monitor is added after 2 consecutive samples
+        var next = new HashSet<string>(_covered.Where(now.Contains), StringComparer.OrdinalIgnoreCase);
+        var gained = now.Except(_covered).Any();
+        _coverHits = gained ? _coverHits + 1 : 0;
+        if (_coverHits >= 2) { foreach (var d in now) next.Add(d); _coverHits = 0; }
+        _covered = next;
+        _coveredKey = string.Join("|", _covered.OrderBy(x => x));
     }
 
     private static bool _lastPublished;
@@ -97,7 +119,9 @@ public static class AppActivity
         bool changed = now != _lastPublished || _fullscreenDevice != _lastDevice
                        || _locked != _lastLocked || _remote != _lastRemote || _batterySaver != _lastSaver
                        || _screensaver != _lastScreensaver || _highLoad != _lastLoad;
-        if (!changed) return;
+        var coveredChanged = _coveredKey != _lastCoveredKey;
+        if (!changed && !coveredChanged) return;
+        _lastCoveredKey = _coveredKey;
         _lastPublished = now; _lastDevice = _fullscreenDevice;
         _lastLocked = _locked; _lastRemote = _remote; _lastSaver = _batterySaver; _lastScreensaver = _screensaver; _lastLoad = _highLoad;
         IsFullscreenAppActive = now;

@@ -63,3 +63,17 @@ public sealed class GlassHostTests
         Assert.Equal(baseSize, UiTheme.FontBody.Size, 0.1f);
     }
 }
+
+public sealed class DesktopCoverageTests
+{
+    [Fact]
+    public void AMaximizedWindowCoversTheWorkAreaButATiledOneDoesNot()
+    {
+        var work = new System.Drawing.Rectangle(0, 0, 2560, 1392);                       // screen minus the taskbar
+        Assert.True(MotionDesk.Services.DesktopCoverageTestAccess.Covers(new System.Drawing.Rectangle(-8, -8, 2576, 1408), work)); // maximized (invisible borders)
+        Assert.True(MotionDesk.Services.DesktopCoverageTestAccess.Covers(new System.Drawing.Rectangle(0, 0, 2560, 1440), work));   // fullscreen
+        Assert.False(MotionDesk.Services.DesktopCoverageTestAccess.Covers(new System.Drawing.Rectangle(0, 0, 1280, 1392), work)); // half of the screen
+        Assert.False(MotionDesk.Services.DesktopCoverageTestAccess.Covers(new System.Drawing.Rectangle(100, 100, 2400, 1200), work));
+        Assert.False(MotionDesk.Services.DesktopCoverageTestAccess.Covers(default, work));
+    }
+}

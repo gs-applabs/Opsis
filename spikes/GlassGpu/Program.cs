@@ -39,6 +39,8 @@ internal static unsafe class Program
             Thread.Sleep(2500);
         }
 
+        if (Environment.GetEnvironmentVariable("SPIKE_STAGE_ONLY") == "1") { Log("stage only: measuring the wallpaper page alone"); Thread.Sleep(14000); Log("done"); return 0; }
+
         // ---------------- devices
         D3D11.D3D11CreateDevice(null, DriverType.Hardware, DeviceCreationFlags.BgraSupport, new[] { Vortice.Direct3D.FeatureLevel.Level_11_1, Vortice.Direct3D.FeatureLevel.Level_11_0 }, out ID3D11Device? dev, out ID3D11DeviceContext? ctx).CheckError();
         using var d3d = dev!; using var d3dCtx = ctx!;

@@ -140,6 +140,9 @@ namespace MotionDesk.Services
         /// <summary>2.6.0: UI scale / text size of the main window in percent (100, 125, 150).</summary>
         public int UiScalePercent { get; set; } = 100;
 
+        /// <summary>2.6.0: pause the live wallpaper on a monitor whose desktop is fully covered by an opaque window (nothing to see, nothing to render). No quality loss.</summary>
+        public bool PauseWhenDesktopCovered { get; set; } = true;
+
         /// <summary>2.6.0: the shared Glass theme choices (Opsis.UI.GlassSettings): Solid by default.</summary>
         public GlassSettings Glass { get; set; } = new();
 

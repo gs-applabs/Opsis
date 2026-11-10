@@ -149,6 +149,37 @@ function rgbToStr(c, a) { return `rgba(${c.r | 0},${c.g | 0},${c.b | 0},${a})`; 
 // Εμπνευσμένο από γυαλιστερές, "τσαλακωμένες" κορδέλες κεραμικής/μεταξιού με απαλές
 // σκιές βάθους ανάμεσα στις πτυχές και μια λεπτή, θερμή→ψυχρή λάμψη στην αιχμή κάθε πτυχής
 // — αντί για επίπεδο, μονόχρωμο γέμισμα.
+// 2.6.0 performance pass (same look, a fraction of the GPU work): the two expensive canvas operations of the Ribbons style were a full-width
+// `ctx.filter = blur(6px)` (shadow between the folds) and `shadowBlur` (glow of the bright line), both done at FULL resolution for every layer
+// in every frame. Blur removes detail, so they are now drawn on a LOWER-resolution layer (quarter for the soft shadow, half for the glow) and scaled up, which is visually the same
+// soft result. The point arrays are reused (no per-frame allocation). `cfg.exactBlur = true` brings back the old full-resolution path.
+const fxLayers = {};   // div -> { c: canvas, x: context, w, h }
+function fxLayer(div) {
+    let L = fxLayers[div];
+    if (!L) { const c = document.createElement('canvas'); L = fxLayers[div] = { c, x: c.getContext('2d'), w: 0, h: 0, div }; }
+    const cw = Math.max(1, Math.round(canvas.width / div)), ch = Math.max(1, Math.round(canvas.height / div));
+    if (cw !== L.w || ch !== L.h) { L.c.width = L.w = cw; L.c.height = L.h = ch; }
+    const f = L.x;
+    f.setTransform(1, 0, 0, 1, 0, 0);
+    f.clearRect(0, 0, L.w, L.h);
+    L.k = canvas.width / div / Math.max(1, window.innerWidth);      // CSS px -> layer px, same drawing coordinates as the main canvas
+    f.setTransform(L.k, 0, 0, L.k, 0, 0);
+    f.filter = 'none'; f.shadowBlur = 0;
+    return L;
+}
+function fxDraw(L) {
+    ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(L.c, 0, 0, L.w, L.h, 0, 0, canvas.width, canvas.height);
+    ctx.restore();
+}
+const wavePoints = [];      // one reusable Float32Array per layer: [x0, y0, x1, y1, ...]
+function pointBuffer(layer, count) {
+    let b = wavePoints[layer];
+    if (!b || b.length !== count * 2) b = wavePoints[layer] = new Float32Array(count * 2);
+    return b;
+}
+
 function drawWaves(dtSeconds) {
     const profile = perfProfile();
     const w = window.innerWidth, h = window.innerHeight;
@@ -178,41 +209,59 @@ function drawWaves(dtSeconds) {
         const freq2 = 0.0037 - layer * 0.0003;
         const freq3 = 0.0009 + layer * 0.0002;
 
-        const points = [];
-        for (let x = 0; x <= w; x += step) {
+        const count = Math.floor(w / step) + 1;
+        const pts = pointBuffer(layer, count);
+        let minY = Infinity;
+        for (let i = 0, x = 0; i < count; i++, x += step) {
             // Τρία αρμονικά κύματα αθροισμένα -> πιο οργανικό, "τσαλακωμένο" περίγραμμα
             // αντί για καθαρό ημίτονο.
             const y = baseline
                 - amplitude * (0.52 * Math.sin(x * freq1 + waveOffset * phaseSpeed)
                              + 0.30 * Math.sin(x * freq2 - waveOffset * phaseSpeed * 1.3)
                              + 0.18 * Math.sin(x * freq3 + waveOffset * phaseSpeed * 0.6 + layer));
-            points.push([x, y]);
+            pts[2 * i] = x; pts[2 * i + 1] = y;
+            if (y < minY) minY = y;
         }
 
         // Σκιά βάθους: ένα σκουρόχρωμο, θολό αντίγραφο της πτυχής λίγο πιο κάτω —
         // προσομοιώνει τη σκιά που πέφτει η μία "κορδέλα" πάνω στην επόμενη.
         if (profile.shading && layer > 0) {
-            ctx.save();
-            ctx.filter = 'blur(6px)';
-            ctx.beginPath();
-            ctx.moveTo(0, h);
-            for (const [x, y] of points) ctx.lineTo(x, y + 10);
-            ctx.lineTo(w, h);
-            ctx.closePath();
-            ctx.fillStyle = rgbToStr(mix(bg, { r: 0, g: 0, b: 0 }, 0.4), 0.35);
-            ctx.fill();
-            ctx.restore();
+            const shadowStyle = rgbToStr(mix(bg, { r: 0, g: 0, b: 0 }, 0.4), 0.35);
+            if (cfg.exactBlur) {
+                ctx.save();
+                ctx.filter = 'blur(6px)';
+                ctx.beginPath();
+                ctx.moveTo(0, h);
+                for (let i = 0; i < count; i++) ctx.lineTo(pts[2 * i], pts[2 * i + 1] + 10);
+                ctx.lineTo(w, h);
+                ctx.closePath();
+                ctx.fillStyle = shadowStyle;
+                ctx.fill();
+                ctx.restore();
+            } else {
+                const fx = fxLayer(4);                          // the shadow is very soft: quarter resolution is enough
+                const f = fx.x;
+                f.filter = 'blur(1.5px)';                      // 6 px at full resolution = 1.5 px at quarter resolution
+                f.beginPath();
+                f.moveTo(0, h);
+                for (let i = 0; i < count; i++) f.lineTo(pts[2 * i], pts[2 * i + 1] + 10);
+                f.lineTo(w, h);
+                f.closePath();
+                f.fillStyle = shadowStyle;
+                f.fill();
+                f.filter = 'none';
+                fxDraw(fx);
+            }
         }
 
         // Κύριο γέμισμα της πτυχής με κάθετο gradient (φωτεινό πάνω -> σκούρο/διάφανο κάτω),
         // ώστε να θυμίζει γυαλιστερή, καμπυλωτή επιφάνεια αντί για επίπεδη μάσκα χρώματος.
         ctx.beginPath();
         ctx.moveTo(0, h);
-        for (const [x, y] of points) ctx.lineTo(x, y);
+        for (let i = 0; i < count; i++) ctx.lineTo(pts[2 * i], pts[2 * i + 1]);
         ctx.lineTo(w, h);
         ctx.closePath();
 
-        const minY = Math.min(...points.map(p => p[1]));
         const fillGrad = ctx.createLinearGradient(0, minY, 0, h);
         const topColor = mix(waveRgb, { r: 255, g: 255, b: 255 }, 0.16 - depth * 0.05);
         fillGrad.addColorStop(0, rgbToStr(topColor, 0.42 - depth * 0.08));
@@ -224,8 +273,8 @@ function drawWaves(dtSeconds) {
         // Η φωτεινή, κινούμενη γραμμή πάνω στην αιχμή του κύματος — θερμό→ψυχρό shimmer
         // που ταξιδεύει κατά μήκος της πτυχής, όπως στα reference renders.
         ctx.beginPath();
-        ctx.moveTo(points[0][0], points[0][1]);
-        for (const [x, y] of points) ctx.lineTo(x, y);
+        ctx.moveTo(pts[0], pts[1]);
+        for (let i = 0; i < count; i++) ctx.lineTo(pts[2 * i], pts[2 * i + 1]);
 
         const grad = ctx.createLinearGradient(0, 0, w, 0);
         const shift = (waveOffset * 0.045 * (layer + 1)) % 1;
@@ -237,13 +286,24 @@ function drawWaves(dtSeconds) {
         ctx.lineWidth = Math.max(1, (2.4 - layer * 0.35) * cfg.lineThickness * audioBoost);
         ctx.strokeStyle = grad;
         ctx.lineJoin = 'round';
-        if (profile.glow) {
+        if (profile.glow && cfg.exactBlur) {
             ctx.shadowColor = cfg.glow;
             ctx.shadowBlur = profile.glowBlur * cfg.glowIntensity * audioBoost;
+            ctx.stroke();
         } else {
+            if (profile.glow) {
+                // the glow of the line = a few wide, very transparent strokes of the glow colour under the sharp line (a gaussian glow is the sum of such rings);
+                // no shadowBlur and no offscreen layer: it costs a few vector strokes instead of a full-resolution blur pass.
+                const blur = Math.max(2, profile.glowBlur * cfg.glowIntensity * audioBoost);
+                const base = ctx.lineWidth, keep = ctx.strokeStyle;
+                ctx.lineCap = 'round';
+                const rings = [[1.00, 0.040], [0.70, 0.055], [0.45, 0.075], [0.25, 0.10], [0.10, 0.14]];
+                for (const [k, a] of rings) { ctx.lineWidth = base + blur * k; ctx.strokeStyle = hexToRgba(cfg.glow, a); ctx.stroke(); }
+                ctx.lineWidth = base; ctx.strokeStyle = keep; ctx.lineCap = 'butt';
+            }
             ctx.shadowBlur = 0;
+            ctx.stroke();
         }
-        ctx.stroke();
 
         // Δεύτερο, στενότερο πέρασμα εντελώς λευκό στο κέντρο της γραμμής — δίνει την
         // εντύπωση καυτού, γυάλινου highlight αντί για επίπεδη έγχρωμη γραμμή.
