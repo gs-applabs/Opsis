@@ -1360,7 +1360,7 @@ namespace MotionDesk.UI
             // προσθήκη video όσο και με την προσθήκη φακέλου η εφαρμογή να ενημερώνει τη λίστα
             // με τα βίντεο". Πριν, η λίστα (dropdown/κάρτα) δεν ανανεωνόταν καθόλου μετά την
             // προσθήκη — μόνο το στατιστικό κείμενο του playlistCard.
-            AddIconButtonGrid(panel,
+            AddIconButtonGrid(panel, 220,
                 ("Add", LocalizationManager.T("Wallpaper.AddVideoButton"), (_, _) => ChooseWallpaperVideoFiles(ShowWallpaper)),
                 ("Add", LocalizationManager.T("Wallpaper.AddFolderButton"), (_, _) => { ChooseWallpaperFolder(); ShowWallpaper(); }),
                 ("Delete", LocalizationManager.T("Wallpaper.ClearPlaylist"), (_, _) => { WallpaperHostEngine.Instance.ClearVideo(); ShowWallpaper(); }));
@@ -1379,7 +1379,8 @@ namespace MotionDesk.UI
             int missingCount = settings.VideoPaths.Count(vp => !File.Exists(vp));
             if (missingCount > 0)
                 selectionButtons.Add(("Delete", string.Format(LocalizationManager.T("Wallpaper.RemoveMissing"), missingCount), (_, _) => { WallpaperHostEngine.Instance.RemoveMissingVideos(); ShowWallpaper(); }));
-            AddIconButtonGrid(panel, selectionButtons.ToArray());
+            AddIconButtonGrid(panel, 220, selectionButtons.ToArray());
+            AddPlaybackControls(panel);
 
             // Πραγματική λίστα με ΟΛΑ τα φορτωμένα βίντεο (όχι μόνο ένα στατιστικό "N αρχεία") —
             // κάθε γραμμή έχει το όνομα αρχείου και ένα ✕ για αφαίρεση, ζητήθηκε ρητά "να μπορεί
@@ -4207,7 +4208,30 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
         // Ίδια διάταξη δύο-στηλών με το AddButtonGrid, αλλά με διανυσματικό εικονίδιο (IconRenderer)
         // αντί για μόνο κείμενο — π.χ. τα κουμπιά "+ System Monitor" της Widget Gallery δεν είχαν
         // κανένα πραγματικό εικονίδιο, μόνο τον χαρακτήρα "＋".
-        private static void AddIconButtonGrid(Control parent, params (string IconKey, string Text, EventHandler Action)[] items)
+        // 2.6.0: Previous / Pause-Play / Next for the video library (plan 2.1.9).
+        private static void AddPlaybackControls(Control parent)
+        {
+            var row = new FlowLayoutPanel { AutoSize = true, FlowDirection = FlowDirection.LeftToRight, WrapContents = false, Margin = new Padding(0, 2, 0, 6) };
+            FlatButton Make(string glyph, string tip, Action action)
+            {
+                var b = new FlatButton { AutoSize = false, Width = 72, Height = 36, Text = glyph, Margin = new Padding(0, 0, 8, 0), Font = new Font("Segoe UI Symbol", 11f) };
+                new ToolTip().SetToolTip(b, tip);
+                b.Click += (_, _) => action();
+                return b;
+            }
+            row.Controls.Add(Make("\u23EE", LocalizationManager.T("Wallpaper.PreviousVideo"), () => WallpaperHostEngine.Instance.StepVideo(false)));
+            var pause = Make(WallpaperHostEngine.UserPaused ? "\u25B6" : "\u23F8", LocalizationManager.T("Wallpaper.PauseVideo"), () => { });
+            pause.Click += (_, _) => { WallpaperHostEngine.Instance.TogglePause(); pause.Text = WallpaperHostEngine.UserPaused ? "\u25B6" : "\u23F8"; };
+            row.Controls.Add(pause);
+            row.Controls.Add(Make("\u23ED", LocalizationManager.T("Wallpaper.NextVideo"), () => WallpaperHostEngine.Instance.StepVideo(true)));
+            parent.Controls.Add(row);
+        }
+
+        private static void AddIconButtonGrid(Control parent, params (string IconKey, string Text, EventHandler Action)[] items) => AddIconButtonGrid(parent, 350, items);
+
+        // 2.6.0: the width is a parameter. Three 350 px buttons did not fit one row in the default window (the third wrapped or was cut off, plan R.1); the video library
+        // uses narrower ones so all three stay on one line.
+        private static void AddIconButtonGrid(Control parent, int buttonWidth, params (string IconKey, string Text, EventHandler Action)[] items)
         {
             var grid = new FlowLayoutPanel
             {
@@ -4218,7 +4242,7 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
             };
             foreach (var (iconKey, text, action) in items)
             {
-                var button = new IconButton(iconKey, text) { Width = 350, Height = 44, Margin = new Padding(0, 3, 8, 3) };
+                var button = new IconButton(iconKey, text) { Width = buttonWidth, Height = 44, Margin = new Padding(0, 3, 8, 3) };
                 button.Click += (_, _) => action(button, EventArgs.Empty);
                 grid.Controls.Add(button);
             }
@@ -4389,7 +4413,7 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                     a.RestoreLastSession = d.RestoreLastSession; a.EnableAnimations = d.EnableAnimations; a.MinimizeToTray = d.MinimizeToTray; a.Save();
                     AnimationsSettingChanged?.Invoke();
                 });
-                stack.Controls.Add(Checkbox(LocalizationManager.T("Settings.StartWithWindows"), StartupManager.IsStartupEnabled(), StartupManager.SetStartup));
+                stack.Controls.Add(Checkbox(LocalizationManager.T("Settings.StartWithWindows"), StartupManager.IsStartupEnabled(), StartupManager.SetStartup, LocalizationManager.T("Settings.StartWithWindowsDesc")));
                 stack.Controls.Add(Checkbox(LocalizationManager.T("Settings.RestoreLastSession"), AppSettings.Load().RestoreLastSession,
                     v => { var a = AppSettings.Load(); a.RestoreLastSession = v; a.Save(); }));
                 stack.Controls.Add(Checkbox(LocalizationManager.T("Settings.EnableAnimations"), AppSettings.Load().EnableAnimations,

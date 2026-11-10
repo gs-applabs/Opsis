@@ -532,6 +532,16 @@ namespace MotionDesk.Widgets
             CurrentVideoIndex = idx >= 0 ? idx : 0;
         }
 
+        /// <summary>2.6.0: one step BACK in the playlist (the "Previous" button). Keeps the shuffle history consistent and resets the repeat counter.</summary>
+        public void PreviousInPlaylist()
+        {
+            var playable = PlayableVideos();
+            if (playable.Count == 0) { CurrentVideoIndex = 0; return; }
+            RepeatsDone = 0;
+            ShuffleHistory.Clear();
+            CurrentVideoIndex = ((CurrentVideoIndex - 1) % playable.Count + playable.Count) % playable.Count;
+        }
+
         public void AdvancePlaylist()
         {
             var playable = PlayableVideos();
@@ -1118,7 +1128,7 @@ namespace MotionDesk.Widgets
                 if (!Active) return;
                 ApplyHeavyPause();
                 // per monitor: a fullscreen app on one screen does not pause the wallpaper of the others (lock/RDP/battery saver pause all)
-                foreach (var w in _windows) _ = w.SetPausedAsync(AppActivity.IsPausedFor(w.TargetScreen));
+                foreach (var w in _windows) _ = w.SetPausedAsync(AppActivity.IsPausedFor(w.TargetScreen) || UserPaused);
             };
 
             // Debounce: το DisplaySettingsChanged στέλνεται σε ριπές (πολλά events για μία αλλαγή
@@ -1251,7 +1261,7 @@ namespace MotionDesk.Widgets
                     if (!w.IsAttached) continue;
                     if (!w.Visible) w.Show();
                     w.EnsureBehindIcons();      // BringToFront() here put the wallpaper window ABOVE the desktop icons (they "disappeared")
-                    _ = w.SetPausedAsync(AppActivity.IsPausedFor(w.TargetScreen));
+                    _ = w.SetPausedAsync(AppActivity.IsPausedFor(w.TargetScreen) || UserPaused);
                 }
             }
             EnsureFullscreenWatcher();
@@ -1657,6 +1667,26 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Count);
             settings.ShuffleHistory.Clear();
             settings.Save();
             _ = RefreshAllAsync();
+        }
+
+        /// <summary>2.6.0: the user pressed Pause in the video library (separate from the automatic pauses of AppActivity: fullscreen, lock, battery ...).</summary>
+        public static bool UserPaused { get; private set; }
+
+        public void TogglePause()
+        {
+            UserPaused = !UserPaused;
+            foreach (var w in _windows) _ = w.SetPausedAsync(AppActivity.IsPausedFor(w.TargetScreen) || UserPaused);
+        }
+
+        /// <summary>Next / previous video now: the shared playlist moves one step and every screen asks for the new current video (the serial makes AdvanceVideo serve it without advancing again).</summary>
+        public void StepVideo(bool forward)
+        {
+            var s = WallpaperSettings.Load();
+            if (forward) s.AdvancePlaylist(); else s.PreviousInPlaylist();
+            s.AdvanceSerial++;
+            s.LastRotateUtc = DateTime.UtcNow;
+            s.Save();
+            foreach (var w in _windows) _ = w.RunScriptAsync("if (typeof advanceVideo === 'function') advanceVideo();");
         }
 
         public void ClearVideo()
