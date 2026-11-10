@@ -50,7 +50,9 @@ namespace MotionDesk.UI
                 case "Focus": DrawTarget(g, pen); break;
                 case "Container": DrawContainer(g, pen); break;
                 case "Rename": DrawRename(g, pen); break;
-                case "Personalization": DrawPalette(g, pen, brush); break;
+                case "Personalization": case "Theme": DrawPalette(g, pen, brush); break;
+                case "DeskContainers": DrawContainer(g, pen); break;
+                case "DeskStrip": DrawGrid(g, pen); break;
                 case "Media": DrawMedia(g, pen, brush); break;
                 case "Notifications": DrawNotifications(g, pen); break;
                 case "Calendar": DrawCalendar(g, pen); break;

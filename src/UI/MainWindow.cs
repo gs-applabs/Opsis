@@ -2515,6 +2515,7 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
             _currentPageKey = "Theme";
             var settings = AppSettings.Load();
             var page = new GlassSettingsPage(settings.Glass) { Dock = DockStyle.Fill };
+            GlassBlur.ApplyScrollbarTheme(page, UiTheme.Background.GetBrightness() < 0.5f);
             page.SettingsChanged += (_, _) => { var a = AppSettings.Load(); a.Glass = page.Settings; a.Save(); };
             _pageTitle.Text = OpsisStrings.T("ui.theme.title");
             Flicker.BatchRedraw(_content, () => SetPageCore(page));
@@ -4414,63 +4415,86 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                 BackColor = UiTheme.Background;
                 AutoScroll = true;
                 GlassBlur.ApplyScrollbarTheme(this, UiTheme.Background.GetBrightness() < 0.5f);
-                var stack = new NoJumpFlowPanel
+                // 2.6.0: the page is built from the shared layout components (Opsis.UI.SettingsPage / SettingsCard / AdvancedSection): one column of cards, a Reset per card,
+                // rarely used rows in a collapsed "Advanced" group, and a search that also opens a group when something inside matches. The rows themselves
+                // (FlatToggle rows, combo rows, numeric rows) are the same controls as before.
+                AutoScroll = false;
+                var page = new SettingsPage { Dock = DockStyle.Fill };
+                GlassBlur.ApplyScrollbarTheme(page, UiTheme.Background.GetBrightness() < 0.5f);
+                var top = new Panel { Dock = DockStyle.Top, Height = 78, BackColor = UiTheme.Background };
+                top.Controls.Add(new Label { Text = LocalizationManager.T("Settings.Intro"), Dock = DockStyle.Fill, Font = UiTheme.FontBody, ForeColor = UiTheme.TextSecondary, Padding = new Padding(8, 0, 8, 0), AutoEllipsis = true });
+                var search = new SettingsSearchBox { Dock = DockStyle.Bottom, Page = page, Font = UiTheme.FontBody, BackColor = UiTheme.Surface, ForeColor = UiTheme.TextPrimary };
+                top.Controls.Add(search);
+                Controls.Add(page);
+                Controls.Add(top);
+                Disposed += (_, _) => { };
+
+                SettingsCard NewCard(string title, Action? reset = null)
                 {
-                    Dock = DockStyle.Fill,
-                    FlowDirection = FlowDirection.TopDown,
-                    WrapContents = false,
-                    AutoScroll = true,
-                    Padding = new Padding(4),
-                    BackColor = UiTheme.Background
-                };
-                GlassBlur.ApplyScrollbarTheme(stack, UiTheme.Background.GetBrightness() < 0.5f);
-                Controls.Add(stack);
+                    var c = new SettingsCard { Title = title, ShowReset = reset != null };
+                    if (reset != null)
+                        c.ResetRequested += (_, _) =>
+                        {
+                            var owner = FindForm();
+                            if (MessageBox.Show(owner, LocalizationManager.T("Settings.ResetConfirm"), title, MessageBoxButtons.YesNo, MessageBoxIcon.Question, MessageBoxDefaultButton.Button2) != DialogResult.Yes) return;
+                            reset();
+                            (owner as MainWindow)?.NavigateTo("Settings");
+                        };
+                    page.AddCard(c);
+                    return c;
+                }
 
-                PageSearch.Attach(stack);
-                AddText(stack, LocalizationManager.T("Settings.Intro"));
-
-                AddSection(stack, LocalizationManager.T("Settings.Appearance"));
-                stack.Controls.Add(BuildThemeRow());
-                stack.Controls.Add(Checkbox(LocalizationManager.T("Settings.FollowWindowsAccent"), AppSettings.Load().FollowWindowsAccent,
+                // ---- Appearance
+                var appearance = NewCard(LocalizationManager.T("Settings.Appearance"));
+                appearance.AddControl(BuildThemeRow());
+                appearance.AddControl(Checkbox(LocalizationManager.T("Settings.FollowWindowsAccent"), AppSettings.Load().FollowWindowsAccent,
                     v => ThemeManager.SetFollowWindowsAccent(v)));
-                stack.Controls.Add(BuildLanguageRow());
-                stack.Controls.Add(BuildUiScaleRow());
-                stack.Controls.Add(BuildOpacityRow());
-                stack.Controls.Add(BuildDarkIntensityRow());
-                stack.Controls.Add(Checkbox(LocalizationManager.T("Settings.UiSoundCues"), AppSettings.Load().UiSoundsEnabled,
+                appearance.AddControl(BuildLanguageRow());
+                appearance.AddControl(BuildUiScaleRow());
+                appearance.AddControl(Checkbox(LocalizationManager.T("Settings.UiSoundCues"), AppSettings.Load().UiSoundsEnabled,
                     v => { var a = AppSettings.Load(); a.UiSoundsEnabled = v; a.Save(); }));
+                var appearanceAdvanced = new AdvancedSection();
+                appearanceAdvanced.AddControl(BuildOpacityRow());
+                appearanceAdvanced.AddControl(BuildDarkIntensityRow());
+                appearance.Add(appearanceAdvanced);
 
-                AddSection(stack, LocalizationManager.T("Settings.SectionSnapping"), () =>
+                // ---- Snapping
+                var snapping = NewCard(LocalizationManager.T("Settings.SectionSnapping"), () =>
                 {
                     var d = new AppSettings(); var a = AppSettings.Load();
                     a.GridSnap = d.GridSnap; a.SnapThreshold = d.SnapThreshold; a.GridSize = d.GridSize; a.Save();
                     WidgetSnapEngine.EnableGridSnap = a.GridSnap; WidgetSnapEngine.SnapThreshold = a.SnapThreshold; WidgetSnapEngine.GridSize = a.GridSize;
                 });
-                stack.Controls.Add(Checkbox(LocalizationManager.T("Settings.EnableGridSnap"), AppSettings.Load().GridSnap, v => { WidgetSnapEngine.EnableGridSnap = v; SaveAppSettings(); }));
+                snapping.AddControl(Checkbox(LocalizationManager.T("Settings.EnableGridSnap"), AppSettings.Load().GridSnap, v => { WidgetSnapEngine.EnableGridSnap = v; SaveAppSettings(); }));
                 var snapRow = new FlowLayoutPanel { AutoSize = true, WrapContents = false, Margin = new Padding(0, 2, 0, 4) };
                 snapRow.Controls.Add(NumericRow(LocalizationManager.T("Settings.SnapThreshold"), AppSettings.Load().SnapThreshold, 5, 50,
                     v => { WidgetSnapEngine.SnapThreshold = v; SaveAppSettings(); }));
                 snapRow.Controls.Add(NumericRow(LocalizationManager.T("Settings.GridSize"), Math.Clamp(AppSettings.Load().GridSize, 5, 100), 5, 100,
                     v => { WidgetSnapEngine.GridSize = v; SaveAppSettings(); }, marginLeft: 24));
-                stack.Controls.Add(snapRow);
+                var snapAdvanced = new AdvancedSection();
+                snapAdvanced.AddControl(snapRow);
+                snapping.Add(snapAdvanced);
 
-                AddSection(stack, LocalizationManager.T("Settings.SectionStartup"), () =>
+                // ---- Startup
+                var startup = NewCard(LocalizationManager.T("Settings.SectionStartup"), () =>
                 {
                     var d = new AppSettings(); var a = AppSettings.Load();
                     a.RestoreLastSession = d.RestoreLastSession; a.EnableAnimations = d.EnableAnimations; a.MinimizeToTray = d.MinimizeToTray; a.Save();
                     AnimationsSettingChanged?.Invoke();
                 });
-                stack.Controls.Add(Checkbox(LocalizationManager.T("Settings.StartWithWindows"), StartupManager.IsStartupEnabled(), StartupManager.SetStartup, LocalizationManager.T("Settings.StartWithWindowsDesc")));
-                stack.Controls.Add(Checkbox(LocalizationManager.T("Settings.RestoreLastSession"), AppSettings.Load().RestoreLastSession,
+                startup.AddControl(Checkbox(LocalizationManager.T("Settings.StartWithWindows"), StartupManager.IsStartupEnabled(), StartupManager.SetStartup, LocalizationManager.T("Settings.StartWithWindowsDesc")));
+                startup.AddControl(Checkbox(LocalizationManager.T("Settings.RestoreLastSession"), AppSettings.Load().RestoreLastSession,
                     v => { var a = AppSettings.Load(); a.RestoreLastSession = v; a.Save(); }));
-                stack.Controls.Add(Checkbox(LocalizationManager.T("Settings.EnableAnimations"), AppSettings.Load().EnableAnimations,
+                startup.AddControl(Checkbox(LocalizationManager.T("Settings.EnableAnimations"), AppSettings.Load().EnableAnimations,
                     v => { var a = AppSettings.Load(); a.EnableAnimations = v; a.Save(); AnimationsSettingChanged?.Invoke(); }));
-                stack.Controls.Add(Checkbox(LocalizationManager.T("Settings.MinimizeToTray"), AppSettings.Load().MinimizeToTray,
+                startup.AddControl(Checkbox(LocalizationManager.T("Settings.MinimizeToTray"), AppSettings.Load().MinimizeToTray,
                     v => { var a = AppSettings.Load(); a.MinimizeToTray = v; a.Save(); }));
-                // Plugins (π.χ. News Crawler): ισχύει στην επόμενη εκκίνηση.
-                BuildDiscordRows(stack);
-                stack.Controls.Add(Checkbox(LocalizationManager.T("Settings.PluginsEnabled"), AppSettings.Load().PluginsEnabled,
+
+                // ---- Plugins and integrations (Advanced: rarely changed)
+                var integrations = NewCard(OpsisStrings.T("ui.about.plugins"));
+                integrations.AddControl(Checkbox(LocalizationManager.T("Settings.PluginsEnabled"), AppSettings.Load().PluginsEnabled,
                     v => { var a = AppSettings.Load(); a.PluginsEnabled = v; a.Save(); }, restart: true));
+                var integrationsAdvanced = new AdvancedSection();
                 {
                     // default look of the plugin pages / standalone apps: Opsis, Opsis Appearance or Opsis News Crawler
                     var styleRow = new FlowLayoutPanel { AutoSize = true, WrapContents = false, Margin = new Padding(0, 4, 0, 8) };
@@ -4481,29 +4505,37 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                     styleCombo.SetItems(names, names[cur]);
                     styleCombo.SelectedIndexChanged += (_, _) => PluginUiStyle.Set(PluginUiStyle.Styles[Math.Clamp(styleCombo.SelectedIndex, 0, 2)]);
                     styleRow.Controls.Add(styleCombo);
-                    stack.Controls.Add(styleRow);
+                    integrationsAdvanced.AddControl(styleRow);
+                    var discordHost = new FlowLayoutPanel { AutoSize = true, FlowDirection = FlowDirection.TopDown, WrapContents = false, Margin = new Padding(0) };
+                    BuildDiscordRows(discordHost);
+                    integrationsAdvanced.AddControl(discordHost);
                 }
+                integrations.Add(integrationsAdvanced);
 
                 // Ζητήθηκε ρητά "ρύθμιση για διαφάνεια παραθύρων των Windows και γρήγορη εκκίνηση
                 // στον πίνακα ελέγχου" — πραγματικές ρυθμίσεις των ίδιων των Windows (μητρώο),
                 // όχι δικές μας· βλ. WindowsSystemSettings.cs.
-                AddSection(stack, LocalizationManager.T("Settings.SectionWindows"));
-                stack.Controls.Add(Checkbox(LocalizationManager.T("Settings.TransparencyEffects"), WindowsSystemSettings.GetTransparencyEffectsEnabled(),
+                var windowsCard = NewCard(LocalizationManager.T("Settings.SectionWindows"));
+                windowsCard.AddControl(Checkbox(LocalizationManager.T("Settings.TransparencyEffects"), WindowsSystemSettings.GetTransparencyEffectsEnabled(),
                     v => System.Threading.Tasks.Task.Run(() => { try { WindowsSystemSettings.SetTransparencyEffectsEnabled(v); } catch (Exception ex) { RotatingLogger.Write("Transparency effects: " + ex.Message); } })));   // off the UI thread: it talks to the shell (taskbar) and may wait for it
-                stack.Controls.Add(Checkbox(LocalizationManager.T("Settings.FastStartup"), WindowsSystemSettings.GetFastStartupEnabled(),
+                var windowsAdvanced = new AdvancedSection();
+                windowsAdvanced.AddControl(Checkbox(LocalizationManager.T("Settings.FastStartup"), WindowsSystemSettings.GetFastStartupEnabled(),
                     v =>
                     {
                         if (!WindowsSystemSettings.TrySetFastStartupEnabled(v))
                             MessageBox.Show(this, LocalizationManager.T("Settings.FastStartupAdminRequired"), LocalizationManager.T("Page.Settings.Title"), MessageBoxButtons.OK, MessageBoxIcon.Warning);
                     }));
+                windowsCard.Add(windowsAdvanced);
 
                 // Ζητήθηκε ρητά: ο installer εγκαθιστά ήδη το WebView2 Runtime/.NET 10 Runtime μία
                 // φορά, αλλά ο χρήστης πρέπει να μπορεί να δει/εγκαταστήσει ξανά τα εξωτερικά
                 // dependencies (π.χ. FFmpeg για .wmv) και από μέσα από την εφαρμογή, χωρίς να
                 // ξανατρέξει τον installer.
-                AddSection(stack, LocalizationManager.T("Settings.SectionDependencies"));
+                var dependencies = NewCard(LocalizationManager.T("Settings.SectionDependencies"));
+                var dependenciesAdvanced = new AdvancedSection();
                 foreach (var dep in DependencyManagerService.All)
-                    stack.Controls.Add(BuildDependencyRow(dep));
+                    dependenciesAdvanced.AddControl(BuildDependencyRow(dep));
+                dependencies.Add(dependenciesAdvanced);
             }
 
             private static Panel BuildDependencyRow(DependencyInfo dep)
