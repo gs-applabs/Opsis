@@ -31,7 +31,8 @@ Updated 2026-11-10. Rule of this file: if a session is cut off, the next one sta
 | Glossy intensity + presets | DONE in Opsis.UI 0.4.5 (Theme page) |
 | Requests table (old containers -> new core) | DONE, design doc section 5 (older chat transcripts are unreadable, so more items may exist) |
 | 4 data model + read-only importer + pipe/CLI | DONE (`core/Opsis.Containers.Core`, 15 tests, design doc section 9) |
-| 6 windows, 2 rendering, 3 shell, 5/9 rules+integration, 7/8 a11y+DPI, switch off the fork | NOT started |
+| 6 windows and behaviour | PART A DONE: the behaviour rules as pure tested functions (`ContainerBehavior`: snap to edges / other containers, resize limits, roll-up with the container's OWN title-bar height, keep reachable after a monitor change, lock, hit test; 8 tests). PART B NOT done: the real window host (non-activating layered window + glass pane), z-order next to the desktop icon layer and the wallpaper window, Win+D / Explorer restart behaviour - these need real-desktop tests |
+| 2 rendering, 3 shell, 5/9 rules+integration, 7/8 a11y+DPI, switch off the fork | NOT started |
 
 ## Asked from the user (manual tests, steps in design doc 6.6)
 Two monitors with different DPI; DPI 150/200 %; real wallpaper behind the icons; AMD/NVIDIA or Remote Desktop; lock/unlock and UAC while glass is on. Also: run `tools/resource-logger.ps1` on 2.4.6.1 for the baseline that fixes the RAM/CPU budgets.
@@ -51,4 +52,4 @@ Two monitors with different DPI; DPI 150/200 %; real wallpaper behind the icons;
 Done: pause when the desktop is fully covered (`DesktopCoverage`, setting on by default) and a cheaper drawing of the Ribbons wallpaper (GPU -35-40 %, same look). Details and what was not done: design doc section 7. NOT verified live: the covered-desktop pause inside a running Opsis (only the geometry is unit-tested); the new Ribbons drawing on the real wallpaper window at other resolutions / tiers.
 
 ## Where I stopped
-Widgets glass done. Next: phase 6 (container windows on top of Opsis.Glass), phase 2 rendering, 3 shell, 5/9, 7/8.
+Phase 6 part A (behaviour rules) done. Next: phase 6 part B (the container window host on Opsis.Glass, including the z-order question: containers must sit above the desktop icons and the wallpaper but below normal windows, and survive Win+D and an Explorer restart - the first real-desktop test is a manual one, steps will be listed here), then phase 2 (own rendering of icons / labels / scroll), 3 shell, 5/9, 7/8.
