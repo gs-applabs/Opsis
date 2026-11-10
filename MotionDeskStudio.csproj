@@ -53,6 +53,10 @@
          το μάζευε ΚΑΙ εδώ (το tests\ είναι κάτω από τη ρίζα του repo, όπως και το src\), προσπαθώντας
          να μεταγλωττίσει κώδικα xunit μέσα στο ίδιο το Opsis.exe. -->
     <Compile Remove="tests\**" />
+    <!-- spikes\: throw-away experiments of the 2.6.0 design phase (own projects), never part of Opsis.exe -->
+    <Compile Remove="spikes\**" />
+    <EmbeddedResource Remove="spikes\**" />
+    <None Remove="spikes\**" />
     <!-- containers\: DesktopFences (WPF, MIT) built as its own project (OpsisContainers.csproj) and shipped next to Opsis.exe. -->
     <Compile Remove="containers\**" />
     <EmbeddedResource Remove="containers\**" />

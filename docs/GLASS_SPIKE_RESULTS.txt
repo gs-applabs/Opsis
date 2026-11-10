@@ -1,0 +1,12 @@
+machine: 1 screen(s): 2560x1440; 6 logical cores; pid 26824
+P1 glass render 420x300 (100%): 5,7 ms per bitmap (parallel rows)
+P1 glass render 630x450 (150%): 7,9 ms per bitmap (parallel rows)
+P1 glass render 840x600 (200%): 14,1 ms per bitmap (parallel rows)
+P1 glass render 1260x900 (300%): 16,4 ms per bitmap (parallel rows)
+P1 full-screen snapshot 2560x1440 (CopyFromScreen): 55,8 ms
+windows: 8 top-level transparent WPF windows 420x300 DIPs; DPI scale 1,00 (this machine's real scale; 150/200% not switched)
+P2 idle, 8 glass windows, 5,0s: CPU 0,05% of the machine
+P3 drag 1 of 8, 5,0s: CPU 9,83%; 274 fps, frame gap median 2,2 ms, p95 16,4 ms, max 45,7 ms
+P4 resize one window, stretch the same bitmap: 120 steps in 4,1s = 29 steps/s, CPU 5,48%
+P4 resize one window, REGENERATE glass every step: 120 steps in 5,7s = 21 steps/s, CPU 8,41%
+P5 live backdrop: 8 windows re-rendered at 2 Hz, 6,0s: CPU 1,48%

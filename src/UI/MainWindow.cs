@@ -4672,7 +4672,8 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                 box.CheckedChanged += (_, _) =>
                 {
                     ApplySetting(text, () => onChange(box.Checked));
-                    if (restart)
+                    // never prompt (or relaunch!) in the automated UI audit / e2e runs: they click every switch
+                    if (restart && Environment.GetEnvironmentVariable("OPSIS_E2E") != "1")
                     {
                         // 2.6.0: the shared mechanism of Opsis.UI - "Restart now / Later" and an automatic relaunch (through the normal exit path: save session, stop plugins, hotkeys).
                         RestartCoordinator.Require(CleanLabel(text));

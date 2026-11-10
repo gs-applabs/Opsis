@@ -54,6 +54,7 @@ namespace MotionDesk
             if (args.Length == 2 && args[0] == "--ui-audit")
             {
                 ApplicationConfiguration.Initialize();
+                Environment.SetEnvironmentVariable("OPSIS_E2E", "1");
                 Environment.Exit(Services.UiAudit.Run(args[1]));
                 return;
             }
