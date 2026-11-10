@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- The data model, the read-only importer of the 2.4.6 containers data and the named-pipe protocol of the new DeskContainers core. No UI toolkit. Windows 11 only. -->
+  <PropertyGroup>
+    <TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>Opsis.Containers</RootNamespace>
+    <AssemblyName>Opsis.Containers.Core</AssemblyName>
+    <Version>0.1.0</Version>
+  </PropertyGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="Opsis.Containers.Core.Tests" />
+  </ItemGroup>
+</Project>

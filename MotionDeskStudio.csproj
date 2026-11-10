@@ -57,6 +57,7 @@
     <Compile Remove="spikes\**" />
     <!-- glass\: Opsis.Glass (GPU glass layer) and its tests are their own projects -->
     <Compile Remove="glass\**" />
+    <Compile Remove="core\**" /><EmbeddedResource Remove="core\**" /><None Remove="core\**" />
     <EmbeddedResource Remove="glass\**" />
     <None Remove="glass\**" />
     <EmbeddedResource Remove="spikes\**" />
@@ -87,6 +88,7 @@
   <!-- the GPU glass layer of the 2.6.0 core (DeskStrip first): Direct2D / DirectComposition / DXGI duplication through Vortice -->
   <ItemGroup>
     <ProjectReference Include="glass\Opsis.Glass\Opsis.Glass.csproj" />
+    <ProjectReference Include="core\Opsis.Containers.Core\Opsis.Containers.Core.csproj" />
   </ItemGroup>
 
   <ItemGroup>

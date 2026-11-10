@@ -6,6 +6,8 @@ namespace MotionDesk
 {
     static class Program
     {
+        [System.Runtime.InteropServices.DllImport("kernel32.dll")] private static extern bool AttachConsole(int pid);
+
         [STAThread]
         static void Main(string[] args)
         {
@@ -47,6 +49,34 @@ namespace MotionDesk
 
             // 2.6.0: read-only check of the "pause the wallpaper when the desktop is fully covered" decision on THIS machine (no window is created or moved):
             // prints which monitors are covered right now and what AppActivity says after its two-sample hysteresis.
+            // 2.6.0 control channel of the new DeskContainers core (design doc phase 4/5): `Opsis.exe --containers <cmd> [json-args]` talks to the named pipe;
+            // `Opsis.exe --containers-serve <data-file>` serves the pipe from that data file until a key is pressed (used for tests before the engine exists).
+            if (args.Length >= 2 && args[0] == "--containers")
+            {
+                AttachConsole(-1);   // Opsis.exe is a Windows-subsystem program: show the answer in the console that started it
+                var pipe = Opsis.Containers.PipeProtocol.DefaultName;
+                try
+                {
+                    var json = args.Length > 2 ? System.Text.Json.Nodes.JsonNode.Parse(args[2]) : null;
+                    Console.WriteLine(Opsis.Containers.PipeClient.Send(pipe, args[1], json).ToJsonString(new System.Text.Json.JsonSerializerOptions { WriteIndented = true }));
+                    Environment.Exit(0);
+                }
+                catch (Exception ex) { Console.Error.WriteLine("containers: " + ex.Message); Environment.Exit(2); }
+                return;
+            }
+            if (args.Length == 2 && args[0] == "--containers-serve")
+            {
+                AttachConsole(-1);
+                var store = new Opsis.Containers.ContainersStore(args[1]);
+                var mons = System.Windows.Forms.Screen.AllScreens.Select(s => new Opsis.Containers.MonitorInfo(s.DeviceName, s.Bounds, s.Primary)).ToList();
+                using var server = new Opsis.Containers.PipeServer(Opsis.Containers.PipeProtocol.DefaultName, new Opsis.Containers.ContainersService(store, () => mons));
+                server.Start();
+                Console.WriteLine("serving " + Opsis.Containers.PipeProtocol.DefaultName + " - press Enter to stop");
+                Console.ReadLine();
+                Environment.Exit(0);
+                return;
+            }
+
             if (args.Length == 2 && args[0] == "--test-deskstrip-glass")
             {
                 ApplicationConfiguration.Initialize();
