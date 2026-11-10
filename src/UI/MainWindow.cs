@@ -134,6 +134,8 @@ namespace MotionDesk.UI
             _pageBuilders["Dashboard"] = () => SafeBuildPage("Dashboard", ShowDashboard);
             _pageBuilders["Widgets"] = () => SafeBuildPage("Widgets", ShowWidgets);
             _pageBuilders["DeskZones"] = () => SafeBuildPage("DeskZones", ShowDeskZones);
+            _pageBuilders["DeskContainers"] = () => SafeBuildPage("DeskContainers", ShowDeskContainers);
+            _pageBuilders["DeskStrip"] = () => SafeBuildPage("DeskStrip", ShowDeskStrip);
             _pageBuilders["Wallpaper"] = () => SafeBuildPage("Wallpaper", ShowWallpaper);
             _pageBuilders["Settings"] = () => SafeBuildPage("Settings", ShowSettings);
             _pageBuilders["Profiles"] = () => SafeBuildPage("Profiles", ShowProfiles);
@@ -520,10 +522,11 @@ namespace MotionDesk.UI
             AddNavButton(_nav, LocalizationManager.T("Nav.Dashboard"), "Dashboard", ShowDashboard, 1);
             AddNavButton(_nav, LocalizationManager.T("Nav.Widgets"), "Widgets", ShowWidgets, 2);
             AddNavButton(_nav, LocalizationManager.T("Nav.DeskZones"), "DeskZones", ShowDeskZones, 3);
+            AddNavButton(_nav, LocalizationManager.T("DeskZones.SectionContainers"), "DeskContainers", ShowDeskContainers, (string?)null);
+            AddNavButton(_nav, LocalizationManager.T("Personalization.SectionDeskStrip"), "DeskStrip", ShowDeskStrip, (string?)null);
             AddNavButton(_nav, LocalizationManager.T("Nav.Wallpaper"), "Wallpaper", ShowWallpaper, 4);
             AddNavButton(_nav, LocalizationManager.T("Nav.Performance"), "Performance", ShowPerformance, 5);
             AddNavButton(_nav, LocalizationManager.T("Nav.Settings"), "Settings", ShowSettings, 6);
-            AddNavButton(_nav, LocalizationManager.T("Nav.Profiles"), "Profiles", ShowProfiles, 7);
             AddNavButton(_nav, LocalizationManager.T("Nav.Automation"), "Automation", ShowAutomation, 8);
             AddNavButton(_nav, LocalizationManager.T("Nav.Personalization"), "Personalization", ShowPersonalization, 0);
             // Ζητήθηκε ρητά: αντί για απλό "Audio Visualizer", νέα καρτέλα "Διαχείριση Ήχου" με
@@ -1260,34 +1263,6 @@ namespace MotionDesk.UI
                 row.Controls.Add(editBtn);
                 panel.Controls.Add(row);
             }
-
-            // Ξεχωριστή, δεύτερη λειτουργία στην ίδια σελίδα: DeskContainers — η "πραγματική"
-            // έννοια των Fences (ομαδοποίηση αρχείων/φακέλων/συντομεύσεων, όχι παραθύρων).
-            AddSection(panel, LocalizationManager.T("DeskZones.SectionContainers"));
-            AddText(panel, LocalizationManager.T("DeskZones.ContainersIntro"));
-
-            // Ζητήθηκε ρητά: ο μηχανισμός "διπλό-κλικ σε κενό σημείο της επιφάνειας εργασίας
-            // κρύβει/επαναφέρει τα εικονίδια" (DesktopIconVisibilityEngine) υπήρχε ήδη πλήρως
-            // λειτουργικός αλλά ήταν πάντα ενεργός χωρίς καμία ρύθμιση ορατή στο χρήστη. Τώρα
-            // μπορεί να απενεργοποιηθεί από εδώ (ενεργοποιείται/απενεργοποιείται ζωντανά, χωρίς
-            // restart της εφαρμογής).
-            // Επιλογή εικονιδίων που ΜΕΝΟΥΝ όταν το διπλό κλικ κρύβει την επιφάνεια εργασίας.
-            string LdKeep(string el, string en) => LocalizationManager.CurrentLanguage == "el" ? el : en;
-            var keepIconsBtn = new HoverButton { Text = LdKeep("Εικονίδια που μένουν ορατά…", "Icons that stay visible…"), Width = 260, Height = 32, Margin = new Padding(0, 0, 0, 10), FlatStyle = FlatStyle.Flat, ForeColor = UiTheme.TextPrimary, BackColor = UiTheme.SurfaceHover, Cursor = Cursors.Hand };
-            keepIconsBtn.FlatAppearance.BorderSize = 0;
-            keepIconsBtn.Click += (_, _) => ShowKeepIconsDialog();
-            var quickHideCheck = new FlatToggle { RowWidth = 700, Text = LocalizationManager.T("DeskZones.QuickHideDoubleClick"), Checked = AppSettings.Load().QuickHideDoubleClickEnabled, BackColor = UiTheme.Background, Margin = new Padding(0, 0, 0, 10) };
-            quickHideCheck.CheckedChanged += (_, _) =>
-            {
-                var a = AppSettings.Load(); a.QuickHideDoubleClickEnabled = quickHideCheck.Checked; a.Save();
-                if (quickHideCheck.Checked) MotionDesk.Widgets.DesktopIconVisibilityEngine.Instance.Start();
-                else MotionDesk.Widgets.DesktopIconVisibilityEngine.Instance.Stop();
-            };
-            panel.Controls.Add(quickHideCheck);
-            panel.Controls.Add(keepIconsBtn);
-
-            // DeskContainers engine: only its on/off control lives here; every other DeskContainers setting is in the three-bars menu of a container.
-            if (ContainersEngine.IsAvailable) BuildContainersSettings(panel);
 
             // Applications that are never snapped (one process name per line, e.g. vlc, obs64)
             AddSection(panel, LocalizationManager.T("DeskZones.SectionExcludedApps"));
@@ -2172,111 +2147,6 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                 (LocalizationManager.T("Personalization.ApplyCursors"), (_, _) => { DeskCursorsEngine.ApplyNow(); _statusLabel.Text = LocalizationManager.T("Personalization.CursorsAppliedStatus"); }),
                 (LocalizationManager.T("Personalization.ResetCursors"), (_, _) => { DeskCursorsEngine.ResetAllToWindowsDefault(); if (_pageBuilders.TryGetValue("Personalization", out var rebuild)) rebuild(); }));
 
-            // ---------- DeskStrip ----------
-            var deskStripCard = AddCardSection(panel, LocalizationManager.T("Personalization.SectionDeskStrip"));
-            AddText(deskStripCard, LocalizationManager.T("Personalization.DeskStripIntro"));
-
-            var deskStripToggle = new FlatToggle { RowWidth = 700, Text = LocalizationManager.T("Personalization.EnableDeskStrip"), Checked = DeskStripHostEngine.Instance.IsEnabled, BackColor = UiTheme.Surface, Margin = new Padding(0, 4, 0, 10) };
-            deskStripCard.Controls.Add(deskStripToggle);
-
-            // Ρυθμίσεις dock (θέση, auto-hide, μέγεθος, μεγέθυνση, τρέχουσες εφαρμογές, προεπισκοπήσεις) — εφαρμόζονται αμέσως.
-            string Ld(string el, string en) => LocalizationManager.CurrentLanguage == "el" ? el : en;
-            var dockCfg = DeskStripHostEngine.Instance.GetSettings();
-            var posValues = new[] { DockPosition.Bottom, DockPosition.Top, DockPosition.Left, DockPosition.Right };
-            var posLabels = new[] { Ld("Κάτω", "Bottom"), Ld("Πάνω", "Top"), Ld("Αριστερά", "Left"), Ld("Δεξιά", "Right") };
-            deskStripCard.Controls.Add(new Label { AutoSize = true, Text = Ld("Θέση στην οθόνη", "Position on screen"), ForeColor = UiTheme.TextMuted, Font = UiTheme.FontBody, Margin = new Padding(0, 2, 0, 2) });
-            var posCombo = new FlatComboBox { Width = 220, Margin = new Padding(0, 0, 0, 8) };
-            posCombo.SetItems(posLabels, posLabels[Math.Max(0, Array.IndexOf(posValues, dockCfg.Position))]);
-            posCombo.SelectedIndexChanged += (_, _) => DeskStripHostEngine.Instance.UpdateSettings(c => c.Position = posValues[Math.Max(0, posCombo.SelectedIndex)]);
-            deskStripCard.Controls.Add(posCombo);
-
-            FlatCheckBox DockCheck(string text, bool value, Action<DeskStripSettings, bool> apply)
-            {
-                var cb = new FlatCheckBox { Text = text, AutoSize = true, Checked = value, BackColor = UiTheme.Surface, Margin = new Padding(0, 2, 0, 4) };
-                cb.CheckedChanged += (_, _) => DeskStripHostEngine.Instance.UpdateSettings(c => apply(c, cb.Checked));
-                deskStripCard.Controls.Add(cb);
-                return cb;
-            }
-            DockCheck(Ld("Αυτόματη απόκρυψη (εμφάνιση από την άκρη της οθόνης)", "Auto-hide (reveal from the screen edge)"), dockCfg.AutoHide, (c, v) => c.AutoHide = v);
-            DockCheck(Ld("Μεγέθυνση εικονιδίων στο hover", "Magnify icons on hover"), dockCfg.Magnify, (c, v) => c.Magnify = v);
-            DockCheck(Ld("Εμφάνιση τρεχουσών εφαρμογών", "Show running apps"), dockCfg.ShowRunning, (c, v) => c.ShowRunning = v);
-            DockCheck(Ld("Προεπισκόπηση παραθύρου στο hover", "Window preview on hover"), dockCfg.ShowPreviews, (c, v) => c.ShowPreviews = v);
-            var sizeLabel = new Label { AutoSize = true, ForeColor = UiTheme.TextMuted, Font = UiTheme.FontBody, Margin = new Padding(0, 6, 0, 2) };
-            void ShowSize(int v) => sizeLabel.Text = Ld($"Μέγεθος εικονιδίων: {v}px", $"Icon size: {v}px");
-            ShowSize(dockCfg.IconSize);
-            deskStripCard.Controls.Add(sizeLabel);
-            var sizeSlider = new FlatSlider { Minimum = 28, Maximum = 72, Value = Math.Clamp(dockCfg.IconSize, 28, 72), Width = 300, Height = 28, Margin = new Padding(0, 0, 0, 10) };
-            sizeSlider.ValueChanged += (_, _) => { ShowSize(sizeSlider.Value); DeskStripHostEngine.Instance.UpdateSettings(c => c.IconSize = sizeSlider.Value); };
-            deskStripCard.Controls.Add(sizeSlider);
-
-            var pinnedList = new FlowLayoutPanel { AutoSize = true, FlowDirection = FlowDirection.TopDown, WrapContents = false };
-            deskStripCard.Controls.Add(pinnedList);
-
-            // Ίδια διόρθωση flicker με RefreshActiveList/RefreshActiveContainers: skip το rebuild
-            // όταν η λίστα δεν άλλαξε — πέρα από το flicker, γλιτώνει και το άσκοπο save/restore
-            // scroll σε κάθε tick.
-            string? lastPinnedSignature = null;
-            void RefreshPinnedApps()
-            {
-                var pinned = DeskStripHostEngine.Instance.GetPinnedApps();
-                string signature = string.Join("|", pinned);
-                if (signature == lastPinnedSignature) return;
-                lastPinnedSignature = signature;
-
-                // Bug fix: αυτή η συνάρτηση καλείται κάθε 2 δευτερόλεπτα από timer (βλ.
-                // deskStripRefreshTimer παρακάτω) ενώ ο χρήστης μπορεί να έχει ήδη κυλήσει
-                // ΠΟΛΥ πιο κάτω στη σελίδα (π.χ. στο "Φόντο οθόνης κλειδώματος"). Το
-                // Controls.Clear()+rebuild ενός FlowLayoutPanel μέσα σε ένα AutoScroll container
-                // επαναφέρει σιωπηλά τη θέση κύλισης — αναφέρθηκε ως "autoscrolling πίσω στα
-                // DeskSounds". Λύση: αποθήκευση/επαναφορά της θέσης κύλισης της ΣΕΛΙΔΑΣ γύρω από
-                // την ανακατασκευή (το AutoScrollPosition GET επιστρέφει αρνητικές τιμές, το SET
-                // περιμένει θετικές — WinForms ιδιαιτερότητα).
-                var savedScroll = panel.AutoScrollPosition;
-                pinnedList.SuspendLayout();
-                DisposeChildren(pinnedList);
-                if (pinned.Count == 0)
-                {
-                    pinnedList.Controls.Add(new Label { AutoSize = true, Text = LocalizationManager.T("Common.NoPinnedApps"), ForeColor = UiTheme.TextMuted, Font = UiTheme.FontBody });
-                }
-                foreach (var appPath in pinned)
-                {
-                    var row = new Panel { Width = 500, Height = 40, BackColor = UiTheme.Surface, Margin = new Padding(0, 0, 0, 6) };
-                    UiTheme.ApplyRoundedRegion(row, 6);
-                    row.Controls.Add(new Label { Text = Path.GetFileNameWithoutExtension(appPath), ForeColor = UiTheme.TextPrimary, Font = UiTheme.FontBody, Location = new Point(14, 11), AutoSize = true });
-                    var removeBtn = new HoverButton { Text = "✕", Width = 36, Height = 28, Location = new Point(444, 6), FlatStyle = FlatStyle.Flat, ForeColor = UiTheme.TextPrimary, BackColor = UiTheme.SurfaceHover, Cursor = Cursors.Hand };
-                    removeBtn.FlatAppearance.BorderSize = 0;
-                    string capturedPath = appPath;
-                    removeBtn.Click += (_, _) => { DeskStripHostEngine.Instance.UnpinApp(capturedPath); RefreshPinnedApps(); };
-                    row.Controls.Add(removeBtn);
-                    pinnedList.Controls.Add(row);
-                }
-                pinnedList.ResumeLayout();
-                panel.AutoScrollPosition = new Point(-savedScroll.X, -savedScroll.Y);
-            }
-
-            deskStripToggle.CheckedChanged += (_, _) =>
-            {
-                if (deskStripToggle.Checked) DeskStripHostEngine.Instance.Enable(); else DeskStripHostEngine.Instance.Disable();
-                RefreshPinnedApps();
-            };
-
-            AddButtonGrid(deskStripCard, (LocalizationManager.T("Personalization.PinApp"), (_, _) =>
-            {
-                using var dlg = new OpenFileDialog { Filter = LocalizationManager.T("Filter.Apps"), Title = LocalizationManager.T("Personalization.PinApp") };
-                if (dlg.ShowDialog(this) == DialogResult.OK)
-                {
-                    DeskStripHostEngine.Instance.PinApp(dlg.FileName);
-                    deskStripToggle.Checked = true;
-                    RefreshPinnedApps();
-                }
-            }));
-
-            RefreshPinnedApps();
-            var deskStripRefreshTimer = new System.Windows.Forms.Timer { Interval = 2000 };
-            deskStripRefreshTimer.Tick += (_, _) => RefreshPinnedApps();
-            deskStripRefreshTimer.Start();
-            panel.Disposed += (_, _) => deskStripRefreshTimer.Dispose();
-
             // ---------- DeskSounds ----------
             var soundsCard = AddCardSection(panel, LocalizationManager.T("Personalization.SectionDeskSounds"));
             AddText(soundsCard, LocalizationManager.T("Personalization.DeskSoundsIntro"));
@@ -2483,6 +2353,157 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
 
         public void OpenCommandPalette() => ShowCommandPalette();
 
+        // 2.6.0: DeskStrip has its own page (it used to be the middle of the long Personalization page).
+        private void ShowDeskStrip()
+        {
+            _currentPageKey = "DeskStrip";
+            var panel = CreatePagePanel();
+            // ---------- DeskStrip ----------
+            var deskStripCard = AddCardSection(panel, LocalizationManager.T("Personalization.SectionDeskStrip"));
+            AddText(deskStripCard, LocalizationManager.T("Personalization.DeskStripIntro"));
+
+            var deskStripToggle = new FlatToggle { RowWidth = 700, Text = LocalizationManager.T("Personalization.EnableDeskStrip"), Checked = DeskStripHostEngine.Instance.IsEnabled, BackColor = UiTheme.Surface, Margin = new Padding(0, 4, 0, 10) };
+            deskStripCard.Controls.Add(deskStripToggle);
+
+            // Ρυθμίσεις dock (θέση, auto-hide, μέγεθος, μεγέθυνση, τρέχουσες εφαρμογές, προεπισκοπήσεις) — εφαρμόζονται αμέσως.
+            string Ld(string el, string en) => LocalizationManager.CurrentLanguage == "el" ? el : en;
+            var dockCfg = DeskStripHostEngine.Instance.GetSettings();
+            var posValues = new[] { DockPosition.Bottom, DockPosition.Top, DockPosition.Left, DockPosition.Right };
+            var posLabels = new[] { Ld("Κάτω", "Bottom"), Ld("Πάνω", "Top"), Ld("Αριστερά", "Left"), Ld("Δεξιά", "Right") };
+            deskStripCard.Controls.Add(new Label { AutoSize = true, Text = Ld("Θέση στην οθόνη", "Position on screen"), ForeColor = UiTheme.TextMuted, Font = UiTheme.FontBody, Margin = new Padding(0, 2, 0, 2) });
+            var posCombo = new FlatComboBox { Width = 220, Margin = new Padding(0, 0, 0, 8) };
+            posCombo.SetItems(posLabels, posLabels[Math.Max(0, Array.IndexOf(posValues, dockCfg.Position))]);
+            posCombo.SelectedIndexChanged += (_, _) => DeskStripHostEngine.Instance.UpdateSettings(c => c.Position = posValues[Math.Max(0, posCombo.SelectedIndex)]);
+            deskStripCard.Controls.Add(posCombo);
+
+            FlatCheckBox DockCheck(string text, bool value, Action<DeskStripSettings, bool> apply)
+            {
+                var cb = new FlatCheckBox { Text = text, AutoSize = true, Checked = value, BackColor = UiTheme.Surface, Margin = new Padding(0, 2, 0, 4) };
+                cb.CheckedChanged += (_, _) => DeskStripHostEngine.Instance.UpdateSettings(c => apply(c, cb.Checked));
+                deskStripCard.Controls.Add(cb);
+                return cb;
+            }
+            DockCheck(Ld("Αυτόματη απόκρυψη (εμφάνιση από την άκρη της οθόνης)", "Auto-hide (reveal from the screen edge)"), dockCfg.AutoHide, (c, v) => c.AutoHide = v);
+            DockCheck(Ld("Μεγέθυνση εικονιδίων στο hover", "Magnify icons on hover"), dockCfg.Magnify, (c, v) => c.Magnify = v);
+            DockCheck(Ld("Εμφάνιση τρεχουσών εφαρμογών", "Show running apps"), dockCfg.ShowRunning, (c, v) => c.ShowRunning = v);
+            DockCheck(Ld("Προεπισκόπηση παραθύρου στο hover", "Window preview on hover"), dockCfg.ShowPreviews, (c, v) => c.ShowPreviews = v);
+            var sizeLabel = new Label { AutoSize = true, ForeColor = UiTheme.TextMuted, Font = UiTheme.FontBody, Margin = new Padding(0, 6, 0, 2) };
+            void ShowSize(int v) => sizeLabel.Text = Ld($"Μέγεθος εικονιδίων: {v}px", $"Icon size: {v}px");
+            ShowSize(dockCfg.IconSize);
+            deskStripCard.Controls.Add(sizeLabel);
+            var sizeSlider = new FlatSlider { Minimum = 28, Maximum = 72, Value = Math.Clamp(dockCfg.IconSize, 28, 72), Width = 300, Height = 28, Margin = new Padding(0, 0, 0, 10) };
+            sizeSlider.ValueChanged += (_, _) => { ShowSize(sizeSlider.Value); DeskStripHostEngine.Instance.UpdateSettings(c => c.IconSize = sizeSlider.Value); };
+            deskStripCard.Controls.Add(sizeSlider);
+
+            var pinnedList = new FlowLayoutPanel { AutoSize = true, FlowDirection = FlowDirection.TopDown, WrapContents = false };
+            deskStripCard.Controls.Add(pinnedList);
+
+            // Ίδια διόρθωση flicker με RefreshActiveList/RefreshActiveContainers: skip το rebuild
+            // όταν η λίστα δεν άλλαξε — πέρα από το flicker, γλιτώνει και το άσκοπο save/restore
+            // scroll σε κάθε tick.
+            string? lastPinnedSignature = null;
+            void RefreshPinnedApps()
+            {
+                var pinned = DeskStripHostEngine.Instance.GetPinnedApps();
+                string signature = string.Join("|", pinned);
+                if (signature == lastPinnedSignature) return;
+                lastPinnedSignature = signature;
+
+                // Bug fix: αυτή η συνάρτηση καλείται κάθε 2 δευτερόλεπτα από timer (βλ.
+                // deskStripRefreshTimer παρακάτω) ενώ ο χρήστης μπορεί να έχει ήδη κυλήσει
+                // ΠΟΛΥ πιο κάτω στη σελίδα (π.χ. στο "Φόντο οθόνης κλειδώματος"). Το
+                // Controls.Clear()+rebuild ενός FlowLayoutPanel μέσα σε ένα AutoScroll container
+                // επαναφέρει σιωπηλά τη θέση κύλισης — αναφέρθηκε ως "autoscrolling πίσω στα
+                // DeskSounds". Λύση: αποθήκευση/επαναφορά της θέσης κύλισης της ΣΕΛΙΔΑΣ γύρω από
+                // την ανακατασκευή (το AutoScrollPosition GET επιστρέφει αρνητικές τιμές, το SET
+                // περιμένει θετικές — WinForms ιδιαιτερότητα).
+                var savedScroll = panel.AutoScrollPosition;
+                pinnedList.SuspendLayout();
+                DisposeChildren(pinnedList);
+                if (pinned.Count == 0)
+                {
+                    pinnedList.Controls.Add(new Label { AutoSize = true, Text = LocalizationManager.T("Common.NoPinnedApps"), ForeColor = UiTheme.TextMuted, Font = UiTheme.FontBody });
+                }
+                foreach (var appPath in pinned)
+                {
+                    var row = new Panel { Width = 500, Height = 40, BackColor = UiTheme.Surface, Margin = new Padding(0, 0, 0, 6) };
+                    UiTheme.ApplyRoundedRegion(row, 6);
+                    row.Controls.Add(new Label { Text = Path.GetFileNameWithoutExtension(appPath), ForeColor = UiTheme.TextPrimary, Font = UiTheme.FontBody, Location = new Point(14, 11), AutoSize = true });
+                    var removeBtn = new HoverButton { Text = "✕", Width = 36, Height = 28, Location = new Point(444, 6), FlatStyle = FlatStyle.Flat, ForeColor = UiTheme.TextPrimary, BackColor = UiTheme.SurfaceHover, Cursor = Cursors.Hand };
+                    removeBtn.FlatAppearance.BorderSize = 0;
+                    string capturedPath = appPath;
+                    removeBtn.Click += (_, _) => { DeskStripHostEngine.Instance.UnpinApp(capturedPath); RefreshPinnedApps(); };
+                    row.Controls.Add(removeBtn);
+                    pinnedList.Controls.Add(row);
+                }
+                pinnedList.ResumeLayout();
+                panel.AutoScrollPosition = new Point(-savedScroll.X, -savedScroll.Y);
+            }
+
+            deskStripToggle.CheckedChanged += (_, _) =>
+            {
+                if (deskStripToggle.Checked) DeskStripHostEngine.Instance.Enable(); else DeskStripHostEngine.Instance.Disable();
+                RefreshPinnedApps();
+            };
+
+            AddButtonGrid(deskStripCard, (LocalizationManager.T("Personalization.PinApp"), (_, _) =>
+            {
+                using var dlg = new OpenFileDialog { Filter = LocalizationManager.T("Filter.Apps"), Title = LocalizationManager.T("Personalization.PinApp") };
+                if (dlg.ShowDialog(this) == DialogResult.OK)
+                {
+                    DeskStripHostEngine.Instance.PinApp(dlg.FileName);
+                    deskStripToggle.Checked = true;
+                    RefreshPinnedApps();
+                }
+            }));
+
+            RefreshPinnedApps();
+            var deskStripRefreshTimer = new System.Windows.Forms.Timer { Interval = 2000 };
+            deskStripRefreshTimer.Tick += (_, _) => RefreshPinnedApps();
+            deskStripRefreshTimer.Start();
+            panel.Disposed += (_, _) => deskStripRefreshTimer.Dispose();
+
+
+            SetPage("Personalization.SectionDeskStrip", panel);
+        }
+
+        // 2.6.0: DeskContainers (and the double-click "hide desktop icons") have their own page; DeskZones keeps only the window zones.
+        private void ShowDeskContainers()
+        {
+            _currentPageKey = "DeskContainers";
+            var panel = CreatePagePanel();
+            // Ξεχωριστή, δεύτερη λειτουργία στην ίδια σελίδα: DeskContainers — η "πραγματική"
+            // έννοια των Fences (ομαδοποίηση αρχείων/φακέλων/συντομεύσεων, όχι παραθύρων).
+            AddSection(panel, LocalizationManager.T("DeskZones.SectionContainers"));
+            AddText(panel, LocalizationManager.T("DeskZones.ContainersIntro"));
+
+            // Ζητήθηκε ρητά: ο μηχανισμός "διπλό-κλικ σε κενό σημείο της επιφάνειας εργασίας
+            // κρύβει/επαναφέρει τα εικονίδια" (DesktopIconVisibilityEngine) υπήρχε ήδη πλήρως
+            // λειτουργικός αλλά ήταν πάντα ενεργός χωρίς καμία ρύθμιση ορατή στο χρήστη. Τώρα
+            // μπορεί να απενεργοποιηθεί από εδώ (ενεργοποιείται/απενεργοποιείται ζωντανά, χωρίς
+            // restart της εφαρμογής).
+            // Επιλογή εικονιδίων που ΜΕΝΟΥΝ όταν το διπλό κλικ κρύβει την επιφάνεια εργασίας.
+            string LdKeep(string el, string en) => LocalizationManager.CurrentLanguage == "el" ? el : en;
+            var keepIconsBtn = new HoverButton { Text = LdKeep("Εικονίδια που μένουν ορατά…", "Icons that stay visible…"), Width = 260, Height = 32, Margin = new Padding(0, 0, 0, 10), FlatStyle = FlatStyle.Flat, ForeColor = UiTheme.TextPrimary, BackColor = UiTheme.SurfaceHover, Cursor = Cursors.Hand };
+            keepIconsBtn.FlatAppearance.BorderSize = 0;
+            keepIconsBtn.Click += (_, _) => ShowKeepIconsDialog();
+            var quickHideCheck = new FlatToggle { RowWidth = 700, Text = LocalizationManager.T("DeskZones.QuickHideDoubleClick"), Checked = AppSettings.Load().QuickHideDoubleClickEnabled, BackColor = UiTheme.Background, Margin = new Padding(0, 0, 0, 10) };
+            quickHideCheck.CheckedChanged += (_, _) =>
+            {
+                var a = AppSettings.Load(); a.QuickHideDoubleClickEnabled = quickHideCheck.Checked; a.Save();
+                if (quickHideCheck.Checked) MotionDesk.Widgets.DesktopIconVisibilityEngine.Instance.Start();
+                else MotionDesk.Widgets.DesktopIconVisibilityEngine.Instance.Stop();
+            };
+            panel.Controls.Add(quickHideCheck);
+            panel.Controls.Add(keepIconsBtn);
+
+            // DeskContainers engine: only its on/off control lives here; every other DeskContainers setting is in the three-bars menu of a container.
+            if (ContainersEngine.IsAvailable) BuildContainersSettings(panel);
+
+
+            SetPage("DeskZones.SectionContainers", panel);
+        }
+
         private void ShowCommandPalette()
         {
             using var dialog = new Form
@@ -2538,6 +2559,8 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                 ("Dashboard", LocalizationManager.T("Nav.Dashboard")),
                 ("WidgetGallery", LocalizationManager.T("Command.WidgetGallery")),
                 ("DeskZones", LocalizationManager.T("Nav.DeskZones")),
+                ("DeskContainers", LocalizationManager.T("DeskZones.SectionContainers")),
+                ("DeskStrip", LocalizationManager.T("Personalization.SectionDeskStrip")),
                 ("WallpaperStudio", LocalizationManager.T("Nav.Wallpaper")),
                 ("Profiles", LocalizationManager.T("Nav.Profiles")),
                 ("Performance", LocalizationManager.T("Nav.Performance")),
@@ -2586,7 +2609,7 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
             {
                 if (list.SelectedItem is not string label || !idByLabel.TryGetValue(label, out var id)) return;
                 switch (id) {
-                    case "Dashboard": NavigateTo("Dashboard"); break; case "WidgetGallery": NavigateTo("Widgets"); break; case "DeskZones": NavigateTo("DeskZones"); break;
+                    case "Dashboard": NavigateTo("Dashboard"); break; case "WidgetGallery": NavigateTo("Widgets"); break; case "DeskZones": NavigateTo("DeskZones"); break; case "DeskContainers": NavigateTo("DeskContainers"); break; case "DeskStrip": NavigateTo("DeskStrip"); break;
                     case "WallpaperStudio": NavigateTo("Wallpaper"); break; case "Profiles": NavigateTo("Profiles"); break;
                     case "Performance": NavigateTo("Performance"); break; case "Automation": NavigateTo("Automation"); break;
                     case "Personalization": NavigateTo("Personalization"); break; case "Settings": NavigateTo("Settings"); break;
@@ -2620,10 +2643,12 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
             dialog.Controls.Add(list); dialog.Controls.Add(box); box.Focus(); dialog.ShowDialog(this);
         }
 
-        private void ShowProfiles()
+        // 2.6.0: Profiles and Automation are ONE page now (a profile is what an automation rule switches to, e.g. "Gaming Mode: steam -> Gaming").
+        // The old "Profiles" key stays as an alias so palette entries and links keep working.
+        private void ShowProfiles() => NavigateTo("Automation");
+
+        private void BuildProfilesSection(Control panel)
         {
-            _currentPageKey = "Profiles";
-            var panel = CreatePagePanel();
             AddText(panel, LocalizationManager.T("Profiles.Intro"));
             var list = new ListBox { Width = 440, Height = 180, Font = new Font("Segoe UI", 10) };
             void Refresh() { list.Items.Clear(); foreach (var p in WorkspaceProfileService.ListProfiles()) list.Items.Add(p); }
@@ -2634,7 +2659,9 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                 ("Restore", LocalizationManager.T("Profiles.LoadSelected"), (_, _) => { if (list.SelectedItem is string p && WorkspaceProfileService.Load(p)) { NavigateTo("Dashboard"); } }),
                 ("Add", LocalizationManager.T("Profiles.CreateUpdateDefaults"), (_, _) => { foreach (var p in new[] { "Work", "Gaming", "Focus" }) { if (!WorkspaceProfileService.ListProfiles().Contains(p, StringComparer.OrdinalIgnoreCase)) WorkspaceProfileService.Save(p); } Refresh(); }),
                 ("Delete", LocalizationManager.T("Profiles.DeleteSelected"), (_, _) => { if (list.SelectedItem is string p && !p.Equals("Last Session", StringComparison.OrdinalIgnoreCase)) { WorkspaceProfileService.Delete(p); Refresh(); } }));
-            SetPage("Page.Profiles.Title", panel);
+            // Which automation rules switch to a profile (so "Gaming Mode" for Steam is visible next to the profiles it uses, plan R.1).
+            var ruleLines = AutomationService.Instance.Rules.Select(r => $"{r.Name}:  {r.TriggerProcess}  →  {r.Profile}" + (WorkspaceProfileService.ListProfiles().Contains(r.Profile) ? "" : "  (!)")).ToList();
+            if (ruleLines.Count > 0) AddText(panel, string.Join("\n", ruleLines));
         }
 
         // Ενοποιημένη καρτέλα: πρώην ξεχωριστά "System Monitor" + "Performance Center" (το
@@ -2727,6 +2754,9 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
         {
             _currentPageKey = "Automation";
             var panel = CreatePagePanel();
+            AddSection(panel, LocalizationManager.T("Page.Profiles.Title"));
+            BuildProfilesSection(panel);
+            AddSection(panel, LocalizationManager.T("Nav.Automation"));
             AddText(panel, LocalizationManager.T("Automation.Intro"));
             foreach (var rule in AutomationService.Instance.Rules)
             {
