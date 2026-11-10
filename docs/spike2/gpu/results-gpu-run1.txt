@@ -1,0 +1,9 @@
+14:41:07.046 machine: 2560x1440, 6 cores, build 26300; label=gpu-live-opsis-wallpaper-page
+14:41:07.942 stage: Opsis wallpaper page loaded in a 1700x900 stand-in window
+14:41:10.611 adapter: Intel(R) UHD Graphics 630
+14:41:10.695 union region 120,200 1310x240 = 1,2 MB VRAM (once)
+14:41:20.205 GPU path, 4 glass windows 320x240 over a LIVE background: 59,8 rendered frames/s, acquire 10,04 ms, GPU-side render submit 6,57 ms per frame (all 4 windows), our process CPU 1,5%
+14:41:20.206    idle timeouts (no change behind -> no work): 0
+14:41:20.765    screenshot gpu-glass-4.png (region 80,160 1390x320)
+14:41:20.776    gpu-captured-union.png = what the glass sees (must show the background only, no glass panes)
+14:41:20.784 done

@@ -24,5 +24,16 @@ Updated 2026-11-10. Rule of this file: if a session is cut off, the next one sta
 ## NOT verified in real use (needs the user, Windows 11)
 - Restart now / relaunch really restarts Opsis; video Previous/Next/Pause on a real playlist (and with two monitors); the new sidebar pages at 100-200 % DPI; WindowMemory with a removed monitor; Glass look in light theme and with Windows "Transparency effects" off; UI scale 125/150 % on every page.
 
+## New core (option A, approved 2026-11-10) - phases
+| Phase | Status |
+|---|---|
+| 1. Opsis.Glass: layered host + shared capture + GPU glass | PROOF DONE (`spikes/GlassGpu`, `docs/spike2/gpu/`, design doc section 6). The product library `src/Opsis.Glass` (device-lost recovery, caches, tiers, multi-monitor) is NOT written yet |
+| Glossy intensity + presets | DONE in Opsis.UI 0.4.5 (Theme page) |
+| Requests table (old containers -> new core) | DONE, design doc section 5 (older chat transcripts are unreadable, so more items may exist) |
+| 4 data model/importer, 6 windows, 2 rendering, 3 shell, 5/9 rules+integration, 7/8 a11y+DPI, switch off the fork | NOT started |
+
+## Asked from the user (manual tests, steps in design doc 6.6)
+Two monitors with different DPI; DPI 150/200 %; real wallpaper behind the icons; AMD/NVIDIA or Remote Desktop; lock/unlock and UAC while glass is on. Also: run `tools/resource-logger.ps1` on 2.4.6.1 for the baseline that fixes the RAM/CPU budgets.
+
 ## Where I stopped
-Settings page converted and audit-checked (see the last commit). Next: the dense pages one by one (start with Wallpaper), then the Mica/Acrylic backdrop pass. The new native core has NOT been started: the user must approve the cost table first.
+Phase 1 proof done and documented; next is writing the product `src/Opsis.Glass` (change-driven capture manager, bounded caches, tier throttle, device-lost and multi-monitor handling) with its unit tests, then phase 4.
