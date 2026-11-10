@@ -35,8 +35,16 @@ Updated 2026-11-10. Rule of this file: if a session is cut off, the next one sta
 ## Asked from the user (manual tests, steps in design doc 6.6)
 Two monitors with different DPI; DPI 150/200 %; real wallpaper behind the icons; AMD/NVIDIA or Remote Desktop; lock/unlock and UAC while glass is on. Also: run `tools/resource-logger.ps1` on 2.4.6.1 for the baseline that fixes the RAM/CPU budgets.
 
+## Integration of Opsis.Glass into DeskStrip (done, behind a setting)
+`UseGpuGlass` (Settings > Appearance > Advanced, default OFF, restart asked): the DeskStrip becomes a layered per-pixel-alpha window (icons only, `LayeredSurface`) with an Opsis.Glass pane directly below it (`GlassService`, conditions from the performance tier, live wallpaper, lock / remote / fullscreen / battery saver, safe mode); if the GPU part cannot start the old DWM blur look stays. Verified by `Opsis.exe --test-deskstrip-glass <folder>` (isolated data, synthetic moving background in my own window, nothing from the desktop of the user is captured): pane created, 51 captures / 51 renders in 4 s, pane removed on Disable; screenshot `docs/spike2/deskstrip/deskstrip-gpu-glass.png`. NOT done: the widgets (still DWM blur; they are WebView/WinForms windows with their own drawing, next), hover/popup windows of the strip, per-monitor DPI of the pane, drag and drop onto the layered strip, long-run behaviour. Why default off: real-use risk (layered window input, z-order with other topmost windows) needs the user's test first.
+
+## Covered-desktop pause: what was tested
+- 8 unit tests of the decision (`DesktopCoverageDecisionTests`): maximized window covers its monitor only; minimized / cloaked / own-process / tool / layered / click-through / shell windows do not; tiled windows never; two monitors.
+- LIVE on this machine (`Opsis.exe --test-covered`, read-only, `docs/spike2/covered-desktop-live-check.txt`): the user's maximized window was detected as covering DISPLAY1 and `AppActivity.IsPausedFor(primary)` was True after the two-sample hysteresis with no fullscreen / lock flag, i.e. the pause is active through coverage alone.
+- NOT tested automatically: the RESUME when the desktop is shown again (needs an uncovered desktop; the logic resumes on the first sample without cover). Manual steps for the user: with the wallpaper running, maximize a window on it and watch GPU use of the Opsis / msedgewebview2 processes drop to ~0 within 2-3 seconds; minimize it (or Win+D) and check the wallpaper moves again within about 1 second; repeat with two monitors (cover one only).
+
 ## Wallpaper cost (user request: less resources, same quality and stability)
 Done: pause when the desktop is fully covered (`DesktopCoverage`, setting on by default) and a cheaper drawing of the Ribbons wallpaper (GPU -35-40 %, same look). Details and what was not done: design doc section 7. NOT verified live: the covered-desktop pause inside a running Opsis (only the geometry is unit-tested); the new Ribbons drawing on the real wallpaper window at other resolutions / tiers.
 
 ## Where I stopped
-Library written and smoke-tested. Next: first integration into DeskStrip and widgets (replace their DWM acrylic with `GlassManager` panes behind a setting, with the Low tier as fallback), then phase 4 (data model + importer).
+DeskStrip glass integration and the covered-desktop checks are done. Next: widgets glass, then phase 4 (data model + read-only importer + pipe/CLI).

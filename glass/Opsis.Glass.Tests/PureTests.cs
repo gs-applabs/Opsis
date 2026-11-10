@@ -25,11 +25,19 @@ public sealed class PureTests
     }
 
     [Fact]
-    public void NothingChangingMeansNoCaptureAndNoWork()
+    public void StaticBackgroundStillWatchesForMovingWindowsButOnlyAtALowRate()
     {
-        var d = GlassPolicy.Evaluate(C());                 // static wallpaper, nothing moving
-        Assert.False(d.CaptureNow); Assert.Equal(0, d.MaxFps); Assert.True(d.Static);
-        Assert.True(GlassPolicy.Evaluate(C(c => c with { WindowMovingBehind = true })).CaptureNow);
+        var d = GlassPolicy.Evaluate(C());                 // static wallpaper, nothing animating
+        Assert.True(d.CaptureNow); Assert.Equal(15, d.MaxFps); Assert.False(d.Static);   // change-driven: a still background costs nothing, but a moving window behind is seen
+        Assert.Equal(4, GlassPolicy.Evaluate(C(c => c with { Idle = true })).MaxFps);
+        Assert.Equal(60, GlassPolicy.Evaluate(C(c => c with { WindowMovingBehind = true })).MaxFps);
+    }
+
+    [Fact]
+    public void FrozenKeepsThePanesAsTheyAreWithoutAnyWork()
+    {
+        var d = GlassPolicy.Evaluate(C(c => c with { Frozen = true, LiveBackdrop = true }));
+        Assert.False(d.Suspended); Assert.False(d.CaptureNow); Assert.Equal(0, d.MaxFps);
     }
 
     [Theory]

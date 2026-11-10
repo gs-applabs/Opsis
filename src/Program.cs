@@ -45,6 +45,22 @@ namespace MotionDesk
                 return;
             }
 
+            // 2.6.0: read-only check of the "pause the wallpaper when the desktop is fully covered" decision on THIS machine (no window is created or moved):
+            // prints which monitors are covered right now and what AppActivity says after its two-sample hysteresis.
+            if (args.Length == 2 && args[0] == "--test-deskstrip-glass")
+            {
+                ApplicationConfiguration.Initialize();
+                Environment.Exit(Services.DesktopDiagnostics.TestDeskStripGlass(args[1]));
+                return;
+            }
+
+            if (args.Length == 2 && args[0] == "--test-covered")
+            {
+                ApplicationConfiguration.Initialize();
+                Environment.Exit(Services.DesktopDiagnostics.TestCovered(args[1]));
+                return;
+            }
+
             if (args.Length == 2 && args[0] == "--test-transparency")
             {
                 ApplicationConfiguration.Initialize();

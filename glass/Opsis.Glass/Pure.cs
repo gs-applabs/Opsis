@@ -19,6 +19,8 @@ public sealed record GlassConditions
     public bool AllMinimizedOrHidden { get; init; }
     public bool SafeMode { get; init; }
     public bool DuplicationAvailable { get; init; } = true;
+    /// <summary>Keep the panes as they are (no capture, no render): for screenshots of the glass and for tests.</summary>
+    public bool Frozen { get; init; }
 }
 
 public enum SuspendReason { None, Locked, RemoteSession, FullscreenApp, AllHidden, SafeMode }
@@ -35,6 +37,7 @@ public static class GlassPolicy
     /// </summary>
     public static GlassDecision Evaluate(GlassConditions c)
     {
+        if (c.Frozen) return new(false, SuspendReason.None, false, 0, false, false, false);
         if (c.SafeMode) return new(true, SuspendReason.SafeMode, false, 0, false, false, true);
         if (c.Locked) return new(true, SuspendReason.Locked, false, 0, false, false, true);
         if (c.RemoteSession) return new(true, SuspendReason.RemoteSession, false, 0, false, false, true);
@@ -44,11 +47,13 @@ public static class GlassPolicy
         if (c.Tier == GlassTier.Low || !c.DuplicationAvailable)
             return new(false, SuspendReason.None, false, 0, false, false, true);            // static frosted tint, painted once
 
+        // Capture is CHANGE-DRIVEN by the compositor (a duplication frame only arrives when something behind changed), so "capture allowed" costs nothing while
+        // the background is still: the loop just times out. The rate only caps how often a CHANGED frame may be rendered.
         var changing = c.LiveBackdrop || c.WindowMovingBehind;
         var fps = c.Tier == GlassTier.High ? 60 : 30;
+        if (!changing) fps = c.Idle ? 4 : 15;                                                // static wallpaper: just watch for windows moving behind
         if (c.BatterySaver) fps = Math.Min(fps, 20);
-        if (c.Idle && !c.LiveBackdrop) changing = false;                                     // idle desktop: nothing to refresh
-        return new(false, SuspendReason.None, changing, changing ? fps : 0, c.Tier == GlassTier.High, true, !changing);
+        return new(false, SuspendReason.None, true, fps, c.Tier == GlassTier.High, true, false);
     }
 }
 

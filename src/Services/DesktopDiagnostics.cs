@@ -18,6 +18,90 @@ namespace MotionDesk.Services
     //   - τεστ παρόχων καιρού (Open-Meteo, wttr.in)
     public static class DesktopDiagnostics
     {
+        /// <summary>
+        /// GPU glass on the DeskStrip over a SYNTHETIC live background (a moving GDI+ picture in my own window, so nothing from the desktop of the user is captured or shown):
+        /// enables UseGpuGlass in the (isolated) settings, shows the strip at the left edge over the stand-in, checks that the glass pane exists and saves a screenshot.
+        /// </summary>
+        public static int TestDeskStripGlass(string folder)
+        {
+            Directory.CreateDirectory(folder);
+            var report = new System.Collections.Generic.List<string>();
+            void Pump(int ms) { var end = DateTime.UtcNow.AddMilliseconds(ms); while (DateTime.UtcNow < end) { Application.DoEvents(); System.Threading.Thread.Sleep(10); } }
+            var settings = AppSettings.Load(); settings.UseGpuGlass = true; settings.Save();
+            var t0 = Stopwatch.StartNew();
+            using var stage = new StageForm { FormBorderStyle = FormBorderStyle.None, StartPosition = FormStartPosition.Manual, Bounds = new Rectangle(0, 0, 1100, 800), TopMost = true, ShowInTaskbar = false, BackColor = Color.FromArgb(5, 7, 13) };
+            stage.Paint += (_, e) =>
+            {
+                var g = e.Graphics; g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias; var t = t0.Elapsed.TotalSeconds;
+                for (int layer = 0; layer < 3; layer++)
+                {
+                    var pts = new System.Collections.Generic.List<PointF>();
+                    for (int x = 0; x <= stage.Width; x += 8) pts.Add(new PointF(x, (float)(stage.Height * (0.45 + layer * 0.13) - 40 * Math.Sin(x * 0.004 + t * (0.8 + layer * 0.3) + layer))));
+                    var poly = new System.Collections.Generic.List<PointF>(pts) { new PointF(stage.Width, stage.Height), new PointF(0, stage.Height) };
+                    using var fill = new SolidBrush(Color.FromArgb(70, 30 + layer * 25, 80 + layer * 30, 160 + layer * 25)); g.FillPolygon(fill, poly.ToArray());
+                    using var pen = new Pen(Color.FromArgb(230, 0, 230, 255), 2.2f); g.DrawLines(pen, pts.ToArray());
+                }
+            };
+            var anim = new System.Windows.Forms.Timer { Interval = 33 }; anim.Tick += (_, _) => stage.Invalidate(); anim.Start();
+            stage.Show(); Pump(800);
+            try
+            {
+                var engine = DeskStripHostEngine.Instance;
+                string sys = Environment.GetFolderPath(Environment.SpecialFolder.System);
+                engine.UpdateSettings(s => { s.Paths = new System.Collections.Generic.List<string> { Path.Combine(sys, "notepad.exe"), Path.Combine(sys, "mspaint.exe"), Path.Combine(sys, "calc.exe") }; s.Position = DockPosition.Left; s.IconSize = 48; s.ShowRunning = false; s.Magnify = true; });
+                engine.Enable();
+                Pump(4000);
+                var m = GlassService.Manager;
+                report.Add("GlassService.Manager ready: " + (m != null));
+                var win = Application.OpenForms.OfType<DeskStripWindow>().FirstOrDefault();
+                report.Add("DeskStripWindow present: " + (win != null) + (win != null ? $" bounds={win.Bounds}" : ""));
+                if (m != null && win != null)
+                {
+                    var st = m.Stats;
+                    report.Add($"glass stats after 4 s live: panes={st.Panes} captures={st.Captures} renders={st.Renders} errors='{st.LastError}'");
+                    GlassService.Hold = true;
+                    m.SetConditions(new Opsis.Glass.GlassConditions { Frozen = true });
+                    Pump(300);
+                    m.SetVisibleToCaptureTools(true); Pump(500);
+                    var r = Rectangle.Intersect(new Rectangle(0, 0, 1100, 800), Rectangle.Inflate(win.Bounds, 180, 180));
+                    using var bmp = new Bitmap(r.Width, r.Height);
+                    using (var g = Graphics.FromImage(bmp)) g.CopyFromScreen(r.Location, Point.Empty, r.Size);
+                    bmp.Save(Path.Combine(folder, "deskstrip-gpu-glass.png"), System.Drawing.Imaging.ImageFormat.Png);
+                    m.SetVisibleToCaptureTools(false); GlassService.Hold = false;
+                    report.Add("screenshot deskstrip-gpu-glass.png saved (stand-in background only)");
+                }
+                engine.Disable(); Pump(500);
+                report.Add("after Disable: panes=" + (GlassService.Manager?.Stats.Panes.ToString() ?? "n/a"));
+            }
+            catch (Exception ex) { report.Add("EXCEPTION: " + ex); }
+            finally { anim.Stop(); GlassService.Shutdown(); }
+            File.WriteAllLines(Path.Combine(folder, "deskstrip-glass.txt"), report);
+            return report.Any(l => l.StartsWith("EXCEPTION")) ? 1 : 0;
+        }
+
+        private sealed class StageForm : Form
+        {
+            public StageForm() { SetStyle(ControlStyles.OptimizedDoubleBuffer | ControlStyles.AllPaintingInWmPaint | ControlStyles.UserPaint, true); }
+            protected override bool ShowWithoutActivation => true;
+        }
+
+        /// <summary>Read-only: which monitors have a fully covered desktop now, and the answer of AppActivity.IsPausedFor after it has polled twice.</summary>
+        public static int TestCovered(string outFile)
+        {
+            var lines = new List<string>();
+            var screens = System.Windows.Forms.Screen.AllScreens;
+            var now = DesktopCoverage.Compute();
+            lines.Add("covered right now (DesktopCoverage.Compute): " + (now.Count == 0 ? "(none)" : string.Join(", ", now)));
+            AppActivity.Start();
+            var end = DateTime.UtcNow.AddSeconds(3.5);
+            while (DateTime.UtcNow < end) { System.Windows.Forms.Application.DoEvents(); System.Threading.Thread.Sleep(50); }
+            foreach (var s in screens)
+                lines.Add($"AppActivity.IsPausedFor({s.DeviceName}) = {AppActivity.IsPausedFor(s)}   (primary={s.Primary}, covered={now.Contains(s.DeviceName)})");
+            lines.Add("AppActivity.Describe: " + AppActivity.Describe());
+            System.IO.File.WriteAllLines(outFile, lines);
+            return 0;
+        }
+
         private static bool _showDesktop;
         [DllImport("user32.dll")] private static extern IntPtr FindWindow(string? cls, string? title);
         [DllImport("user32.dll")] private static extern IntPtr FindWindowEx(IntPtr p, IntPtr a, string? c, string? t);

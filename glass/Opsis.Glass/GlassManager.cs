@@ -72,6 +72,11 @@ public sealed class GlassManager : IDisposable
     public void SetStyle(int id, GlassStyle style) => Post(() => { if (panes.TryGetValue(id, out var p) && gpu != null) p.SetStyle(gpu.D2D, style); backdropChanged = true; });
     /// <summary>For screenshots and screen recordings: while on, the panes are visible to capture tools (and see themselves, so use it only for a moment).</summary>
     public void SetVisibleToCaptureTools(bool on) => Post(() => { foreach (var p in panes.Values) p.SetExcluded(!on); });
+    /// <summary>Keeps pane <paramref name="id"/> directly below the window <paramref name="hwnd"/> in the z-order (the host window draws the content, the pane the glass).</summary>
+    public void PlaceBelow(int id, IntPtr hwnd) => Post(() => { if (panes.TryGetValue(id, out var p)) p.PlaceBelow(hwnd); });
+    public void SetPaneVisible(int id, bool visible) => Post(() => { if (panes.TryGetValue(id, out var p)) p.SetVisible(visible); });
+    /// <summary>True when the GPU devices were created (false = the host should keep its own non-GPU look).</summary>
+    public bool IsGpuReady => gpu != null && !lastError.StartsWith("GPU init", StringComparison.Ordinal);
     public void RemovePane(int id) => Post(() => { if (panes.Remove(id, out var p)) { p.Dispose(); paneCount = panes.Count; } });
 
     /// <summary>The host tells what is true now (tier, live wallpaper, lock, fullscreen ...). Cheap; call it whenever something changes.</summary>
@@ -348,6 +353,7 @@ public sealed class GlassManager : IDisposable
         public void SetStyle(ID2D1DeviceContext dc, GlassStyle s) { style = s; if (swap != null) BuildEffects(dc); Dirty = true; }
         public void MoveTo(Point p) { Bounds = new Rectangle(p, Bounds.Size); Native.SetWindowPos(hwnd, IntPtr.Zero, p.X, p.Y, 0, 0, Native.SWP_NOSIZE | Native.SWP_NOZORDER | Native.SWP_NOACTIVATE); }
         public void SetExcluded(bool exclude) => Native.SetWindowDisplayAffinity(hwnd, exclude ? Native.WDA_EXCLUDEFROMCAPTURE : Native.WDA_NONE);
+        public void PlaceBelow(IntPtr above) => Native.SetWindowPos(hwnd, above, 0, 0, 0, 0, Native.SWP_NOMOVE | Native.SWP_NOSIZE | Native.SWP_NOACTIVATE);
         public void SetVisible(bool v) { if (v == visible) return; visible = v; Native.ShowWindow(hwnd, v ? 4 : 0); if (v) Dirty = true; }
 
         public void Resize(Devices g, Size size)

@@ -84,6 +84,11 @@
     </Reference>
   </ItemGroup>
 
+  <!-- the GPU glass layer of the 2.6.0 core (DeskStrip first): Direct2D / DirectComposition / DXGI duplication through Vortice -->
+  <ItemGroup>
+    <ProjectReference Include="glass\Opsis.Glass\Opsis.Glass.csproj" />
+  </ItemGroup>
+
   <ItemGroup>
     <PackageReference Include="LibreHardwareMonitorLib" Version="0.9.4" />
     <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.2903.40" ExcludeAssets="build;buildTransitive" GeneratePathProperty="true" />

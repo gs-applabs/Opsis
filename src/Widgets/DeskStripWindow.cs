@@ -78,8 +78,17 @@ namespace MotionDesk.Widgets
         private double MaxScale => _s.Magnify && !Low ? 1.5 : 1.0;
         private const int Pad = 10, IndicatorSpace = 12, Gap = 10;
 
+        // 2.6.0 GPU glass: when on, this window is a LAYERED per-pixel-alpha window that only draws icons / dots (transparent background); the glass itself is a pane of
+        // Opsis.Glass directly below it (real transparency, live refraction of what is behind). When off or unavailable everything is as before (DWM blur).
+        private bool _wantGpu;
+        private int _glassPane = -1;
+        private LayeredSurface? _layered;
+        private bool _layeredDirty;
+        private readonly System.Windows.Forms.Timer _layeredTimer = new() { Interval = 8 };
+
         public DeskStripWindow()
         {
+            _wantGpu = !Low && MotionDesk.Services.GlassService.Manager != null;
             MotionDesk.UI.Flicker.Attach(this);
             FormBorderStyle = FormBorderStyle.None;
             StartPosition = FormStartPosition.Manual;
@@ -90,6 +99,7 @@ namespace MotionDesk.Widgets
             SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.UserPaint | ControlStyles.OptimizedDoubleBuffer | ControlStyles.ResizeRedraw, true);
 
             _saveTimer.Tick += (_, _) => { _saveTimer.Stop(); SaveState(); };
+            _layeredTimer.Tick += (_, _) => { if (_layeredDirty) RepaintLayered(); else _layeredTimer.Stop(); };
             _animTimer.Interval = Low ? 33 : 16;
             _animTimer.Tick += (_, _) => AnimateStep();
             _pollTimer = new System.Windows.Forms.Timer { Interval = Low ? 3500 : 1500 };
@@ -304,6 +314,7 @@ namespace MotionDesk.Widgets
 
         private void UpdateRegion()
         {
+            if (_wantGpu) return;   // the alpha of the layered window and the pane give the rounded shape
             try { using var p = MotionDesk.UI.UiTheme.RoundedPath(new Rectangle(0, 0, Width, Height), 20); Region = new Region(p); } catch (Exception) { }
         }
 
@@ -382,11 +393,45 @@ namespace MotionDesk.Widgets
         }
 
         // ---- ζωγραφική --------------------------------------------------------------------------------------------
-        protected override void OnPaint(PaintEventArgs e)
+        protected override void OnPaint(PaintEventArgs e) { if (!_wantGpu) PaintStrip(e.Graphics, glass: false); }
+
+        // ---- GPU glass: layered painting ---------------------------------------------------------------------------
+        protected override void OnInvalidated(InvalidateEventArgs e)
         {
-            var g = e.Graphics;
+            base.OnInvalidated(e);
+            if (!_wantGpu) return;
+            _layeredDirty = true;
+            if (!_layeredTimer.Enabled) _layeredTimer.Start();   // coalesce: at most one repaint per 8 ms
+        }
+
+        private void RepaintLayered()
+        {
+            if (!_wantGpu || !IsHandleCreated || IsDisposed || !Visible || Width <= 0 || Height <= 0) return;
+            _layeredDirty = false;
+            _layered ??= new LayeredSurface();
+            using (var g = _layered.Begin(Width, Height)) PaintStrip(g, glass: true);
+            _layered.Present(Handle, Location);
+        }
+
+        private void SyncGlassPane()
+        {
+            var m = MotionDesk.Services.GlassService.Manager;
+            if (!_wantGpu || m == null || !IsHandleCreated) return;
+            if (_glassPane < 0) _glassPane = m.AddPane(Bounds, MotionDesk.Services.GlassService.Style(20), clickThrough: true);
+            else { m.MovePane(_glassPane, Location); m.ResizePane(_glassPane, Size); }
+            m.PlaceBelow(_glassPane, Handle);
+            m.SetPaneVisible(_glassPane, Visible);
+        }
+
+        protected override void OnLocationChanged(EventArgs e) { base.OnLocationChanged(e); if (_wantGpu) { SyncGlassPane(); _layeredDirty = true; } }
+        protected override void OnSizeChanged(EventArgs e) { base.OnSizeChanged(e); if (_wantGpu) { SyncGlassPane(); _layeredDirty = true; } }
+        protected override void OnVisibleChanged(EventArgs e) { base.OnVisibleChanged(e); if (_wantGpu) { SyncGlassPane(); _layeredDirty = true; if (!_layeredTimer.Enabled) _layeredTimer.Start(); } }
+
+        private void PaintStrip(Graphics g, bool glass)
+        {
             g.SmoothingMode = SmoothingMode.AntiAlias;
             g.InterpolationMode = InterpolationMode.HighQualityBicubic;
+            if (!glass)   // with GPU glass the pane below draws the tint, the refraction and the rim
             using (var bgPath = MotionDesk.UI.UiTheme.RoundedPath(new Rectangle(0, 0, Width - 1, Height - 1), 20))
             {
                 using var tint = new SolidBrush(Color.FromArgb(Low ? 215 : 70, 24, 26, 34));
@@ -648,10 +693,20 @@ namespace MotionDesk.Widgets
             if (_s.Paths.RemoveAll(p => string.Equals(p, path, StringComparison.OrdinalIgnoreCase)) > 0) { SyncItems(); ApplyLayout(true); QueueSave(); }
         }
 
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                _layeredTimer.Stop(); _layeredTimer.Dispose(); _layered?.Dispose();
+                if (_glassPane >= 0) { MotionDesk.Services.GlassService.Manager?.RemovePane(_glassPane); _glassPane = -1; }
+            }
+            base.Dispose(disposing);
+        }
+
         // ---- παράθυρο: blur, DPI ----------------------------------------------------------------------------------
         protected override CreateParams CreateParams
         {
-            get { var cp = base.CreateParams; cp.ExStyle |= 0x08000000 /*WS_EX_NOACTIVATE*/ | 0x80 /*TOOLWINDOW: όχι Alt-Tab*/; return cp; }
+            get { var cp = base.CreateParams; cp.ExStyle |= 0x08000000 /*WS_EX_NOACTIVATE*/ | 0x80 /*TOOLWINDOW: όχι Alt-Tab*/ | (_wantGpu ? 0x00080000 /*WS_EX_LAYERED: GPU glass mode*/ : 0); return cp; }
         }
 
         protected override bool ShowWithoutActivation => true;
@@ -659,6 +714,7 @@ namespace MotionDesk.Widgets
         protected override void OnHandleCreated(EventArgs e)
         {
             base.OnHandleCreated(e);
+            if (_wantGpu) { SyncGlassPane(); return; }
             ApplyBlur();
         }
 

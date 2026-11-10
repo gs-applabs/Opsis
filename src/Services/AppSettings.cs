@@ -143,6 +143,9 @@ namespace MotionDesk.Services
         /// <summary>2.6.0: pause the live wallpaper on a monitor whose desktop is fully covered by an opaque window (nothing to see, nothing to render). No quality loss.</summary>
         public bool PauseWhenDesktopCovered { get; set; } = true;
 
+        /// <summary>2.6.0: draw the DeskStrip glass with the GPU glass layer (Opsis.Glass): real transparency, live refraction of what is behind. Off until tested on real machines.</summary>
+        public bool UseGpuGlass { get; set; }
+
         /// <summary>2.6.0: the shared Glass theme choices (Opsis.UI.GlassSettings): Solid by default.</summary>
         public GlassSettings Glass { get; set; } = new();
 

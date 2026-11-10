@@ -1,0 +1,3 @@
+covered right now (DesktopCoverage.Compute): \\.\DISPLAY1
+AppActivity.IsPausedFor(\\.\DISPLAY1) = True   (primary=True, covered=True)
+AppActivity.Describe: fullscreen=False(-) locked=False remote=False batterySaver=False screensaver=False highLoad=False

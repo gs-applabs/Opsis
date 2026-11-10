@@ -4455,6 +4455,8 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                     v => { var a = AppSettings.Load(); a.UiSoundsEnabled = v; a.Save(); }));
                 var appearanceAdvanced = new AdvancedSection();
                 appearanceAdvanced.AddControl(BuildOpacityRow());
+                appearanceAdvanced.AddControl(Checkbox(LocalizationManager.T("Settings.GpuGlass"), AppSettings.Load().UseGpuGlass,
+                    v => { var a = AppSettings.Load(); a.UseGpuGlass = v; a.Save(); }, LocalizationManager.T("Settings.GpuGlassDesc"), restart: true));
                 appearanceAdvanced.AddControl(BuildDarkIntensityRow());
                 appearance.Add(appearanceAdvanced);
 

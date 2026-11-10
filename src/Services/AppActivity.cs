@@ -30,6 +30,10 @@ public static class AppActivity
 
     /// <summary>True όταν υπάρχει οποιοσδήποτε λόγος παύσης (fullscreen, lock, RDP, battery saver).</summary>
     public static bool IsFullscreenAppActive { get; private set; }
+
+    /// <summary>2.6.0: the individual reasons, for the glass layer (it suspends on lock / remote / fullscreen and lowers its rate on battery saver).</summary>
+    public readonly record struct ActivitySnapshot(bool Locked, bool Remote, bool Fullscreen, bool BatterySaver);
+    public static ActivitySnapshot Snapshot => new(_locked, _remote, _fullscreen, _batterySaver);
     public static event Action<bool>? FullscreenChanged;
 
     public static string Describe() =>

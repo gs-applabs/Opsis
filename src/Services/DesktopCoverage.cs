@@ -20,32 +20,45 @@ namespace MotionDesk.Services
 
         private static readonly string[] ShellClasses = { "Progman", "WorkerW", "Shell_TrayWnd", "Shell_SecondaryTrayWnd", "NotifyIconOverflowWindow", "TopLevelWindowForOverflowXamlIsland", "XamlExplorerHostIslandWindow", "Windows.UI.Core.CoreWindow" };
 
+        /// <summary>What the covering decision needs to know about one top-level window.</summary>
+        internal readonly record struct WinInfo(Rectangle Rect, uint Pid, bool Visible, bool Minimized, bool Cloaked, long ExStyle, string Class);
+
+        /// <summary>
+        /// The pure decision: windows in z-order from the top; a monitor is covered when an opaque, visible, not-ours window covers its whole work area.
+        /// (Windows above it do not matter: if the covering window is below a small popup, the desktop is still not visible.)
+        /// </summary>
+        internal static HashSet<string> Evaluate(IEnumerable<WinInfo> topToBottom, IReadOnlyDictionary<string, Rectangle> workAreas, uint ownPid)
+        {
+            var covered = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var remaining = new Dictionary<string, Rectangle>(workAreas, StringComparer.OrdinalIgnoreCase);
+            foreach (var w in topToBottom)
+            {
+                if (remaining.Count == 0) break;
+                if (!w.Visible || w.Minimized || w.Cloaked || w.Pid == ownPid) continue;
+                if ((w.ExStyle & (0x80 /*TOOLWINDOW*/ | 0x20 /*TRANSPARENT*/ | 0x80000 /*LAYERED*/)) != 0) continue;
+                if (Array.IndexOf(ShellClasses, w.Class) >= 0) continue;
+                foreach (var kv in remaining.ToArray())
+                    if (Covers(w.Rect, kv.Value)) { covered.Add(kv.Key); remaining.Remove(kv.Key); }
+            }
+            return covered;
+        }
+
         /// <summary>The device names of the monitors whose desktop is covered right now.</summary>
         public static HashSet<string> Compute()
         {
             var screens = Screen.AllScreens;
-            var covered = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            var remaining = screens.ToDictionary(s => s.DeviceName, s => s.WorkingArea, StringComparer.OrdinalIgnoreCase);
-            var pid = (uint)Environment.ProcessId;
-
+            var wins = new List<WinInfo>();
             EnumWindows((h, _) =>
             {
-                if (remaining.Count == 0) return false;
-                if (!IsWindowVisible(h) || IsIconic(h)) return true;
+                if (!IsWindowVisible(h)) return true;
                 GetWindowThreadProcessId(h, out var wpid);
-                if (wpid == pid) return true;
-                var ex = GetWindowLong(h, -20);
-                if ((ex & (0x80 /*TOOLWINDOW*/ | 0x20 /*TRANSPARENT*/ | 0x80000 /*LAYERED*/)) != 0) return true;
-                if (DwmGetWindowAttribute(h, 14 /*CLOAKED*/, out int cloaked, 4) == 0 && cloaked != 0) return true;
                 var cls = new System.Text.StringBuilder(64); GetClassName(h, cls, 64);
-                if (Array.IndexOf(ShellClasses, cls.ToString()) >= 0) return true;
+                var cloaked = DwmGetWindowAttribute(h, 14 /*CLOAKED*/, out int c, 4) == 0 && c != 0;
                 if (DwmGetWindowAttribute(h, 9 /*EXTENDED_FRAME_BOUNDS*/, out RECT r, Marshal.SizeOf<RECT>()) != 0 && !GetWindowRect(h, out r)) return true;
-                var rect = Rectangle.FromLTRB(r.l, r.t, r.r, r.b);
-                foreach (var kv in remaining.ToArray())
-                    if (Covers(rect, kv.Value)) { covered.Add(kv.Key); remaining.Remove(kv.Key); }
+                wins.Add(new WinInfo(Rectangle.FromLTRB(r.l, r.t, r.r, r.b), wpid, true, IsIconic(h), cloaked, GetWindowLong(h, -20), cls.ToString()));
                 return true;
             }, IntPtr.Zero);
-            return covered;
+            return Evaluate(wins, screens.ToDictionary(sc => sc.DeviceName, sc => sc.WorkingArea, StringComparer.OrdinalIgnoreCase), (uint)Environment.ProcessId);
         }
 
         [StructLayout(LayoutKind.Sequential)] private struct RECT { public int l, t, r, b; }
@@ -68,5 +81,8 @@ namespace MotionDesk.Services
     public static class DesktopCoverageTestAccess
     {
         public static bool Covers(System.Drawing.Rectangle window, System.Drawing.Rectangle workArea) => DesktopCoverage.Covers(window, workArea);
+
+        public static string[] Evaluate(IEnumerable<(System.Drawing.Rectangle Rect, uint Pid, bool Minimized, bool Cloaked, long ExStyle, string Class)> topToBottom, IDictionary<string, System.Drawing.Rectangle> workAreas, uint ownPid) =>
+            DesktopCoverage.Evaluate(topToBottom.Select(w => new DesktopCoverage.WinInfo(w.Rect, w.Pid, true, w.Minimized, w.Cloaked, w.ExStyle, w.Class)), new Dictionary<string, System.Drawing.Rectangle>(workAreas), ownPid).OrderBy(x => x).ToArray();
     }
 }

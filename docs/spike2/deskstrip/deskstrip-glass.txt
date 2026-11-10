@@ -1,0 +1,5 @@
+GlassService.Manager ready: True
+DeskStripWindow present: True bounds={X=8,Y=623,Width=104,Height=146}
+glass stats after 4 s live: panes=1 captures=51 renders=51 errors=''
+screenshot deskstrip-gpu-glass.png saved (stand-in background only)
+after Disable: panes=0
