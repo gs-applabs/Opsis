@@ -79,6 +79,64 @@ namespace MotionDesk.Services
             return report.Any(l => l.StartsWith("EXCEPTION")) ? 1 : 0;
         }
 
+        /// <summary>
+        /// GPU glass behind a see-through WIDGET (Transparent mode, no tint = colour key) over a synthetic moving background in my own window (nothing from the desktop of the user is captured).
+        /// Settings are changed in the (isolated) data folder only. Saves a screenshot with and without the pane and a report.
+        /// </summary>
+        public static int TestWidgetGlass(string folder)
+        {
+            Directory.CreateDirectory(folder);
+            var report = new System.Collections.Generic.List<string>();
+            void Pump(int ms) { var end = DateTime.UtcNow.AddMilliseconds(ms); while (DateTime.UtcNow < end) { Application.DoEvents(); System.Threading.Thread.Sleep(10); } }
+            var settings = AppSettings.Load(); settings.UseGpuGlass = true; settings.WidgetsThemeMode = "Transparent"; settings.WidgetsTintPercent = 0; settings.Save();
+            var t0 = Stopwatch.StartNew();
+            using var stage = new StageForm { FormBorderStyle = FormBorderStyle.None, StartPosition = FormStartPosition.Manual, Bounds = new Rectangle(0, 0, 900, 600), TopMost = true, ShowInTaskbar = false, BackColor = Color.FromArgb(5, 7, 13) };
+            stage.Paint += (_, e) =>
+            {
+                var g = e.Graphics; g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias; var t = t0.Elapsed.TotalSeconds;
+                for (int layer = 0; layer < 3; layer++)
+                {
+                    var pts = new System.Collections.Generic.List<PointF>();
+                    for (int x = 0; x <= stage.Width; x += 8) pts.Add(new PointF(x, (float)(stage.Height * (0.45 + layer * 0.13) - 40 * Math.Sin(x * 0.004 + t * (0.8 + layer * 0.3) + layer))));
+                    var poly = new System.Collections.Generic.List<PointF>(pts) { new PointF(stage.Width, stage.Height), new PointF(0, stage.Height) };
+                    using var fill = new SolidBrush(Color.FromArgb(70, 30 + layer * 25, 80 + layer * 30, 160 + layer * 25)); g.FillPolygon(fill, poly.ToArray());
+                    using var pen = new Pen(Color.FromArgb(230, 0, 230, 255), 2.2f); g.DrawLines(pen, pts.ToArray());
+                }
+            };
+            var anim = new System.Windows.Forms.Timer { Interval = 33 }; anim.Tick += (_, _) => stage.Invalidate(); anim.Start();
+            stage.Show(); Pump(800);
+            try
+            {
+                var w = WidgetHostEngine.Instance.SpawnWidget("Clock", 260, 250, 300, 200);
+                w.TopMost = true; w.BringToFront();
+                Pump(4000);
+                var m = GlassService.Manager;
+                report.Add("GlassService.Manager ready: " + (m != null));
+                report.Add($"widget bounds={w.Bounds} visible={w.Visible} transparencyKey={w.TransparencyKey}");
+                if (m != null)
+                {
+                    var st = m.Stats;
+                    report.Add($"glass stats after 4 s live: panes={st.Panes} captures={st.Captures} renders={st.Renders} errors='{st.LastError}'");
+                    GlassService.Hold = true;
+                    m.SetConditions(new Opsis.Glass.GlassConditions { Frozen = true });
+                    Pump(300);
+                    m.SetVisibleToCaptureTools(true); Pump(500);
+                    var r = Rectangle.Intersect(new Rectangle(0, 0, 900, 600), Rectangle.Inflate(w.Bounds, 120, 120));
+                    using var bmp = new Bitmap(r.Width, r.Height);
+                    using (var g = Graphics.FromImage(bmp)) g.CopyFromScreen(r.Location, Point.Empty, r.Size);
+                    bmp.Save(Path.Combine(folder, "widget-gpu-glass.png"), System.Drawing.Imaging.ImageFormat.Png);
+                    m.SetVisibleToCaptureTools(false); GlassService.Hold = false;
+                    report.Add("screenshot widget-gpu-glass.png saved (stand-in background only)");
+                }
+                w.Close(); Pump(500);
+                report.Add("after close: panes=" + (GlassService.Manager?.Stats.Panes.ToString() ?? "n/a"));
+            }
+            catch (Exception ex) { report.Add("EXCEPTION: " + ex); }
+            finally { anim.Stop(); GlassService.Shutdown(); }
+            File.WriteAllLines(Path.Combine(folder, "widget-glass.txt"), report);
+            return report.Any(l => l.StartsWith("EXCEPTION")) ? 1 : 0;
+        }
+
         private sealed class StageForm : Form
         {
             public StageForm() { SetStyle(ControlStyles.OptimizedDoubleBuffer | ControlStyles.AllPaintingInWmPaint | ControlStyles.UserPaint, true); }

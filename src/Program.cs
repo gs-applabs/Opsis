@@ -84,6 +84,13 @@ namespace MotionDesk
                 return;
             }
 
+            if (args.Length == 2 && args[0] == "--test-widget-glass")
+            {
+                ApplicationConfiguration.Initialize();
+                Environment.Exit(Services.DesktopDiagnostics.TestWidgetGlass(args[1]));
+                return;
+            }
+
             if (args.Length == 2 && args[0] == "--test-covered")
             {
                 ApplicationConfiguration.Initialize();

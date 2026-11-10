@@ -770,8 +770,17 @@ namespace MotionDesk.Widgets
             return panel;
         }
 
+        // 2.6.0 GPU glass behind a see-through widget: only when the widget is in "Transparent" mode WITHOUT a tint (the colour key makes the form see-through) and UseGpuGlass is on.
+        private MotionDesk.Services.GlassPaneBinder? _glassPane;
+        private void EnsureGlassPane()
+        {
+            if (_glassPane != null || IsDisposed) return;
+            _glassPane = new MotionDesk.Services.GlassPaneBinder(this, 12, () => MotionDesk.Services.GlassService.Enabled && UiTheme.IsFullyTransparent && UiTheme.IsColorKey);
+        }
+
         private void ApplyRoundedShell()
         {
+            EnsureGlassPane();
             if (Width > 0 && Height > 0) UiTheme.ApplyRoundedRegion(this, 12);
             ApplyGlassBlur();
             GlassBlur.DisableNativeBorderAccent(Handle);

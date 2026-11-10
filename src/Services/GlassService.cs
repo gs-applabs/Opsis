@@ -102,6 +102,47 @@ namespace MotionDesk.Services
     }
 
     /// <summary>
+    /// Keeps an Opsis.Glass pane directly below a see-through form (a widget in "Transparent" mode with the colour key): add / move / resize / show / hide / remove follow the form.
+    /// <c>wants</c> decides when the pane should exist (setting on, form see-through); it is re-evaluated on theme and setting changes.
+    /// </summary>
+    internal sealed class GlassPaneBinder : IDisposable
+    {
+        private readonly Form _f; private readonly int _radius; private readonly Func<bool> _wants; private int _id = -1; private bool _disposed;
+        // a widget changes its z-order without any event of ours (TopMost, BringToFront, another topmost window): re-seat the pane below it twice a second
+        private readonly System.Windows.Forms.Timer _reseat = new() { Interval = 500 };
+
+        public GlassPaneBinder(Form form, int cornerRadius, Func<bool> wants)
+        {
+            _f = form; _radius = cornerRadius; _wants = wants;
+            form.HandleCreated += (_, _) => Sync();
+            form.LocationChanged += (_, _) => Sync();
+            form.SizeChanged += (_, _) => Sync();
+            form.VisibleChanged += (_, _) => Sync();
+            form.Disposed += (_, _) => Dispose();
+            MotionDesk.UI.ThemeManager.Changed += OnTheme;
+            _reseat.Tick += (_, _) => { if (_id >= 0 && !_f.IsDisposed && _f.Visible) GlassService.Manager?.PlaceBelow(_id, _f.Handle); };
+        }
+
+        private void OnTheme() { if (_disposed || _f.IsDisposed) return; if (_f.InvokeRequired) { try { _f.BeginInvoke(new Action(Sync)); } catch (InvalidOperationException) { } } else Sync(); }
+
+        public void Sync()
+        {
+            if (_disposed || _f.IsDisposed || !_f.IsHandleCreated) return;
+            var m = _wants() ? GlassService.Manager : null;
+            if (m == null) { Remove(); return; }
+            if (_id < 0) _id = m.AddPane(_f.Bounds, GlassService.Style(_radius), clickThrough: true);
+            else { m.MovePane(_id, _f.Location); m.ResizePane(_id, _f.Size); }
+            m.PlaceBelow(_id, _f.Handle);
+            m.SetPaneVisible(_id, _f.Visible);
+            if (!_reseat.Enabled) _reseat.Start();
+        }
+
+        private void Remove() { _reseat.Stop(); if (_id >= 0) { GlassService.Manager?.RemovePane(_id); _id = -1; } }
+
+        public void Dispose() { if (_disposed) return; _disposed = true; MotionDesk.UI.ThemeManager.Changed -= OnTheme; Remove(); _reseat.Dispose(); }
+    }
+
+    /// <summary>
     /// A 32-bit premultiplied-alpha surface for a layered window (UpdateLayeredWindow): the window draws into <see cref="Begin"/>'s Graphics and calls <see cref="Present"/>.
     /// One DIB section reused for every frame; re-created only when the size changes.
     /// </summary>
