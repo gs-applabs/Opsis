@@ -85,7 +85,7 @@ Portable build outside the repo + `docs/TRY-NATIVE-CONTAINERS.md` (Greek). Rescu
 | 11 | Βίντεο: drag & drop σειράς | ✓ (καθαρή λογική + 8 tests, UI με γραμμή πτώσης και αυτόματο scroll· ⛔ χειροκίνητη δοκιμή drag με το ποντίκι) |
 | 12 | Βίντεο: RAM 16 βίντεο ~3 GB → ~850 MB | ☐ χρειάζεται μέτρηση |
 | 13 | «Προεπιλεγμένη εμφάνιση plugins» → διαγραφή (2.1.1) | ✓ (η σειρά αφαιρέθηκε από τις ρυθμίσεις· τα plugins ακολουθούν πάντα το θέμα Opsis) |
-| 14 | Distinctive εικονίδιο καρτέλας plugin (γενικός μηχανισμός) | ☐ (επόμενο) |
+| 14 | Distinctive εικονίδιο καρτέλας plugin (γενικός μηχανισμός) | ✓ `PluginIconChooser`: γνωστά θέματα → δικό τους εικονίδιο, κάθε άλλο plugin → πλακίδιο με το δικό του γράμμα (⛔ οπτικός έλεγχος) |
 | 15 | Ενημερώσεις plugins μόνο από το κουμπί του Opsis | ☐ |
 | 16 | Κοινές ρυθμίσεις Opsis↔plugins μόνο στο Opsis | ☐ φάση P |
 | 17 | Theme packs: duplicate με Appearance; Εξατομίκευση Plus | ☐ χρειάζεται το plugin Appearance για σύγκριση |
