@@ -1367,8 +1367,39 @@ namespace MotionDesk.UI
             var videoListPanel = new Panel { Width = 720, Height = Math.Min(300, Math.Max(50, settings.VideoPaths.Count * 46 + 10)), Margin = new Padding(0, 0, 0, 10), AutoScroll = true, BackColor = UiTheme.Surface };
             GlassBlur.ApplyScrollbarTheme(videoListPanel, UiTheme.Surface.GetBrightness() < 0.5f);
             int rowY = 4;
+            // drag and drop of the playback order: press on a row (name / thumbnail), drag up or down, a cyan line shows where it will land
+            const int VideoRowStep = 46;
+            int dropLineY = -1;
+            int InsertIndexAt(Point clientPt) => Math.Clamp((clientPt.Y - 4 + VideoRowStep / 2) / VideoRowStep, 0, settings.VideoPaths.Count);
+            DragEventHandler vEnter = (_, de) => de.Effect = de.Data?.GetDataPresent("Opsis.VideoRow") == true ? DragDropEffects.Move : DragDropEffects.None;
+            DragEventHandler vOver = (_, de) =>
+            {
+                de.Effect = de.Data?.GetDataPresent("Opsis.VideoRow") == true ? DragDropEffects.Move : DragDropEffects.None;
+                var pt = videoListPanel.PointToClient(new Point(de.X, de.Y));
+                var y = 4 + InsertIndexAt(pt) * VideoRowStep - 2 + videoListPanel.AutoScrollPosition.Y;
+                if (y != dropLineY) { dropLineY = y; videoListPanel.Invalidate(true); }
+                if (pt.Y < 24) videoListPanel.AutoScrollPosition = new Point(0, -videoListPanel.AutoScrollPosition.Y - 20);
+                else if (pt.Y > videoListPanel.Height - 24) videoListPanel.AutoScrollPosition = new Point(0, -videoListPanel.AutoScrollPosition.Y + 20);
+            };
+            EventHandler vLeave = (_, _) => { dropLineY = -1; videoListPanel.Invalidate(true); };
+            DragEventHandler vDrop = (_, de) =>
+            {
+                dropLineY = -1;
+                if (de.Data?.GetData("Opsis.VideoRow") is int from)
+                {
+                    var pt = videoListPanel.PointToClient(new Point(de.X, de.Y));
+                    pt.Y -= videoListPanel.AutoScrollPosition.Y;
+                    WallpaperHostEngine.Instance.MoveVideo(from, InsertIndexAt(pt));
+                    ShowWallpaper();
+                }
+            };
+            void AttachDrop(Control c) { c.AllowDrop = true; c.DragEnter += vEnter; c.DragOver += vOver; c.DragLeave += vLeave; c.DragDrop += vDrop; }
+            AttachDrop(videoListPanel);
+            videoListPanel.Paint += (_, pe) => { if (dropLineY >= 0) using (var br = new SolidBrush(UiTheme.AccentCyan)) pe.Graphics.FillRectangle(br, 4, dropLineY, 700, 3); };
+            int videoIndex = 0;
             foreach (var videoPath in settings.VideoPaths.ToArray())
             {
+                int myIndex = videoIndex++;
                 bool exists = File.Exists(videoPath);
                 var row = new Panel { Location = new Point(4, rowY), Size = new Size(700, 42), BackColor = UiTheme.Surface };
                 // Ζητήθηκε ρητά "να επιλέγει ο χρήστης 1 ή περισσότερα βίντεο για να
@@ -1412,9 +1443,22 @@ namespace MotionDesk.UI
                 removeBtn.MouseLeave += (_, _) => { removeHot = false; removeBtn.Invalidate(); };
                 removeBtn.Click += (_, _) => { WallpaperHostEngine.Instance.RemoveVideo(videoPath); ShowWallpaper(); };
                 nameLabel.Click += (_, _) => enabledCheck.Checked = !enabledCheck.Checked;
+                Point pressAt = Point.Empty; bool pressed = false;
+                void StartDrag(object? s, MouseEventArgs me) { pressed = me.Button == MouseButtons.Left; pressAt = me.Location; }
+                void MaybeDrag(object? s, MouseEventArgs me)
+                {
+                    if (!pressed || (me.Button & MouseButtons.Left) == 0) return;
+                    if (Math.Abs(me.X - pressAt.X) < SystemInformation.DragSize.Width && Math.Abs(me.Y - pressAt.Y) < SystemInformation.DragSize.Height) return;
+                    pressed = false;
+                    var data = new DataObject(); data.SetData("Opsis.VideoRow", myIndex);
+                    ((Control)s!).DoDragDrop(data, DragDropEffects.Move);
+                }
+                nameLabel.MouseDown += StartDrag; nameLabel.MouseMove += MaybeDrag; nameLabel.MouseUp += (_, _) => pressed = false;
                 // thumbnail (Windows Shell) + duration (FFmpeg, if present) — loaded in the background, the row never waits for them
                 var thumb = new PictureBox { Location = new Point(28, 3), Size = new Size(68, 36), SizeMode = PictureBoxSizeMode.Zoom, BackColor = UiTheme.Background, Cursor = Cursors.Hand };
                 thumb.Click += (_, _) => enabledCheck.Checked = !enabledCheck.Checked;
+                thumb.MouseDown += StartDrag; thumb.MouseMove += MaybeDrag; thumb.MouseUp += (_, _) => pressed = false;
+                foreach (var dc in new Control[] { row, enabledCheck, thumb, nameLabel, removeBtn }) AttachDrop(dc);
                 var durationLabel = new Label { Text = "", AutoSize = false, Size = new Size(60, 28), Location = new Point(604, 7), TextAlign = ContentAlignment.MiddleRight, ForeColor = UiTheme.TextMuted, Font = UiTheme.FontBody };
                 if (exists) _ = LoadVideoRowMetaAsync(videoPath, thumb, durationLabel);
                 row.Controls.Add(enabledCheck);

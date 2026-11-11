@@ -1645,6 +1645,16 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Count);
             RefreshAllDebounced();
         }
 
+        /// <summary>Drag and drop order of the video library (plan 2.1.9). The current video stays the current one; playback is not restarted.</summary>
+        public void MoveVideo(int from, int insertBefore)
+        {
+            var settings = WallpaperSettings.Load();
+            var current = settings.CurrentPlaylistFile();
+            if (!PlaylistOrder.Move(settings.VideoPaths, from, insertBefore)) return;
+            settings.KeepCurrentVideo(current);
+            settings.Save();
+        }
+
         public void RemoveVideo(string path)
         {
             var settings = WallpaperSettings.Load();

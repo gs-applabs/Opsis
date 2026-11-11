@@ -82,7 +82,7 @@ Portable build outside the repo + `docs/TRY-NATIVE-CONTAINERS.md` (Greek). Rescu
 | 8 | DeskContainers / DeskStrip σε δική τους καρτέλα | ✓ |
 | 9 | Αποσυμφόρηση ρυθμίσεων, UiScale, WindowMemory, αναζήτηση, Advanced (2.1.8) | ◐ Ρυθμίσεις+Θέμα έτοιμες· Wallpaper/Εξατομίκευση/Audio/DeskZones/Widgets ☐ (χρειάζονται screenshots/έλεγχο ανά σελίδα) |
 | 10 | Βίντεο: Prev/Pause/Next, μικρότερα κουμπιά στην ίδια ευθεία (2.1.9) | ✓ |
-| 11 | Βίντεο: drag & drop σειράς | ☐ (επόμενο) |
+| 11 | Βίντεο: drag & drop σειράς | ✓ (καθαρή λογική + 8 tests, UI με γραμμή πτώσης και αυτόματο scroll· ⛔ χειροκίνητη δοκιμή drag με το ποντίκι) |
 | 12 | Βίντεο: RAM 16 βίντεο ~3 GB → ~850 MB | ☐ χρειάζεται μέτρηση |
 | 13 | «Προεπιλεγμένη εμφάνιση plugins» → διαγραφή (2.1.1) | ✓ (η σειρά αφαιρέθηκε από τις ρυθμίσεις· τα plugins ακολουθούν πάντα το θέμα Opsis) |
 | 14 | Distinctive εικονίδιο καρτέλας plugin (γενικός μηχανισμός) | ☐ (επόμενο) |
