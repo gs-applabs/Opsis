@@ -51,6 +51,27 @@ namespace MotionDesk
             // prints which monitors are covered right now and what AppActivity says after its two-sample hysteresis.
             // 2.6.0 control channel of the new DeskContainers core (design doc phase 4/5): `Opsis.exe --containers <cmd> [json-args]` talks to the named pipe;
             // `Opsis.exe --containers-serve <data-file>` serves the pipe from that data file until a key is pressed (used for tests before the engine exists).
+            // Rescue: puts the desktop icons back from the state file of THIS data folder (OPSIS_APPDATA or the normal AppData\Opsis), then exits. Safe to run any time, also when nothing is hidden.
+            if (args.Length == 1 && args[0] == "--restore-desktop-icons")
+            {
+                AttachConsole(-1);
+                Widgets.DesktopIconVisibilityEngine.Instance.RestoreIfHidden();
+                Console.WriteLine("restore-desktop-icons: done (data folder: " + Services.AppPaths.AppDataFolder + ")");
+                Environment.Exit(0);
+                return;
+            }
+            if (args.Length == 2 && args[0] == "--test-icons-dump")
+            {
+                System.IO.File.WriteAllLines(args[1], Widgets.DesktopIconVisibilityEngine.DumpPositions());
+                Environment.Exit(0);
+                return;
+            }
+            if (args.Length == 1 && args[0] == "--test-icons-hide-and-die")
+            {
+                Widgets.DesktopIconVisibilityEngine.Instance.HideForTest();
+                System.Diagnostics.Process.GetCurrentProcess().Kill();   // simulates a crash / kill: no Stop(), no cleanup
+                return;
+            }
             if (args.Length >= 2 && args[0] == "--containers")
             {
                 AttachConsole(-1);   // Opsis.exe is a Windows-subsystem program: show the answer in the console that started it

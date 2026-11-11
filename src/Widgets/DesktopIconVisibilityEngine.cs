@@ -175,6 +175,25 @@ namespace MotionDesk.Widgets
             if (File.Exists(StateFilePath)) RestoreIfHidden();
         }
 
+        /// <summary>Rescue / test helpers (2.6.0 beta). DumpPositions is read-only: one line "name TAB x TAB y" per desktop icon.</summary>
+        public static List<string> DumpPositions()
+        {
+            var lines = new List<string>();
+            IntPtr list = FindDesktopListView(); if (list == IntPtr.Zero) return lines;
+            GetWindowThreadProcessId(list, out uint pid);
+            IntPtr hp = OpenProcess(PROCESS_VM_OPERATION | PROCESS_VM_READ | PROCESS_VM_WRITE, false, pid); if (hp == IntPtr.Zero) return lines;
+            try
+            {
+                int count = SendMessage(list, LVM_GETITEMCOUNT, IntPtr.Zero, IntPtr.Zero).ToInt32();
+                for (int i = 0; i < count; i++) { var p = GetItemPositionRemote(hp, list, i); lines.Add(GetItemTextRemote(hp, list, i) + "\t" + p.X + "\t" + p.Y); }
+            }
+            finally { CloseHandle(hp); }
+            return lines;
+        }
+
+        /// <summary>Test only: hides the icons exactly like the double-click gesture does (state file written), without any hook.</summary>
+        public void HideForTest() { var l = FindDesktopListView(); if (l != IntPtr.Zero && !_hidden) ToggleDesktopIcons(l); }
+
         // Επαναφέρει τα κρυμμένα εικονίδια (αν υπάρχουν) — καλείται στην έξοδο και στην εκκίνηση.
         public void RestoreIfHidden()
         {
