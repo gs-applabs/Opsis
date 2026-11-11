@@ -7,30 +7,92 @@ using Opsis.Containers;
 
 namespace MotionDesk.Containers
 {
-    /// <summary>Icons for the container grid: extracted once per (path, size) into a BOUNDED cache of bitmaps (disposed when evicted).</summary>
+    /// <summary>
+    /// Icons for the container grid. Extraction (shell calls, can block on network drives) NEVER runs on the UI thread: <see cref="Get"/> returns a cheap placeholder at once and queues the
+    /// path on one background worker; finished bitmaps are inserted into the BOUNDED cache on the UI thread only (so eviction/dispose never races with painting) and <see cref="Loaded"/> asks for a repaint.
+    /// </summary>
     internal sealed class ContainerIcons : IDisposable
     {
         private readonly BoundedCache<(string, int), Bitmap> _cache = new(256);
+        private readonly System.Collections.Concurrent.ConcurrentQueue<((string, int) Key, Bitmap Bmp)> _done = new();
+        private readonly HashSet<(string, int)> _pending = new();
+        private readonly System.Collections.Concurrent.BlockingCollection<(string, int)> _work = new(new System.Collections.Concurrent.ConcurrentQueue<(string, int)>(), 512);
+        private readonly Dictionary<int, Bitmap> _placeholders = new();
+        private readonly System.Threading.CancellationTokenSource _cts = new();
+        private System.Threading.SynchronizationContext? _ui;   // captured on the first Get (UI thread)
+        private int _wake;
+        private Task? _worker;
+
+        /// <summary>Raised on the UI thread after new icons are ready (the window repaints).</summary>
+        public event Action? Loaded;
+        public int PendingCount => _pending.Count;
 
         public Bitmap Get(string path, int size)
         {
-            return _cache.GetOrAdd((path, size), key =>
+            _ui ??= System.Threading.SynchronizationContext.Current;
+            Drain();
+            var key = (path, size);
+            if (_cache.TryGet(key, out var hit)) return hit;
+            if (_pending.Add(key))
             {
-                try
-                {
-                    using var icon = System.IO.File.Exists(key.Item1) || System.IO.Directory.Exists(key.Item1) ? Icon.ExtractAssociatedIcon(key.Item1) : null;
-                    var bmp = new Bitmap(key.Item2, key.Item2, System.Drawing.Imaging.PixelFormat.Format32bppPArgb);
-                    using var g = Graphics.FromImage(bmp);
-                    g.InterpolationMode = InterpolationMode.HighQualityBicubic;
-                    if (icon != null) g.DrawIcon(icon, new Rectangle(0, 0, key.Item2, key.Item2));
-                    else { using var b = new SolidBrush(Color.FromArgb(90, 150, 170, 200)); g.FillEllipse(b, 2, 2, key.Item2 - 4, key.Item2 - 4); }
-                    return bmp;
-                }
-                catch (Exception) { return new Bitmap(key.Item2, key.Item2); }
-            });
+                _worker ??= Task.Factory.StartNew(Work, _cts.Token, TaskCreationOptions.LongRunning, TaskScheduler.Default);
+                if (!_work.TryAdd(key)) _pending.Remove(key);
+            }
+            return Placeholder(size);
         }
 
-        public void Dispose() => _cache.Dispose();
+        private Bitmap Placeholder(int size)
+        {
+            if (_placeholders.TryGetValue(size, out var b)) return b;
+            b = new Bitmap(size, size, System.Drawing.Imaging.PixelFormat.Format32bppPArgb);
+            using (var g = Graphics.FromImage(b)) { g.SmoothingMode = SmoothingMode.AntiAlias; using var br = new SolidBrush(Color.FromArgb(40, 190, 210, 230)); g.FillEllipse(br, size / 6, size / 6, size * 2 / 3, size * 2 / 3); }
+            return _placeholders[size] = b;
+        }
+
+        private void Work()
+        {
+            try
+            {
+                foreach (var key in _work.GetConsumingEnumerable(_cts.Token))
+                {
+                    var bmp = Extract(key.Item1, key.Item2);
+                    _done.Enqueue((key, bmp));
+                    if (System.Threading.Interlocked.Exchange(ref _wake, 1) == 0) _ui?.Post(_ => { System.Threading.Interlocked.Exchange(ref _wake, 0); if (Drain()) Loaded?.Invoke(); }, null);
+                }
+            }
+            catch (OperationCanceledException) { }
+        }
+
+        private static Bitmap Extract(string path, int size)
+        {
+            try
+            {
+                using var icon = System.IO.File.Exists(path) || System.IO.Directory.Exists(path) ? Icon.ExtractAssociatedIcon(path) : null;
+                var bmp = new Bitmap(size, size, System.Drawing.Imaging.PixelFormat.Format32bppPArgb);
+                using var g = Graphics.FromImage(bmp);
+                g.InterpolationMode = InterpolationMode.HighQualityBicubic;
+                if (icon != null) g.DrawIcon(icon, new Rectangle(0, 0, size, size));
+                else { using var b = new SolidBrush(Color.FromArgb(90, 150, 170, 200)); g.FillEllipse(b, 2, 2, size - 4, size - 4); }
+                return bmp;
+            }
+            catch (Exception) { return new Bitmap(size, size); }
+        }
+
+        /// <summary>Moves finished bitmaps into the cache (call on the UI thread). True when something arrived.</summary>
+        public bool Drain()
+        {
+            var any = false;
+            while (_done.TryDequeue(out var d)) { _pending.Remove(d.Key); _cache.Set(d.Key, d.Bmp); any = true; }
+            return any;
+        }
+
+        public void Dispose()
+        {
+            _cts.Cancel(); _work.CompleteAdding();
+            while (_done.TryDequeue(out var d)) d.Bmp.Dispose();
+            foreach (var b in _placeholders.Values) b.Dispose();
+            _cache.Dispose();
+        }
     }
 
     /// <summary>
@@ -158,6 +220,14 @@ namespace MotionDesk.Containers
             SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.UserPaint | ControlStyles.Opaque, true);
             _repaint.Tick += (_, _) => { if (_dirty) Repaint(); else _repaint.Stop(); };
             _pane = new GlassPaneBinder(this, 14, () => GlassOn);
+            _icons.Loaded += Dirty;
+        }
+
+        /// <summary>For tests: waits until the background icon extraction has finished (UI messages keep pumping).</summary>
+        public void WaitIcons(int timeoutMs)
+        {
+            var end = DateTime.UtcNow.AddMilliseconds(timeoutMs);
+            while (DateTime.UtcNow < end && _icons.PendingCount > 0) { Application.DoEvents(); System.Threading.Thread.Sleep(10); }
         }
 
         protected override CreateParams CreateParams { get { var cp = base.CreateParams; cp.ExStyle |= 0x00080000 | 0x08000000 | 0x80; return cp; } }
@@ -193,6 +263,7 @@ namespace MotionDesk.Containers
         protected override void OnMouseDown(MouseEventArgs e)
         {
             base.OnMouseDown(e);
+            if (e.Button == MouseButtons.Right) { ShowMenu(e.Location); return; }
             if (e.Button != MouseButtons.Left) return;
             _dragStart = Cursor.Position; _boundsAtDragStart = Bounds;
             if (Grip.Contains(e.Location) && !Model.RolledUp) _drag = Drag.Resize;
@@ -245,6 +316,37 @@ namespace MotionDesk.Containers
             }
             else { Bounds = ContainerBehavior.Unroll(Bounds, Model.UnrolledHeight, WorkArea); Model.RolledUp = false; }
             Dirty(); Changed?.Invoke(Model);
+        }
+
+        // ---- context menu: the container's OWN small menu (no shell extensions loaded into our process); every action is isolated by try/catch ----
+        private void ShowMenu(Point at)
+        {
+            var idx = at.Y < Metrics.TitleBarHeight ? -1 : ContainerLayout.HitTest(at, Client, Model.Items.Count, Metrics, _scroll);
+            var menu = new ContextMenuStrip();
+            void Add(string text, Action act, bool enabled = true)
+            {
+                var it = menu.Items.Add(text); it.Enabled = enabled;
+                it.Click += (_, _) => { try { act(); } catch (Exception ex) { System.Diagnostics.Debug.WriteLine("container menu: " + ex.Message); } };
+            }
+            if (idx >= 0)
+            {
+                var item = Model.Items[idx];
+                Add("Open", () => System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(item.Path) { UseShellExecute = true, Arguments = item.Arguments ?? "" }));
+                Add("Show in folder", () => System.Diagnostics.Process.Start("explorer.exe", "/select,\"" + item.Path + "\""));
+                Add("Remove from container (the file stays)", () => RemoveItem(idx), !Model.Locked);
+                menu.Items.Add(new ToolStripSeparator());
+            }
+            Add(Model.Locked ? "Unlock container" : "Lock container", () => { Model.Locked = !Model.Locked; Dirty(); Changed?.Invoke(Model); });
+            Add(Model.RolledUp ? "Unroll" : "Roll up", ToggleRollUp);
+            menu.Closed += (_, _) => BeginInvoke(() => menu.Dispose());
+            menu.Show(this, at);
+        }
+
+        /// <summary>Removes the REFERENCE only; the file on disk is never touched.</summary>
+        public void RemoveItem(int index)
+        {
+            if (index < 0 || index >= Model.Items.Count) return;
+            Model.Items.RemoveAt(index); _selected = -1; _scroll = ContainerLayout.ClampScroll(_scroll, Client, Model.Items.Count, Metrics); Dirty(); Changed?.Invoke(Model);
         }
 
         // ---- drag and drop (phase 3): items are REFERENCES, dropping never copies or moves the file --------------------

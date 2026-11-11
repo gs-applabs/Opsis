@@ -7,4 +7,6 @@ rolled up: height=44 (title bar 44)
 screenshot container-rolled.png
 unrolled: height=330
 drop: added=1 (expected 1 or 0 if file missing, duplicate skipped) items 14->15 changedEvents=1; fileUntouched=True
-reorder: first item changed=True count=15
+icons: background extraction finished in 0 ms (UI thread kept pumping)
+remove: reference removed 15->14; file on disk still there=True
+reorder: first item changed=True count=14

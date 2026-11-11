@@ -212,6 +212,10 @@ namespace MotionDesk.Services
                 int added = win.AcceptDrop(new[] { extra, dupe, "" }, new Point(60, 120));
                 report.Add($"drop: added={added} (expected 1 or 0 if file missing, duplicate skipped) items {before}->{model.Items.Count} changedEvents={fired}; fileUntouched={File.Exists(dupe)}");
                 var firstBefore = model.Items[0].Path; win.MoveItem(0, new Point(300, 300));
+                var swIcons = Stopwatch.StartNew(); win.WaitIcons(5000);
+                report.Add($"icons: background extraction finished in {swIcons.ElapsedMilliseconds} ms (UI thread kept pumping)");
+                int cnt = model.Items.Count; win.RemoveItem(0);
+                report.Add($"remove: reference removed {cnt}->{model.Items.Count}; file on disk still there={File.Exists(dupe)}");
                 report.Add($"reorder: first item changed={(model.Items[0].Path != firstBefore)} count={model.Items.Count}");
             }
             catch (Exception ex) { report.Add("EXCEPTION: " + ex); }
