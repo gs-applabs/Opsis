@@ -89,17 +89,17 @@ Portable build outside the repo + `docs/TRY-NATIVE-CONTAINERS.md` (Greek). Rescu
 | 15 | Ενημερώσεις plugins μόνο από το κουμπί του Opsis | ☐ |
 | 16 | Κοινές ρυθμίσεις Opsis↔plugins μόνο στο Opsis | ☐ φάση P |
 | 17 | Theme packs: duplicate με Appearance; Εξατομίκευση Plus | ☐ χρειάζεται το plugin Appearance για σύγκριση |
-| 18 | Lockscreen GIF (LockscreenGif — έλεγχος άδειας) + «ταίριασμα» χωρίς καιρό/ώρα | ☐ |
+| 18 | Lockscreen GIF (LockscreenGif — έλεγχος άδειας) + «ταίριασμα» χωρίς καιρό/ώρα | ⛔ δεν ξεκίνησε: πρώτα έλεγχος άδειας/τεχνικής του LockscreenGif και σχεδιασμός (η οθόνη κλειδώματος των Windows δεν δέχεται κινούμενο περιεχόμενο εύκολα) |
 | 19 | Αφαίρεση φάσματος ήχου από στοιχεία wallpaper | ✓ (στοιχείο, κατάλογος, ετικέτα, JS, polling 80 ms αφαιρέθηκαν· το widget Audio Visualizer μένει) |
 | 20 | Music overlay (GSMTC, clean-room, χωρίς γραμματοσειρές Rainbow) | ◐ έτοιμο: `NowPlayingService` (event-driven GSMTC, εξώφυλλο ≤160 px), `MusicOverlayWindow` (layered, click-through, glass pane αν GPU glass), 9 θέσεις, ρύθμιση Appearance→Advanced (ζωντανή, 14 γλώσσες), `--test-music-overlay`. ☐ visualizations Media Suite (άλλη εφαρμογή), ⛔ δοκιμή με πραγματικό player στην επιφάνεια |
 | 21 | Wallpapers landmarks + ποιότητα (2.1.5/2.1.5β) | ◐ Ribbons φθηνότερο (GPU −35 %)· landmarks/3D ☐ (άδειες μοντέλων) |
 | 22 | Δεξί κλικ επιφάνειας: Νέο DeskContainer / Αλλαγή wallpaper (0Β.3) | ◐ Επίσημη τεκμηρίωση (Microsoft Learn «Creating Shortcut Menu Handlers», «Add a File Explorer context menu command to a packaged desktop app»): στατικά verbs στο `DesktopBackground\Shell` = κλασικό μενού («Εμφάνιση περισσότερων επιλογών»/Shift+δεξί κλικ)· το νέο πάνω-επίπεδο μενού Win11 θέλει `IExplorerCommand` + sparse package με identity + υπογραφή → ΔΕΝ έγινε. Έγινε: opt-in HKCU verbs (`DesktopMenu`, χωρίς elevation) που στέλνουν whitelisted εντολή (new-container / next-video) στη ζωντανή εγκατάσταση μέσω pipe ανά χρήστη, ρύθμιση Appearance→Advanced (14 γλώσσες), 2 tests. Εναλλακτική πρόσβαση: tray/DeskStrip. ⛔ δοκιμή στο πραγματικό desktop (Win11 build 26200.9818+/παλιότερο), απόφαση για sparse package/υπογραφή |
-| 23 | Ακριβής καιρός: πάροχος + opt-in τοποθεσία (0Β.5) | ⛔ πίνακας παρόχων στον χρήστη πριν επιλογή |
+| 23 | Ακριβής καιρός: πάροχος + opt-in τοποθεσία (0Β.5) | ◐ `docs/WEATHER_PROVIDERS.md`: συγκριτικός πίνακας (Open-Meteo επιβεβαιωμένοι όροι, MET Norway, NWS) + σχεδιασμός privacy· ⛔ απόφαση χρήστη (α: μόνο Open-Meteo / β: + MET Norway/NWS) πριν κώδικα |
 | 24 | Perf §9.1: DeskStrip SyncItems lookups/εκτός UI thread | ✓ dictionaries + απαρίθμηση παραθύρων σε worker (⛔ δοκιμή στο ζωντανό dock) |
 | 25 | Perf §9.1: FeatureOverride cache | ✓ 2.4.6.1 |
 | 26 | Perf §9.2: FlatToggle font | ✓ Opsis.UI 0.3.1 · FlatTabs rects / FlatComboBox popup ☐ |
 | 27 | Rubber-band ≥2 εικονίδια → «Δημιουργία container» (§22-6) | ☐ |
 | 28 | Native DeskContainers (phases 3, 5/9, 7/8) | ✓ πρώτες φέτες· ⛔ δοκιμή χρήστη, μετά switch-off fork |
 | 29 | Opsis ξεκινά ΠΡΩΤΟ στην εκκίνηση Windows (§22-1) | ☐ scheduled task με καθυστέρηση |
-| 30 | Explorer restart → μαύρη οθόνη (§22-5) | ☐ χρειάζεται αναπαραγωγή |
+| 30 | Explorer restart → μαύρη οθόνη (§22-5) | ◐ υπάρχει ExplorerRestartWatcher (+tests) από 2.4.x· ⛔ επιβεβαίωση σε πραγματικό restart |
 | 31 | Μέτρηση RAM/CPU baseline, soak logger | ⛔ τρέχει ο χρήστης (tools/resource-logger.ps1) |
