@@ -137,7 +137,27 @@ public sealed class ContainersService : IContainersApi
     private readonly ContainersStore store; private readonly Func<IReadOnlyList<MonitorInfo>> monitors; private readonly object gate = new();
     public ContainersService(ContainersStore store, Func<IReadOnlyList<MonitorInfo>> monitors) { this.store = store; this.monitors = monitors; }
 
+    /// <summary>Raised (on the pipe thread) after a command changed the stored data; a host re-reads and updates its windows.</summary>
+    public event Action? Mutated;
+
+    /// <summary>Lets the host change the document under the SAME lock as the pipe commands (no lost updates). <paramref name="change"/> returns true when it changed something.</summary>
+    public void Update(Func<ContainersDocument, bool> change)
+    {
+        lock (gate) { var doc = store.Load(); if (change(doc)) store.Save(doc); }
+    }
+
+    public ContainersDocument Snapshot() { lock (gate) return store.Load(); }
+
+    private static readonly HashSet<string> Mutating = new() { "create", "delete", "move", "set-title-style", "show", "hide", "import-legacy" };
+
     public JsonNode? Handle(string cmd, JsonObject args)
+    {
+        var result = HandleCore(cmd, args);
+        if (Mutating.Contains(cmd)) { try { Mutated?.Invoke(); } catch (Exception) { } }
+        return result;
+    }
+
+    private JsonNode? HandleCore(string cmd, JsonObject args)
     {
         lock (gate)
         {
@@ -167,6 +187,12 @@ public sealed class ContainersService : IContainersApi
                     var doc = store.Load(); var c = Find(doc, args);
                     c.Geometry = LegacyImporter.Normalize(Int(args, "x", c.Geometry.X), Int(args, "y", c.Geometry.Y), Int(args, "width", c.Geometry.Width), Int(args, "height", c.Geometry.Height), monitors());
                     store.Save(doc); return JsonSerializer.SerializeToNode(c.Geometry, ContainersStore.Json);
+                }
+                case "show":
+                case "hide":
+                {
+                    var doc = store.Load(); var c = Find(doc, args); c.Hidden = cmd == "hide";
+                    store.Save(doc); return new JsonObject { ["id"] = c.Id, ["hidden"] = c.Hidden };
                 }
                 case "set-title-style":
                 {

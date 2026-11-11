@@ -224,6 +224,40 @@ namespace MotionDesk.Services
             return report.Any(l => l.StartsWith("EXCEPTION")) ? 1 : 0;
         }
 
+        /// <summary>Phase 5/9: the host keeps real container windows in step with the stored data driven only through the named pipe. No screenshots, nothing captured.</summary>
+        public static int TestContainerHost(string folder)
+        {
+            Directory.CreateDirectory(folder);
+            var report = new System.Collections.Generic.List<string>();
+            void Pump(int ms) { var end = DateTime.UtcNow.AddMilliseconds(ms); while (DateTime.UtcNow < end) { Application.DoEvents(); System.Threading.Thread.Sleep(10); } }
+            var file = Path.Combine(folder, "containers-host-test.json"); if (File.Exists(file)) File.Delete(file);
+            var pipe = "opsis-containers-test-" + Environment.ProcessId;
+            try
+            {
+                using var host = new MotionDesk.Containers.ContainerHost(new Opsis.Containers.ContainersStore(file), pipe);
+                var r = Opsis.Containers.PipeClient.Send(pipe, "create", new System.Text.Json.Nodes.JsonObject { ["title"] = "Host test", ["x"] = 200, ["y"] = 200, ["width"] = 300, ["height"] = 220 });
+                var id = r["data"]?["id"]?.ToString() ?? ""; Pump(600);
+                report.Add($"create via pipe -> windows={host.Windows.Count} (expected 1)");
+                Opsis.Containers.PipeClient.Send(pipe, "set-title-style", new System.Text.Json.Nodes.JsonObject { ["id"] = id, ["color"] = "#336699", ["height"] = 40 }); Pump(300);
+                Opsis.Containers.PipeClient.Send(pipe, "hide", new System.Text.Json.Nodes.JsonObject { ["id"] = id }); Pump(600);
+                report.Add($"hide via pipe -> windows={host.Windows.Count} (expected 0)");
+                Opsis.Containers.PipeClient.Send(pipe, "show", new System.Text.Json.Nodes.JsonObject { ["id"] = id }); Pump(600);
+                report.Add($"show via pipe -> windows={host.Windows.Count} (expected 1)");
+                var w = host.Windows.First();
+                var moved = new Rectangle(w.Left + 50, w.Top + 40, w.Width, w.Height);
+                w.AcceptDrop(new[] { Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "notepad.exe") }, new Point(60, 80));
+                Pump(900);   // debounced save
+                var doc = new Opsis.Containers.ContainersStore(file).Load();
+                report.Add($"window change saved: items={doc.Containers[0].Items.Count} (expected 1), titleColor={doc.Containers[0].TitleBar.Color} (expected #336699)");
+                Opsis.Containers.PipeClient.Send(pipe, "delete", new System.Text.Json.Nodes.JsonObject { ["id"] = id }); Pump(600);
+                report.Add($"delete via pipe -> windows={host.Windows.Count} (expected 0)");
+            }
+            catch (Exception ex) { report.Add("EXCEPTION: " + ex); }
+            finally { GlassService.Shutdown(); }
+            File.WriteAllLines(Path.Combine(folder, "container-host.txt"), report);
+            return report.Any(l => l.StartsWith("EXCEPTION")) ? 1 : 0;
+        }
+
         private sealed class StageForm : Form
         {
             public StageForm() { SetStyle(ControlStyles.OptimizedDoubleBuffer | ControlStyles.AllPaintingInWmPaint | ControlStyles.UserPaint, true); }

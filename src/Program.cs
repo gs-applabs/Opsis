@@ -98,6 +98,13 @@ namespace MotionDesk
                 return;
             }
 
+            if (args.Length == 2 && args[0] == "--test-container-host")
+            {
+                ApplicationConfiguration.Initialize();
+                Environment.Exit(Services.DesktopDiagnostics.TestContainerHost(args[1]));
+                return;
+            }
+
             if (args.Length == 2 && args[0] == "--test-covered")
             {
                 ApplicationConfiguration.Initialize();

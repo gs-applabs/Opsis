@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 1,
+  "profile": "Default",
+  "containers": [
+    {
+      "id": "edb74d7f93c04fb8a8d03ccb6e0600b3",
+      "title": "Host test",
+      "kind": 0,
+      "geometry": {
+        "monitor": "\\\\.\\DISPLAY1",
+        "nx": 0.078125,
+        "ny": 0.1388888888888889,
+        "nw": 0.1171875,
+        "nh": 0.1527777777777778,
+        "x": 200,
+        "y": 200,
+        "width": 300,
+        "height": 220
+      },
+      "locked": false,
+      "hidden": false,
+      "rolledUp": false,
+      "unrolledHeight": 0,
+      "tabsEnabled": false,
+      "currentTab": 0,
+      "tabs": [],
+      "items": [
+        {
+          "id": "07476098e62647c4bbcafaa7befb2629",
+          "path": "C:\\windows\\notepad.exe",
+          "displayName": "notepad",
+          "isFolder": false
+        }
+      ],
+      "appearance": {
+        "borderThickness": 1,
+        "iconSize": 0,
+        "iconSpacing": 0,
+        "grayscaleIcons": false,
+        "textShadow": true
+      },
+      "titleBar": {
+        "color": "#336699",
+        "opacity": 90,
+        "height": 40,
+        "fontSize": 10,
+        "bold": true
+      }
+    }
+  ],
+  "hiddenOriginals": []
+}

@@ -1,0 +1,5 @@
+create via pipe -> windows=1 (expected 1)
+hide via pipe -> windows=0 (expected 0)
+show via pipe -> windows=1 (expected 1)
+window change saved: items=1 (expected 1), titleColor=#336699 (expected #336699)
+delete via pipe -> windows=0 (expected 0)
