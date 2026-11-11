@@ -21,6 +21,9 @@ namespace MotionDesk.Containers
         private PipeServer? _pipe;
         private bool _syncing;
 
+        /// <summary>The running host (null when the native containers are off); used by the desktop menu actions.</summary>
+        public static ContainerHost? Current { get; private set; }
+
         public IReadOnlyCollection<ContainerWindow> Windows => _windows.Values;
         public ContainersService Service => _service;
 
@@ -33,6 +36,7 @@ namespace MotionDesk.Containers
             _rules.Tick += (_, _) => EvaluateRules(); _rules.Start();
             if (pipeName != null) { _pipe = new PipeServer(pipeName, new HostApi(this)); _pipe.Start(); }
             Microsoft.Win32.SystemEvents.DisplaySettingsChanged += OnDisplayChanged;
+            Current = this;
             Sync();
         }
 
@@ -131,6 +135,7 @@ namespace MotionDesk.Containers
 
         public void Dispose()
         {
+            if (ReferenceEquals(Current, this)) Current = null;
             Microsoft.Win32.SystemEvents.DisplaySettingsChanged -= OnDisplayChanged;
             Flush(); _save.Dispose(); _rules.Dispose(); _pipe?.Dispose();
             foreach (var w in _windows.Values) { w.Close(); w.Dispose(); }

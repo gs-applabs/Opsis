@@ -12,6 +12,7 @@ namespace MotionDesk.Widgets
     public class TrayApplicationContext : ApplicationContext
     {
         private MotionDesk.Containers.ContainerHost? _nativeContainers;
+        private Opsis.Containers.PipeServer? _controlPipe;
         private readonly NotifyIcon _trayIcon = null!;
         private MainWindow? _mainWindow;
         private readonly HotkeyManager _hotkeys = new();
@@ -171,6 +172,11 @@ namespace MotionDesk.Widgets
             MotionDesk.Services.DiscordPresence.Instance.Apply();
             BackdropContrast.EnsureStarted();
             if (!safeMode && ContainersEngine.Enabled) ContainersEngine.Start();
+            if (!safeMode && AppSettings.Load().DesktopMenuEnabled)
+            {
+                try { _controlPipe = new Opsis.Containers.PipeServer(DesktopMenu.PipeName, new DesktopMenu.Api()); _controlPipe.Start(); DesktopMenu.Apply(true); }
+                catch (Exception ex) { RotatingLogger.Write("desktop menu failed to start: " + ex.Message); }
+            }
             if (!safeMode) { try { MusicOverlay.Apply(); } catch (Exception ex) { RotatingLogger.Write("music overlay failed to start: " + ex.Message); } }
             if (!safeMode && AppSettings.Load().UseNativeContainers)
             {
@@ -578,6 +584,7 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
             _taskbarWatcher.Dispose();
             try { _nativeContainers?.Dispose(); } catch { }
             try { MusicOverlay.Stop(); } catch { }
+            try { _controlPipe?.Dispose(); } catch { }
             DesktopIconVisibilityEngine.Instance.Stop();
             _trayIcon.Visible = false;
             Application.Exit();

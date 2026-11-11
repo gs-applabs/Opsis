@@ -126,6 +126,13 @@ namespace MotionDesk
                 return;
             }
 
+            // desktop right-click verbs (see Services/DesktopMenu): forward the action to the running instance; without one, only "new-container" can still be done (file bridge)
+            if (args.Length == 2 && args[0] == "--desktop-action")
+            {
+                if (Services.DesktopMenu.Allowed.Contains(args[1]) && !Services.DesktopMenu.Send(args[1]) && args[1] == "new-container")
+                    try { Services.ContainersBridge.Command("new-container"); } catch (Exception) { }
+                return;
+            }
             if (args.Length == 2 && args[0] == "--test-music-overlay")
             {
                 ApplicationConfiguration.Initialize();

@@ -4501,6 +4501,8 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                 appearanceAdvanced.AddControl(BuildOpacityRow());
                 appearanceAdvanced.AddControl(Checkbox(LocalizationManager.T("Settings.GpuGlass"), AppSettings.Load().UseGpuGlass,
                     v => { var a = AppSettings.Load(); a.UseGpuGlass = v; a.Save(); }, LocalizationManager.T("Settings.GpuGlassDesc"), restart: true));
+                appearanceAdvanced.AddControl(Checkbox(LocalizationManager.T("Settings.DesktopMenu"), AppSettings.Load().DesktopMenuEnabled,
+                    v => { var a = AppSettings.Load(); a.DesktopMenuEnabled = v; a.Save(); try { DesktopMenu.Apply(v); } catch (Exception) { } }, LocalizationManager.T("Settings.DesktopMenuDesc"), restart: true));
                 // music overlay (plan 2.1.6): live, no restart
                 appearanceAdvanced.AddControl(Checkbox(LocalizationManager.T("Settings.MusicOverlay"), AppSettings.Load().MusicOverlayEnabled,
                     v => { var a = AppSettings.Load(); a.MusicOverlayEnabled = v; a.Save(); MusicOverlay.Apply(); }, LocalizationManager.T("Settings.MusicOverlayDesc")));

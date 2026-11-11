@@ -149,6 +149,8 @@ namespace MotionDesk.Services
         public bool UseNativeContainers { get; set; }
         /// <summary>Music overlay (plan 2.1.6): a glass card with the cover / title / artist of whatever any player is playing. Off by default.</summary>
         public bool MusicOverlayEnabled { get; set; }
+        /// <summary>Opt-in: "New DeskContainer" / "Next animated wallpaper" in the desktop right-click menu (per-user registry verbs, see DesktopMenu).</summary>
+        public bool DesktopMenuEnabled { get; set; }
         public string MusicOverlayAnchor { get; set; } = "BottomRight";
 
         /// <summary>2.6.0: the shared Glass theme choices (Opsis.UI.GlassSettings): Solid by default.</summary>
