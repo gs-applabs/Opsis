@@ -31,9 +31,35 @@ namespace MotionDesk.Containers
             _service.Mutated += () => { if (_ui.IsHandleCreated && !_ui.IsDisposed) try { _ui.BeginInvoke(Sync); } catch (Exception) { } };
             _save.Tick += (_, _) => Flush();
             _rules.Tick += (_, _) => EvaluateRules(); _rules.Start();
-            if (pipeName != null) { _pipe = new PipeServer(pipeName, _service); _pipe.Start(); }
+            if (pipeName != null) { _pipe = new PipeServer(pipeName, new HostApi(this)); _pipe.Start(); }
             Microsoft.Win32.SystemEvents.DisplaySettingsChanged += OnDisplayChanged;
             Sync();
+        }
+
+        /// <summary>Host-level commands on top of the data commands: "focus" (id) gives a container the keyboard focus, "toggle-all" hides every container or shows them again (all of them, like the old quick-hide).</summary>
+        private sealed class HostApi : IContainersApi
+        {
+            private readonly ContainerHost _h; public HostApi(ContainerHost h) { _h = h; }
+            public System.Text.Json.Nodes.JsonNode? Handle(string cmd, System.Text.Json.Nodes.JsonObject args)
+            {
+                switch (cmd)
+                {
+                    case "focus":
+                    {
+                        var id = args["id"]?.ToString() ?? "";
+                        _h._ui.Invoke(() => { if (_h._windows.TryGetValue(id, out var w)) w.FocusForKeyboard(); });
+                        return new System.Text.Json.Nodes.JsonObject { ["focused"] = _h._windows.ContainsKey(id) };
+                    }
+                    case "toggle-all":
+                    {
+                        var hidden = false;
+                        _h._service.Update(doc => { hidden = doc.Containers.Any(c => !c.Hidden); foreach (var c in doc.Containers) c.Hidden = hidden; return doc.Containers.Count > 0; });
+                        _h._ui.BeginInvoke(_h.Sync);
+                        return new System.Text.Json.Nodes.JsonObject { ["hidden"] = hidden };
+                    }
+                    default: return _h._service.Handle(cmd, args);
+                }
+            }
         }
 
         private static IReadOnlyList<MonitorInfo> Monitors() => Screen.AllScreens.Select(s => new MonitorInfo(s.DeviceName, s.Bounds, s.Primary)).ToList();

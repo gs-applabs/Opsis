@@ -2,5 +2,6 @@
   "schemaVersion": 1,
   "profile": "Default",
   "containers": [],
-  "hiddenOriginals": []
+  "hiddenOriginals": [],
+  "rules": []
 }

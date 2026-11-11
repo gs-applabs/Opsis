@@ -260,6 +260,10 @@ namespace MotionDesk.Services
                 Pump(900);   // debounced save
                 var doc = new Opsis.Containers.ContainersStore(file).Load();
                 report.Add($"window change saved: items={doc.Containers[0].Items.Count} (expected 1), titleColor={doc.Containers[0].TitleBar.Color} (expected #336699)");
+                var ta = Opsis.Containers.PipeClient.Send(pipe, "toggle-all"); Pump(500);
+                report.Add($"toggle-all -> resp={ta.ToJsonString()} windows={host.Windows.Count} (expected true, 0)");
+                ta = Opsis.Containers.PipeClient.Send(pipe, "toggle-all"); Pump(500);
+                report.Add($"toggle-all again -> resp={ta.ToJsonString()} windows={host.Windows.Count} (expected false, 1)");
                 Opsis.Containers.PipeClient.Send(pipe, "delete", new System.Text.Json.Nodes.JsonObject { ["id"] = id }); Pump(600);
                 report.Add($"delete via pipe -> windows={host.Windows.Count} (expected 0)");
             }

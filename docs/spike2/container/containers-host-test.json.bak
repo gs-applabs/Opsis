@@ -3,7 +3,7 @@
   "profile": "Default",
   "containers": [
     {
-      "id": "edb74d7f93c04fb8a8d03ccb6e0600b3",
+      "id": "b5bce67cdbaf43319cebdbe27d350cfd",
       "title": "Host test",
       "kind": 0,
       "geometry": {
@@ -26,7 +26,7 @@
       "tabs": [],
       "items": [
         {
-          "id": "07476098e62647c4bbcafaa7befb2629",
+          "id": "53fa2f3c8af24ee4af28fd3e7dc2c2bd",
           "path": "C:\\windows\\notepad.exe",
           "displayName": "notepad",
           "isFolder": false
@@ -48,5 +48,6 @@
       }
     }
   ],
-  "hiddenOriginals": []
+  "hiddenOriginals": [],
+  "rules": []
 }
