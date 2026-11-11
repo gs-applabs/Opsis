@@ -29,7 +29,7 @@
 | 2.1.6 | Music overlay GSMTC (clean-room) | ✓ | ⛔ δοκιμή με πραγματικό player |
 | 2.1.5/2.1.5β | Wallpapers landmarks/ποιότητα, μοντέλα | ◐ | Ribbons φθηνότερο· landmarks/3D ⛔ άδειες μοντέλων |
 | 0Β.3 | Δεξί κλικ επιφάνειας | ◐ | opt-in classic verbs· νέο μενού Win11 ⛔ (sparse package/υπογραφή) |
-| 0Β.5 | Ακριβής καιρός + opt-in τοποθεσία | ⛔ | πίνακας παρόχων `docs/WEATHER_PROVIDERS.md` — περιμένει απόφαση χρήστη |
+| 0Β.5 | Ακριβής καιρός + opt-in τοποθεσία | ✓ | NWS(ΗΠΑ)→Open-Meteo best_match→MET Norway, fallback, ήλιος/σελήνη, πηγή+ώρα στις ρυθμίσεις, opt-in τοποθεσία, 14 γλώσσες, 52 tests· `docs/WEATHER-PROVIDERS.md`, backport `docs/WEATHER-BACKPORT.md`· ⛔ Windows Location και εμφάνιση στο wallpaper δεν δοκιμάστηκαν |
 | 0Β.2 | Hotkeys, pop-up επανεκκίνησης | ✓ | |
 | 0Β.4/0Β.6 | Glass dropdown, status bar | ✓ | |
 | §9 | DeskStrip PollTick εκτός UI thread | ✓ | |
