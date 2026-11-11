@@ -148,7 +148,9 @@ public sealed class ContainersService : IContainersApi
 
     public ContainersDocument Snapshot() { lock (gate) return store.Load(); }
 
-    private static readonly HashSet<string> Mutating = new() { "create", "delete", "move", "set-title-style", "show", "hide", "import-legacy" };
+    private string SnapshotDir => System.IO.Path.Combine(System.IO.Path.GetDirectoryName(System.IO.Path.GetFullPath(store.Path)) ?? ".", "container-snapshots");
+
+    private static readonly HashSet<string> Mutating = new() { "create", "delete", "move", "set-title-style", "show", "hide", "import-legacy", "snapshot-load" };
 
     public JsonNode? Handle(string cmd, JsonObject args)
     {
@@ -194,6 +196,22 @@ public sealed class ContainersService : IContainersApi
                     var doc = store.Load(); var c = Find(doc, args); c.Hidden = cmd == "hide";
                     store.Save(doc); return new JsonObject { ["id"] = c.Id, ["hidden"] = c.Hidden };
                 }
+                case "snapshot-save":
+                {
+                    var name = args["name"]?.ToString() ?? throw new PipeException("bad-args", "name is required");
+                    ContainerSnapshots.Save(store.Load(), SnapshotDir, name); return new JsonObject { ["saved"] = ContainerSnapshots.Sanitize(name) };
+                }
+                case "snapshot-list": return new JsonArray(ContainerSnapshots.List(SnapshotDir).Select(n => (JsonNode)JsonValue.Create(n)!).ToArray());
+                case "snapshot-delete":
+                    return new JsonObject { ["deleted"] = ContainerSnapshots.Delete(SnapshotDir, args["name"]?.ToString() ?? throw new PipeException("bad-args", "name is required")) };
+                case "snapshot-load":
+                {
+                    var name = args["name"]?.ToString() ?? throw new PipeException("bad-args", "name is required");
+                    var snap = ContainerSnapshots.Load(SnapshotDir, name) ?? throw new PipeException("not-found", $"no snapshot '{name}'");
+                    var cur = store.Load(); snap.Rules = cur.Rules;      // rules belong to the installation, not to a layout
+                    store.Save(snap); return new JsonObject { ["loaded"] = ContainerSnapshots.Sanitize(name), ["containers"] = snap.Containers.Count };
+                }
+                case "rules-list": return JsonSerializer.SerializeToNode(store.Load().Rules, ContainersStore.Json);
                 case "set-title-style":
                 {
                     var doc = store.Load(); var c = Find(doc, args); var t = c.TitleBar;

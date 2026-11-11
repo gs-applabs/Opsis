@@ -16,6 +16,8 @@ namespace MotionDesk.Containers
         private readonly Dictionary<string, ContainerWindow> _windows = new();
         private readonly Dictionary<string, Container> _dirty = new();
         private readonly System.Windows.Forms.Timer _save = new() { Interval = 400 };
+        private readonly System.Windows.Forms.Timer _rules = new() { Interval = 3000 };
+        private HashSet<string> _activeRules = new();
         private PipeServer? _pipe;
         private bool _syncing;
 
@@ -28,6 +30,7 @@ namespace MotionDesk.Containers
             _service = new ContainersService(store, Monitors);
             _service.Mutated += () => { if (_ui.IsHandleCreated && !_ui.IsDisposed) try { _ui.BeginInvoke(Sync); } catch (Exception) { } };
             _save.Tick += (_, _) => Flush();
+            _rules.Tick += (_, _) => EvaluateRules(); _rules.Start();
             if (pipeName != null) { _pipe = new PipeServer(pipeName, _service); _pipe.Start(); }
             Microsoft.Win32.SystemEvents.DisplaySettingsChanged += OnDisplayChanged;
             Sync();
@@ -67,6 +70,23 @@ namespace MotionDesk.Containers
             return ContainerBehavior.KeepReachable(r, areas, c.TitleBar.Height);
         }
 
+        /// <summary>Phase 5: rules (monitor count, process running, time of day, fullscreen app) are evaluated every 3 s, edge-triggered; cheap when there are none.</summary>
+        public void EvaluateRules()
+        {
+            var rules = _service.Snapshot().Rules.Where(r => r.Enabled).ToList();
+            if (rules.Count == 0) { _activeRules.Clear(); return; }
+            var procs = rules.Any(r => r.When == RuleWhen.ProcessRunning)
+                ? System.Diagnostics.Process.GetProcesses().Select(p => { try { return p.ProcessName.ToLowerInvariant() + ".exe"; } finally { p.Dispose(); } }).ToHashSet()
+                : new HashSet<string>();
+            var ctx = new RuleContext(Screen.AllScreens.Length, procs, DateTime.Now.TimeOfDay, MotionDesk.Services.AppActivity.IsFullscreenAppActive);
+            var (actions, active) = RuleEngine.Evaluate(rules, ctx, _activeRules); _activeRules = active;
+            foreach (var a in actions)
+            {
+                if (a.Do == RuleDo.LoadSnapshot) { try { _service.Handle("snapshot-load", new System.Text.Json.Nodes.JsonObject { ["name"] = a.Targets.FirstOrDefault() ?? "" }); } catch (PipeException) { } continue; }
+                _service.Update(doc => RuleEngine.Apply(doc, a)); Sync();
+            }
+        }
+
         /// <summary>Writes the changed containers back through the service (one load/save for all of them).</summary>
         public void Flush()
         {
@@ -86,7 +106,7 @@ namespace MotionDesk.Containers
         public void Dispose()
         {
             Microsoft.Win32.SystemEvents.DisplaySettingsChanged -= OnDisplayChanged;
-            Flush(); _save.Dispose(); _pipe?.Dispose();
+            Flush(); _save.Dispose(); _rules.Dispose(); _pipe?.Dispose();
             foreach (var w in _windows.Values) { w.Close(); w.Dispose(); }
             _windows.Clear(); _ui.Dispose();
         }

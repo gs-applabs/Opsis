@@ -28,6 +28,23 @@ public sealed class ServiceTests
     }
 
     [Fact]
+    public void SnapshotSaveListLoadKeepsTheRulesOfTheInstallation()
+    {
+        var s = New(out var file); var dir = Path.Combine(Path.GetDirectoryName(file)!, "container-snapshots");
+        try
+        {
+            s.Handle("create", new JsonObject { ["title"] = "A" });
+            s.Handle("snapshot-save", new JsonObject { ["name"] = "work" });
+            s.Update(d => { d.Containers.Clear(); d.Rules.Add(new Rule { Name = "keep me" }); return true; });
+            Assert.Equal("work", ((JsonArray)s.Handle("snapshot-list", new JsonObject())!)[0]!.ToString());
+            s.Handle("snapshot-load", new JsonObject { ["name"] = "work" });
+            var d2 = s.Snapshot(); Assert.Single(d2.Containers); Assert.Equal("keep me", d2.Rules[0].Name);
+            Assert.Throws<PipeException>(() => s.Handle("snapshot-load", new JsonObject { ["name"] = "nope" }));
+        }
+        finally { File.Delete(file); if (Directory.Exists(dir)) Directory.Delete(dir, true); }
+    }
+
+    [Fact]
     public void UpdateWritesOnlyWhenTheChangeSaysSo()
     {
         var s = New(out var file);

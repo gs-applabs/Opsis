@@ -92,6 +92,7 @@ public sealed class ContainersDocument
     public string Profile { get; set; } = "Default";
     public List<Container> Containers { get; set; } = new();
     public List<string> HiddenOriginals { get; set; } = new();
+    public List<Rule> Rules { get; set; } = new();
     [JsonExtensionData] public Dictionary<string, JsonElement>? Extra { get; set; }
 }
 

@@ -11,6 +11,7 @@ namespace MotionDesk.Widgets
 {
     public class TrayApplicationContext : ApplicationContext
     {
+        private MotionDesk.Containers.ContainerHost? _nativeContainers;
         private readonly NotifyIcon _trayIcon = null!;
         private MainWindow? _mainWindow;
         private readonly HotkeyManager _hotkeys = new();
@@ -170,6 +171,11 @@ namespace MotionDesk.Widgets
             MotionDesk.Services.DiscordPresence.Instance.Apply();
             BackdropContrast.EnsureStarted();
             if (!safeMode && ContainersEngine.Enabled) ContainersEngine.Start();
+            if (!safeMode && AppSettings.Load().UseNativeContainers)
+            {
+                try { _nativeContainers = new MotionDesk.Containers.ContainerHost(new Opsis.Containers.ContainersStore(Path.Combine(AppPaths.AppDataFolder, "containers-native.json")), Opsis.Containers.PipeProtocol.DefaultName); }
+                catch (Exception ex) { RotatingLogger.Write("native containers failed to start: " + ex.Message); }
+            }
             ContainersEngine.SettingsRequested += () => ShowMainWindow("DeskZones");
 
             // Restore lightweight persistent preferences before showing the manager.
@@ -569,6 +575,7 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
             PluginHost.Instance.StopAll();
             _hotkeys.Dispose();
             _taskbarWatcher.Dispose();
+            try { _nativeContainers?.Dispose(); } catch { }
             DesktopIconVisibilityEngine.Instance.Stop();
             _trayIcon.Visible = false;
             Application.Exit();

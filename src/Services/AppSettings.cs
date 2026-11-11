@@ -145,6 +145,8 @@ namespace MotionDesk.Services
 
         /// <summary>2.6.0: draw the DeskStrip glass with the GPU glass layer (Opsis.Glass): real transparency, live refraction of what is behind. Off until tested on real machines.</summary>
         public bool UseGpuGlass { get; set; }
+        /// <summary>EXPERIMENTAL (2.6.0 beta): run the new native container windows (own data file containers-native.json, pipe opsis-containers-v1-*) instead of the WPF fork. Only a settings.json flag until the switch-off phase; turn the fork engine off first or both show.</summary>
+        public bool UseNativeContainers { get; set; }
 
         /// <summary>2.6.0: the shared Glass theme choices (Opsis.UI.GlassSettings): Solid by default.</summary>
         public GlassSettings Glass { get; set; } = new();
