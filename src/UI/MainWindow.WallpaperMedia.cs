@@ -277,7 +277,6 @@ namespace MotionDesk.UI
             "network" => L("Network", "Δίκτυο"),
             "disks" => L("Disks", "Δίσκοι"),
             "battery" => L("Battery", "Μπαταρία"),
-            "audio" => L("Audio spectrum", "Φάσμα ήχου"),
             _ => id,
         };
 

@@ -1,4 +1,4 @@
-// Wallpaper elements: the pieces of the Opsis widgets (clock, CPU, memory, GPU, network, disks, battery, audio spectrum) drawn directly on the
+// Wallpaper elements: the pieces of the Opsis widgets (clock, CPU, memory, GPU, network, disks, battery; the old audio-spectrum element was removed in 2.6.0, the music overlay replaces it) drawn directly on the
 // wallpaper, on top of any wallpaper mode. The user chooses which ones are shown and where (Wallpaper page -> "Wallpaper elements").
 // Loaded by index.html; uses its globals: cfg, isPaused, bridge().
 (function () {
@@ -91,20 +91,13 @@
             html: '<div class="elT">Battery</div><div class="elBig" data-k="v">–</div><div class="elBar"><i data-k="b"></i></div>',
             upd(e, d) { if (d.batteryPercent < 0) { setText(e, 'v', 'AC'); setBar(e, 'b', 100); return; } setText(e, 'v', d.batteryPercent + ' %' + (d.charging ? ' ⚡' : '')); setBar(e, 'b', d.batteryPercent); }
         },
-        audio: {
-            needsAudio: true,
-            html: '<div class="elT">Audio</div><canvas class="elCv" data-k="cv" width="260" height="90" style="width:100%;height:auto"></canvas>',
-            draw(e, bands) { const cv = $q(e, 'cv'), c = cv.getContext('2d'); c.clearRect(0, 0, cv.width, cv.height);
-                const n = bands.length || 24, bw = cv.width / n; c.fillStyle = getComputedStyle(e).getPropertyValue('--a') || '#00d2ff';
-                for (let i = 0; i < n; i++) { const v = Math.min(1, (bands[i] || 0) * 1.2), h = Math.max(2, v * cv.height); c.globalAlpha = .4 + .6 * v; c.fillRect(i * bw + 1.5, cv.height - h, bw - 3, h); } c.globalAlpha = 1; }
-        },
     };
 
     let active = new Map();      // id -> element
-    let timer = null, audioTimer = null, clockTimer = null;
+    let timer = null, clockTimer = null;
     const needs = k => [...active.keys()].some(id => defs[id] && defs[id][k]);
 
-    function clearTimers() { clearInterval(timer); clearInterval(audioTimer); clearInterval(clockTimer); timer = audioTimer = clockTimer = null; }
+    function clearTimers() { clearInterval(timer); clearInterval(clockTimer); timer = clockTimer = null; }
 
     async function pollSystem() {
         if (isPaused) return;
@@ -113,11 +106,6 @@
             const d = JSON.parse(await b.GetSystemJson(needs('needsGpu')));
             for (const [id, e] of active) if (defs[id].upd) defs[id].upd(e, d);
         } catch (x) { /* keep the last values */ }
-    }
-    async function pollAudio() {
-        if (isPaused) return;
-        const b = bridge(); if (!b) return;
-        try { const bands = JSON.parse(await b.GetAudioBandsJson()); for (const [id, e] of active) if (defs[id].draw) defs[id].draw(e, bands); } catch (x) { /* ignore */ }
     }
     function tickClocks() { if (isPaused) return; for (const [id, e] of active) if (defs[id].tick) defs[id].tick(e); }
 
@@ -145,7 +133,6 @@
         clearTimers();
         if (active.size === 0) return;
         if ([...active.keys()].some(id => defs[id].upd)) { pollSystem(); timer = setInterval(pollSystem, 1000); }
-        if (needs('needsAudio')) audioTimer = setInterval(pollAudio, 80);
         if ([...active.keys()].some(id => defs[id].tick)) { tickClocks(); clockTimer = setInterval(tickClocks, 1000); }
     };
     window.opsisPauseElements = function (paused) { if (paused) clearTimers(); else window.opsisApplyElements(); };

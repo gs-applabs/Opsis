@@ -340,7 +340,7 @@ namespace MotionDesk.Widgets
 
         public static readonly (string Id, int X, int Y)[] Catalog =
         {
-            ("analog", 14, 22), ("cpu", 14, 52), ("ram", 14, 72), ("gpu", 14, 90), ("network", 86, 22), ("disks", 86, 50), ("battery", 86, 72), ("audio", 50, 88),
+            ("analog", 14, 22), ("cpu", 14, 52), ("ram", 14, 72), ("gpu", 14, 90), ("network", 86, 22), ("disks", 86, 50), ("battery", 86, 72),
         };
     }
 

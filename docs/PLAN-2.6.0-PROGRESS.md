@@ -90,7 +90,7 @@ Portable build outside the repo + `docs/TRY-NATIVE-CONTAINERS.md` (Greek). Rescu
 | 16 | Κοινές ρυθμίσεις Opsis↔plugins μόνο στο Opsis | ☐ φάση P |
 | 17 | Theme packs: duplicate με Appearance; Εξατομίκευση Plus | ☐ χρειάζεται το plugin Appearance για σύγκριση |
 | 18 | Lockscreen GIF (LockscreenGif — έλεγχος άδειας) + «ταίριασμα» χωρίς καιρό/ώρα | ☐ |
-| 19 | Αφαίρεση φάσματος ήχου από στοιχεία wallpaper | ☐ μετά το music overlay |
+| 19 | Αφαίρεση φάσματος ήχου από στοιχεία wallpaper | ✓ (στοιχείο, κατάλογος, ετικέτα, JS, polling 80 ms αφαιρέθηκαν· το widget Audio Visualizer μένει) |
 | 20 | Music overlay (GSMTC, clean-room, χωρίς γραμματοσειρές Rainbow) | ◐ έτοιμο: `NowPlayingService` (event-driven GSMTC, εξώφυλλο ≤160 px), `MusicOverlayWindow` (layered, click-through, glass pane αν GPU glass), 9 θέσεις, ρύθμιση Appearance→Advanced (ζωντανή, 14 γλώσσες), `--test-music-overlay`. ☐ visualizations Media Suite (άλλη εφαρμογή), ⛔ δοκιμή με πραγματικό player στην επιφάνεια |
 | 21 | Wallpapers landmarks + ποιότητα (2.1.5/2.1.5β) | ◐ Ribbons φθηνότερο (GPU −35 %)· landmarks/3D ☐ (άδειες μοντέλων) |
 | 22 | Δεξί κλικ επιφάνειας: Νέο DeskContainer / Αλλαγή wallpaper (0Β.3) | ☐ πρώτα επίσημη τεκμηρίωση MS |
