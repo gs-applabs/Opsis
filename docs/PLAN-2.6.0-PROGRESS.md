@@ -95,7 +95,7 @@ Portable build outside the repo + `docs/TRY-NATIVE-CONTAINERS.md` (Greek). Rescu
 | 21 | Wallpapers landmarks + ποιότητα (2.1.5/2.1.5β) | ◐ Ribbons φθηνότερο (GPU −35 %)· landmarks/3D ☐ (άδειες μοντέλων) |
 | 22 | Δεξί κλικ επιφάνειας: Νέο DeskContainer / Αλλαγή wallpaper (0Β.3) | ☐ πρώτα επίσημη τεκμηρίωση MS |
 | 23 | Ακριβής καιρός: πάροχος + opt-in τοποθεσία (0Β.5) | ⛔ πίνακας παρόχων στον χρήστη πριν επιλογή |
-| 24 | Perf §9.1: DeskStrip SyncItems lookups/εκτός UI thread | ☐ (επόμενο) |
+| 24 | Perf §9.1: DeskStrip SyncItems lookups/εκτός UI thread | ✓ dictionaries + απαρίθμηση παραθύρων σε worker (⛔ δοκιμή στο ζωντανό dock) |
 | 25 | Perf §9.1: FeatureOverride cache | ✓ 2.4.6.1 |
 | 26 | Perf §9.2: FlatToggle font | ✓ Opsis.UI 0.3.1 · FlatTabs rects / FlatComboBox popup ☐ |
 | 27 | Rubber-band ≥2 εικονίδια → «Δημιουργία container» (§22-6) | ☐ |

@@ -179,14 +179,33 @@ namespace MotionDesk.Widgets
             bool fs = AppActivity.IsFullscreenAppActive;
             if (fs != _hiddenByFullscreen) { _hiddenByFullscreen = fs; Visible = !fs; if (!fs) Invalidate(); }
             if (fs) return;
-            if (SyncItems()) ApplyLayout(animate: true);
-            else UpdateActiveFlags();
+            // Plan 9.1: the window enumeration (EnumWindows + the image path of every window) is the expensive part: it runs on a worker thread and only
+            // the cheap merge into the item list happens on the UI thread. One enumeration at a time; a slow one is simply skipped, never queued.
+            if (_enumerating) return;
+            if (!(_s.ShowRunning || _s.Paths.Count > 0)) { if (SyncItems()) ApplyLayout(animate: true); else UpdateActiveFlags(); return; }
+            _enumerating = true;
+            Task.Run(WinApi.EnumerateAppWindows).ContinueWith(t =>
+            {
+                try
+                {
+                    if (IsDisposed || !IsHandleCreated) return;
+                    BeginInvoke(new Action(() =>
+                    {
+                        _enumerating = false;
+                        if (IsDisposed || t.IsFaulted) return;
+                        if (SyncItems(t.Result)) ApplyLayout(animate: true); else UpdateActiveFlags();
+                    }));
+                }
+                catch (Exception) { _enumerating = false; }
+            });
         }
 
+        private volatile bool _enumerating;
+
         /// <summary>Συγχρονίζει τη λίστα (καρφιτσωμένα + τρέχοντα). Επιστρέφει true αν άλλαξε το πλήθος των στοιχείων.</summary>
-        private bool SyncItems()
+        private bool SyncItems(List<WinApi.AppWindow>? enumerated = null)
         {
-            var windows = _s.ShowRunning || _s.Paths.Count > 0 ? WinApi.EnumerateAppWindows() : new List<WinApi.AppWindow>();
+            var windows = enumerated ?? (_s.ShowRunning || _s.Paths.Count > 0 ? WinApi.EnumerateAppWindows() : new List<WinApi.AppWindow>());
             int before = _items.Count;
             var previous = new Dictionary<string, Item>(StringComparer.OrdinalIgnoreCase);
             foreach (var i in _items) previous[i.Key] = i;
@@ -201,15 +220,19 @@ namespace MotionDesk.Widgets
                 it.Windows = new List<IntPtr>();
                 list.Add(it);
             }
+            // dictionaries instead of a linear search per window (windows x items)
+            var pinnedByExe = new Dictionary<string, Item>(StringComparer.OrdinalIgnoreCase);
+            foreach (var i in list) { if (!i.Pinned) continue; if (i.Target != null) pinnedByExe.TryAdd(i.Target, i); pinnedByExe.TryAdd(i.Key, i); }
+            var runningByKey = new Dictionary<string, Item>(StringComparer.OrdinalIgnoreCase);
             foreach (var w in windows)
             {
-                var pinned = list.FirstOrDefault(i => i.Pinned && SameApp(i, w.ExePath));
+                pinnedByExe.TryGetValue(w.ExePath, out var pinned);
                 if (pinned != null) { pinned.Windows.Add(w.Handle); pinned.Title = w.Title; continue; }
                 if (!_s.ShowRunning) continue;
                 // Οι UWP εφαρμογές (Αριθμομηχανή, Ρυθμίσεις...) τρέχουν όλες μέσα στο ApplicationFrameHost.exe: κάθε παράθυρο είναι δική του εφαρμογή.
                 bool uwp = Path.GetFileName(w.ExePath).Equals("ApplicationFrameHost.exe", StringComparison.OrdinalIgnoreCase);
                 string key = uwp ? w.ExePath + "#" + w.Handle.ToInt64() : w.ExePath;
-                var run = list.FirstOrDefault(i => !i.Pinned && string.Equals(i.Key, key, StringComparison.OrdinalIgnoreCase));
+                runningByKey.TryGetValue(key, out var run);
                 if (run == null)
                 {
                     if (!previous.TryGetValue(key, out run) || run.Pinned)
@@ -217,7 +240,7 @@ namespace MotionDesk.Widgets
                     run.Display = uwp ? w.Title : Path.GetFileNameWithoutExtension(w.ExePath);
                     run.Windows = new List<IntPtr>();
                     run.Icon ??= uwp ? WinApi.WindowIcon(w.Handle) ?? IconFor(w.ExePath) : IconFor(w.ExePath) ?? WinApi.WindowIcon(w.Handle);
-                    list.Add(run);
+                    list.Add(run); runningByKey[key] = run;
                 }
                 run.Windows.Add(w.Handle); run.Title = w.Title;
             }
