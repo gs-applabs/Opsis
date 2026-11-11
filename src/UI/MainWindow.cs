@@ -695,7 +695,7 @@ namespace MotionDesk.UI
                     for (int x = 0; x <= Width; x += 16)
                         pts.Add(new PointF(x, (float)(baseline + Math.Sin(phase + x * 0.012) * amp)));
                     if (pts.Count < 2) continue;
-                    using var pen = new Pen(Color.FromArgb(38 - i * 6, colors[i]), 1.6f) { LineJoin = LineJoin.Round };
+                    using var pen = new Pen(Color.FromArgb(HeaderWaveStyle.Alpha(UiTheme.Background, colors[i], i), colors[i]), 2f) { LineJoin = LineJoin.Round };
                     g.DrawLines(pen, pts.ToArray());
                 }
             }
