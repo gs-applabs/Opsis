@@ -1,6 +1,6 @@
 # Δοκιμή των νέων DeskContainers (2.6.0-beta) — με ασφάλεια
 
-Η δοκιμή τρέχει από **ξεχωριστό φάκελο** (`C:\w\Opsis-2.6.0-beta-portable`) με **δικό της φάκελο δεδομένων** (`data\`).
+Η δοκιμή τρέχει από **ξεχωριστό φάκελο** (`Opsis-2.6.0-beta-portable`, η διαδρομή δόθηκε στο chat· παρακάτω «ο φάκελος») με **δικό της φάκελο δεδομένων** (`data\`).
 Το εγκατεστημένο Opsis 2.4.6.1 και τα δεδομένα του (`%AppData%\Opsis`) **δεν αγγίζονται**. Δεν υπάρχει installer, δεν γράφεται τίποτα στο registry.
 
 ## Πριν ξεκινήσεις
@@ -8,7 +8,7 @@
 2. Αν θες, κράτα ανοιχτό ένα παράθυρο PowerShell/CMD για ό,τι χρειαστεί.
 
 ## Εκκίνηση
-1. Διπλό κλικ στο `C:\w\Opsis-2.6.0-beta-portable\Start-Opsis-TEST.bat`.
+1. Διπλό κλικ στο `Start-Opsis-TEST.bat` μέσα στον φάκελο.
 2. Η ρύθμιση `UseNativeContainers` και η GPU glass είναι **ήδη ενεργές** στο `data\settings.json`. Μετά από ~10 δευτερόλεπτα πρέπει να εμφανιστεί ένα container «Test» (πορτοκαλί τίτλος) με Notepad, Calc, Charmap.
 
 ## Τι να παρατηρήσεις
@@ -30,11 +30,12 @@
 
    ```powershell
    Get-Process Opsis,OpsisContainers | Where-Object { $_.Path -like '*Opsis-2.6.0-beta-portable*' } | Stop-Process -Force
-   $env:OPSIS_APPDATA = 'C:\w\Opsis-2.6.0-beta-portable\data'
-   & 'C:\w\Opsis-2.6.0-beta-portable\app\Opsis.exe' --restore-desktop-icons
+   cd <ο φάκελος της δοκιμής>
+   $env:OPSIS_APPDATA = (Resolve-Path .\data)
+   & .\app\Opsis.exe --restore-desktop-icons
    ```
 3. Αν τα εικονίδια εξακολουθούν να λείπουν: δεξί κλικ στην επιφάνεια → Προβολή → «Αυτόματη τακτοποίηση εικονιδίων» (ενεργοποίηση και μετά απενεργοποίηση). Ως τελευταία λύση: Task Manager → Windows Explorer → Επανεκκίνηση.
-4. Για πλήρη επαναφορά της δοκιμής: κλείσε το δοκιμαστικό Opsis και σβήσε τον φάκελο `C:\w\Opsis-2.6.0-beta-portable`. Το εγκατεστημένο Opsis δεν επηρεάζεται.
+4. Για πλήρη επαναφορά της δοκιμής: κλείσε το δοκιμαστικό Opsis και σβήσε ολόκληρο τον φάκελο της δοκιμής. Το εγκατεστημένο Opsis δεν επηρεάζεται.
 
 ## Τι έχει ελεγχθεί ήδη (αυτόματα)
 - Το δοκιμαστικό Opsis ξεκινά με το δικό του `data\`, φορτώνει το container και απαντά στο pipe (`Opsis.exe --containers list`).

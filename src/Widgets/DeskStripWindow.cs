@@ -19,6 +19,8 @@ namespace MotionDesk.Widgets
     public sealed class DeskStripSettings
     {
         public List<string> Paths { get; set; } = new();
+        /// <summary>Ids of Opsis-family apps already offered for automatic pinning (an app the user unpins stays unpinned).</summary>
+        public List<string> AutoPinnedFamily { get; set; } = new();
         public DockPosition Position { get; set; } = DockPosition.Bottom;
         public bool AutoHide { get; set; } = false;
         public int IconSize { get; set; } = 44;               // 28..72
@@ -151,8 +153,29 @@ namespace MotionDesk.Widgets
         }
 
         // ---- ανίχνευση παραθύρων ----------------------------------------------------------------------------------
+        private int _familyCheck;
+
+        /// <summary>Pins the installed Opsis-family apps (suite/apps.json) once each. Cheap: a handful of File.Exists, run at start and then about once a minute.</summary>
+        private void AutoPinFamily()
+        {
+            try
+            {
+                var offered = new HashSet<string>(_s.AutoPinnedFamily, StringComparer.OrdinalIgnoreCase);
+                var found = FamilyApp.AutoPinCandidates(FamilyApp.Load(), offered, a => a.InstalledPath);
+                if (found.Count == 0) return;
+                foreach (var (id, path) in found)
+                {
+                    _s.AutoPinnedFamily.Add(id);
+                    if (!_s.Paths.Contains(path, StringComparer.OrdinalIgnoreCase)) { _s.Paths.Add(path); _pendingEntrance.Add(path); }
+                }
+                SyncItems(); ApplyLayout(animate: true); QueueSave();
+            }
+            catch (Exception) { }
+        }
+
         private void PollTick()
         {
+            if (_familyCheck++ % 40 == 0) AutoPinFamily();
             bool fs = AppActivity.IsFullscreenAppActive;
             if (fs != _hiddenByFullscreen) { _hiddenByFullscreen = fs; Visible = !fs; if (!fs) Invalidate(); }
             if (fs) return;

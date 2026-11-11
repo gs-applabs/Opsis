@@ -58,5 +58,11 @@ Done: pause when the desktop is fully covered (`DesktopCoverage`, setting on by 
 Not done: z-order against the desktop icon layer and the wallpaper window (the window is TopMost for now), Win+D and Explorer restart behaviour, keyboard navigation, selection with the keyboard, drag and drop in / out, context menu, rename, tabs, portals, notes, drop of the desktop icons, persistence of the live container set, multi-monitor DPI. The test uses a stand-in background in my own window, not the real wallpaper window.
 Manual test (Windows 11, needs the user): none can be run before the container host is started from Opsis itself (phase 6 part B/9); steps will be written when it is wired.
 
+## DeskStrip: auto-pin of the Opsis family (user request 2026-11-11)
+Installed family apps from `suite/apps.json` (other than Opsis) are pinned to the DeskStrip automatically, once each (id kept in `DeskStripSettings.AutoPinnedFamily`, so an app the user unpins is never pinned again); checked at start and about once a minute, so an app installed later appears too. Pure rule `FamilyApp.AutoPinCandidates` is unit-tested (177 Opsis tests). NOT verified live with a real installed family app.
+
+## Test kit for UseNativeContainers
+Portable build outside the repo + `docs/TRY-NATIVE-CONTAINERS.md` (Greek). Rescue: `Opsis.exe --restore-desktop-icons`. Verified: hide 162/166 icons, kill, rescue = identical positions.
+
 ## Where I stopped
 7/8 part 1 committed (keyboard, accessibility tree, High Contrast). Next: 5/9 rest (hotkey -> FocusForKeyboard / show-hide, tray entries, perf-governor + safe-mode hooks, options.json import), then z-order / Win+D (phase 6 part B, needs the user), then the fork switch-off (remove `containers/`, csproj excludes, installer, legacy files) - that last step only after the user has tried `UseNativeContainers`.

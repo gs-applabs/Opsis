@@ -17,6 +17,23 @@ namespace MotionDesk.Widgets
         /// <summary>First existing install path (environment variables expanded), or null when the app is not installed.</summary>
         public string? InstalledPath => Paths.Select(Environment.ExpandEnvironmentVariables).FirstOrDefault(File.Exists);
 
+        /// <summary>
+        /// DeskStrip auto-pin (pure, testable): the installed family apps (other than Opsis itself) that should be pinned now. Each app is offered ONCE (its id goes into
+        /// <paramref name="alreadyOffered"/>), so an app the user unpins by hand is never pinned again. <paramref name="installedPathOf"/> maps an app to its install path or null.
+        /// </summary>
+        public static List<(string Id, string Path)> AutoPinCandidates(IEnumerable<FamilyApp> apps, ISet<string> alreadyOffered, Func<FamilyApp, string?> installedPathOf)
+        {
+            var result = new List<(string, string)>();
+            foreach (var a in apps)
+            {
+                if (a.Id.Equals("opsis", StringComparison.OrdinalIgnoreCase) || alreadyOffered.Contains(a.Id)) continue;
+                var path = installedPathOf(a);
+                if (string.IsNullOrEmpty(path)) continue;
+                result.Add((a.Id, path));
+            }
+            return result;
+        }
+
         public string ReleasesUrl => $"https://github.com/{Owner}/{Repo}/releases/latest";
 
         /// <summary>Reads the family list (pure, testable). Unknown / broken entries are skipped.</summary>
