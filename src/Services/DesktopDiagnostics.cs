@@ -212,6 +212,17 @@ namespace MotionDesk.Services
                 int added = win.AcceptDrop(new[] { extra, dupe, "" }, new Point(60, 120));
                 report.Add($"drop: added={added} (expected 1 or 0 if file missing, duplicate skipped) items {before}->{model.Items.Count} changedEvents={fired}; fileUntouched={File.Exists(dupe)}");
                 var firstBefore = model.Items[0].Path; win.MoveItem(0, new Point(300, 300));
+                // phase 7/8: keyboard, accessibility tree, high contrast
+                win.HandleKey(Keys.Right); win.HandleKey(Keys.Right); win.HandleKey(Keys.Down);
+                report.Add($"keyboard: selected={win.Selected} after Right,Right,Down (expected >= 2)");
+                var acc = win.AccessibilityObject;
+                report.Add($"accessibility: name='{acc.Name}' role={acc.Role} children={acc.GetChildCount()} (items={model.Items.Count}) child0='{acc.GetChild(0)?.Name}' action='{acc.GetChild(0)?.DefaultAction}'");
+                using (var hcBmp = new Bitmap(win.Width, win.Height, System.Drawing.Imaging.PixelFormat.Format32bppPArgb))
+                {
+                    using (var g = Graphics.FromImage(hcBmp)) win.RenderTo(g, true);
+                    var px = hcBmp.GetPixel(win.Width / 4, 8); var hl = SystemColors.Highlight;
+                    report.Add($"high contrast: title bar pixel={px} equals system Highlight={px.R == hl.R && px.G == hl.G && px.B == hl.B && px.A == 255}");
+                }
                 var swIcons = Stopwatch.StartNew(); win.WaitIcons(5000);
                 report.Add($"icons: background extraction finished in {swIcons.ElapsedMilliseconds} ms (UI thread kept pumping)");
                 int cnt = model.Items.Count; win.RemoveItem(0);

@@ -107,14 +107,20 @@ namespace MotionDesk.Containers
             try { return ColorTranslator.FromHtml(hex); } catch (Exception) { return fallback; }
         }
 
-        public static void Paint(Graphics g, Size client, Container model, ContainerMetrics m, int scroll, int hover, int selected, ContainerIcons icons, bool glass, float scale)
+        public static void Paint(Graphics g, Size client, Container model, ContainerMetrics m, int scroll, int hover, int selected, ContainerIcons icons, bool glass, float scale, bool? highContrast = null)
         {
+            var hc = highContrast ?? SystemInformation.HighContrast;   // Windows High Contrast: system colours only, opaque, no glass
             g.SmoothingMode = SmoothingMode.AntiAlias; g.InterpolationMode = InterpolationMode.HighQualityBicubic; g.TextRenderingHint = TextRenderingHint.AntiAliasGridFit;
             var radius = (int)Math.Round(14 * scale);
             var tb = model.TitleBar;
             var accent = MotionDesk.UI.UiTheme.AccentCyan;
 
-            if (!glass)   // no GPU glass: a translucent dark surface of its own
+            if (hc)
+            {
+                using var bg = new SolidBrush(SystemColors.Window); g.FillRectangle(bg, 0, 0, client.Width, client.Height);
+                using var bp = new Pen(SystemColors.WindowText, Math.Max(1, 2 * scale)); g.DrawRectangle(bp, 1, 1, client.Width - 3, client.Height - 3);
+            }
+            else if (!glass)   // no GPU glass: a translucent dark surface of its own
             {
                 using var path = MotionDesk.UI.UiTheme.RoundedPath(new Rectangle(0, 0, client.Width - 1, client.Height - 1), radius);
                 using var fill = new SolidBrush(Color.FromArgb(150, 24, 26, 34)); g.FillPath(fill, path);
@@ -123,12 +129,12 @@ namespace MotionDesk.Containers
 
             // ---- title bar: its OWN colour / opacity / height / font
             var barRect = new Rectangle(1, 1, client.Width - 2, m.TitleBarHeight);
-            var barColor = ParseColor(tb.Color, Color.FromArgb(255, accent.R / 3, accent.G / 3, accent.B / 3));
+            var barColor = hc ? SystemColors.Highlight : ParseColor(tb.Color, Color.FromArgb(255, accent.R / 3, accent.G / 3, accent.B / 3));
             using (var barPath = TopRounded(barRect, radius))
             {
-                using var bar = new SolidBrush(Color.FromArgb(Math.Clamp(tb.Opacity, 0, 100) * 255 / 100, barColor)); g.FillPath(bar, barPath);
+                using var bar = new SolidBrush(Color.FromArgb(hc ? 255 : Math.Clamp(tb.Opacity, 0, 100) * 255 / 100, barColor)); g.FillPath(bar, barPath);
             }
-            var textColor = ParseColor(tb.TextColor, Contrast(barColor));
+            var textColor = hc ? SystemColors.HighlightText : ParseColor(tb.TextColor, Contrast(barColor));
             using (var font = new Font(string.IsNullOrWhiteSpace(tb.FontFamily) ? "Segoe UI Variable Display" : tb.FontFamily, tb.FontSize * scale, tb.Bold ? FontStyle.Bold : FontStyle.Regular, GraphicsUnit.Point))
             using (var tbrush = new SolidBrush(textColor))
             {
@@ -150,15 +156,16 @@ namespace MotionDesk.Containers
             g.SetClip(view);
             using var labelFont = new Font("Segoe UI", 9f * scale, FontStyle.Regular, GraphicsUnit.Point);
             using var labelFmt = new StringFormat { Alignment = StringAlignment.Center, Trimming = StringTrimming.EllipsisWord, FormatFlags = StringFormatFlags.LineLimit };
-            using var labelBrush = new SolidBrush(Color.FromArgb(240, 255, 255, 255));
-            using var shadowBrush = new SolidBrush(Color.FromArgb(model.Appearance.TextShadow ? 150 : 0, 0, 0, 0));
+            using var labelBrush = new SolidBrush(hc ? SystemColors.WindowText : Color.FromArgb(240, 255, 255, 255));
+            using var shadowBrush = new SolidBrush(Color.FromArgb(model.Appearance.TextShadow && !hc ? 150 : 0, 0, 0, 0));
             for (var i = first; i <= last; i++)
             {
                 var cell = ContainerLayout.CellRect(i, client, m, scroll);
                 if (i == hover || i == selected)
                 {
                     using var hp = MotionDesk.UI.UiTheme.RoundedPath(cell, (int)(8 * scale));
-                    using var hb = new SolidBrush(Color.FromArgb(i == selected ? 70 : 38, 255, 255, 255)); g.FillPath(hb, hp);
+                    using var hb = hc ? new SolidBrush(i == selected ? SystemColors.Highlight : SystemColors.ControlLight) : new SolidBrush(Color.FromArgb(i == selected ? 70 : 38, 255, 255, 255)); g.FillPath(hb, hp);
+                    if (i == selected) { using var fp = new Pen(hc ? SystemColors.HighlightText : Color.FromArgb(220, 255, 255, 255), Math.Max(1f, 1.5f * scale)) { DashStyle = DashStyle.Dot }; g.DrawPath(fp, hp); }   // visible keyboard focus
                 }
                 var item = model.Items[i];
                 var iconRect = new Rectangle(cell.X + (cell.Width - m.IconSize) / 2, cell.Y + (int)(4 * scale), m.IconSize, m.IconSize);
@@ -167,7 +174,8 @@ namespace MotionDesk.Containers
                 var labelRect = new RectangleF(cell.X + 2, iconRect.Bottom + 3 * scale, cell.Width - 4, m.LabelHeight);
                 var shadowRect = labelRect; shadowRect.Offset(1, 1);
                 g.DrawString(name, labelFont, shadowBrush, shadowRect, labelFmt);
-                g.DrawString(name, labelFont, labelBrush, labelRect, labelFmt);
+                if (hc && i == selected) { using var sb = new SolidBrush(SystemColors.HighlightText); g.DrawString(name, labelFont, sb, labelRect, labelFmt); }
+                else g.DrawString(name, labelFont, labelBrush, labelRect, labelFmt);
             }
             g.ResetClip();
 
@@ -177,7 +185,7 @@ namespace MotionDesk.Containers
             {
                 var track = view.Height - 2 * m.Margin; var content = ContainerLayout.ContentHeight(client.Width, model.Items.Count, m);
                 var h = Math.Max(24, track * view.Height / Math.Max(1, content)); var y = view.Top + m.Margin + (track - h) * scroll / max;
-                using var tp = new SolidBrush(Color.FromArgb(110, 255, 255, 255));
+                using var tp = new SolidBrush(hc ? SystemColors.WindowText : Color.FromArgb(110, 255, 255, 255));
                 g.FillRectangle(tp, client.Width - 5 * scale, y, 3 * scale, h);
             }
         }
@@ -246,7 +254,7 @@ namespace MotionDesk.Containers
         protected override void OnPaintBackground(PaintEventArgs e) { }
 
         /// <summary>Draws the window; also usable for a test (renders into a bitmap of the same size).</summary>
-        public void RenderTo(Graphics g) => ContainerRenderer.Paint(g, Client, Model, Metrics, _scroll, _hover, _selected, _icons, GlassOn, Scale);
+        public void RenderTo(Graphics g, bool? highContrast = null) => ContainerRenderer.Paint(g, Client, Model, Metrics, _scroll, _hover, _selected, _icons, GlassOn, Scale, highContrast);
 
         private void Repaint()
         {
@@ -316,6 +324,70 @@ namespace MotionDesk.Containers
             }
             else { Bounds = ContainerBehavior.Unroll(Bounds, Model.UnrolledHeight, WorkArea); Model.RolledUp = false; }
             Dirty(); Changed?.Invoke(Model);
+        }
+
+        // ---- keyboard (phase 7/8): the window does not steal focus, so keys work after FocusForKeyboard() (hotkey / tray) or when Windows activates it for assistive tools ----
+        public int Selected => _selected;
+        public void FocusForKeyboard() { if (_selected < 0 && Model.Items.Count > 0) { _selected = 0; Dirty(); } Activate(); }
+
+        /// <summary>Handles one navigation key; returns true when it was used. Public so it can be tested without real keyboard input.</summary>
+        public bool HandleKey(Keys key)
+        {
+            var cols = ContainerLayout.Columns(Client.Width, Metrics);
+            NavKey? nav = key switch { Keys.Left => NavKey.Left, Keys.Right => NavKey.Right, Keys.Up => NavKey.Up, Keys.Down => NavKey.Down, Keys.Home => NavKey.Home, Keys.End => NavKey.End, Keys.PageUp => NavKey.PageUp, Keys.PageDown => NavKey.PageDown, _ => null };
+            if (nav != null)
+            {
+                _selected = ContainerNavigation.Move(_selected, nav.Value, cols, Model.Items.Count, Math.Max(1, ContainerLayout.Viewport(Client, Metrics).Height / Math.Max(1, Metrics.CellHeight)));
+                if (_selected >= 0) _scroll = ContainerLayout.ScrollIntoView(_selected, Client, Model.Items.Count, Metrics, _scroll);
+                Dirty(); return true;
+            }
+            if (key == Keys.Enter && _selected >= 0 && _selected < Model.Items.Count) { OpenItem(_selected); return true; }
+            if (key == Keys.Delete && _selected >= 0 && !Model.Locked) { RemoveItem(_selected); return true; }
+            if (key == Keys.Apps || key == (Keys.F10 | Keys.Shift)) { ShowMenu(_selected >= 0 ? ContainerLayout.CellRect(_selected, Client, Metrics, _scroll).Location : new Point(Metrics.Margin, Metrics.TitleBarHeight)); return true; }
+            return false;
+        }
+
+        public void OpenItem(int index)
+        {
+            try { var it = Model.Items[index]; System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(it.Path) { UseShellExecute = true, Arguments = it.Arguments ?? "" }); }
+            catch (Exception ex) { System.Diagnostics.Debug.WriteLine("container open: " + ex.Message); }
+        }
+
+        protected override bool ProcessCmdKey(ref Message msg, Keys keyData) => HandleKey(keyData) || base.ProcessCmdKey(ref msg, keyData);
+
+        // ---- UI Automation / MSAA: a custom-drawn window must describe itself, otherwise screen readers see an empty window ----
+        protected override AccessibleObject CreateAccessibilityInstance() => new WindowAccessible(this);
+
+        private sealed class WindowAccessible : ControlAccessibleObject
+        {
+            private readonly ContainerWindow _w;
+            public WindowAccessible(ContainerWindow w) : base(w) { _w = w; }
+            public override string? Name { get => _w.Model.Title + " container"; set { } }
+            public override AccessibleRole Role => AccessibleRole.List;
+            public override string? Description => $"{_w.Model.Items.Count} items" + (_w.Model.Locked ? ", locked" : "");
+            public override int GetChildCount() => _w.Model.Items.Count;
+            public override AccessibleObject? GetChild(int index) => index >= 0 && index < _w.Model.Items.Count ? new ItemAccessible(this, _w, index) : null;
+            public override AccessibleObject? HitTest(int x, int y)
+            {
+                var p = _w.PointToClient(new Point(x, y)); var i = ContainerLayout.HitTest(p, _w.Client, _w.Model.Items.Count, _w.Metrics, _w._scroll);
+                return i >= 0 ? GetChild(i) : this;
+            }
+        }
+
+        private sealed class ItemAccessible : AccessibleObject
+        {
+            private readonly AccessibleObject _parent; private readonly ContainerWindow _w; private readonly int _i;
+            public ItemAccessible(AccessibleObject parent, ContainerWindow w, int i) { _parent = parent; _w = w; _i = i; }
+            private ContainerItem Item => _w.Model.Items[Math.Min(_i, _w.Model.Items.Count - 1)];
+            public override string? Name { get => string.IsNullOrEmpty(Item.DisplayName) ? System.IO.Path.GetFileNameWithoutExtension(Item.Path) : Item.DisplayName; set { } }
+            public override string? Description => Item.Path;
+            public override AccessibleObject? Parent => _parent;
+            public override AccessibleRole Role => AccessibleRole.ListItem;
+            public override string DefaultAction => "Open";
+            public override void DoDefaultAction() => _w.OpenItem(_i);
+            public override AccessibleStates State => AccessibleStates.Selectable | AccessibleStates.Focusable | (_w._selected == _i ? AccessibleStates.Selected | AccessibleStates.Focused : 0);
+            public override Rectangle Bounds => _w.RectangleToScreen(ContainerLayout.CellRect(_i, _w.Client, _w.Metrics, _w._scroll));
+            public override void Select(AccessibleSelection flags) { if ((flags & AccessibleSelection.TakeSelection) != 0) { _w._selected = _i; _w._scroll = ContainerLayout.ScrollIntoView(_i, _w.Client, _w.Model.Items.Count, _w.Metrics, _w._scroll); _w.Dirty(); } }
         }
 
         // ---- context menu: the container's OWN small menu (no shell extensions loaded into our process); every action is isolated by try/catch ----
