@@ -332,6 +332,64 @@ namespace MotionDesk.Services
             return ok ? 0 : 1;
         }
 
+        /// <summary>
+        /// Cost of N glass containers over a moving stand-in (my own window): CPU of this process, private memory, handles, GDI/USER objects, capture/render counts, for the budgets of
+        /// the design doc (section 6). Idle containers (nothing moving behind them) are measured as well. Nothing from the desktop is captured or saved.
+        /// </summary>
+        public static int TestContainerBudget(string folder, int count)
+        {
+            Directory.CreateDirectory(folder);
+            var report = new System.Collections.Generic.List<string>();
+            void Pump(int ms) { var end = DateTime.UtcNow.AddMilliseconds(ms); while (DateTime.UtcNow < end) { Application.DoEvents(); System.Threading.Thread.Sleep(10); } }
+            var settings = AppSettings.Load(); settings.UseGpuGlass = true; settings.Save();
+            var proc = Process.GetCurrentProcess();
+            [System.Runtime.InteropServices.DllImport("user32.dll")] static extern uint GetGuiResources(IntPtr h, uint flag);
+            (double cpu, long priv, int handles, uint gdi, uint user) Snap(TimeSpan cpuBefore, DateTime t0)
+            {
+                proc.Refresh();
+                var cpu = (proc.TotalProcessorTime - cpuBefore).TotalMilliseconds / Math.Max(1, (DateTime.UtcNow - t0).TotalMilliseconds) / Environment.ProcessorCount * 100;
+                return (cpu, proc.PrivateMemorySize64, proc.HandleCount, GetGuiResources(proc.Handle, 0), GetGuiResources(proc.Handle, 1));
+            }
+            var t = System.Diagnostics.Stopwatch.StartNew(); bool moving = true;
+            using var stage = new StageForm { FormBorderStyle = FormBorderStyle.None, StartPosition = FormStartPosition.Manual, Bounds = new Rectangle(0, 0, 1000, 700), TopMost = true, ShowInTaskbar = false, BackColor = Color.FromArgb(5, 7, 13) };
+            stage.Paint += (_, e) =>
+            {
+                if (!moving) return;
+                var g = e.Graphics; g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias; var tt = t.Elapsed.TotalSeconds;
+                using var pen = new Pen(Color.FromArgb(230, 0, 230, 255), 2.2f); var pts = new System.Collections.Generic.List<PointF>();
+                for (int x = 0; x <= stage.Width; x += 8) pts.Add(new PointF(x, (float)(350 - 40 * Math.Sin(x * 0.004 + tt))));
+                g.DrawLines(pen, pts.ToArray());
+            };
+            var anim = new System.Windows.Forms.Timer { Interval = 33 }; anim.Tick += (_, _) => { if (moving) stage.Invalidate(); }; anim.Start();
+            stage.Show(); Pump(600);
+            var windows = new System.Collections.Generic.List<MotionDesk.Containers.ContainerWindow>();
+            try
+            {
+                var baseline = Snap(proc.TotalProcessorTime, DateTime.UtcNow);
+                report.Add($"before containers: priv={baseline.priv / 1048576} MB handles={baseline.handles} GDI={baseline.gdi} USER={baseline.user}");
+                for (int i = 0; i < count; i++)
+                {
+                    var model = new Opsis.Containers.Container { Title = "C" + i };
+                    for (int k = 0; k < 24; k++) model.Items.Add(new Opsis.Containers.ContainerItem { Path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System), k % 2 == 0 ? "notepad.exe" : "calc.exe"), DisplayName = "item" + k });
+                    var w = new MotionDesk.Containers.ContainerWindow(model) { Bounds = new Rectangle(40 + i * 300, 100, 280, 300), TopMost = true };
+                    w.Show(); windows.Add(w);
+                }
+                Pump(2500);
+                var t0 = DateTime.UtcNow; var c0 = proc.TotalProcessorTime; Pump(8000);
+                var live = Snap(c0, t0); var mgr = GlassService.Manager;
+                report.Add($"{count} glass containers, background MOVING 8 s: cpu={live.cpu:0.0}% of all cores, priv={live.priv / 1048576} MB, handles={live.handles}, GDI={live.gdi}, USER={live.user}" + (mgr != null ? $", panes={mgr.Stats.Panes}, captures={mgr.Stats.Captures}, renders={mgr.Stats.Renders}" : ""));
+                moving = false; anim.Stop(); Pump(2500);
+                var t1 = DateTime.UtcNow; var c1 = proc.TotalProcessorTime; Pump(8000);
+                var idle = Snap(c1, t1);
+                report.Add($"{count} glass containers, background STATIC 8 s: cpu={idle.cpu:0.0}% of all cores, priv={idle.priv / 1048576} MB, handles={idle.handles}, GDI={idle.gdi}, USER={idle.user}");
+                report.Add($"growth over the run: priv +{(idle.priv - baseline.priv) / 1048576} MB, GDI +{(int)idle.gdi - (int)baseline.gdi}, USER +{(int)idle.user - (int)baseline.user}, handles +{idle.handles - baseline.handles}");
+            }
+            catch (Exception ex) { report.Add("EXCEPTION: " + ex); }
+            finally { foreach (var w in windows) w.Close(); anim.Stop(); GlassService.Shutdown(); }
+            File.WriteAllLines(Path.Combine(folder, "container-budget.txt"), report);
+            return report.Any(l => l.StartsWith("EXCEPTION")) ? 1 : 0;
+        }
+
         private sealed class StageForm : Form
         {
             public StageForm() { SetStyle(ControlStyles.OptimizedDoubleBuffer | ControlStyles.AllPaintingInWmPaint | ControlStyles.UserPaint, true); }

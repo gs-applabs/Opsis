@@ -139,6 +139,12 @@ namespace MotionDesk
                 Environment.Exit(Services.DesktopDiagnostics.TestContainerZOrder(args[1]));
                 return;
             }
+            if (args.Length == 3 && args[0] == "--test-container-budget")
+            {
+                ApplicationConfiguration.Initialize();
+                Environment.Exit(Services.DesktopDiagnostics.TestContainerBudget(args[1], int.Parse(args[2])));
+                return;
+            }
             if (args.Length == 2 && args[0] == "--test-music-overlay")
             {
                 ApplicationConfiguration.Initialize();

@@ -1,0 +1,4 @@
+before containers: priv=16 MB handles=313 GDI=25 USER=20
+3 glass containers, background MOVING 8 s: cpu=2,3% of all cores, priv=44 MB, handles=552, GDI=50, USER=52, panes=3, captures=128, renders=383
+3 glass containers, background STATIC 8 s: cpu=0,7% of all cores, priv=42 MB, handles=551, GDI=50, USER=50
+growth over the run: priv +25 MB, GDI +25, USER +30, handles +238
