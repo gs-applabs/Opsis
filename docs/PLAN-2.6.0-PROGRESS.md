@@ -80,10 +80,10 @@ Portable build outside the repo + `docs/TRY-NATIVE-CONTAINERS.md` (Greek). Rescu
 | 6 | Κουμπιά Επαναφορά κομμένα (R.1) | ✓ κάρτες/Reset ανά ενότητα στη Ρυθμίσεις· ⛔ έλεγχος στο ζωντανό UI |
 | 7 | Αυτοματισμοί+Προφίλ ενοποιημένα, gaming mode Steam ορατό | ✓ |
 | 8 | DeskContainers / DeskStrip σε δική τους καρτέλα | ✓ |
-| 9 | Αποσυμφόρηση ρυθμίσεων, UiScale, WindowMemory, αναζήτηση, Advanced (2.1.8) | ◐ Ρυθμίσεις+Θέμα έτοιμες· Wallpaper/Εξατομίκευση/Audio/DeskZones/Widgets ☐ (χρειάζονται screenshots/έλεγχο ανά σελίδα) |
+| 9 | Αποσυμφόρηση ρυθμίσεων (οι εικόνες των σελίδων στο `--ui-audit` δείχνουν Wallpaper/DeskZones σε παλιά διάταξη χωρίς κάρτες), UiScale, WindowMemory, αναζήτηση, Advanced (2.1.8) | ◐ Ρυθμίσεις+Θέμα έτοιμες· Wallpaper/Εξατομίκευση/Audio/DeskZones/Widgets ☐ (χρειάζονται screenshots/έλεγχο ανά σελίδα) |
 | 10 | Βίντεο: Prev/Pause/Next, μικρότερα κουμπιά στην ίδια ευθεία (2.1.9) | ✓ |
 | 11 | Βίντεο: drag & drop σειράς | ✓ (καθαρή λογική + 8 tests, UI με γραμμή πτώσης και αυτόματο scroll· ⛔ χειροκίνητη δοκιμή drag με το ποντίκι) |
-| 12 | Βίντεο: RAM 16 βίντεο ~3 GB → ~850 MB | ☐ χρειάζεται μέτρηση |
+| 12 | Βίντεο: RAM 16 βίντεο ~3 GB → ~850 MB | ◐ ανάλυση κώδικα: το wallpaper έχει ΜΟΝΟ 2 στοιχεία `<video>` (A/B crossfade) και μικρά thumbnails στη λίστα — δεν φαίνεται preload όλων· πιθανή αιτία η αποκωδικοποίηση 4K/WebView2. ⛔ μέτρηση με 16 πραγματικά βίντεο (tools/resource-logger.ps1) πριν διόρθωση |
 | 13 | «Προεπιλεγμένη εμφάνιση plugins» → διαγραφή (2.1.1) | ✓ (η σειρά αφαιρέθηκε από τις ρυθμίσεις· τα plugins ακολουθούν πάντα το θέμα Opsis) |
 | 14 | Distinctive εικονίδιο καρτέλας plugin (γενικός μηχανισμός) | ✓ `PluginIconChooser`: γνωστά θέματα → δικό τους εικονίδιο, κάθε άλλο plugin → πλακίδιο με το δικό του γράμμα (⛔ οπτικός έλεγχος) |
 | 15 | Ενημερώσεις plugins μόνο από το κουμπί του Opsis | ☐ |
@@ -97,8 +97,8 @@ Portable build outside the repo + `docs/TRY-NATIVE-CONTAINERS.md` (Greek). Rescu
 | 23 | Ακριβής καιρός: πάροχος + opt-in τοποθεσία (0Β.5) | ◐ `docs/WEATHER_PROVIDERS.md`: συγκριτικός πίνακας (Open-Meteo επιβεβαιωμένοι όροι, MET Norway, NWS) + σχεδιασμός privacy· ⛔ απόφαση χρήστη (α: μόνο Open-Meteo / β: + MET Norway/NWS) πριν κώδικα |
 | 24 | Perf §9.1: DeskStrip SyncItems lookups/εκτός UI thread | ✓ dictionaries + απαρίθμηση παραθύρων σε worker (⛔ δοκιμή στο ζωντανό dock) |
 | 25 | Perf §9.1: FeatureOverride cache | ✓ 2.4.6.1 |
-| 26 | Perf §9.2: FlatToggle font | ✓ Opsis.UI 0.3.1 · FlatTabs rects / FlatComboBox popup ☐ |
-| 27 | Rubber-band ≥2 εικονίδια → «Δημιουργία container» (§22-6) | ☐ |
+| 26 | Perf §9.2: FlatToggle font | ✓ Opsis.UI 0.3.1 · FlatTabs rects cache + FlatComboBox popup dispose ✓ (Opsis.UI 0.4.0) · custom painting (slider) ☐ μετά από προφίλ |
+| 27 | Rubber-band ≥2 εικονίδια → «Δημιουργία container» (§22-6) | ☐ σχεδιασμένο: το mouse hook του DesktopIconVisibilityEngine + LVM_GETSELECTEDCOUNT/LVM_GETITEMSTATE (χωρίς δείκτες) + αντιστοίχιση ονόματος→αρχείο στους φακέλους Desktop· χρειάζεται τον native host (item API) → μετά τη δοκιμή του από τον χρήστη |
 | 28 | Native DeskContainers (phases 3, 5/9, 7/8) | ✓ πρώτες φέτες· ⛔ δοκιμή χρήστη, μετά switch-off fork |
 | 29 | Opsis ξεκινά ΠΡΩΤΟ στην εκκίνηση Windows (§22-1) | ☐ scheduled task με καθυστέρηση |
 | 30 | Explorer restart → μαύρη οθόνη (§22-5) | ◐ υπάρχει ExplorerRestartWatcher (+tests) από 2.4.x· ⛔ επιβεβαίωση σε πραγματικό restart |
