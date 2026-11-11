@@ -294,6 +294,44 @@ namespace MotionDesk.Services
             return p == new Point(1556, 928) ? 0 : 1;
         }
 
+        /// <summary>
+        /// Z-order of the container windows against a normal window and the desktop, checked in the real z-order chain: container ABOVE the desktop (Progman/WorkerW), BELOW a normal
+        /// window of mine, and still above the desktop after the normal window comes to the front. No screenshot, nothing of the desktop is captured; the windows are not clicked.
+        /// </summary>
+        public static int TestContainerZOrder(string folder)
+        {
+            Directory.CreateDirectory(folder);
+            var report = new System.Collections.Generic.List<string>();
+            void Pump(int ms) { var end = DateTime.UtcNow.AddMilliseconds(ms); while (DateTime.UtcNow < end) { Application.DoEvents(); System.Threading.Thread.Sleep(10); } }
+            var file = Path.Combine(folder, "zorder-test.json"); if (File.Exists(file)) File.Delete(file);
+            bool ok = true;
+            try
+            {
+                using var host = new MotionDesk.Containers.ContainerHost(new Opsis.Containers.ContainersStore(file));
+                host.Service.Handle("create", new System.Text.Json.Nodes.JsonObject { ["title"] = "Z", ["x"] = 300, ["y"] = 300, ["width"] = 300, ["height"] = 200 });
+                host.Sync(); Pump(500);
+                var win = host.Windows.First();
+                using var normal = new Form { FormBorderStyle = FormBorderStyle.FixedToolWindow, Text = "zorder-normal-window", ShowInTaskbar = false, StartPosition = FormStartPosition.Manual, Bounds = new Rectangle(320, 320, 200, 120) };
+                normal.Show(); normal.Activate(); Pump(400);
+                int Idx(IntPtr h) => MotionDesk.Containers.DesktopZOrder.Chain().IndexOf(h);
+                var desk = MotionDesk.Containers.DesktopZOrder.DesktopWindows();
+                int deskTop = desk.Select(Idx).Where(i => i >= 0).DefaultIfEmpty(-1).Min();
+                int c = Idx(win.Handle), n = Idx(normal.Handle);
+                report.Add($"chain index: normal window={n} container={c} highest desktop window={deskTop} (smaller = higher)");
+                bool a = c > n && n >= 0; report.Add("container is BELOW the normal window: " + a);
+                bool b = deskTop >= 0 && c < deskTop; report.Add("container is ABOVE the desktop: " + b);
+                // push the container to the bottom, as another topmost change might, and let the host put it back
+                win.SendToBack(); Pump(1500);
+                c = Idx(win.Handle); deskTop = desk.Select(Idx).Where(i => i >= 0).DefaultIfEmpty(-1).Min();
+                bool d = deskTop >= 0 && c >= 0 && c < deskTop; report.Add($"after SendToBack the host re-seated it above the desktop: {d} (container={c}, desktop={deskTop})");
+                ok = a && b && d;
+            }
+            catch (Exception ex) { report.Add("EXCEPTION: " + ex); ok = false; }
+            finally { GlassService.Shutdown(); }
+            File.WriteAllLines(Path.Combine(folder, "container-zorder.txt"), report);
+            return ok ? 0 : 1;
+        }
+
         private sealed class StageForm : Form
         {
             public StageForm() { SetStyle(ControlStyles.OptimizedDoubleBuffer | ControlStyles.AllPaintingInWmPaint | ControlStyles.UserPaint, true); }

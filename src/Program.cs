@@ -133,6 +133,12 @@ namespace MotionDesk
                     try { Services.ContainersBridge.Command("new-container"); } catch (Exception) { }
                 return;
             }
+            if (args.Length == 2 && args[0] == "--test-container-zorder")
+            {
+                ApplicationConfiguration.Initialize();
+                Environment.Exit(Services.DesktopDiagnostics.TestContainerZOrder(args[1]));
+                return;
+            }
             if (args.Length == 2 && args[0] == "--test-music-overlay")
             {
                 ApplicationConfiguration.Initialize();

@@ -16,6 +16,8 @@ namespace MotionDesk.Containers
         private readonly Dictionary<string, ContainerWindow> _windows = new();
         private readonly Dictionary<string, Container> _dirty = new();
         private readonly System.Windows.Forms.Timer _save = new() { Interval = 400 };
+        // z-order: directly above the desktop, below normal windows; re-seated every second (Win+D, Explorer restart and other topmost changes move windows around)
+        private readonly System.Windows.Forms.Timer _z = new() { Interval = 1000 };
         private readonly System.Windows.Forms.Timer _rules = new() { Interval = 3000 };
         private HashSet<string> _activeRules = new();
         private PipeServer? _pipe;
@@ -34,6 +36,7 @@ namespace MotionDesk.Containers
             _service.Mutated += () => { if (_ui.IsHandleCreated && !_ui.IsDisposed) try { _ui.BeginInvoke(Sync); } catch (Exception) { } };
             _save.Tick += (_, _) => Flush();
             _rules.Tick += (_, _) => EvaluateRules(); _rules.Start();
+            _z.Tick += (_, _) => ReseatZOrder(); _z.Start();
             if (pipeName != null) { _pipe = new PipeServer(pipeName, new HostApi(this)); _pipe.Start(); }
             Microsoft.Win32.SystemEvents.DisplaySettingsChanged += OnDisplayChanged;
             Current = this;
@@ -108,9 +111,9 @@ namespace MotionDesk.Containers
                         var b = Place(model, mons); if (existing.Bounds != b && !_dirty.ContainsKey(id)) existing.Bounds = b;
                         continue;
                     }
-                    var w = new ContainerWindow(model, () => _windows.Where(p => p.Key != id).Select(p => p.Value.Bounds)) { Bounds = Place(model, mons), TopMost = true };
+                    var w = new ContainerWindow(model, () => _windows.Where(p => p.Key != id).Select(p => p.Value.Bounds)) { Bounds = Place(model, mons) };
                     w.Changed += c => { _dirty[c.Id] = c; if (!_save.Enabled) _save.Start(); };
-                    _windows[id] = w; w.Show();
+                    _windows[id] = w; w.Show(); DesktopZOrder.Place(w.Handle);
                 }
             }
             finally { _syncing = false; }
@@ -122,6 +125,12 @@ namespace MotionDesk.Containers
             var r = new Rectangle(d.X, d.Y, Math.Max(80, d.Width), Math.Max(c.RolledUp ? c.TitleBar.Height : 60, d.Height));
             var areas = Screen.AllScreens.Select(s => s.WorkingArea).ToList();
             return ContainerBehavior.KeepReachable(r, areas, c.TitleBar.Height);
+        }
+
+        /// <summary>Puts every container window back directly above the desktop (cheap: a no-op while they already are).</summary>
+        public void ReseatZOrder()
+        {
+            foreach (var w in _windows.Values) if (w.IsHandleCreated && w.Visible) DesktopZOrder.Place(w.Handle);
         }
 
         /// <summary>Phase 5: rules (monitor count, process running, time of day, fullscreen app) are evaluated every 3 s, edge-triggered; cheap when there are none.</summary>
@@ -161,7 +170,7 @@ namespace MotionDesk.Containers
         {
             if (ReferenceEquals(Current, this)) Current = null;
             Microsoft.Win32.SystemEvents.DisplaySettingsChanged -= OnDisplayChanged;
-            Flush(); _save.Dispose(); _rules.Dispose(); _pipe?.Dispose();
+            Flush(); _save.Dispose(); _rules.Dispose(); _z.Dispose(); _pipe?.Dispose();
             foreach (var w in _windows.Values) { w.Close(); w.Dispose(); }
             _windows.Clear(); _ui.Dispose();
         }
