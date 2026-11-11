@@ -206,6 +206,13 @@ namespace MotionDesk.Services
                 win.ScrollBy(260); Pump(400); Shot("container-scrolled");
                 win.ToggleRollUp(); Pump(600); report.Add($"rolled up: height={win.Height} (title bar 44)"); Shot("container-rolled");
                 win.ToggleRollUp(); Pump(400); report.Add($"unrolled: height={win.Height}");
+                // phase 3: drop adds references (no duplicates), reorder moves, the files themselves are never touched
+                int before = model.Items.Count; var fired = 0; win.Changed += _ => fired++;
+                var extra = Path.Combine(win32, "winhlp32.exe"); var dupe = model.Items[0].Path;
+                int added = win.AcceptDrop(new[] { extra, dupe, "" }, new Point(60, 120));
+                report.Add($"drop: added={added} (expected 1 or 0 if file missing, duplicate skipped) items {before}->{model.Items.Count} changedEvents={fired}; fileUntouched={File.Exists(dupe)}");
+                var firstBefore = model.Items[0].Path; win.MoveItem(0, new Point(300, 300));
+                report.Add($"reorder: first item changed={(model.Items[0].Path != firstBefore)} count={model.Items.Count}");
             }
             catch (Exception ex) { report.Add("EXCEPTION: " + ex); }
             finally { win?.Close(); anim.Stop(); GlassService.Shutdown(); }

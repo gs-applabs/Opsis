@@ -6,3 +6,5 @@ screenshot container-scrolled.png
 rolled up: height=44 (title bar 44)
 screenshot container-rolled.png
 unrolled: height=330
+drop: added=1 (expected 1 or 0 if file missing, duplicate skipped) items 14->15 changedEvents=1; fileUntouched=True
+reorder: first item changed=True count=15

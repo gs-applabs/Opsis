@@ -32,7 +32,8 @@ Updated 2026-11-10. Rule of this file: if a session is cut off, the next one sta
 | Requests table (old containers -> new core) | DONE, design doc section 5 (older chat transcripts are unreadable, so more items may exist) |
 | 4 data model + read-only importer + pipe/CLI | DONE (`core/Opsis.Containers.Core`, 15 tests, design doc section 9) |
 | 6 windows and behaviour | FIRST WINDOW DONE (part B slice): `src/Containers/ContainerWindow.cs` = layered per-pixel-alpha window + Opsis.Glass pane, own rendering (`ContainerRenderer`: title bar with ITS OWN colour / opacity / height / font, visible-rows-only icon grid, labels with shadow, lock glyph, scroll indicator), title drag with snapping, corner resize, wheel scroll, double click = roll-up, bounded icon cache. Checked with `Opsis.exe --test-container-window` (screenshots `docs/spike2/container/`, the title bar pixel is orange while the frame is transparent). Earlier part A: the behaviour rules as pure tested functions (`ContainerBehavior`: snap to edges / other containers, resize limits, roll-up with the container's OWN title-bar height, keep reachable after a monitor change, lock, hit test; 8 tests). PART B NOT done: the real window host (non-activating layered window + glass pane), z-order next to the desktop icon layer and the wallpaper window, Win+D / Explorer restart behaviour - these need real-desktop tests |
-| 2 rendering, 3 shell, 5/9 rules+integration, 7/8 a11y+DPI, switch off the fork | NOT started |
+| 3 shell (part 1) | DONE: `DropRules` (pure, 7 tests) + `ContainerWindow` drop of files as REFERENCES (no duplicates, own folder refused), drag to reorder, drag-out as file drop; checked in `--test-container-window` (added 1, duplicate skipped, reorder). NOT done: icon extraction off the UI thread, context-menu isolation, Copy/Move/Link choice, hiding desktop originals |
+| 2 rendering, 5/9 rules+integration, 7/8 a11y+DPI, switch off the fork | NOT started |
 
 ## Asked from the user (manual tests, steps in design doc 6.6)
 Two monitors with different DPI; DPI 150/200 %; real wallpaper behind the icons; AMD/NVIDIA or Remote Desktop; lock/unlock and UAC while glass is on. Also: run `tools/resource-logger.ps1` on 2.4.6.1 for the baseline that fixes the RAM/CPU budgets.
@@ -56,4 +57,4 @@ Not done: z-order against the desktop icon layer and the wallpaper window (the w
 Manual test (Windows 11, needs the user): none can be run before the container host is started from Opsis itself (phase 6 part B/9); steps will be written when it is wired.
 
 ## Where I stopped
-First real container window works (glass, own title-bar colour/size, glossy, rendering and layout tested). Next: phase 3 (shell: drag and drop in/out with Copy/Move/Link, icon extraction off the UI thread, context menu isolation), then phase 5/9 (rules, profiles, snapshots, hotkeys, tray/pipe wiring, containers host process), 7/8 (accessibility, DPI), switch off the fork.
+Phase 3 part 1 committed (drop / reorder). Next: icon extraction off the UI thread + context menu, then phase 5/9 (containers host process, pipe wiring, rules/profiles/snapshots, hotkeys), 7/8, switch off the fork.

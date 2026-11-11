@@ -197,12 +197,18 @@ namespace MotionDesk.Containers
             _dragStart = Cursor.Position; _boundsAtDragStart = Bounds;
             if (Grip.Contains(e.Location) && !Model.RolledUp) _drag = Drag.Resize;
             else if (e.Y < Metrics.TitleBarHeight) _drag = Drag.Move;
-            else { _selected = ContainerLayout.HitTest(e.Location, Client, Model.Items.Count, Metrics, _scroll); Dirty(); }
+            else { _selected = ContainerLayout.HitTest(e.Location, Client, Model.Items.Count, Metrics, _scroll); _dragItem = _selected; _pressAt = e.Location; Dirty(); }
         }
 
         protected override void OnMouseMove(MouseEventArgs e)
         {
             base.OnMouseMove(e);
+            if (_dragItem >= 0 && (e.Button & MouseButtons.Left) != 0 && !Model.Locked && (Math.Abs(e.X - _pressAt.X) > SystemInformation.DragSize.Width || Math.Abs(e.Y - _pressAt.Y) > SystemInformation.DragSize.Height))
+            {
+                var idx = _dragItem; _dragItem = -1;
+                if (idx < Model.Items.Count) { var dobj = new DataObject(); dobj.SetData(InternalFormat, idx); dobj.SetData(DataFormats.FileDrop, new[] { Model.Items[idx].Path }); DoDragDrop(dobj, DragDropEffects.Link | DragDropEffects.Copy); }
+                return;
+            }
             if (_drag == Drag.None)
             {
                 var h = e.Y < Metrics.TitleBarHeight ? -1 : ContainerLayout.HitTest(e.Location, Client, Model.Items.Count, Metrics, _scroll);
@@ -217,7 +223,7 @@ namespace MotionDesk.Containers
             if (wanted != Bounds) { Bounds = wanted; _surface.Present(Handle, Location); Dirty(); }
         }
 
-        protected override void OnMouseUp(MouseEventArgs e) { base.OnMouseUp(e); if (_drag != Drag.None) { _drag = Drag.None; Model.Geometry = LegacyImporter.Normalize(Left, Top, Width, Height, System.Windows.Forms.Screen.AllScreens.Select(s => new MonitorInfo(s.DeviceName, s.Bounds, s.Primary)).ToList()); Changed?.Invoke(Model); } }
+        protected override void OnMouseUp(MouseEventArgs e) { base.OnMouseUp(e); _dragItem = -1; if (_drag != Drag.None) { _drag = Drag.None; Model.Geometry = LegacyImporter.Normalize(Left, Top, Width, Height, System.Windows.Forms.Screen.AllScreens.Select(s => new MonitorInfo(s.DeviceName, s.Bounds, s.Primary)).ToList()); Changed?.Invoke(Model); } }
 
         protected override void OnMouseLeave(EventArgs e) { base.OnMouseLeave(e); if (_hover != -1) { _hover = -1; Dirty(); } }
 
@@ -239,6 +245,39 @@ namespace MotionDesk.Containers
             }
             else { Bounds = ContainerBehavior.Unroll(Bounds, Model.UnrolledHeight, WorkArea); Model.RolledUp = false; }
             Dirty(); Changed?.Invoke(Model);
+        }
+
+        // ---- drag and drop (phase 3): items are REFERENCES, dropping never copies or moves the file --------------------
+        private int _dragItem = -1; private Point _pressAt; private const string InternalFormat = "Opsis.ContainerItemIndex";
+
+        /// <summary>Adds dropped paths as references at the position under <paramref name="clientPoint"/>. Returns how many were added. Used by the drop handler and by tests.</summary>
+        public int AcceptDrop(IEnumerable<string> paths, Point clientPoint)
+        {
+            var at = ContainerLayout.DropIndex(clientPoint, Client, Model.Items.Count, Metrics, _scroll);
+            var plan = DropRules.Plan(paths, Model.Items, at, p => System.IO.Directory.Exists(p));
+            if (plan.Effect != DropEffect.AddReference) return 0;
+            Model.Items.InsertRange(plan.InsertAt, plan.Add);
+            _scroll = ContainerLayout.ClampScroll(_scroll, Client, Model.Items.Count, Metrics); Dirty(); Changed?.Invoke(Model);
+            return plan.Add.Count;
+        }
+
+        /// <summary>Moves an item inside this container (drag to reorder).</summary>
+        public void MoveItem(int from, Point clientPoint)
+        {
+            var at = ContainerLayout.DropIndex(clientPoint, Client, Model.Items.Count, Metrics, _scroll);
+            var list = DropRules.Reorder(Model.Items, from, at);
+            Model.Items.Clear(); Model.Items.AddRange(list); _selected = -1; Dirty(); Changed?.Invoke(Model);
+        }
+
+        protected override void OnDragEnter(DragEventArgs e) { base.OnDragEnter(e); e.Effect = e.Data != null && (e.Data.GetDataPresent(DataFormats.FileDrop) || e.Data.GetDataPresent(InternalFormat)) ? DragDropEffects.Link : DragDropEffects.None; }
+        protected override void OnDragOver(DragEventArgs e) { base.OnDragOver(e); e.Effect = e.Data != null && (e.Data.GetDataPresent(DataFormats.FileDrop) || e.Data.GetDataPresent(InternalFormat)) ? DragDropEffects.Link : DragDropEffects.None; }
+        protected override void OnDragDrop(DragEventArgs e)
+        {
+            base.OnDragDrop(e);
+            if (e.Data == null) return;
+            var pt = PointToClient(new Point(e.X, e.Y));
+            if (e.Data.GetData(InternalFormat) is int from) MoveItem(from, pt);
+            else if (e.Data.GetData(DataFormats.FileDrop) is string[] files) AcceptDrop(files, pt);
         }
 
         /// <summary>Scroll by wheel notches (positive = down).</summary>
