@@ -591,6 +591,8 @@
   "DCM.FocusContainer": "किसी कंटेनर पर फ़ोकस करें…",
   "DCM.QuickHide": "सभी DeskContainers छिपाएँ",
   "DCM.QuickShow": "सभी DeskContainers दिखाएँ",
+  "DCM.Snapshots": "लेआउट स्नैपशॉट",
+  "DCM.SaveSnapshot": "वर्तमान लेआउट सहेजें",
   "DCM.Reload": "सभी DeskContainers फिर से लोड करें",
   "DCM.Backup": "अभी बैकअप लें",
   "DCM.EngineCard": "DeskContainers इंजन",

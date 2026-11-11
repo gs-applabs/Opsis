@@ -68,6 +68,30 @@ namespace MotionDesk.Containers
 
         private static IReadOnlyList<MonitorInfo> Monitors() => Screen.AllScreens.Select(s => new MonitorInfo(s.DeviceName, s.Bounds, s.Primary)).ToList();
 
+        // ---- commands used by the tray menu and the global hotkeys (UI thread) ----
+        public string NewContainerAtCursor()
+        {
+            var p = Cursor.Position;
+            var r = _service.Handle("create", new System.Text.Json.Nodes.JsonObject { ["title"] = "New container", ["x"] = p.X, ["y"] = p.Y, ["width"] = 320, ["height"] = 240 });
+            Sync();
+            return r?["id"]?.ToString() ?? "";
+        }
+
+        /// <summary>Hides every container, or shows them again when none is visible (the quick-hide gesture). Returns true when they are hidden now.</summary>
+        public bool ToggleAll()
+        {
+            var hidden = false;
+            _service.Update(doc => { hidden = doc.Containers.Any(c => !c.Hidden); foreach (var c in doc.Containers) c.Hidden = hidden; return doc.Containers.Count > 0; });
+            Sync(); return hidden;
+        }
+
+        public void SetHidden(string id, bool hidden) { _service.Handle(hidden ? "hide" : "show", new System.Text.Json.Nodes.JsonObject { ["id"] = id }); Sync(); }
+        public void Focus(string id) { if (_windows.TryGetValue(id, out var w)) w.FocusForKeyboard(); }
+        public string SaveSnapshot(string name) { Flush(); var r = _service.Handle("snapshot-save", new System.Text.Json.Nodes.JsonObject { ["name"] = name }); return r?["saved"]?.ToString() ?? ""; }
+        public void LoadSnapshot(string name) { Flush(); _service.Handle("snapshot-load", new System.Text.Json.Nodes.JsonObject { ["name"] = name }); Sync(); }
+        public IReadOnlyList<string> SnapshotNames() => ((System.Text.Json.Nodes.JsonArray)_service.Handle("snapshot-list", new System.Text.Json.Nodes.JsonObject())!).Select(n => n!.ToString()).ToList();
+        public IReadOnlyList<Container> Containers() => _service.Snapshot().Containers;
+
         /// <summary>Makes the windows match the stored data (UI thread).</summary>
         public void Sync()
         {

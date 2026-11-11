@@ -591,6 +591,8 @@
   "DCM.FocusContainer": "Bir kapsayıcıya odaklan…",
   "DCM.QuickHide": "Tüm DeskContainers’ı gizle",
   "DCM.QuickShow": "Tüm DeskContainers’ı göster",
+  "DCM.Snapshots": "Düzen anlık görüntüleri",
+  "DCM.SaveSnapshot": "Geçerli düzeni kaydet",
   "DCM.Reload": "Tüm DeskContainers’ı yeniden yükle",
   "DCM.Backup": "Şimdi yedekle",
   "DCM.EngineCard": "DeskContainers altyapısı",

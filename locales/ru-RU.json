@@ -591,6 +591,8 @@
   "DCM.FocusContainer": "Перейти к контейнеру…",
   "DCM.QuickHide": "Скрыть все DeskContainers",
   "DCM.QuickShow": "Показать все DeskContainers",
+  "DCM.Snapshots": "Снимки раскладки",
+  "DCM.SaveSnapshot": "Сохранить текущую раскладку",
   "DCM.Reload": "Перезагрузить все DeskContainers",
   "DCM.Backup": "Создать резервную копию",
   "DCM.EngineCard": "Движок DeskContainers",

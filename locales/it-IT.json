@@ -591,6 +591,8 @@
   "DCM.FocusContainer": "Porta in primo piano un contenitore…",
   "DCM.QuickHide": "Nascondi tutti i DeskContainers",
   "DCM.QuickShow": "Mostra tutti i DeskContainers",
+  "DCM.Snapshots": "Istantanee del layout",
+  "DCM.SaveSnapshot": "Salva il layout corrente",
   "DCM.Reload": "Ricarica tutti i DeskContainers",
   "DCM.Backup": "Esegui backup ora",
   "DCM.EngineCard": "Motore DeskContainers",

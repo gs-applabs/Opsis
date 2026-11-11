@@ -591,6 +591,8 @@
   "DCM.FocusContainer": "التركيز على حاوية…",
   "DCM.QuickHide": "إخفاء كل DeskContainers",
   "DCM.QuickShow": "إظهار كل DeskContainers",
+  "DCM.Snapshots": "لقطات التخطيط",
+  "DCM.SaveSnapshot": "حفظ التخطيط الحالي",
   "DCM.Reload": "إعادة تحميل كل DeskContainers",
   "DCM.Backup": "نسخ احتياطي الآن",
   "DCM.EngineCard": "محرك DeskContainers",

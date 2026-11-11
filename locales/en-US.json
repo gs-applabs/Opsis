@@ -698,6 +698,8 @@
   "DCM.FocusContainer": "Focus a container…",
   "DCM.QuickHide": "Hide all DeskContainers",
   "DCM.QuickShow": "Show all DeskContainers",
+  "DCM.Snapshots": "Layout snapshots",
+  "DCM.SaveSnapshot": "Save the current layout",
   "DCM.Reload": "Reload all DeskContainers",
   "DCM.Backup": "Back up now",
   "DCM.EngineCard": "DeskContainers engine",

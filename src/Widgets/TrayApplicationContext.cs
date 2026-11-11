@@ -78,7 +78,7 @@ namespace MotionDesk.Widgets
             contextMenu.Items.Add(wallpaperMenu);
 
             // ---- DeskContainers (items and state come from the engine through the bridge)
-            if (ContainersEngine.IsAvailable) contextMenu.Items.Add(BuildContainersTrayMenu());
+            if (ContainersEngine.IsAvailable || AppSettings.Load().UseNativeContainers) contextMenu.Items.Add(BuildContainersTrayMenu());
 
             // ---- Desktop tools
             var desktopMenu = new ToolStripMenuItem(LocalizationManager.T("Tray.GroupDesktop"));
@@ -180,7 +180,13 @@ namespace MotionDesk.Widgets
             if (!safeMode) { try { MusicOverlay.Apply(); } catch (Exception ex) { RotatingLogger.Write("music overlay failed to start: " + ex.Message); } }
             if (!safeMode && AppSettings.Load().UseNativeContainers)
             {
-                try { _nativeContainers = new MotionDesk.Containers.ContainerHost(new Opsis.Containers.ContainersStore(Path.Combine(AppPaths.AppDataFolder, "containers-native.json")), Opsis.Containers.PipeProtocol.DefaultName); }
+                try
+                {
+                    var host = _nativeContainers = new MotionDesk.Containers.ContainerHost(new Opsis.Containers.ContainersStore(Path.Combine(AppPaths.AppDataFolder, "containers-native.json")), Opsis.Containers.PipeProtocol.DefaultName);
+                    // global hotkeys of the native containers: Ctrl+Alt+Shift+H = hide / show all, Ctrl+Alt+Shift+N = new container at the cursor (neither is a Windows default)
+                    _hotkeys.RegisterCtrlAltShift(Keys.H, () => host.ToggleAll());
+                    _hotkeys.RegisterCtrlAltShift(Keys.N, () => host.NewContainerAtCursor());
+                }
                 catch (Exception ex) { RotatingLogger.Write("native containers failed to start: " + ex.Message); }
             }
             ContainersEngine.SettingsRequested += () => ShowMainWindow("DeskZones");
@@ -511,6 +517,33 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
         // αποθηκεύεται η συνεδρία και να σταματούν σωστά τα plugins/hotkeys πριν το Application.Exit().
         // DeskContainers group of the tray menu. The engine publishes its state (profiles, switches, hidden containers) in bridge\state.json;
         // the submenu is rebuilt every time it opens, and every entry sends a command to the engine through the bridge.
+        // The tray menu of the NEW native DeskContainers (UseNativeContainers): same group, entries talk to the in-process host instead of the WPF engine.
+        private void FillNativeContainersMenu(ToolStripMenuItem menu, MotionDesk.Containers.ContainerHost host)
+        {
+            string T(string key) => LocalizationManager.T(key);
+            menu.DropDownItems.Add(T("DCM.NewContainer"), null, (s, e) => host.NewContainerAtCursor());
+            menu.DropDownItems.Add(new ToolStripSeparator());
+            var list = host.Containers();
+            var focus = new ToolStripMenuItem(T("DCM.FocusContainer")) { Enabled = list.Any(c => !c.Hidden) };
+            var hidden = new ToolStripMenuItem(T("DCM.HiddenContainers")) { Enabled = list.Any(c => c.Hidden) };
+            foreach (var c in list)
+            {
+                string id = c.Id; string title = string.IsNullOrWhiteSpace(c.Title) ? id[..Math.Min(6, id.Length)] : c.Title;
+                if (c.Hidden) hidden.DropDownItems.Add(title, null, (s, e) => host.SetHidden(id, false));
+                else focus.DropDownItems.Add(title, null, (s, e) => host.Focus(id));
+            }
+            menu.DropDownItems.Add(focus); menu.DropDownItems.Add(hidden);
+            var snaps = new ToolStripMenuItem(T("DCM.Snapshots"));
+            snaps.DropDownItems.Add(T("DCM.SaveSnapshot"), null, (s, e) => host.SaveSnapshot("Layout " + DateTime.Now.ToString("yyyy-MM-dd HH.mm")));
+            var names = host.SnapshotNames();
+            if (names.Count > 0) snaps.DropDownItems.Add(new ToolStripSeparator());
+            foreach (var n in names) { string name = n; snaps.DropDownItems.Add(name, null, (s, e) => host.LoadSnapshot(name)); }
+            menu.DropDownItems.Add(snaps);
+            menu.DropDownItems.Add(new ToolStripSeparator());
+            menu.DropDownItems.Add(T("DCM.QuickHide") + " / " + T("DCM.QuickShow"), null, (s, e) => host.ToggleAll());
+            menu.DropDownItems.Add(T("DCM.OpenSettingsPage"), null, (s, e) => ShowMainWindow("DeskZones"));
+        }
+
         private ToolStripMenuItem BuildContainersTrayMenu()
         {
             string T(string key) => LocalizationManager.T(key);
@@ -520,6 +553,11 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                 foreach (ToolStripItem old in menu.DropDownItems) old.Dispose();
                 menu.DropDownItems.Clear();
                 void Add(ToolStripItemCollection to, string key, string cmd) => to.Add(T(key), null, (s, e) => ContainersBridge.Command(cmd));
+                if (MotionDesk.Containers.ContainerHost.Current is { } native)
+                {
+                    FillNativeContainersMenu(menu, native);
+                    return;
+                }
                 if (!ContainersEngine.IsRunning)
                 {
                     menu.DropDownItems.Add(T("DCM.StartEngine"), null, (s, e) => ContainersEngine.Start());
