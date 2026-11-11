@@ -95,6 +95,9 @@ public sealed class HygieneTests
         foreach (var bad in new[] { "powershell", "ExecutionPolicy", "WindowStyle", "-Command" })
             Assert.DoesNotContain(bad, updater, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("RESTARTOPSIS=1", UpdateInstallerService.SetupArguments);
+        var args = UpdateInstallerService.BuildArguments(@"C:\x y\last-update.log");
+        Assert.Contains("/VERYSILENT", args); Assert.Contains("/CLOSEAPPLICATIONS", args);
+        Assert.Contains("\"/LOG=C:\\x y\\last-update.log\"", args);          // quoted: the path may contain spaces
         // no other source file starts a hidden PowerShell either
         foreach (var f in Directory.GetFiles(Path.Combine(Root(), "src"), "*.cs", SearchOption.AllDirectories))
         {
