@@ -66,3 +66,40 @@ Portable build outside the repo + `docs/TRY-NATIVE-CONTAINERS.md` (Greek). Rescu
 
 ## Where I stopped
 7/8 part 1 committed (keyboard, accessibility tree, High Contrast). Next: 5/9 rest (hotkey -> FocusForKeyboard / show-hide, tray entries, perf-governor + safe-mode hooks, options.json import), then z-order / Win+D (phase 6 part B, needs the user), then the fork switch-off (remove `containers/`, csproj excludes, installer, legacy files) - that last step only after the user has tried `UseNativeContainers`.
+
+## ΖΗΤΗΘΗΚΕ → ΚΑΤΑΣΤΑΣΗ (λίστα από OPSIS_UNIFIED_MASTER_PLAN, INTAKE, CHANGELOG «Υπόλοιπο», TASKS §22-A) — ενημερώνεται ανά ενότητα
+Σειρά εργασίας: φθηνά/εύκολα πρώτα. ✓ έγινε · ◐ μερικό · ☐ μένει · ⛔ χρειάζεται χρήστη/απόφαση/τρίτο repo.
+
+| # | Αίτημα | Κατάσταση |
+|---|---|---|
+| 1 | Hotkeys χωρίς σύγκρουση με Windows + ειδοποίηση αποτυχίας (0Β.2) | ✓ 2.4.6.1 |
+| 2 | Pop-up «Επανεκκίνηση τώρα/Αργότερα» (0Β.2) | ✓ Opsis.UI RestartCoordinator |
+| 3 | Θέμα Glass dropdown + χρώματα σε ξεχωριστή ενότητα (0Β.4) | ✓ Theme page |
+| 4 | Κοινή γραμμή κατάστασης (0Β.6) | ✓ OpsisStatusBar (αντιπαραβολή με 2.4.6 στα tests: ☐) |
+| 5 | Εκκίνηση με Windows → tray, περιγραφή (2.1.2) | ✓ |
+| 6 | Κουμπιά Επαναφορά κομμένα (R.1) | ✓ κάρτες/Reset ανά ενότητα στη Ρυθμίσεις· ⛔ έλεγχος στο ζωντανό UI |
+| 7 | Αυτοματισμοί+Προφίλ ενοποιημένα, gaming mode Steam ορατό | ✓ |
+| 8 | DeskContainers / DeskStrip σε δική τους καρτέλα | ✓ |
+| 9 | Αποσυμφόρηση ρυθμίσεων, UiScale, WindowMemory, αναζήτηση, Advanced (2.1.8) | ◐ Ρυθμίσεις+Θέμα έτοιμες· Wallpaper/Εξατομίκευση/Audio/DeskZones/Widgets ☐ (χρειάζονται screenshots/έλεγχο ανά σελίδα) |
+| 10 | Βίντεο: Prev/Pause/Next, μικρότερα κουμπιά στην ίδια ευθεία (2.1.9) | ✓ |
+| 11 | Βίντεο: drag & drop σειράς | ☐ (επόμενο) |
+| 12 | Βίντεο: RAM 16 βίντεο ~3 GB → ~850 MB | ☐ χρειάζεται μέτρηση |
+| 13 | «Προεπιλεγμένη εμφάνιση plugins» → διαγραφή (2.1.1) | ✓ (η σειρά αφαιρέθηκε από τις ρυθμίσεις· τα plugins ακολουθούν πάντα το θέμα Opsis) |
+| 14 | Distinctive εικονίδιο καρτέλας plugin (γενικός μηχανισμός) | ☐ (επόμενο) |
+| 15 | Ενημερώσεις plugins μόνο από το κουμπί του Opsis | ☐ |
+| 16 | Κοινές ρυθμίσεις Opsis↔plugins μόνο στο Opsis | ☐ φάση P |
+| 17 | Theme packs: duplicate με Appearance; Εξατομίκευση Plus | ☐ χρειάζεται το plugin Appearance για σύγκριση |
+| 18 | Lockscreen GIF (LockscreenGif — έλεγχος άδειας) + «ταίριασμα» χωρίς καιρό/ώρα | ☐ |
+| 19 | Αφαίρεση φάσματος ήχου από στοιχεία wallpaper | ☐ μετά το music overlay |
+| 20 | Music overlay (GSMTC, clean-room, χωρίς γραμματοσειρές Rainbow) | ☐ |
+| 21 | Wallpapers landmarks + ποιότητα (2.1.5/2.1.5β) | ◐ Ribbons φθηνότερο (GPU −35 %)· landmarks/3D ☐ (άδειες μοντέλων) |
+| 22 | Δεξί κλικ επιφάνειας: Νέο DeskContainer / Αλλαγή wallpaper (0Β.3) | ☐ πρώτα επίσημη τεκμηρίωση MS |
+| 23 | Ακριβής καιρός: πάροχος + opt-in τοποθεσία (0Β.5) | ⛔ πίνακας παρόχων στον χρήστη πριν επιλογή |
+| 24 | Perf §9.1: DeskStrip SyncItems lookups/εκτός UI thread | ☐ (επόμενο) |
+| 25 | Perf §9.1: FeatureOverride cache | ✓ 2.4.6.1 |
+| 26 | Perf §9.2: FlatToggle font | ✓ Opsis.UI 0.3.1 · FlatTabs rects / FlatComboBox popup ☐ |
+| 27 | Rubber-band ≥2 εικονίδια → «Δημιουργία container» (§22-6) | ☐ |
+| 28 | Native DeskContainers (phases 3, 5/9, 7/8) | ✓ πρώτες φέτες· ⛔ δοκιμή χρήστη, μετά switch-off fork |
+| 29 | Opsis ξεκινά ΠΡΩΤΟ στην εκκίνηση Windows (§22-1) | ☐ scheduled task με καθυστέρηση |
+| 30 | Explorer restart → μαύρη οθόνη (§22-5) | ☐ χρειάζεται αναπαραγωγή |
+| 31 | Μέτρηση RAM/CPU baseline, soak logger | ⛔ τρέχει ο χρήστης (tools/resource-logger.ps1) |

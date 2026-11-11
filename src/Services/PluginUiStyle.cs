@@ -15,7 +15,8 @@ namespace MotionDesk.Services
 
         public static string Normalize(string? s) => Array.Find(Styles, x => x.Equals(s, StringComparison.OrdinalIgnoreCase)) ?? "Opsis";
 
-        public static string Current => Normalize(AppSettings.Load().PluginUiStyle);
+        /// <summary>Plan 2.1.1: the setting is gone from the UI; plugin pages always follow the Opsis theme.</summary>
+        public static string Current => "Opsis";
 
         public static string FilePath => Path.Combine(AppPaths.AppDataFolder, "plugin-ui.json");
 

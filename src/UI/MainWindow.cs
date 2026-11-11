@@ -4498,16 +4498,7 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                     v => { var a = AppSettings.Load(); a.PluginsEnabled = v; a.Save(); }, restart: true));
                 var integrationsAdvanced = new AdvancedSection();
                 {
-                    // default look of the plugin pages / standalone apps: Opsis, Opsis Appearance or Opsis News Crawler
-                    var styleRow = new FlowLayoutPanel { AutoSize = true, WrapContents = false, Margin = new Padding(0, 4, 0, 8) };
-                    styleRow.Controls.Add(new Label { Text = LocalizationManager.T("Settings.PluginUiStyle"), AutoSize = false, Width = 300, Height = 28, TextAlign = ContentAlignment.MiddleLeft, Font = UiTheme.FontBody, ForeColor = UiTheme.TextSecondary });
-                    var styleCombo = new FlatComboBox { Width = 200 };
-                    string[] names = { LocalizationManager.T("Settings.PluginUiOpsis"), LocalizationManager.T("Settings.PluginUiAppearance"), LocalizationManager.T("Settings.PluginUiCrawler") };
-                    int cur = Math.Max(0, Array.IndexOf(PluginUiStyle.Styles, PluginUiStyle.Current));
-                    styleCombo.SetItems(names, names[cur]);
-                    styleCombo.SelectedIndexChanged += (_, _) => PluginUiStyle.Set(PluginUiStyle.Styles[Math.Clamp(styleCombo.SelectedIndex, 0, 2)]);
-                    styleRow.Controls.Add(styleCombo);
-                    integrationsAdvanced.AddControl(styleRow);
+                    // (plan 2.1.1: the "default look of plugins" setting was removed - plugins always follow the Opsis theme; the Crawler bars follow Windows by their own rule)
                     var discordHost = new FlowLayoutPanel { AutoSize = true, FlowDirection = FlowDirection.TopDown, WrapContents = false, Margin = new Padding(0) };
                     BuildDiscordRows(discordHost);
                     integrationsAdvanced.AddControl(discordHost);
