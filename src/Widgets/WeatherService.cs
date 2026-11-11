@@ -177,26 +177,11 @@ namespace MotionDesk.Services
             string? json = null;
             try
             {
-                string raw = await _httpClient.GetStringAsync(BuildWallpaperUrl(lat, lon));
-                using var doc = JsonDocument.Parse(raw);
-                var cur = doc.RootElement.GetProperty("current");
-                double Num(string n, double d = 0) => cur.TryGetProperty(n, out var v) && v.ValueKind == JsonValueKind.Number ? v.GetDouble() : d;
-                json = JsonSerializer.Serialize(new
-                {
-                    ok = true,
-                    code = (int)Num("weather_code"),
-                    temp = Num("temperature_2m"),
-                    humidity = Num("relative_humidity_2m", -1),
-                    precip = Num("precipitation"),
-                    cloud = Num("cloud_cover", -1),
-                    wind = Num("wind_speed_10m"),
-                    windDir = Num("wind_direction_10m", 270),
-                    isDay = Num("is_day", 1) > 0,
-                    utcOffsetSec = doc.RootElement.TryGetProperty("utc_offset_seconds", out var off) && off.ValueKind == JsonValueKind.Number ? off.GetInt32() : (int?)null,
-                    source = "Open-Meteo"
-                });
+                // plan 0B.5: one interface, providers per region with fallback (NWS stations in the US, Open-Meteo best regional model, MET Norway)
+                var fetch = await WeatherHub.Default.GetAsync(lat, lon).ConfigureAwait(false);
+                if (fetch.Observation != null) json = WeatherPayload.Build(fetch.Observation, lat, lon, DateTime.UtcNow, stale: false);
             }
-            catch (Exception) { /* fall through to the second provider */ }
+            catch (Exception) { /* fall through to the legacy provider */ }
 
             if (json == null)
             {
@@ -212,9 +197,21 @@ namespace MotionDesk.Services
             lock (_wpLock)
             {
                 if (json != null) { _wpCacheKey = key; _wpCacheJson = json; _wpCacheAt = DateTime.UtcNow; return json; }
-                if (_wpCacheKey == key && _wpCacheJson != null) return _wpCacheJson;   // stale but better than nothing
+                if (_wpCacheKey == key && _wpCacheJson != null) return MarkStale(_wpCacheJson);   // stale but better than nothing (observedAt in it tells the user how old)
             }
             return "{\"ok\":false}";
+        }
+
+        private static string MarkStale(string json)
+        {
+            try
+            {
+                var node = System.Text.Json.Nodes.JsonNode.Parse(json)?.AsObject();
+                if (node == null) return json;
+                node["stale"] = true;
+                return node.ToJsonString();
+            }
+            catch (Exception) { return json; }
         }
 
         // Open-Meteo geocoding API (ίδιος δωρεάν πάροχος με τον καιρό, χωρίς API key) — επιτρέπει
