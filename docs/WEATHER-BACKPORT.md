@@ -15,7 +15,7 @@ git am --3way <ΔΙΑΔΡΟΜΗ_ΤΟΥ_REPO_2.6.0-app>/docs/weather-backport/000
 cd tests/Opsis.Tests
 dotnet test -m:1 -p:UseSharedCompilation=false -nodeReuse:false
 ```
-Αν το `git am` σταματήσει με σύγκρουση σε `src/UI/MainWindow.cs` ή `locales/*.json`: τα σημεία είναι (α) το μπλοκ μετά το `panel.Controls.Add(locRow);` (κουμπιά τοποθεσίας) και η `SourceLine`, (β) 10 νέα κλειδιά `Wallpaper.Weather*` μετά το `Wallpaper.WeatherLocationCurrent` σε κάθε γλώσσα. Λύσε χειροκίνητα, `git add`, `git am --continue`.
+Αν το patch έχει μετατραπεί σε CRLF από το checkout (σφάλμα «corrupt patch»): `git am --3way --ignore-whitespace …` ή `dos2unix` στο αρχείο. Αν το `git am` σταματήσει με σύγκρουση σε `src/UI/MainWindow.cs` ή `locales/*.json`: τα σημεία είναι (α) το μπλοκ μετά το `panel.Controls.Add(locRow);` (κουμπιά τοποθεσίας) και η `SourceLine`, (β) 10 νέα κλειδιά `Wallpaper.Weather*` μετά το `Wallpaper.WeatherLocationCurrent` σε κάθε γλώσσα. Λύσε χειροκίνητα, `git add`, `git am --continue`.
 Εναλλακτικά `git cherry-pick <sha>` από το repo `C:\w\Opsis` αν ο κλάδος είναι ορατός (shared git store).
 
 ## Αρχεία που αγγίζει
