@@ -1964,13 +1964,12 @@ namespace MotionDesk.Widgets
 
         private void DrawSnow(Graphics g, float cx, float cy, float scale)
         {
-            using var flakeBrush = new SolidBrush(Color.White);
             for (int i = 0; i < _drops.Length; i++)
             {
                 float t = ((_phase * 0.015f + i * 0.41f) % 1f);
                 float x = cx + (_drops[i].X - 0.5f) * 60 * scale + (float)Math.Sin(_phase * 0.05 + i) * 4 * scale;
                 float y = cy + 8 * scale + t * 36 * scale;
-                g.FillEllipse(flakeBrush, x, y, 3.5f * scale, 3.5f * scale);
+                g.FillEllipse(FlakeBrush, x, y, 3.5f * scale, 3.5f * scale);
             }
         }
 
@@ -1987,9 +1986,12 @@ namespace MotionDesk.Widgets
                 new PointF(cx + 2 * scale, cy + 18 * scale),
                 new PointF(cx + 10 * scale, cy + 2 * scale),
             };
-            using var boltBrush = new SolidBrush(Color.FromArgb(230, 255, 221, 87));
-            g.FillPolygon(boltBrush, pts);
+            g.FillPolygon(BoltBrush, pts);
         }
+
+        // Theme-independent brushes are created once for the process instead of on every animation frame (plan 9.2).
+        private static readonly SolidBrush FlakeBrush = new(Color.White);
+        private static readonly SolidBrush BoltBrush = new(Color.FromArgb(230, 255, 221, 87));
     }
 
     // Κυκλικό ("donut") ring ανά δίσκο, με τις πληροφορίες στο κέντρο — αντικατέστησε τη
