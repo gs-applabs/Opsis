@@ -182,7 +182,15 @@ namespace MotionDesk.Widgets
             {
                 try
                 {
-                    var host = _nativeContainers = new MotionDesk.Containers.ContainerHost(new Opsis.Containers.ContainersStore(Path.Combine(AppPaths.AppDataFolder, "containers-native.json")), Opsis.Containers.PipeProtocol.DefaultName);
+                    var nativeStore = new Opsis.Containers.ContainersStore(Path.Combine(AppPaths.AppDataFolder, "containers-native.json"));
+                    try
+                    {
+                        var mons = Screen.AllScreens.Select(sc => new Opsis.Containers.MonitorInfo(sc.DeviceName, sc.Bounds, sc.Primary)).ToList();
+                        var note = MotionDesk.Containers.NativeMigration.ImportIfNeeded(nativeStore, Path.Combine(AppPaths.AppDataFolder, "containers"), mons);
+                        if (note != null) RotatingLogger.Write(note);
+                    }
+                    catch (Exception ex) { RotatingLogger.Write("native containers: legacy import failed: " + ex.Message); }
+                    var host = _nativeContainers = new MotionDesk.Containers.ContainerHost(nativeStore, Opsis.Containers.PipeProtocol.DefaultName);
                     // global hotkeys of the native containers: Ctrl+Alt+Shift+H = hide / show all, Ctrl+Alt+Shift+N = new container at the cursor (neither is a Windows default)
                     _hotkeys.RegisterCtrlAltShift(Keys.H, () => host.ToggleAll());
                     _hotkeys.RegisterCtrlAltShift(Keys.N, () => host.NewContainerAtCursor());
