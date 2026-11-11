@@ -1,0 +1,4 @@
+chain index: normal window=39 container=77 highest desktop window=78 (smaller = higher)
+container is BELOW the normal window: True
+container is ABOVE the desktop: True
+after SendToBack the host re-seated it above the desktop: True (container=77, desktop=78)

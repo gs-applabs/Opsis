@@ -311,7 +311,12 @@ namespace MotionDesk.Containers
         protected override void OnMouseDoubleClick(MouseEventArgs e)
         {
             base.OnMouseDoubleClick(e);
-            if (e.Y >= Metrics.TitleBarHeight) return;
+            if (e.Y >= Metrics.TitleBarHeight)
+            {
+                var hit = ContainerLayout.HitTest(e.Location, Client, Model.Items.Count, Metrics, _scroll);
+                if (hit >= 0) OpenItem(hit);                 // double click launches the item
+                return;
+            }
             ToggleRollUp();
         }
 
