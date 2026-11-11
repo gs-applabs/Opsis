@@ -1766,6 +1766,38 @@ namespace MotionDesk.UI
             locRow.Controls.Add(cityBox);
             locRow.Controls.Add(setBtn);
             panel.Controls.Add(locRow);
+
+            // Opt-in device location (explicit click + confirmation; rounded to ~1 km; only the rounded point is stored) and a way to delete it again.
+            var privacyRow = new FlowLayoutPanel { AutoSize = true, WrapContents = true, MaximumSize = new Size(740, 0), Margin = new Padding(0, 0, 0, 10) };
+            var myLocBtn = NewHoverButton(LocalizationManager.T("Wallpaper.WeatherUseMyLocation"), () => { });
+            myLocBtn.Width = 220;
+            myLocBtn.Click += async (_, _) =>
+            {
+                if (MessageBox.Show(this, LocalizationManager.T("Wallpaper.WeatherLocationConsent"), LocalizationManager.T("Wallpaper.WeatherUseMyLocation"), MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes) return;
+                myLocBtn.Enabled = false;
+                try
+                {
+                    var here = await DeviceLocation.GetApproximateAsync();
+                    if (here == null) { locLabel.Text = LocalizationManager.T("Wallpaper.WeatherLocationDenied"); return; }
+                    string name = LocalizationManager.T("Wallpaper.WeatherMyLocation");
+                    WallpaperHostEngine.Instance.SetWeatherLocation(name, here.Value.Lat, here.Value.Lon);
+                    locLabel.Text = string.Format(LocalizationManager.T("Wallpaper.WeatherLocationCurrent"), name);
+                    cityBox.Text = "";
+                    _ = RefreshLiveWeatherLabelAsync(liveLabel, here.Value.Lat, here.Value.Lon);
+                }
+                finally { if (!myLocBtn.IsDisposed) myLocBtn.Enabled = true; }
+            };
+            var clearLocBtn = NewHoverButton(LocalizationManager.T("Wallpaper.WeatherLocationClear"), () =>
+            {
+                WallpaperHostEngine.Instance.SetWeatherLocation("", 37.9838, 23.7275);
+                cityBox.Text = "";
+                locLabel.Text = LocalizationManager.T("Wallpaper.WeatherLocationCleared");
+                _ = RefreshLiveWeatherLabelAsync(liveLabel, 37.9838, 23.7275);
+            });
+            clearLocBtn.Width = 240; clearLocBtn.Margin = new Padding(10, 0, 0, 0);
+            privacyRow.Controls.Add(myLocBtn);
+            privacyRow.Controls.Add(clearLocBtn);
+            panel.Controls.Add(privacyRow);
             panel.Controls.Add(choicesPanel);
 
             // Ζητήθηκε ρητά: ρώτα μία φορά αν δεν έχει οριστεί ποτέ πόλη, αντί να δείχνουμε σιωπηλά
@@ -1852,11 +1884,28 @@ namespace MotionDesk.UI
                     // η τιμή έτυχε να είναι ακέραια (παραλείπει το .0), ασυνεπές με την επικάλυψη του
                     // wallpaper (που δείχνει πάντα 1 δεκαδικό). "0.0" δείχνει πάντα ακριβώς 1 δεκαδικό.
                     text = string.Format(LocalizationManager.T("Wallpaper.WeatherLive"), root.GetProperty("temp").GetDouble().ToString("0.0"), root.GetProperty("wind").GetDouble().ToString("0"), cond, WeatherService.ToBeaufort(root.GetProperty("wind").GetDouble()));
+                    text += SourceLine(root);
                 }
                 else text = LocalizationManager.T("Wallpaper.WeatherLiveUnavailable");
             }
             catch (Exception) { text = LocalizationManager.T("Wallpaper.WeatherLiveUnavailable"); }
             if (!target.IsDisposed) target.Text = text;
+        }
+
+        // "Source: MET Norway (model for this hour) · observed 12:15" (+ the offline note when the reading is an old one)
+        private static string SourceLine(System.Text.Json.JsonElement root)
+        {
+            try
+            {
+                if (!root.TryGetProperty("source", out var src) || !root.TryGetProperty("observedAt", out var at)) return "";
+                if (!DateTime.TryParse(at.GetString(), System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.RoundtripKind, out var utc)) return "";
+                bool model = root.TryGetProperty("isModel", out var m) && m.GetBoolean();
+                string kind = LocalizationManager.T(model ? "Wallpaper.WeatherKindModel" : "Wallpaper.WeatherKindStation");
+                string line = Environment.NewLine + string.Format(LocalizationManager.T("Wallpaper.WeatherSourceLine"), src.GetString(), kind, utc.ToLocalTime().ToString("t"));
+                if (root.TryGetProperty("stale", out var st) && st.ValueKind == System.Text.Json.JsonValueKind.True) line += Environment.NewLine + LocalizationManager.T("Wallpaper.WeatherStale");
+                return line;
+            }
+            catch (Exception) { return ""; }
         }
 
         private static string CodeToSimId(int code) => code switch
