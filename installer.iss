@@ -3,7 +3,8 @@
   #error This installer must be compiled with Inno Setup 7 or newer.
 #endif
 #define MyAppName "Opsis - Desktop Customization"
-#define MyAppVersion "2.4.6.1"
+#define MyAppVersion "2.6.0"
+#define MyAppLabel "2.6.0 beta"
 #define MyAppPublisher "giorstergiopoulos-design"
 #define MyAppURL "https://github.com/giorstergiopoulos-design/Opsis"
 #define MyAppExeName "Opsis.exe"
@@ -27,7 +28,7 @@
 ; Μοναδικό GUID για την εφαρμογή (μην το αλλάξεις σε μελλοντικές εκδόσεις)
 AppId={{A9E8F765-1234-4567-89AB-CDEF01234567}
 AppName={#MyAppName}
-AppVersion={#MyAppVersion}
+AppVersion={#MyAppLabel}
 AppPublisher={#MyAppPublisher}
 AppPublisherURL={#MyAppURL}
 AppSupportURL={#MyAppURL}/issues
@@ -36,12 +37,12 @@ VersionInfoCompany={#MyAppPublisher}
 VersionInfoDescription=Opsis - Desktop Customization setup
 VersionInfoVersion={#MyAppVersion}.0
 VersionInfoProductName={#MyAppName}
-VersionInfoProductVersion={#MyAppVersion}
+VersionInfoProductVersion={#MyAppLabel}
 VersionInfoCopyright=Copyright (c) 2026 {#MyAppPublisher}
 DefaultDirName={autopf}\{#MyAppName}
 DefaultGroupName={#MyAppName}
 OutputDir=Output
-OutputBaseFilename=OpsisSetup
+OutputBaseFilename=OpsisSetup-2.6.0-beta
 Compression=lzma2/ultra64
 SolidCompression=yes
 WizardStyle=modern

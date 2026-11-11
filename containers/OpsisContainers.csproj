@@ -8,9 +8,9 @@
 		<Nullable>enable</Nullable>
 		<UseWPF>true</UseWPF>
 		<UseWindowsForms>True</UseWindowsForms>
-		<AssemblyVersion>2.4.6.1</AssemblyVersion>
-		<FileVersion>2.4.6.1</FileVersion>
-		<Version>2.4.6.1</Version>
+		<AssemblyVersion>2.6.0.0</AssemblyVersion>
+		<FileVersion>2.6.0.0</FileVersion>
+		<Version>2.6.0</Version>
 		<Product>Opsis DeskContainers</Product>
 		<Description>DeskContainers engine of Opsis - Desktop Customization (based on DesktopFences, MIT).</Description>
 		<AssemblyTitle>Opsis DeskContainers</AssemblyTitle>

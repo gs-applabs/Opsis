@@ -752,6 +752,7 @@
   "About.UpdateNoDigest": "此版本没有可供验证的校验和，因此不会自动安装——改为打开发布页面。",
   "About.DeskContainersGuideTitle": "DeskContainers — 使用方法",
   "VersionNotes.2.4.6": "~ 通用词语（确定、取消、重置、“需要重启”、自动/低/均衡/高 ……）现在来自 Opsis 家族的共享翻译（Opsis.UI 0.3.0），在每个应用中都相同。",
+  "VersionNotes.2.6.0": "~ Beta of the new core: GPU glass, new DeskContainers engine (experimental), music overlay, desktop menu entries, video drag and drop, and the header waves are visible on the dark theme.",
   "VersionNotes.2.4.6.1": "~ 稳定性：如果全局快捷键已被其他应用占用，Opsis 现在会告诉你是哪一个。减少后台开销（设置已缓存），修复开关控件中的小型 GDI 泄漏，并在备份还原后重启前恢复桌面图标。",
   "VersionNotes.2.4.5": "~ 发布规范：标准 MIT 许可证文本，程序文件中没有个人数据或构建路径，各处发布者信息一致，安装程序使用 Inno Setup 7 构建。更新程序不再使用隐藏的 PowerShell 脚本：更新后由安装程序自身重新打开 Opsis。",
   "VersionNotes.2.4.4": "~ 等待批准的插件（如 %AppData% 中的 News Crawler）不再阻塞启动或消失：Opsis 在启动后立即以及从托盘菜单询问。\n~ 资源管理器重启后会重建壁纸（重启通知现在能到达 Opsis）。\n~ 每次更改设置时，状态栏会显示“已保存：…”或“失败：…”。\n~ 应用光标不再冻结 Opsis。\n~ 托盘不再显示“Collection was modified”错误；欢迎指南和 Opsis 家族是 Opsis 自己的条目，只显示一次。",

@@ -129,7 +129,7 @@ namespace MotionDesk.Widgets
             {
                 Icon = LoadTrayIcon(),
                 ContextMenuStrip = contextMenu,
-                Text = "Opsis",
+                Text = "Opsis " + AppVersion.Label,
                 Visible = true
             };
 
