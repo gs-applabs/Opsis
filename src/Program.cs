@@ -126,6 +126,13 @@ namespace MotionDesk
                 return;
             }
 
+            if (args.Length == 2 && args[0] == "--test-music-overlay")
+            {
+                ApplicationConfiguration.Initialize();
+                Environment.Exit(Services.DesktopDiagnostics.TestMusicOverlay(args[1]));
+                return;
+            }
+
             if (args.Length == 2 && args[0] == "--test-covered")
             {
                 ApplicationConfiguration.Initialize();

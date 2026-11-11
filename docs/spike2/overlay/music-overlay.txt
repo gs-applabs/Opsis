@@ -1,0 +1,2 @@
+bottom right on 1920x1040 -> {X=1556,Y=928} (expected 1556,928)
+card rendered 340x88

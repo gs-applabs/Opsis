@@ -171,6 +171,7 @@ namespace MotionDesk.Widgets
             MotionDesk.Services.DiscordPresence.Instance.Apply();
             BackdropContrast.EnsureStarted();
             if (!safeMode && ContainersEngine.Enabled) ContainersEngine.Start();
+            if (!safeMode) { try { MusicOverlay.Apply(); } catch (Exception ex) { RotatingLogger.Write("music overlay failed to start: " + ex.Message); } }
             if (!safeMode && AppSettings.Load().UseNativeContainers)
             {
                 try { _nativeContainers = new MotionDesk.Containers.ContainerHost(new Opsis.Containers.ContainersStore(Path.Combine(AppPaths.AppDataFolder, "containers-native.json")), Opsis.Containers.PipeProtocol.DefaultName); }
@@ -576,6 +577,7 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
             _hotkeys.Dispose();
             _taskbarWatcher.Dispose();
             try { _nativeContainers?.Dispose(); } catch { }
+            try { MusicOverlay.Stop(); } catch { }
             DesktopIconVisibilityEngine.Instance.Stop();
             _trayIcon.Visible = false;
             Application.Exit();

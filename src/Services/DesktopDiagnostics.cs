@@ -273,6 +273,27 @@ namespace MotionDesk.Services
             return report.Any(l => l.StartsWith("EXCEPTION")) ? 1 : 0;
         }
 
+        /// <summary>Renders the music overlay card for a made-up track onto a dark stand-in (no desktop content) and checks the placement rule.</summary>
+        public static int TestMusicOverlay(string folder)
+        {
+            Directory.CreateDirectory(folder);
+            var report = new System.Collections.Generic.List<string>();
+            var svc = new NowPlayingService();
+            using var win = new MotionDesk.Widgets.MusicOverlayWindow(svc, OverlayAnchor.BottomRight);
+            using var art = new Bitmap(160, 160);
+            using (var g = Graphics.FromImage(art)) { using var br = new System.Drawing.Drawing2D.LinearGradientBrush(new Rectangle(0, 0, 160, 160), Color.OrangeRed, Color.MediumPurple, 45f); g.FillRectangle(br, 0, 0, 160, 160); }
+            using var card = win.RenderPreview(new NowPlaying("A Made-up Song Title That Is Quite Long Indeed", "Some Artist", "Album", true, TimeSpan.FromSeconds(214), "test"), art);
+            using var stage = new Bitmap(card.Width + 60, card.Height + 60);
+            using (var g = Graphics.FromImage(stage)) { g.Clear(Color.FromArgb(14, 40, 80)); g.DrawImage(card, 30, 30); }
+            stage.Save(Path.Combine(folder, "music-overlay.png"), System.Drawing.Imaging.ImageFormat.Png);
+            var wa = new Rectangle(0, 0, 1920, 1040);
+            var p = OverlayPlacement.Compute(wa, new Size(340, 88), OverlayAnchor.BottomRight, 24);
+            report.Add($"bottom right on 1920x1040 -> {p} (expected 1556,928)");
+            report.Add("card rendered " + card.Width + "x" + card.Height);
+            File.WriteAllLines(Path.Combine(folder, "music-overlay.txt"), report);
+            return p == new Point(1556, 928) ? 0 : 1;
+        }
+
         private sealed class StageForm : Form
         {
             public StageForm() { SetStyle(ControlStyles.OptimizedDoubleBuffer | ControlStyles.AllPaintingInWmPaint | ControlStyles.UserPaint, true); }

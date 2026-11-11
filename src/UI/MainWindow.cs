@@ -4501,6 +4501,21 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                 appearanceAdvanced.AddControl(BuildOpacityRow());
                 appearanceAdvanced.AddControl(Checkbox(LocalizationManager.T("Settings.GpuGlass"), AppSettings.Load().UseGpuGlass,
                     v => { var a = AppSettings.Load(); a.UseGpuGlass = v; a.Save(); }, LocalizationManager.T("Settings.GpuGlassDesc"), restart: true));
+                // music overlay (plan 2.1.6): live, no restart
+                appearanceAdvanced.AddControl(Checkbox(LocalizationManager.T("Settings.MusicOverlay"), AppSettings.Load().MusicOverlayEnabled,
+                    v => { var a = AppSettings.Load(); a.MusicOverlayEnabled = v; a.Save(); MusicOverlay.Apply(); }, LocalizationManager.T("Settings.MusicOverlayDesc")));
+                {
+                    var anchorRow = new FlowLayoutPanel { AutoSize = true, WrapContents = false, Margin = new Padding(0, 4, 0, 8) };
+                    anchorRow.Controls.Add(new Label { Text = LocalizationManager.T("Settings.MusicOverlayPosition"), AutoSize = false, Width = 300, Height = 28, TextAlign = ContentAlignment.MiddleLeft, Font = UiTheme.FontBody, ForeColor = UiTheme.TextSecondary });
+                    var anchorCombo = new FlatComboBox { Width = 200 };
+                    var anchors = Enum.GetValues<MotionDesk.Services.OverlayAnchor>();
+                    var anchorNames = anchors.Select(a => LocalizationManager.T("Anchor." + a)).ToArray();
+                    var curAnchor = Enum.TryParse<MotionDesk.Services.OverlayAnchor>(AppSettings.Load().MusicOverlayAnchor, true, out var ca) ? ca : MotionDesk.Services.OverlayAnchor.BottomRight;
+                    anchorCombo.SetItems(anchorNames, anchorNames[Array.IndexOf(anchors, curAnchor)]);
+                    anchorCombo.SelectedIndexChanged += (_, _) => { var a = AppSettings.Load(); a.MusicOverlayAnchor = anchors[Math.Clamp(anchorCombo.SelectedIndex, 0, anchors.Length - 1)].ToString(); a.Save(); MusicOverlay.Apply(); };
+                    anchorRow.Controls.Add(anchorCombo);
+                    appearanceAdvanced.AddControl(anchorRow);
+                }
                 appearanceAdvanced.AddControl(BuildDarkIntensityRow());
                 appearance.Add(appearanceAdvanced);
 

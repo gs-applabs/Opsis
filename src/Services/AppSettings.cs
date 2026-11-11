@@ -147,6 +147,9 @@ namespace MotionDesk.Services
         public bool UseGpuGlass { get; set; }
         /// <summary>EXPERIMENTAL (2.6.0 beta): run the new native container windows (own data file containers-native.json, pipe opsis-containers-v1-*) instead of the WPF fork. Only a settings.json flag until the switch-off phase; turn the fork engine off first or both show.</summary>
         public bool UseNativeContainers { get; set; }
+        /// <summary>Music overlay (plan 2.1.6): a glass card with the cover / title / artist of whatever any player is playing. Off by default.</summary>
+        public bool MusicOverlayEnabled { get; set; }
+        public string MusicOverlayAnchor { get; set; } = "BottomRight";
 
         /// <summary>2.6.0: the shared Glass theme choices (Opsis.UI.GlassSettings): Solid by default.</summary>
         public GlassSettings Glass { get; set; } = new();
