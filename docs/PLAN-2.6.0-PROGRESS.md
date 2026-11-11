@@ -71,6 +71,9 @@ Portable build outside the repo + `docs/TRY-NATIVE-CONTAINERS.md` (Greek). Rescu
 - **Glass cost (3 containers x 24 icons, `--test-container-budget`, Intel UHD 630 machine):** background moving 8 s: 2.3 % of all cores, private memory 44 MB (16 MB before), 128 captures / 383 renders; background static: 0.7 % CPU, 42 MB. Growth GDI +25, USER +30, handles +238 for 3 windows + 3 glass panes (to be compared with the logger baseline of 2.4.6.1, ⛔ user). Idle 0.7 % is above the "near zero" goal: next step is to stop the static-watch capture when nothing can change (needs a policy change in Opsis.Glass).
 - **Fork switch-off:** `docs/CONTAINERS_EQUIVALENCE.md` lists what the fork does and what the native core still lacks (tabs/portals/notes, hiding desktop originals, Spot Search and profile hotkeys, settings page). The fork is NOT removed yet; the table states the conditions.
 
+## 2.4.6.2 worktree: real plugins
+`--test-plugins-load` (needs OPSIS_E2E=1 + OPSIS_APPDATA) loads the REAL plugin builds from an isolated data folder: Opsis Appearance 1.7.5 and Opsis News Crawler 0.23.0 (both built from the local repos) were approved by the test mode, loaded by the 2.4.6.2 host, each added ONE side-menu page (News Crawler, Εμφάνιση Windows) and ONE tray group (no duplicates), and plugins.log has no load errors. NOT covered: Chronikologio (its repo is not on this machine), Kombos/GearWin, the Crawler 'Ροή ιστορίας' page contents, real UI clicks inside the plugin pages, the 2.6.0-beta host with the same plugins.
+
 ## Where I stopped
 Native core: tray/hotkeys, z-order, first-start import, budgets, equivalence table done. Next (in order): tabs/portals/notes rendering, settings page for the native core, Spot Search + profile hotkeys, hiding originals (with the rescue path), then the fork switch-off. Also 2.4.6.2 worktree: real plugin e2e with the new plugin builds.
 
