@@ -22,6 +22,7 @@ namespace MotionDesk.UI
         private TableLayoutPanel _sidebarLayout = null!;
         private Panel _brandPanel = null!;
         private FlowLayoutPanel _nav = null!;
+        private int? _navBaseHeight;
         private PulsingLogoPanel _brandDot = null!;
         private Label _brandLabel = null!;
         private Label _brandSubLabel = null!;
@@ -561,6 +562,12 @@ namespace MotionDesk.UI
             {
                 if (IsDisposed || WindowState != FormWindowState.Normal) return;
                 PerformLayout();                       // the sizes below are only right once the layout of the sidebar has run
+                var buttons = _nav.Controls.OfType<NavButton>().ToList();
+                if (buttons.Count > 0)
+                {
+                    _navBaseHeight ??= buttons[0].Height;
+                    foreach (var b in buttons) b.Height = _navBaseHeight.Value;   // start from the normal size every time
+                }
                 int need = _nav.Padding.Vertical + _nav.Controls.Cast<Control>().Sum(c => c.Height + c.Margin.Vertical);
                 int missing = need - _nav.ClientSize.Height;
                 if (missing > 0)
@@ -572,6 +579,13 @@ namespace MotionDesk.UI
                         Height = newHeight;
                         if (Bottom > wa.Bottom) Top = Math.Max(wa.Top, wa.Bottom - Height);
                     }
+                }
+                // Still not enough room (a small screen, many plugins): make the entries a little lower so that EVERY entry is visible.
+                if (need > _nav.ClientSize.Height + 1 && buttons.Count > 0)
+                {
+                    int per = (_nav.ClientSize.Height - _nav.Padding.Vertical - (_nav.Controls.Count - buttons.Count) * 24) / buttons.Count;
+                    foreach (var b in buttons) b.Height = Math.Clamp(per - b.Margin.Vertical, 28, _navBaseHeight ?? 40);
+                    need = _nav.Padding.Vertical + _nav.Controls.Cast<Control>().Sum(c => c.Height + c.Margin.Vertical);
                 }
                 _nav.AutoScroll = need > _nav.ClientSize.Height + 1;
             }
@@ -4830,7 +4844,7 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
             {
                 var row = new FlowLayoutPanel { AutoSize = true, WrapContents = false, Margin = new Padding(marginLeft, 2, 0, 4) };
                 row.Controls.Add(new Label { Text = label + ":", AutoSize = true, ForeColor = UiTheme.TextSecondary, Font = UiTheme.FontBody, Padding = new Padding(0, 6, 8, 0) });
-                var numeric = new NumericUpDown { Minimum = min, Maximum = max, Value = value, Width = 80 };
+                var numeric = new NumericUpDown { Minimum = min, Maximum = max, Value = Math.Clamp(value, min, max), Width = 80 };   // a stored value outside the range must never break the page
                 numeric.ValueChanged += (_, _) => ApplySetting(label, () => onChange((int)numeric.Value));
                 row.Controls.Add(numeric);
                 row.Controls.Add(new Label { Text = unit, AutoSize = true, ForeColor = UiTheme.TextMuted, Font = UiTheme.FontBody, Padding = new Padding(8, 6, 0, 0) });

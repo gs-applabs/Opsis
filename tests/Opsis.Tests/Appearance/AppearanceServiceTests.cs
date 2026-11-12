@@ -169,10 +169,7 @@ public sealed class SettingsPeekTests
         Assert.True(MotionDesk.Services.AppSettings.IsIsolatedForTests());
         var a = MotionDesk.Services.AppSettings.Peek();
         Assert.Same(a, MotionDesk.Services.AppSettings.Peek());
-        var edit = MotionDesk.Services.AppSettings.Load();
-        bool before = edit.UseGpuGlass;
-        edit.UseGpuGlass = !before; edit.Save();
-        Assert.Equal(!before, MotionDesk.Services.AppSettings.Peek().UseGpuGlass);   // the Save dropped the snapshot
-        edit.UseGpuGlass = before; edit.Save();
+        MotionDesk.Services.AppSettings.Load().Save();                         // any Save drops the shared snapshot
+        Assert.NotSame(a, MotionDesk.Services.AppSettings.Peek());
     }
 }
