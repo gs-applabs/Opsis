@@ -169,7 +169,31 @@ namespace MotionDesk.Services
 
         public static AppSettings Load() => Store().Load();
 
-        public void Save() => Store().Save(this);
+        // READ-ONLY snapshot for hot paths (paint, timers, property getters): the file is parsed at most every 1.5 s and after a Save. The returned object is
+        // shared: never change it and never Save it (use Load() for that).
+        private static AppSettings? _peek;
+        private static string? _peekPath;
+        private static long _peekAt;
+        private static readonly object PeekLock = new();
+
+        /// <summary>True when the data folder is the isolated one of a test or audit run (OPSIS_APPDATA).</summary>
+        internal static bool IsIsolatedForTests() => !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("OPSIS_APPDATA"));
+
+        public static AppSettings Peek()
+        {
+            lock (PeekLock)
+            {
+                if (_peek != null && _peekPath == ConfigPath && Environment.TickCount64 - _peekAt < 1500) return _peek;
+                _peek = Load(); _peekPath = ConfigPath; _peekAt = Environment.TickCount64;
+                return _peek;
+            }
+        }
+
+        public void Save()
+        {
+            Store().Save(this);
+            lock (PeekLock) _peek = null;
+        }
     }
 
     public static class PerformanceModeManager

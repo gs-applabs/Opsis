@@ -135,7 +135,7 @@ namespace MotionDesk.Containers
                 using var bar = new SolidBrush(Color.FromArgb(hc ? 255 : Math.Clamp(tb.Opacity, 0, 100) * 255 / 100, barColor)); g.FillPath(bar, barPath);
             }
             var textColor = hc ? SystemColors.HighlightText : ParseColor(tb.TextColor, Contrast(barColor));
-            using (var font = new Font(string.IsNullOrWhiteSpace(tb.FontFamily) ? "Segoe UI Variable Display" : tb.FontFamily, tb.FontSize * scale, tb.Bold ? FontStyle.Bold : FontStyle.Regular, GraphicsUnit.Point))
+            using (var font = new Font(string.IsNullOrWhiteSpace(tb.FontFamily) ? "Segoe UI Variable Display" : tb.FontFamily, Math.Max(1f, tb.FontSize * scale), tb.Bold ? FontStyle.Bold : FontStyle.Regular, GraphicsUnit.Point))
             using (var tbrush = new SolidBrush(textColor))
             {
                 var sf = new StringFormat { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center, Trimming = StringTrimming.EllipsisCharacter, FormatFlags = StringFormatFlags.NoWrap };
@@ -154,7 +154,7 @@ namespace MotionDesk.Containers
             var (first, last) = ContainerLayout.VisibleRange(client, model.Items.Count, m, scroll);
             var view = ContainerLayout.Viewport(client, m);
             g.SetClip(view);
-            using var labelFont = new Font("Segoe UI", 9f * scale, FontStyle.Regular, GraphicsUnit.Point);
+            using var labelFont = new Font("Segoe UI", Math.Max(1f, 9f * scale), FontStyle.Regular, GraphicsUnit.Point);
             using var labelFmt = new StringFormat { Alignment = StringAlignment.Center, Trimming = StringTrimming.EllipsisWord, FormatFlags = StringFormatFlags.LineLimit };
             using var labelBrush = new SolidBrush(hc ? SystemColors.WindowText : Color.FromArgb(240, 255, 255, 255));
             using var shadowBrush = new SolidBrush(Color.FromArgb(model.Appearance.TextShadow && !hc ? 150 : 0, 0, 0, 0));

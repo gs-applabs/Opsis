@@ -73,7 +73,7 @@ public static class AppActivity
     {
         try
         {
-            var settings = AppSettings.Load();
+            var settings = AppSettings.Peek();
             bool fsNow = IsForegroundWindowFullscreen(out string? device);
             _fullscreenHits = fsNow ? _fullscreenHits + 1 : 0;
             // είσοδος μετά από 2 συνεχόμενα δείγματα, έξοδος αμέσως (ή αν άλλαξε οθόνη το ίδιο fullscreen)

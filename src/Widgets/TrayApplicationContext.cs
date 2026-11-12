@@ -48,7 +48,7 @@ namespace MotionDesk.Widgets
             PluginHost.Instance.NavigationRequested += key => ShowMainWindow("plugin:" + key);
             // Plugins from user-writable folders run code inside Opsis: ask once, show the content hash, remember the approval (plugin-trust.json).
             // (the approval question is NOT asked while starting: see PluginHost.ConsiderFolder / ResolvePending)
-            if (!safeMode) { PluginHost.Instance.StartAll(); SchedulePluginApproval(); }
+            if (!safeMode) { PluginHost.Instance.StartAll(); SchedulePluginApproval(); try { MotionDesk.Appearance.AppearanceService.Instance.Start(); } catch (Exception) { } }
 
             // Δημιουργία Context Menu για το Tray Icon — ομαδοποιημένο σε: παράθυρο, DeskZones,
             // wallpaper, γρήγορα προφίλ, γρήγορες ρυθμίσεις, έξοδος.
@@ -57,6 +57,7 @@ namespace MotionDesk.Widgets
             contextMenu.Items.Add(LocalizationManager.T("Tray.Open"), null, (s, e) => ShowMainWindow());
             contextMenu.Items.Add(LocalizationManager.T("Tray.CommandPalette"), null, (s, e) => { ShowMainWindow(); _mainWindow?.OpenCommandPalette(); });
             contextMenu.Items.Add(LocalizationManager.T("Tray.Settings"), null, (s, e) => ShowMainWindow("Settings"));
+            contextMenu.Items.Add(LocalizationManager.T("Tray.ToggleLightDark"), null, (s, e) => { try { var a = MotionDesk.Appearance.AppearanceService.Instance; a.Backup(); a.Engine.SetDark(!a.Engine.IsDark); } catch (Exception) { } });
             // Opsis' own help entries: ONE welcome guide and ONE family window for the whole suite (plugins do not offer them when hosted: PluginHost.IsHostOwnedEntry)
             contextMenu.Items.Add(LocalizationManager.T("Tray.Welcome"), null, (s, e) => FamilyWindows.ShowWelcome());
             contextMenu.Items.Add(LocalizationManager.T("Tray.Family"), null, (s, e) => FamilyWindows.ShowFamily());
@@ -570,6 +571,7 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
         {
             try { WorkspaceProfileService.Save("Last Session"); WorkspaceProfileService.ExitSaveDone = true; } catch { }
             PluginHost.Instance.StopAll();
+            try { MotionDesk.Appearance.AppearanceService.Instance.Stop(); } catch (Exception) { }   // taskbar look and window effects always go back to Windows
             _hotkeys.Dispose();
             _taskbarWatcher.Dispose();
             try { _nativeContainers?.Dispose(); } catch { }

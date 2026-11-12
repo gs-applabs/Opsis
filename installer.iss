@@ -10,10 +10,6 @@
 #define MyAppExeName "Opsis.exe"
 ; Πού βρίσκεται ο installer του News Crawler (δημοσιεύεται ως GitHub release του αντίστοιχου repo).
 ; ΠΡΟΣΟΧΗ: το URL είναι η υπόθεση για το repo του crawler — άλλαξέ το αν ο installer ανέβει αλλού.
-; Opsis Appearance (plugin): το installer του δημοσιεύεται ως GitHub release του αντίστοιχου repo (ίδιος μηχανισμός με τον crawler).
-#ifndef AppearanceSetupUrl
-  #define AppearanceSetupUrl "https://github.com/giorstergiopoulos-design/OpsisAppearance/releases/latest/download/OpsisAppearance-Setup.exe"
-#endif
 #ifndef CrawlerSetupUrl
   #define CrawlerSetupUrl "https://github.com/giorstergiopoulos-design/OpsisNewsCrawler/releases/latest/download/OpsisNewsCrawler-Setup.exe"
 #endif
@@ -45,7 +41,7 @@ OutputDir=Output
 OutputBaseFilename=OpsisSetup-2.6.0-beta
 Compression=lzma2/ultra64
 SolidCompression=yes
-WizardStyle=modern
+WizardStyle=modern dynamic
 PrivilegesRequired=admin
 AppMutex=Opsis.SingleInstance
 ; Η εφαρμογή είναι win-x64 (framework-dependent, native WebView2Loader.dll x64) — ο installer
@@ -57,6 +53,10 @@ SetupIconFile=assets\Opsis.ico
 ; Opsis logo on every wizard page instead of the default Inno disk-and-box (images made by installer\make-wizard-images.ps1, no text inside)
 WizardImageFile=installer\wizard\large-100.bmp,installer\wizard\large-125.bmp,installer\wizard\large-150.bmp,installer\wizard\large-200.bmp
 WizardSmallImageFile=installer\wizard\small-100.bmp,installer\wizard\small-125.bmp,installer\wizard\small-150.bmp,installer\wizard\small-200.bmp
+; Dark wizard (Windows in dark mode, checked once when Setup starts): deeper tall pictures, small PNGs with a transparent background, dark top colours
+WizardImageFileDynamicDark=installer\wizard\dark-large-100.bmp,installer\wizard\dark-large-125.bmp,installer\wizard\dark-large-150.bmp,installer\wizard\dark-large-200.bmp
+WizardImageBackColorDynamicDark=#060E19
+WizardSmallImageFileDynamicDark=installer\wizard\dark-small-100.png,installer\wizard\dark-small-125.png,installer\wizard\dark-small-150.png,installer\wizard\dark-small-200.png
 UninstallDisplayIcon={app}\{#MyAppExeName}
 DisableWelcomePage=no
 
@@ -283,77 +283,23 @@ turkish.CrawlerFailed=News Crawler indirilemedi (%1).%n%nOpsis normal şekilde y
 arabic.CrawlerFailed=تعذّر تنزيل News Crawler (%1).%n%nتم تثبيت Opsis بشكل طبيعي. يمكنك تثبيت News Crawler لاحقًا من:%n%2
 hindi.CrawlerFailed=News Crawler डाउनलोड नहीं हो सका (%1)।%n%nOpsis सामान्य रूप से इंस्टॉल हो गया। आप News Crawler बाद में यहाँ से इंस्टॉल कर सकते हैं:%n%2
 
-; Opsis Appearance (plugin): προαιρετική λήψη και εγκατάσταση ταυτόχρονα με το Opsis (όπως ο crawler)
-greek.AppearanceTask=Λήψη και εγκατάσταση του Opsis Appearance (αλλαγή εμφάνισης Windows: light/dark, accent, εφέ παραθύρων, θέματα· plugin του Opsis)
-english.AppearanceTask=Download and install Opsis Appearance (change the look of Windows: light/dark, accent, window effects, themes; a plugin of Opsis)
-german.AppearanceTask=Download and install Opsis Appearance (change the look of Windows: light/dark, accent, window effects, themes; a plugin of Opsis)
-french.AppearanceTask=Download and install Opsis Appearance (change the look of Windows: light/dark, accent, window effects, themes; a plugin of Opsis)
-spanish.AppearanceTask=Download and install Opsis Appearance (change the look of Windows: light/dark, accent, window effects, themes; a plugin of Opsis)
-korean.AppearanceTask=Download and install Opsis Appearance (change the look of Windows: light/dark, accent, window effects, themes; a plugin of Opsis)
-chinese.AppearanceTask=Download and install Opsis Appearance (change the look of Windows: light/dark, accent, window effects, themes; a plugin of Opsis)
-italian.AppearanceTask=Download and install Opsis Appearance (change the look of Windows: light/dark, accent, window effects, themes; a plugin of Opsis)
-russian.AppearanceTask=Download and install Opsis Appearance (change the look of Windows: light/dark, accent, window effects, themes; a plugin of Opsis)
-japanese.AppearanceTask=Download and install Opsis Appearance (change the look of Windows: light/dark, accent, window effects, themes; a plugin of Opsis)
-portuguese.AppearanceTask=Download and install Opsis Appearance (change the look of Windows: light/dark, accent, window effects, themes; a plugin of Opsis)
-turkish.AppearanceTask=Download and install Opsis Appearance (change the look of Windows: light/dark, accent, window effects, themes; a plugin of Opsis)
-arabic.AppearanceTask=Download and install Opsis Appearance (change the look of Windows: light/dark, accent, window effects, themes; a plugin of Opsis)
-hindi.AppearanceTask=Download and install Opsis Appearance (change the look of Windows: light/dark, accent, window effects, themes; a plugin of Opsis)
-greek.AppearanceDownloadTitle=Λήψη του Opsis Appearance
-english.AppearanceDownloadTitle=Downloading Opsis Appearance
-german.AppearanceDownloadTitle=Downloading Opsis Appearance
-french.AppearanceDownloadTitle=Downloading Opsis Appearance
-spanish.AppearanceDownloadTitle=Downloading Opsis Appearance
-korean.AppearanceDownloadTitle=Downloading Opsis Appearance
-chinese.AppearanceDownloadTitle=Downloading Opsis Appearance
-italian.AppearanceDownloadTitle=Downloading Opsis Appearance
-russian.AppearanceDownloadTitle=Downloading Opsis Appearance
-japanese.AppearanceDownloadTitle=Downloading Opsis Appearance
-portuguese.AppearanceDownloadTitle=Downloading Opsis Appearance
-turkish.AppearanceDownloadTitle=Downloading Opsis Appearance
-arabic.AppearanceDownloadTitle=Downloading Opsis Appearance
-hindi.AppearanceDownloadTitle=Downloading Opsis Appearance
-greek.AppearanceDownloadDesc=Περιμένετε όσο κατεβαίνει ο installer του Opsis Appearance.
-english.AppearanceDownloadDesc=Please wait while the Opsis Appearance installer is downloaded.
-german.AppearanceDownloadDesc=Please wait while the Opsis Appearance installer is downloaded.
-french.AppearanceDownloadDesc=Please wait while the Opsis Appearance installer is downloaded.
-spanish.AppearanceDownloadDesc=Please wait while the Opsis Appearance installer is downloaded.
-korean.AppearanceDownloadDesc=Please wait while the Opsis Appearance installer is downloaded.
-chinese.AppearanceDownloadDesc=Please wait while the Opsis Appearance installer is downloaded.
-italian.AppearanceDownloadDesc=Please wait while the Opsis Appearance installer is downloaded.
-russian.AppearanceDownloadDesc=Please wait while the Opsis Appearance installer is downloaded.
-japanese.AppearanceDownloadDesc=Please wait while the Opsis Appearance installer is downloaded.
-portuguese.AppearanceDownloadDesc=Please wait while the Opsis Appearance installer is downloaded.
-turkish.AppearanceDownloadDesc=Please wait while the Opsis Appearance installer is downloaded.
-arabic.AppearanceDownloadDesc=Please wait while the Opsis Appearance installer is downloaded.
-hindi.AppearanceDownloadDesc=Please wait while the Opsis Appearance installer is downloaded.
-greek.AppearanceInstalling=Εγκατάσταση του Opsis Appearance...
-english.AppearanceInstalling=Installing Opsis Appearance...
-german.AppearanceInstalling=Installing Opsis Appearance...
-french.AppearanceInstalling=Installing Opsis Appearance...
-spanish.AppearanceInstalling=Installing Opsis Appearance...
-korean.AppearanceInstalling=Installing Opsis Appearance...
-chinese.AppearanceInstalling=Installing Opsis Appearance...
-italian.AppearanceInstalling=Installing Opsis Appearance...
-russian.AppearanceInstalling=Installing Opsis Appearance...
-japanese.AppearanceInstalling=Installing Opsis Appearance...
-portuguese.AppearanceInstalling=Installing Opsis Appearance...
-turkish.AppearanceInstalling=Installing Opsis Appearance...
-arabic.AppearanceInstalling=Installing Opsis Appearance...
-hindi.AppearanceInstalling=Installing Opsis Appearance...
-greek.AppearanceFailed=Δεν ήταν δυνατή η λήψη του Opsis Appearance (%1).%n%nΤο Opsis εγκαταστάθηκε κανονικά. Μπορείτε να εγκαταστήσετε το Opsis Appearance αργότερα από:%n%2
-english.AppearanceFailed=Opsis Appearance could not be downloaded (%1).%n%nOpsis was installed normally. You can install Opsis Appearance later from:%n%2
-german.AppearanceFailed=Opsis Appearance could not be downloaded (%1).%n%nOpsis was installed normally. You can install Opsis Appearance later from:%n%2
-french.AppearanceFailed=Opsis Appearance could not be downloaded (%1).%n%nOpsis was installed normally. You can install Opsis Appearance later from:%n%2
-spanish.AppearanceFailed=Opsis Appearance could not be downloaded (%1).%n%nOpsis was installed normally. You can install Opsis Appearance later from:%n%2
-korean.AppearanceFailed=Opsis Appearance could not be downloaded (%1).%n%nOpsis was installed normally. You can install Opsis Appearance later from:%n%2
-chinese.AppearanceFailed=Opsis Appearance could not be downloaded (%1).%n%nOpsis was installed normally. You can install Opsis Appearance later from:%n%2
-italian.AppearanceFailed=Opsis Appearance could not be downloaded (%1).%n%nOpsis was installed normally. You can install Opsis Appearance later from:%n%2
-russian.AppearanceFailed=Opsis Appearance could not be downloaded (%1).%n%nOpsis was installed normally. You can install Opsis Appearance later from:%n%2
-japanese.AppearanceFailed=Opsis Appearance could not be downloaded (%1).%n%nOpsis was installed normally. You can install Opsis Appearance later from:%n%2
-portuguese.AppearanceFailed=Opsis Appearance could not be downloaded (%1).%n%nOpsis was installed normally. You can install Opsis Appearance later from:%n%2
-turkish.AppearanceFailed=Opsis Appearance could not be downloaded (%1).%n%nOpsis was installed normally. You can install Opsis Appearance later from:%n%2
-arabic.AppearanceFailed=Opsis Appearance could not be downloaded (%1).%n%nOpsis was installed normally. You can install Opsis Appearance later from:%n%2
-hindi.AppearanceFailed=Opsis Appearance could not be downloaded (%1).%n%nOpsis was installed normally. You can install Opsis Appearance later from:%n%2
+
+; The older separate appearance app/plugin is detected and uninstalled (its data in %AppData%\Opsis stays)
+[CustomMessages]
+greek.RemoveOldAppearance=Το Opsis 2.6.0 περιλαμβάνει πλέον την εμφάνιση των Windows. Βρέθηκε μια παλαιότερη ξεχωριστή εφαρμογή/plugin εμφάνισης για το Opsis· θα απεγκατασταθεί για να μη λειτουργούν δύο μηχανές μαζί. Οι ρυθμίσεις και τα θέματά σου διατηρούνται. Να απεγκατασταθεί τώρα;
+english.RemoveOldAppearance=Opsis 2.6.0 now includes the Windows appearance features. An older separate appearance app/plugin for Opsis was found; it will be uninstalled so two engines do not run together. Your settings and themes are kept. Uninstall it now?
+german.RemoveOldAppearance=Opsis 2.6.0 enthält jetzt die Windows-Darstellung. Eine ältere separate Darstellungs-App/ein Plugin für Opsis wurde gefunden; sie wird deinstalliert, damit nicht zwei Engines gleichzeitig laufen. Einstellungen und Designs bleiben erhalten. Jetzt deinstallieren?
+french.RemoveOldAppearance=Opsis 2.6.0 inclut désormais l'apparence de Windows. Une ancienne application/un ancien plugin d'apparence séparé pour Opsis a été trouvé ; il sera désinstallé pour éviter que deux moteurs fonctionnent ensemble. Vos paramètres et thèmes sont conservés. Le désinstaller maintenant ?
+spanish.RemoveOldAppearance=Opsis 2.6.0 ya incluye la apariencia de Windows. Se encontró una aplicación/plugin de apariencia independiente anterior para Opsis; se desinstalará para que no funcionen dos motores a la vez. Tus ajustes y temas se conservan. ¿Desinstalar ahora?
+korean.RemoveOldAppearance=Opsis 2.6.0에는 이제 Windows 모양 기능이 포함되어 있습니다. Opsis용 이전 별도 모양 앱/플러그인이 발견되었으며, 두 엔진이 동시에 동작하지 않도록 제거됩니다. 설정과 테마는 유지됩니다. 지금 제거할까요?
+chinese.RemoveOldAppearance=Opsis 2.6.0 现已内置 Windows 外观功能。发现了适用于 Opsis 的旧版独立外观应用/插件，将卸载它，以免两个引擎同时运行。您的设置和主题会保留。现在卸载吗？
+italian.RemoveOldAppearance=Opsis 2.6.0 include ora l'aspetto di Windows. È stata trovata una precedente app/plugin di aspetto separata per Opsis; verrà disinstallata per evitare che due motori funzionino insieme. Impostazioni e temi vengono mantenuti. Disinstallare ora?
+russian.RemoveOldAppearance=Opsis 2.6.0 теперь включает оформление Windows. Найдено прежнее отдельное приложение/плагин оформления для Opsis; оно будет удалено, чтобы два движка не работали одновременно. Ваши настройки и темы сохранятся. Удалить сейчас?
+japanese.RemoveOldAppearance=Opsis 2.6.0 には Windows の外観機能が組み込まれました。Opsis 用の以前の別個の外観アプリ/プラグインが見つかりました。2 つのエンジンが同時に動作しないよう、アンインストールします。設定とテーマは保持されます。今すぐアンインストールしますか？
+portuguese.RemoveOldAppearance=O Opsis 2.6.0 inclui agora o aspeto do Windows. Foi encontrada uma aplicação/plugin de aspeto separada e anterior para o Opsis; será desinstalada para que dois motores não funcionem em conjunto. As suas definições e temas são mantidos. Desinstalar agora?
+turkish.RemoveOldAppearance=Opsis 2.6.0 artık Windows görünümünü içeriyor. Opsis için eski, ayrı bir görünüm uygulaması/eklentisi bulundu; iki motorun birlikte çalışmaması için kaldırılacak. Ayarlarınız ve temalarınız korunur. Şimdi kaldırılsın mı?
+arabic.RemoveOldAppearance=يتضمن Opsis 2.6.0 الآن مظهر Windows. عُثر على تطبيق/إضافة مظهر منفصلة أقدم لـ Opsis؛ ستتم إزالتها حتى لا يعمل محركان معًا. تُحفظ إعداداتك وسماتك. هل تريد إزالتها الآن؟
+hindi.RemoveOldAppearance=Opsis 2.6.0 में अब Windows का रूप शामिल है। Opsis के लिए एक पुराना अलग रूप ऐप/प्लगइन मिला; दो इंजन एक साथ न चलें, इसलिए उसे हटाया जाएगा। आपकी सेटिंग और थीम सुरक्षित रहेंगी। अभी हटाएँ?
 
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: checkedonce
@@ -367,7 +313,6 @@ Name: "autostart"; Description: "{cm:AutostartTask}"; GroupDescription: "{cm:Sta
 ; σε κάθε ενημέρωση του Opsis και το News Crawler έμενε παλιό για μήνες. "checkedonce" (ίδιο flag
 ; με το desktopicon παραπάνω) = ενεργό στην πρώτη εγκατάσταση, αλλά θυμάται αν ο χρήστης το
 ; απενεργοποιήσει αργότερα — δεν το ξαναενεργοποιεί σιωπηλά σε κάθε update.
-Name: "installappearance"; Description: "{cm:AppearanceTask}"; GroupDescription: "{cm:ExtraDepsGroup}"; Flags: unchecked
 Name: "installcrawler"; Description: "{cm:CrawlerTask}"; GroupDescription: "{cm:ExtraDepsGroup}"; Flags: checkedonce
 Name: "installffmpeg"; Description: "{cm:FfmpegTask}"; GroupDescription: "{cm:ExtraDepsGroup}"; Flags: unchecked; Check: IsWingetAvailable and not IsFfmpegInstalled
 
@@ -443,8 +388,6 @@ end;
 var
   CrawlerDownload: TDownloadWizardPage;
   CrawlerDownloaded: Boolean;
-  AppearanceDownload: TDownloadWizardPage;
-  AppearanceDownloaded: Boolean;
 
 procedure InitializeWizard();
 var
@@ -454,7 +397,6 @@ begin
   if sPrevVersion <> '' then
     WizardForm.WelcomeLabel2.Caption := FmtMessage(CustomMessage('UpdateDetected'), [sPrevVersion]);
   CrawlerDownload := CreateDownloadPage(CustomMessage('CrawlerDownloadTitle'), CustomMessage('CrawlerDownloadDesc'), nil);
-  AppearanceDownload := CreateDownloadPage(CustomMessage('AppearanceDownloadTitle'), CustomMessage('AppearanceDownloadDesc'), nil);
   // Σελίδα εξαρτήσεων (dependencies.iss) αμέσως μετά τη σελίδα επιλογής tasks.
   DepsInit(wpSelectTasks);
 end;
@@ -472,49 +414,12 @@ begin
   Result := (Length(Expected) = 64) and (Expected = Actual);
 end;
 
-function AppearanceChecksumMatches: Boolean;
-var
-  Lines: TArrayOfString;
-  Expected, Actual: String;
-begin
-  Result := False;
-  if not LoadStringsFromFile(ExpandConstant('{tmp}\OpsisAppearance-Setup.exe.sha256'), Lines) then Exit;
-  if GetArrayLength(Lines) = 0 then Exit;
-  Expected := Lowercase(Copy(Trim(Lines[0]), 1, 64));
-  Actual := Lowercase(GetSHA256OfFile(ExpandConstant('{tmp}\OpsisAppearance-Setup.exe')));
-  Result := (Length(Expected) = 64) and (Expected = Actual);
-end;
-
 // Λήψη του installer του News Crawler πριν ξεκινήσει η εγκατάσταση (αν επιλέχθηκε). Αν αποτύχει, το Opsis εγκαθίσταται κανονικά.
 function NextButtonClick(CurPageID: Integer): Boolean;
 begin
   Result := True;
   if CurPageID = wpReady then
     Result := DepsDownloadSelected();
-  if (CurPageID = wpReady) and WizardIsTaskSelected('installappearance') then
-  begin
-    AppearanceDownloaded := False;
-    AppearanceDownload.Clear;
-    AppearanceDownload.Add('{#AppearanceSetupUrl}', 'OpsisAppearance-Setup.exe', '');
-    AppearanceDownload.Add('{#AppearanceSetupUrl}.sha256', 'OpsisAppearance-Setup.exe.sha256', '');
-    AppearanceDownload.Show;
-    try
-      try
-        AppearanceDownload.Download;
-        // Το release δημοσιεύει το SHA-256 δίπλα στο installer: απορρίπτεται αρχείο που δεν ταιριάζει (κατεστραμμένο ή αντικατεστημένο).
-        if not AppearanceChecksumMatches then
-          RaiseException('the checksum of the downloaded file does not match');
-        AppearanceDownloaded := True;
-      except
-        if AppearanceDownload.AbortedByUser then
-          Log('Opsis Appearance download aborted by the user')
-        else
-          SuppressibleMsgBox(FmtMessage(CustomMessage('AppearanceFailed'), [GetExceptionMessage, '{#AppearanceSetupUrl}']), mbError, MB_OK, IDOK);
-      end;
-    finally
-      AppearanceDownload.Hide;
-    end;
-  end;
   if (CurPageID = wpReady) and WizardIsTaskSelected('installcrawler') then
   begin
     CrawlerDownloaded := False;
@@ -549,16 +454,6 @@ var
   SetupFile: String;
 begin
   if CurStep = ssInstall then DepsInstallSelected();
-  if (CurStep = ssPostInstall) and AppearanceDownloaded then
-  begin
-    SetupFile := ExpandConstant('{tmp}\OpsisAppearance-Setup.exe');
-    if FileExists(SetupFile) then
-    begin
-      WizardForm.StatusLabel.Caption := CustomMessage('AppearanceInstalling');
-      if not ExecAsOriginalUser(SetupFile, '/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /MODE=plugin', '', SW_SHOWNORMAL, ewWaitUntilTerminated, ResultCode) then
-        Log('Could not start the Opsis Appearance installer');
-    end;
-  end;
   if (CurStep = ssPostInstall) and CrawlerDownloaded then
   begin
     SetupFile := ExpandConstant('{tmp}\OpsisNewsCrawler-Setup.exe');
@@ -616,6 +511,36 @@ begin
   RegDeleteValue(HKCU, 'Software\Microsoft\Windows\CurrentVersion\Run', 'MotionDesk Studio');
 end;
 
+// The older separate appearance app / plugin (Inno AppId below) is built into Opsis 2.6.0. Detect its uninstaller (machine-wide or the old per-user one)
+// and remove it with its own uninstaller, which keeps the user's data and refuses to delete anything that is not ours.
+function OldAppearanceUninstaller(var Cmd: String): Boolean;
+var
+  Key: String;
+begin
+  Key := 'Software\Microsoft\Windows\CurrentVersion\Uninstall\{5D2F7B1C-8E43-4A9B-B6C0-71A3E9D4F528}_is1';
+  Result := RegQueryStringValue(HKLM, Key, 'UninstallString', Cmd)
+         or RegQueryStringValue(HKCU, Key, 'UninstallString', Cmd);
+  if Result then Result := FileExists(RemoveQuotes(Cmd));
+end;
+
+procedure RemoveOldAppearance;
+var
+  Cmd: String;
+  ResultCode: Integer;
+begin
+  if not OldAppearanceUninstaller(Cmd) then Exit;
+  if (not WizardSilent) and (SuppressibleMsgBox(CustomMessage('RemoveOldAppearance'), mbConfirmation, MB_YESNO, IDYES) <> IDYES) then
+  begin
+    Log('Older appearance app kept by the user');
+    Exit;
+  end;
+  // MutexName of the old app is waited for by its own uninstaller; its settings (%AppData%\Opsis\appearance.json, themes) are not touched.
+  if not Exec(RemoveQuotes(Cmd), '/VERYSILENT /SUPPRESSMSGBOXES /NORESTART', '', SW_HIDE, ewWaitUntilTerminated, ResultCode) then
+    Log('Could not start the older appearance uninstaller')
+  else
+    Log('Older appearance uninstaller finished with code ' + IntToStr(ResultCode));
+end;
+
 // Upgrade from 2.4.x: the old DeskContainers engine (containers\OpsisContainers.exe) is removed by [InstallDelete]. Before that it puts back every desktop icon it had
 // hidden (--unhide-desktop) and is stopped, because it keeps its files locked while it runs.
 function PrepareToInstall(var NeedsRestart: Boolean): String;
@@ -628,6 +553,7 @@ begin
     Exec(OldEngine, '--unhide-desktop', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
   Exec(ExpandConstant('{sys}\taskkill.exe'), '/F /IM OpsisContainers.exe', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
   RemovePerUserInstall;
+  RemoveOldAppearance;
   Result := '';
 end;
 
