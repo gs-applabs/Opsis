@@ -404,12 +404,29 @@ namespace MotionDesk.Services
             foreach (var (root, trusted) in roots.GroupBy(r => r.Path, StringComparer.OrdinalIgnoreCase).Select(g => g.First()))
             {
                 if (!Directory.Exists(root)) continue;
-                foreach (var dir in Directory.EnumerateDirectories(root)) yield return (dir, trusted);
+                foreach (var dir in Directory.EnumerateDirectories(root))
+                {
+                    if (IsReplacedByBuiltIn(dir)) continue;
+                    yield return (dir, trusted);
+                }
             }
+        }
+
+        /// <summary>
+        /// Plugins whose features were moved INTO Opsis (2.6.0): Opsis Appearance is now the built-in "Windows appearance" page, so an installed
+        /// copy of the old plugin must not load (two engines would fight over the same Windows settings). Never asks for approval, never deletes anything.
+        /// </summary>
+        internal static readonly string[] ReplacedPluginDlls = { "OpsisAppearancePlugin.dll" };
+
+        internal static bool IsReplacedByBuiltIn(string folder)
+        {
+            try { return ReplacedPluginDlls.Any(d => File.Exists(Path.Combine(folder, d))); }
+            catch (Exception) { return false; }
         }
 
         internal void LoadFolder(string folder)
         {
+            if (IsReplacedByBuiltIn(folder)) { Log($"Plugin folder '{Path.GetFileName(folder)}' skipped: its features are built into Opsis 2.6.0"); return; }
             foreach (var dll in Directory.EnumerateFiles(folder, "*Plugin.dll"))
             {
                 var context = new PluginLoadContext(dll);
