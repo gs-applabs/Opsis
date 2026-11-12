@@ -906,5 +906,6 @@
   "Win.ThemeWallpaperAsk": "Geçerli Windows duvar kağıdı da eklensin mi?",
   "Win.TitleBars": "Koyu başlık çubukları",
   "Win.WinThemeNote": "Aşağıdaki Windows .theme dosyaları imleç ve sesleri de değiştirir. Özel görsel stiller, Opsis’in kurmadığı bir imza yamacı gerektirir: yalnızca güvendiğiniz kaynaklardan gelen temaları kullanın.",
-  "Win.WinThemes": "Windows temaları (.theme)"
+  "Win.WinThemes": "Windows temaları (.theme)",
+  "Tray.ToggleLightDark": "Açık / Koyu geçişi"
 }

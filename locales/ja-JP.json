@@ -906,5 +906,6 @@
   "Win.ThemeWallpaperAsk": "現在の Windows の壁紙も含めますか？",
   "Win.TitleBars": "ダークなタイトルバー",
   "Win.WinThemeNote": "以下の Windows .theme ファイルはカーソルとサウンドも変更します。カスタムのビジュアルスタイルには Opsis がインストールしない署名パッチャーが必要です。信頼できる提供元のテーマのみ使用してください。",
-  "Win.WinThemes": "Windows テーマ (.theme)"
+  "Win.WinThemes": "Windows テーマ (.theme)",
+  "Tray.ToggleLightDark": "ライト / ダークを切り替え"
 }

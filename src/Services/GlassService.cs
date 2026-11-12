@@ -20,7 +20,7 @@ namespace MotionDesk.Services
         /// <summary>Diagnostics: while true Refresh() does not touch the conditions (a test holds them).</summary>
         internal static volatile bool Hold;
 
-        public static bool Enabled => AppSettings.Load().UseGpuGlass && !SafeModeService.IsSafeMode && Environment.OSVersion.Version.Build >= 22000 && !_failed;
+        public static bool Enabled => AppSettings.Peek().UseGpuGlass && !SafeModeService.IsSafeMode && Environment.OSVersion.Version.Build >= 22000 && !_failed;
 
         /// <summary>The manager when glass is enabled and the GPU part is ready; null otherwise (the caller keeps its non-GPU look).</summary>
         public static OpsisGlass.GlassManager? Manager

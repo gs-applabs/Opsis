@@ -929,5 +929,6 @@
   "Win.ThemeWallpaperAsk": "Να συμπεριληφθεί και το τρέχον wallpaper των Windows;",
   "Win.TitleBars": "Σκούρες γραμμές τίτλου",
   "Win.WinThemeNote": "Τα .theme των Windows παρακάτω αλλάζουν και δείκτες/ήχους. Τα προσαρμοσμένα visual styles θέλουν patcher υπογραφής που το Opsis δεν εγκαθιστά: χρησιμοποίησε μόνο θέματα από πηγές που εμπιστεύεσαι.",
-  "Win.WinThemes": "Θέματα Windows (.theme)"
+  "Win.WinThemes": "Θέματα Windows (.theme)",
+  "Tray.ToggleLightDark": "Εναλλαγή Φωτεινό / Σκούρο"
 }

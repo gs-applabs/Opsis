@@ -906,5 +906,6 @@
   "Win.ThemeWallpaperAsk": "Auch das aktuelle Windows-Hintergrundbild einschließen?",
   "Win.TitleBars": "Dunkle Titelleisten",
   "Win.WinThemeNote": "Die unten aufgeführten Windows-.theme-Dateien ändern auch Mauszeiger und Sounds. Eigene visuelle Stile benötigen einen Signatur-Patcher, den Opsis nicht installiert: nutze nur Designs aus vertrauenswürdigen Quellen.",
-  "Win.WinThemes": "Windows-Designs (.theme)"
+  "Win.WinThemes": "Windows-Designs (.theme)",
+  "Tray.ToggleLightDark": "Hell / Dunkel umschalten"
 }

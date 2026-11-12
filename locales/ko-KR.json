@@ -906,5 +906,6 @@
   "Win.ThemeWallpaperAsk": "현재 Windows 배경 화면도 포함할까요?",
   "Win.TitleBars": "어두운 제목 표시줄",
   "Win.WinThemeNote": "아래 Windows .theme 파일은 커서와 소리도 바꿉니다. 사용자 지정 시각 스타일에는 Opsis가 설치하지 않는 서명 패처가 필요합니다. 신뢰할 수 있는 출처의 테마만 사용하세요.",
-  "Win.WinThemes": "Windows 테마(.theme)"
+  "Win.WinThemes": "Windows 테마(.theme)",
+  "Tray.ToggleLightDark": "밝게 / 어둡게 전환"
 }

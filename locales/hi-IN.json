@@ -906,5 +906,6 @@
   "Win.ThemeWallpaperAsk": "क्या वर्तमान Windows वॉलपेपर भी शामिल करें?",
   "Win.TitleBars": "गहरे टाइटल बार",
   "Win.WinThemeNote": "नीचे की Windows .theme फ़ाइलें कर्सर और ध्वनियाँ भी बदलती हैं। कस्टम विज़ुअल स्टाइल को सिग्नेचर पैचर चाहिए जिसे Opsis इंस्टॉल नहीं करता: केवल भरोसेमंद स्रोतों की थीम उपयोग करें।",
-  "Win.WinThemes": "Windows थीम (.theme)"
+  "Win.WinThemes": "Windows थीम (.theme)",
+  "Tray.ToggleLightDark": "हल्का / गहरा बदलें"
 }

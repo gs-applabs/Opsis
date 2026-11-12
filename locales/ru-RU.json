@@ -906,5 +906,6 @@
   "Win.ThemeWallpaperAsk": "Включить также текущие обои Windows?",
   "Win.TitleBars": "Тёмные заголовки",
   "Win.WinThemeNote": "Файлы .theme Windows ниже также меняют курсоры и звуки. Пользовательские визуальные стили требуют патчера подписи, который Opsis не устанавливает: используйте только темы из надёжных источников.",
-  "Win.WinThemes": "Темы Windows (.theme)"
+  "Win.WinThemes": "Темы Windows (.theme)",
+  "Tray.ToggleLightDark": "Переключить светлую / тёмную"
 }

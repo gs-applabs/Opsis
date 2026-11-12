@@ -929,5 +929,6 @@
   "Win.ThemeWallpaperAsk": "Include the current Windows wallpaper too?",
   "Win.TitleBars": "Dark title bars",
   "Win.WinThemeNote": "The Windows .theme files below also change cursors and sounds. Custom visual styles need a signature patcher that Opsis does not install: use only themes from sources you trust.",
-  "Win.WinThemes": "Windows themes (.theme)"
+  "Win.WinThemes": "Windows themes (.theme)",
+  "Tray.ToggleLightDark": "Switch Light / Dark"
 }

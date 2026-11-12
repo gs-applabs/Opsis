@@ -906,5 +906,6 @@
   "Win.ThemeWallpaperAsk": "是否同时包含当前的 Windows 壁纸？",
   "Win.TitleBars": "深色标题栏",
   "Win.WinThemeNote": "下面的 Windows .theme 文件也会更改光标和声音。自定义视觉样式需要 Opsis 不会安装的签名补丁程序：请仅使用来自可信来源的主题。",
-  "Win.WinThemes": "Windows 主题 (.theme)"
+  "Win.WinThemes": "Windows 主题 (.theme)",
+  "Tray.ToggleLightDark": "切换浅色 / 深色"
 }

@@ -33,7 +33,7 @@
 | 0Β.2 | Hotkeys, pop-up επανεκκίνησης | ✓ | |
 | 0Β.4/0Β.6 | Glass dropdown, status bar | ✓ | |
 | §9 | DeskStrip PollTick εκτός UI thread | ✓ | |
-| §9 | Cache `AppSettings.Load` (179 σημεία) | ☐ | οι callers αλλάζουν το αντικείμενο· ασφαλές μόνο με clone ή στοχευμένα στα hot σημεία |
+| §9 | Cache `AppSettings.Load` (179 σημεία) | ✓ στοχευμένα | νέο `AppSettings.Peek()` (μόνο-ανάγνωση snapshot 1,5 s, ακυρώνεται στο Save) στα hot σημεία: AppActivity.Poll, WidgetTheme, GlassService· τα υπόλοιπα 170 σημεία μένουν με `Load()` (κάνουν αλλαγές) |
 | §9 | Weather renderer buffers | ✓ | στατικά brushes snow/bolt αντί νέου ανά frame (μικρό κέρδος· build OK)· ⛔ δεν μετρήθηκε |
 | §22-A.1 | Opsis ξεκινά πρώτο στην εκκίνηση | ☐ | |
 | §22-A.5 | Explorer restart → μαύρη οθόνη | ◐ | `ExplorerRestartWatcher` υπάρχει· ⛔ πραγματικό restart |
@@ -47,3 +47,4 @@
 - ✓ Ενσωμάτωση Appearance στην Εξατομίκευση (ίδια καρτέλα, κάρτες, «Για προχωρημένους»): `docs/APPEARANCE-MIGRATION-LEDGER.md` (§5 κατάσταση, §6 διπλότυπα/συγχωνεύσεις).
 - ✓ Οικογένεια χωρίς καταργημένες εφαρμογές (catalogue, README, installer, μεταφράσεις, VersionNotes)· Waveframe → Opsis Media Suite.
 - ✓ Καιρός: `docs/WEATHER-PROVIDERS.md` + `docs/WEATHER-BACKPORT.md`· Crawler: ίδιο σύστημα (MET Norway δεύτερη πηγή + opt-in τοποθεσία), commit 507eca6/e06cdc5 στο repo του.
+- ✓ Εξατομίκευση: cache λίστας εικόνων slideshow, δείγμα χρώματος wallpaper με όριο μεγέθους και μνήμη, εγγραφή tray «Εναλλαγή Φωτεινό / Σκούρο» (14 γλώσσες).

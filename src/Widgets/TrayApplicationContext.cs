@@ -57,6 +57,7 @@ namespace MotionDesk.Widgets
             contextMenu.Items.Add(LocalizationManager.T("Tray.Open"), null, (s, e) => ShowMainWindow());
             contextMenu.Items.Add(LocalizationManager.T("Tray.CommandPalette"), null, (s, e) => { ShowMainWindow(); _mainWindow?.OpenCommandPalette(); });
             contextMenu.Items.Add(LocalizationManager.T("Tray.Settings"), null, (s, e) => ShowMainWindow("Settings"));
+            contextMenu.Items.Add(LocalizationManager.T("Tray.ToggleLightDark"), null, (s, e) => { try { var a = MotionDesk.Appearance.AppearanceService.Instance; a.Backup(); a.Engine.SetDark(!a.Engine.IsDark); } catch (Exception) { } });
             // Opsis' own help entries: ONE welcome guide and ONE family window for the whole suite (plugins do not offer them when hosted: PluginHost.IsHostOwnedEntry)
             contextMenu.Items.Add(LocalizationManager.T("Tray.Welcome"), null, (s, e) => FamilyWindows.ShowWelcome());
             contextMenu.Items.Add(LocalizationManager.T("Tray.Family"), null, (s, e) => FamilyWindows.ShowFamily());

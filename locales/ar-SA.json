@@ -906,5 +906,6 @@
   "Win.ThemeWallpaperAsk": "هل تضمّن خلفية Windows الحالية أيضًا؟",
   "Win.TitleBars": "أشرطة عنوان داكنة",
   "Win.WinThemeNote": "ملفات .theme الخاصة بـ Windows أدناه تغيّر المؤشرات والأصوات أيضًا. الأنماط المرئية المخصصة تحتاج مُرقِّع توقيع لا يثبّته Opsis: استخدم سمات من مصادر موثوقة فقط.",
-  "Win.WinThemes": "سمات Windows (.theme)"
+  "Win.WinThemes": "سمات Windows (.theme)",
+  "Tray.ToggleLightDark": "تبديل فاتح / داكن"
 }

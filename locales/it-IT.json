@@ -906,5 +906,6 @@
   "Win.ThemeWallpaperAsk": "Includere anche lo sfondo attuale di Windows?",
   "Win.TitleBars": "Barre del titolo scure",
   "Win.WinThemeNote": "I file .theme di Windows qui sotto cambiano anche cursori e suoni. Gli stili visivi personalizzati richiedono un patcher di firma che Opsis non installa: usa solo temi da fonti fidate.",
-  "Win.WinThemes": "Temi di Windows (.theme)"
+  "Win.WinThemes": "Temi di Windows (.theme)",
+  "Tray.ToggleLightDark": "Passa a chiaro / scuro"
 }

@@ -160,3 +160,19 @@ public sealed class AppearanceCachesTests : IDisposable
         Assert.Null(engine.WallpaperAccent());                                  // a missing file gives null, never an exception
     }
 }
+
+public sealed class SettingsPeekTests
+{
+    [Fact]
+    public void PeekIsSharedForAShortTimeAndASaveRefreshesIt()
+    {
+        Assert.True(MotionDesk.Services.AppSettings.IsIsolatedForTests());
+        var a = MotionDesk.Services.AppSettings.Peek();
+        Assert.Same(a, MotionDesk.Services.AppSettings.Peek());
+        var edit = MotionDesk.Services.AppSettings.Load();
+        bool before = edit.UseGpuGlass;
+        edit.UseGpuGlass = !before; edit.Save();
+        Assert.Equal(!before, MotionDesk.Services.AppSettings.Peek().UseGpuGlass);   // the Save dropped the snapshot
+        edit.UseGpuGlass = before; edit.Save();
+    }
+}
