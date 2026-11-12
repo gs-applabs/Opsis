@@ -25,6 +25,7 @@ public sealed class AppearanceService
     private readonly IRestorePointService _restorePoints;
     private readonly BackupVault _vault;
     private bool _started;
+    private readonly bool _noSystem;
     private readonly InstanceGuard _guard = new();
 
     /// <summary>False when an old stand-alone Opsis Appearance is still running and owns the engine: then nothing is applied from here (read-only page).</summary>
@@ -33,11 +34,16 @@ public sealed class AppearanceService
     /// <summary>Raised on the UI thread after the engine changed something the page shows (theme flipped, slideshow advanced, theme applied).</summary>
     public event Action? Changed;
 
-    public AppearanceService() : this(new CurrentUserRegistry()) { }
+    /// <summary>True when Opsis runs with an isolated data folder (tests, UI audit, CI): then NOTHING of the real Windows is read or changed.</summary>
+    public static bool IsolatedRun => !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("OPSIS_APPDATA"));
+
+    public AppearanceService() : this(IsolatedRun ? new MemoryRegistry() : new CurrentUserRegistry(), IsolatedRun ? new NullDwm() : null, IsolatedRun ? new NullTaskbarControl() : null,
+        IsolatedRun ? new MemoryWallpaper() : null, null, IsolatedRun ? new NullTaskbarSurface() : null, IsolatedRun ? new NullRestorePoints() : null, null, noSystem: IsolatedRun) { }
 
     internal AppearanceService(IRegistryStore registry, IDwmWindows? dwm = null, ITaskbarControl? taskbar = null, IWallpaperApi? wallpaper = null, string? themesRoot = null,
-        ITaskbarSurface? surface = null, IRestorePointService? restorePoints = null, string? vaultRoot = null)
+        ITaskbarSurface? surface = null, IRestorePointService? restorePoints = null, string? vaultRoot = null, bool noSystem = false)
     {
+        _noSystem = noSystem;
         var tbSurface = surface ?? new RealTaskbarSurface();
         _taskbarLook = new TaskbarLookEngine(tbSurface);
         _taskbarShape = new TaskbarShapeEngine(tbSurface);
@@ -45,7 +51,7 @@ public sealed class AppearanceService
         _vault = new BackupVault(vaultRoot ?? BackupVault.DefaultRoot);
         if (themesRoot != null) _themes = new ThemeLibrary(themesRoot);
         _wallpaperApi = wallpaper ?? new RealWallpaper();
-        _engine = new AppearanceEngine(registry);
+        _engine = new AppearanceEngine(registry, noSystem ? () => { } : null);
         _effects = new WindowEffectsEngine(dwm ?? new RealDwmWindows(), taskbar ?? new RealTaskbar(), () => _engine.IsDark);
         _applier = new ThemeApplier(_engine, fx => { _settings.Effects = fx; ApplyEffects(); }, _wallpaperApi, _themes);
     }
@@ -58,7 +64,7 @@ public sealed class AppearanceService
     public AppearanceSettings Settings => _settings;
     public BackupVault Vault => _vault;
     public bool IsAdministrator => _restorePoints.IsAdministrator;
-    internal bool Started => _started;
+    public bool Started => _started;
 
     private void RaiseChanged() { try { Changed?.Invoke(); } catch (Exception) { } }
 
@@ -255,7 +261,7 @@ public sealed class AppearanceService
             if (wantDark == _engine.IsDark) return;
             Backup();
             _engine.SetDark(wantDark);
-            Broadcaster.SettingsChanged();
+            if (!_noSystem) Broadcaster.SettingsChanged();
             RaiseChanged();
         }
         catch (Exception)

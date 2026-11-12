@@ -91,6 +91,20 @@ public sealed class AppearanceServiceTests : IDisposable
     }
 
     [Fact]
+    public void AnIsolatedRunNeverTouchesTheRealWindows()
+    {
+        Assert.True(AppearanceService.IsolatedRun);   // the module initializer above sets OPSIS_APPDATA for the whole test run
+        object? Real() => Microsoft.Win32.Registry.GetValue(@"HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize", "AppsUseLightTheme", null);
+        var before = Real();
+        var svc = new AppearanceService();
+        svc.Engine.Apply(new Look { Dark = before is int b && b != 0, Transparency = true });   // the opposite of "no change" is irrelevant: it must go to memory
+        svc.Engine.Apply(new Look { Dark = !(before is int b2 && b2 != 0) });
+        Assert.Equal(before, Real());
+        Assert.Equal(!(before is int b3 && b3 != 0), svc.Engine.IsDark);   // the in-memory store took the change
+        svc.Stop();
+    }
+
+    [Fact]
     public void StopIsSafeWithoutStartAndRepeatable()
     {
         var (svc, _, _) = Make();

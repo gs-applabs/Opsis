@@ -37,7 +37,7 @@ public sealed class BackupVault
     public BackupVault(string root) { _root = root; }
     public string Root => _root;
 
-    public static string DefaultRoot => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Opsis", "appearance", "backups");
+    public static string DefaultRoot => Path.Combine(MotionDesk.Services.AppPaths.AppDataFolder, "appearance", "backups");
 
     public static string Sha256Of(string path)
     {
