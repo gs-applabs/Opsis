@@ -2546,7 +2546,7 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
             panel.Controls.Add(keepIconsBtn);
 
             // DeskContainers engine: only its on/off control lives here; every other DeskContainers setting is in the three-bars menu of a container.
-            if (ContainersEngine.IsAvailable) BuildContainersSettings(panel);
+            BuildContainersSettings(panel);
 
 
             SetPage("DeskZones.SectionContainers", panel);

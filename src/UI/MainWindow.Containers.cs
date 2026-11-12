@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
@@ -9,8 +9,7 @@ using UiTheme = MotionDesk.UI.UiTheme;
 
 namespace MotionDesk.UI
 {
-    // Settings of the DeskContainers engine , shown as cards on the DeskZones page instead of a separate
-    // settings window. Values are read from / written to the engine's options.json through ContainersBridge; the engine applies them live.
+    // Settings of the native DeskContainers core (2.6.0): shown on the DeskContainers page; every change goes through the in-process host (same service as the pipe), live.
     public sealed partial class MainWindow
     {
         private static string Lx(string el, string en) => LocalizationManager.CurrentLanguage == "el" ? el : en;
@@ -39,77 +38,81 @@ namespace MotionDesk.UI
                 v => { var a = AppSettings.Load(); a.WidgetsTintPercent = v; a.Save(); ThemeManager.NotifyChanged(); }, 0, "%"));
             return col;
         }
-        // DeskContainers on the DeskZones page: only the engine on/off control. EVERY other DeskContainers setting lives in the
-        // three-bars menu of a container (Settings > General / Appearance / Tools / Profiles / Hotkeys / Smart desktop / Logging).
+        // DeskContainers page: on/off, the containers (title bar colour / opacity / height / font, lock, delete) and the layout snapshots.
         private void BuildContainersSettings(Control panel)
         {
-            var engine = AddCardSection(panel, LocalizationManager.T("DCM.EngineCard"));
-            engine.Controls.Add(SettingsView.Checkbox(LocalizationManager.T("DCM.EngineEnabled"), AppSettings.Load().DeskContainersEnabled, v =>
-            {
-                var a = AppSettings.Load(); a.DeskContainersEnabled = v; a.Save();
-                if (v) ContainersEngine.Start(); else ContainersEngine.Stop();
-            }));
-            AddText(engine, LocalizationManager.T("DCM.SettingsHint"));
+            var engine = AddCardSection(panel, Lx("DeskContainers (νέος πυρήνας)", "DeskContainers (new core)"));
+            engine.Controls.Add(SettingsView.Checkbox(Lx("Ενεργοποίηση DeskContainers", "Enable DeskContainers"), AppSettings.Load().UseNativeContainers,
+                v => { var a = AppSettings.Load(); a.UseNativeContainers = v; a.Save(); }, Lx("Τα containers ομαδοποιούν συντομεύσεις/αρχεία σε γυάλινα παράθυρα στην επιφάνεια εργασίας.", "Containers group shortcuts and files in glass windows on the desktop."), restart: true));
+            var host = MotionDesk.Containers.ContainerHost.Current;
+            if (host == null) { AddText(engine, Lx("Τα containers δεν τρέχουν αυτή τη στιγμή (απενεργοποιημένα ή ασφαλής λειτουργία).", "Containers are not running right now (disabled or safe mode).")); return; }
+            AddText(engine, Lx("Συντομεύσεις: Ctrl+Alt+Shift+N νέο container, Ctrl+Alt+Shift+H απόκρυψη/εμφάνιση όλων.", "Shortcuts: Ctrl+Alt+Shift+N new container, Ctrl+Alt+Shift+H hide / show all."));
 
-            // The buttons of the former built-in containers, now driving the DeskContainers engine through its bridge.
             AddIconButtonGrid(panel,
-                ("Container", LocalizationManager.T("DeskZones.NewContainerBtn"), (_, _) => ContainersBridge.Command("new-container")),
-                ("Container", LocalizationManager.T("DCX.NewNote"), (_, _) => ContainersBridge.Command("new-note")),
-                ("Close", LocalizationManager.T("DeskZones.CloseAllContainers"), (_, _) => ContainersBridge.Command("quick-hide")),
-                ("Restore", LocalizationManager.T("DCX.ShowAll"), (_, _) => ContainersBridge.Command("quick-show")));
+                ("Container", LocalizationManager.T("DeskZones.NewContainerBtn"), (_, _) => { host.NewContainerAtCursor(); ShowDeskContainers(); }),
+                ("Close", LocalizationManager.T("DeskZones.CloseAllContainers"), (_, _) => host.ToggleAll()));
 
-            // delete a container: its desktop icons come back to the desktop
-            var row = new FlowLayoutPanel { AutoSize = true, WrapContents = false, Margin = new Padding(0, 4, 0, 10) };
-            var pick = new FlatComboBox { Width = 260, Margin = new Padding(0, 0, 10, 0) };
-            ContainersBridge.ContainerInfo[] known = Array.Empty<ContainersBridge.ContainerInfo>();
-            void RefreshList()
+            // ---- one container at a time
+            var list = host.Containers();
+            var card = AddCardSection(panel, Lx("Container", "Container"));
+            if (list.Count == 0) { AddText(card, LocalizationManager.T("DCX.NoContainers")); }
+            else
             {
-                known = ContainersBridge.ReadState().Containers;
-                var names = known.Select((c, i) => (string.IsNullOrWhiteSpace(c.Title) ? LocalizationManager.T("DeskZones.NewContainerDefaultTitle") : c.Title) + "  (" + (i + 1) + ")").ToArray();
-                pick.SetItems(names.Length > 0 ? names : new[] { LocalizationManager.T("DCX.NoContainers") }, names.Length > 0 ? names[0] : LocalizationManager.T("DCX.NoContainers"));
+                var names = list.Select((c, n) => (string.IsNullOrWhiteSpace(c.Title) ? "Container" : c.Title) + "  (" + (n + 1) + ")").ToArray();
+                int sel = 0;
+                var holder = new FlowLayoutPanel { AutoSize = true, FlowDirection = FlowDirection.TopDown, WrapContents = false, Margin = new Padding(0) };
+                void Build()
+                {
+                    foreach (Control old in holder.Controls.Cast<Control>().ToList()) { holder.Controls.Remove(old); old.Dispose(); }
+                    var c = host.Containers().ElementAtOrDefault(sel); if (c == null) return;
+                    string id = c.Id; var tb = c.TitleBar;
+                    void Style(string key, object value) { host.Service.Handle("set-title-style", new System.Text.Json.Nodes.JsonObject { ["id"] = id, [key] = System.Text.Json.Nodes.JsonValue.Create(value) }); host.Sync(); }
+                    var colorRow = new FlowLayoutPanel { AutoSize = true, WrapContents = false, Margin = new Padding(0, 2, 0, 6) };
+                    colorRow.Controls.Add(new Label { Text = Lx("Χρώμα τίτλου (#RRGGBB ή Auto):", "Title bar colour (#RRGGBB or Auto):"), AutoSize = true, ForeColor = UiTheme.TextSecondary, Font = UiTheme.FontBody, Padding = new Padding(0, 6, 10, 0) });
+                    var colorBox = new TextBox { Width = 110, Text = tb.Color };
+                    colorBox.Leave += (_, _) => { var t = colorBox.Text.Trim(); if (t.Equals("Auto", StringComparison.OrdinalIgnoreCase) || System.Text.RegularExpressions.Regex.IsMatch(t, "^#[0-9a-fA-F]{6}$")) Style("color", t); else colorBox.Text = tb.Color; };
+                    colorRow.Controls.Add(colorBox); holder.Controls.Add(colorRow);
+                    holder.Controls.Add(SettingsView.NumericRow(Lx("Διαφάνεια τίτλου", "Title bar opacity"), tb.Opacity, 0, 100, v => Style("opacity", v), 0, "%"));
+                    holder.Controls.Add(SettingsView.NumericRow(Lx("Ύψος τίτλου", "Title bar height"), tb.Height, 16, 96, v => Style("height", v), 0, "px"));
+                    holder.Controls.Add(SettingsView.NumericRow(Lx("Μέγεθος γραμματοσειράς τίτλου", "Title font size"), (int)tb.FontSize, 6, 36, v => Style("fontSize", (float)v), 0, "pt"));
+                    holder.Controls.Add(SettingsView.Checkbox(Lx("Κλείδωμα (δεν μετακινείται/αλλάζει μέγεθος)", "Locked (cannot move or resize)"), c.Locked,
+                        v => { host.Service.Update(d => { var x = d.Containers.FirstOrDefault(k => k.Id == id); if (x == null) return false; x.Locked = v; return true; }); host.Sync(); }));
+                    holder.Controls.Add(SettingsView.Checkbox(Lx("Κρυμμένο", "Hidden"), c.Hidden, v => host.SetHidden(id, v)));
+                    var del = new HoverButton { Text = LocalizationManager.T("DCX.DeleteContainer"), Width = 230, Height = 32, FlatStyle = FlatStyle.Flat, ForeColor = UiTheme.TextPrimary, BackColor = UiTheme.SurfaceHover, Cursor = Cursors.Hand, Margin = new Padding(0, 6, 0, 0) };
+                    del.FlatAppearance.BorderSize = 0;
+                    del.Click += (_, _) =>
+                    {
+                        string name = string.IsNullOrWhiteSpace(c.Title) ? c.Id : c.Title;
+                        if (MessageBox.Show(this, string.Format(LocalizationManager.T("DCX.DeleteConfirm"), name), LocalizationManager.T("DCX.DeleteTitle"), MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes) return;
+                        host.Service.Handle("delete", new System.Text.Json.Nodes.JsonObject { ["id"] = id }); host.Sync(); ShowDeskContainers();
+                    };
+                    holder.Controls.Add(del);
+                }
+                var pick = new FlatComboBox { Width = 300, Margin = new Padding(0, 0, 0, 8) };
+                pick.SetItems(names, names[0]);
+                pick.SelectedIndexChanged += (_, _) => { sel = Math.Max(0, pick.SelectedIndex); Build(); };
+                card.Controls.Add(pick); card.Controls.Add(holder); Build();
             }
-            RefreshList();
-            pick.MouseEnter += (_, _) => { if (!pick.Focused) RefreshList(); };
-            var del = new HoverButton { Text = LocalizationManager.T("DCX.DeleteContainer"), Width = 230, Height = 32, FlatStyle = FlatStyle.Flat, ForeColor = UiTheme.TextPrimary, BackColor = UiTheme.SurfaceHover, Cursor = Cursors.Hand };
-            del.FlatAppearance.BorderSize = 0;
-            del.Click += (_, _) =>
-            {
-                RefreshList();
-                int i = Math.Max(0, pick.SelectedIndex);
-                if (i >= known.Length) return;
-                var c = known[i];
-                string name = string.IsNullOrWhiteSpace(c.Title) ? c.Id : c.Title;
-                if (MessageBox.Show(this, string.Format(LocalizationManager.T("DCX.DeleteConfirm"), name), LocalizationManager.T("DCX.DeleteTitle"), MessageBoxButtons.YesNo, MessageBoxIcon.Warning, MessageBoxDefaultButton.Button2) != DialogResult.Yes) return;
-                ContainersBridge.Command("delete-container:" + c.Id);
-                var t = new System.Windows.Forms.Timer { Interval = 1500 };
-                t.Tick += (_, _) => { t.Stop(); t.Dispose(); RefreshList(); };
-                t.Start();
-            };
-            row.Controls.Add(pick); row.Controls.Add(del);
-            panel.Controls.Add(row);
 
-            // profiles (named container layouts) - save the current layout / apply a saved one
-            var prow = new FlowLayoutPanel { AutoSize = true, WrapContents = false, Margin = new Padding(0, 0, 0, 10) };
-            var profiles = new FlatComboBox { Width = 260, Margin = new Padding(0, 0, 10, 0) };
-            void RefreshProfiles() { var st = ContainersBridge.ReadState(); var p = st.Profiles.Length > 0 ? st.Profiles : new[] { st.Profile }; profiles.SetItems(p, p.Contains(st.Profile) ? st.Profile : p[0]); }
-            RefreshProfiles();
-            profiles.MouseEnter += (_, _) => { if (!profiles.Focused) RefreshProfiles(); };
-            var apply = new HoverButton { Text = LocalizationManager.T("DCX.ProfileApply"), Width = 190, Height = 32, FlatStyle = FlatStyle.Flat, ForeColor = UiTheme.TextPrimary, BackColor = UiTheme.SurfaceHover, Cursor = Cursors.Hand, Margin = new Padding(0, 0, 8, 0) };
-            apply.FlatAppearance.BorderSize = 0;
-            apply.Click += (_, _) => { if (profiles.SelectedItem is { Length: > 0 } n) ContainersBridge.Command("profile:" + n); };
-            var save = new HoverButton { Text = LocalizationManager.T("DCX.ProfileSave"), Width = 230, Height = 32, FlatStyle = FlatStyle.Flat, ForeColor = UiTheme.TextPrimary, BackColor = UiTheme.SurfaceHover, Cursor = Cursors.Hand };
-            save.FlatAppearance.BorderSize = 0;
-            save.Click += (_, _) =>
+            // ---- layout snapshots (named layouts; the rules of the installation are kept when one is loaded)
+            var snapCard = AddCardSection(panel, Lx("Στιγμιότυπα διάταξης", "Layout snapshots"));
+            var snaps = host.SnapshotNames().ToArray();
+            var snapPick = new FlatComboBox { Width = 300, Margin = new Padding(0, 0, 0, 8) };
+            snapPick.SetItems(snaps.Length > 0 ? snaps : new[] { Lx("(κανένα)", "(none)") }, snaps.Length > 0 ? snaps[0] : Lx("(κανένα)", "(none)"));
+            snapCard.Controls.Add(snapPick);
+            var snapRow = new FlowLayoutPanel { AutoSize = true, WrapContents = false, Margin = new Padding(0) };
+            HoverButton SnapBtn(string text, Action act) { var b = new HoverButton { Text = text, Width = 190, Height = 32, FlatStyle = FlatStyle.Flat, ForeColor = UiTheme.TextPrimary, BackColor = UiTheme.SurfaceHover, Cursor = Cursors.Hand, Margin = new Padding(0, 0, 8, 0) }; b.FlatAppearance.BorderSize = 0; b.Click += (_, _) => act(); return b; }
+            snapRow.Controls.Add(SnapBtn(LocalizationManager.T("DCX.ProfileApply"), () => { if (snaps.Length > 0 && snapPick.SelectedIndex >= 0) { host.LoadSnapshot(snaps[snapPick.SelectedIndex]); ShowDeskContainers(); } }));
+            snapRow.Controls.Add(SnapBtn(LocalizationManager.T("DCX.ProfileSave"), () =>
             {
-                using var f = new Form { Text = LocalizationManager.T("DCX.ProfileName"), StartPosition = FormStartPosition.CenterParent, ClientSize = new Size(360, 110), FormBorderStyle = FormBorderStyle.FixedDialog, MaximizeBox = false, MinimizeBox = false, BackColor = UiTheme.Surface, ForeColor = UiTheme.TextPrimary };
+                using var f = new Form { Text = LocalizationManager.T("DCX.ProfileName"), StartPosition = FormStartPosition.CenterParent, ClientSize = new Size(360, 110), FormBorderStyle = FormBorderStyle.FixedDialog, MaximizeBox = false, MinimizeBox = false };
                 var box = new TextBox { Location = new Point(14, 14), Width = 332 };
                 var ok = new Button { Text = "OK", DialogResult = DialogResult.OK, Location = new Point(266, 62), Size = new Size(80, 30) };
                 f.Controls.AddRange(new Control[] { box, ok }); f.AcceptButton = ok;
                 if (f.ShowDialog(this) != DialogResult.OK || box.Text.Trim().Length == 0) return;
-                ContainersBridge.Command("create-profile:" + box.Text.Trim());
-            };
-            prow.Controls.Add(profiles); prow.Controls.Add(apply); prow.Controls.Add(save);
-            panel.Controls.Add(prow);
+                host.SaveSnapshot(box.Text.Trim()); ShowDeskContainers();
+            }));
+            snapCard.Controls.Add(snapRow);
         }
     }
 }

@@ -129,8 +129,7 @@ namespace MotionDesk
             // desktop right-click verbs (see Services/DesktopMenu): forward the action to the running instance; without one, only "new-container" can still be done (file bridge)
             if (args.Length == 2 && args[0] == "--desktop-action")
             {
-                if (Services.DesktopMenu.Allowed.Contains(args[1]) && !Services.DesktopMenu.Send(args[1]) && args[1] == "new-container")
-                    try { Services.ContainersBridge.Command("new-container"); } catch (Exception) { }
+                if (Services.DesktopMenu.Allowed.Contains(args[1])) Services.DesktopMenu.Send(args[1]);
                 return;
             }
             if (args.Length == 2 && args[0] == "--test-container-zorder")
@@ -245,7 +244,6 @@ namespace MotionDesk
             {
                 Services.RotatingLogger.Write("Performance: effective tier is now " + t);
                 try { MotionDesk.Widgets.WallpaperHostEngine.Instance.PushPerf(); } catch (Exception) { }
-                try { Services.ContainersBridge.Command("perf:" + Services.PerformanceProfile.ForFeature(Services.PerfFeature.DeskContainers).Tier); } catch (Exception) { }
             };
 
             // Το .NET 5+ δεν περιλαμβάνει πλέον τις legacy κωδικοσελίδες (π.χ. 737 για ελληνικά

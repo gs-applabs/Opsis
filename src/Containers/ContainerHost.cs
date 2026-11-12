@@ -88,6 +88,13 @@ namespace MotionDesk.Containers
             Sync(); return hidden;
         }
 
+        /// <summary>Quick-hide / quick-show of the desktop gesture: every container follows the desktop icons.</summary>
+        public void SetAllHidden(bool hidden)
+        {
+            _service.Update(doc => { var any = false; foreach (var c in doc.Containers) if (c.Hidden != hidden) { c.Hidden = hidden; any = true; } return any; });
+            Sync();
+        }
+
         public void SetHidden(string id, bool hidden) { _service.Handle(hidden ? "hide" : "show", new System.Text.Json.Nodes.JsonObject { ["id"] = id }); Sync(); }
         public void Focus(string id) { if (_windows.TryGetValue(id, out var w)) w.FocusForKeyboard(); }
         public string SaveSnapshot(string name) { Flush(); var r = _service.Handle("snapshot-save", new System.Text.Json.Nodes.JsonObject { ["name"] = name }); return r?["saved"]?.ToString() ?? ""; }

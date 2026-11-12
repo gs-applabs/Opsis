@@ -145,8 +145,8 @@ namespace MotionDesk.Services
 
         /// <summary>2.6.0: draw the DeskStrip glass with the GPU glass layer (Opsis.Glass): real transparency, live refraction of what is behind. Off until tested on real machines.</summary>
         public bool UseGpuGlass { get; set; }
-        /// <summary>EXPERIMENTAL (2.6.0 beta): run the new native container windows (own data file containers-native.json, pipe opsis-containers-v1-*) instead of the WPF fork. Only a settings.json flag until the switch-off phase; turn the fork engine off first or both show.</summary>
-        public bool UseNativeContainers { get; set; }
+        /// <summary>2.6.0: the native DeskContainers core (own data file containers-native.json, pipe opsis-containers-v1-*). The WPF fork was removed; on first start the 2.4.x data is imported read-only.</summary>
+        public bool UseNativeContainers { get; set; } = true;
         /// <summary>Music overlay (plan 2.1.6): a glass card with the cover / title / artist of whatever any player is playing. Off by default.</summary>
         public bool MusicOverlayEnabled { get; set; }
         /// <summary>Opt-in: "New DeskContainer" / "Next animated wallpaper" in the desktop right-click menu (per-user registry verbs, see DesktopMenu).</summary>

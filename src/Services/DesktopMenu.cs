@@ -80,7 +80,6 @@ namespace MotionDesk.Services
                                 var p = System.Windows.Forms.Cursor.Position;
                                 host.Service.Handle("create", new JsonObject { ["title"] = "New container", ["x"] = p.X, ["y"] = p.Y, ["width"] = 320, ["height"] = 240 });
                             }
-                            else ContainersBridge.Command("new-container");
                             break;
                     }
                 }

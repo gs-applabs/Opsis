@@ -65,12 +65,6 @@
     <None Remove="glass\**" />
     <EmbeddedResource Remove="spikes\**" />
     <None Remove="spikes\**" />
-    <!-- containers\: DesktopFences (WPF, MIT) built as its own project (OpsisContainers.csproj) and shipped next to Opsis.exe. -->
-    <Compile Remove="containers\**" />
-    <EmbeddedResource Remove="containers\**" />
-    <None Remove="containers\**" />
-    <Page Remove="containers\**" />
-    <ApplicationDefinition Remove="containers\**" />
   </ItemGroup>
 
   <!-- Plugin contract (Opsis - Desktop Customization plugin mechanism). Plugins live in "plugins\<name>\" folders
@@ -162,17 +156,6 @@
     <Reference Remove="PresentationFramework" />
   </ItemGroup>
 
-
-  <!-- The DesktopFences engine (WPF) is built as a companion app into "containers\" next to Opsis.exe, and copied into the publish folder. -->
-  <Target Name="BuildContainers" AfterTargets="Build" Condition="'$(SkipContainers)' != 'true'">
-    <Exec Command="dotnet build &quot;$(MSBuildProjectDirectory)\containers\OpsisContainers.csproj&quot; -c $(Configuration) -o &quot;$(OutDir)containers&quot; -p:SkipContainers=true --nologo -v:q" />
-  </Target>
-  <Target Name="CopyContainersToPublish" AfterTargets="Publish" Condition="'$(SkipContainers)' != 'true'">
-    <ItemGroup>
-      <ContainersFiles Include="$(OutDir)containers\**\*" />
-    </ItemGroup>
-    <Copy SourceFiles="@(ContainersFiles)" DestinationFiles="@(ContainersFiles->'$(PublishDir)containers\%(RecursiveDir)%(Filename)%(Extension)')" />
-  </Target>
 
   <PropertyGroup Condition="'$(Configuration)' == 'Release'">
     <Optimize>true</Optimize>
