@@ -1,6 +1,6 @@
 # DeskContainers: fork (2.4.x, WPF `OpsisContainers.exe`) → native core (2.6.0 beta) — equivalence table
 
-Rule for the switch-off: the fork is removed **only when every row marked "needed" is ✓ or consciously dropped by the user**. Today it is NOT removed.
+**Status 2026-11-12: the fork is REMOVED** (`containers/`, `BuildContainers` target, `ContainersEngine`/`ContainersBridge`, installer entries; the installer deletes the old engine folder on upgrade after putting back any icon it hid). Rows still ☐ below are now ✗ "missing" in the beta and are listed to the user in `docs/TRY-NATIVE-CONTAINERS.md`.
 ✓ done and checked · ◐ partly · ☐ not yet · ✗ dropped on purpose (plan §5 of `CONTAINERS_NATIVE_DESIGN.md`).
 
 | Feature of the fork | Native core now | Evidence / note |
@@ -26,12 +26,12 @@ Rule for the switch-off: the fork is removed **only when every row marked "neede
 | Rubber-band selection → "create container" | ☐ | needs the item API (exists) + selection hook |
 | Backups (daily/manual) | ☐ | snapshots are the manual part |
 | Icon glow, launch effect, auto-hide after idle, hover roll-up | ☐ | cosmetic, can follow |
-| Settings page for the native core | ☐ | the DeskContainers page still talks to the fork — **needed** |
-| Installer: stop shipping `OpsisContainers.exe`, removal on upgrade | ☐ | blocked on the rows above |
+| Settings page for the native core | ✓ | DeskContainers page: on/off, per container title bar colour/opacity/height/font, lock, hidden, delete, layout snapshots |
+| Installer: stop shipping `OpsisContainers.exe`, removal on upgrade | ✓ | `[InstallDelete]` + unhide before; upgrade 2.4.6.2 → 2.6.0 beta verified with an isolated test installer (other AppId, no admin) |
 | Tray entry "DeskContainers" | ✓ | native variant of the menu |
 
-## What the switch-off will do (when the "needed" rows are done and you agree)
-1. `UseNativeContainers` becomes the default; the first start imports your 2.4.x data (already implemented).
+## What the switch-off did
+1. `UseNativeContainers` is the default (true); the first start imports your 2.4.x data (already implemented).
 2. Remove `containers/` (WPF fork), the `MotionDeskStudio.csproj` build step and excludes, the installer entries (`containers\OpsisContainers.exe`, its `taskkill`/unhide steps), `ContainersEngine`/`ContainersBridge` and the legacy WinForms containers.
 3. Keep: `--restore-desktop-icons` (rescue), the quick-hide engine (it moves desktop icons, independent of containers), the importer.
 4. Upgrade from 2.4.6.x: the installer replaces the files; the old `%AppData%\Opsis\containers` folder is kept (never deleted) so a downgrade still works.

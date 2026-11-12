@@ -74,8 +74,22 @@ Portable build outside the repo + `docs/TRY-NATIVE-CONTAINERS.md` (Greek). Rescu
 ## 2.4.6.2 worktree: real plugins
 `--test-plugins-load` (needs OPSIS_E2E=1 + OPSIS_APPDATA) loads the REAL plugin builds from an isolated data folder: Opsis Appearance 1.7.5 and Opsis News Crawler 0.23.0 (both built from the local repos) were approved by the test mode, loaded by the 2.4.6.2 host, each added ONE side-menu page (News Crawler, Εμφάνιση Windows) and ONE tray group (no duplicates), and plugins.log has no load errors. NOT covered: Chronikologio (its repo is not on this machine), Kombos/GearWin, the Crawler 'Ροή ιστορίας' page contents, real UI clicks inside the plugin pages, the 2.6.0-beta host with the same plugins.
 
+## Fork switch-off and upgrade (2026-11-12)
+Removed: `containers/` (WPF fork), `ContainersEngine`, `ContainersBridge`, the BuildContainers/CopyContainersToPublish targets, the installer's engine entries. Native settings page, tray menu, quick-hide, desktop-menu verbs and the native host now are the only path; `UseNativeContainers` defaults to true. Installer 2.6.0 beta compiles (8.3 MB, no fork); an upgrade from a 2.4.6.2 install was run with an ISOLATED test installer (other AppId, no admin, own folder): exe became 2.6.0, `containers\` deleted, uninstall entry "2.6.0 beta", uninstall clean, real Opsis untouched (checked). ⛔ Still needs the user: a real upgrade of the installed 2.4.6.1 on the machine and the manual steps above.
+
 ## Where I stopped
 Native core: tray/hotkeys, z-order, first-start import, budgets, equivalence table done. Next (in order): tabs/portals/notes rendering, settings page for the native core, Spot Search + profile hotkeys, hiding originals (with the rescue path), then the fork switch-off. Also 2.4.6.2 worktree: real plugin e2e with the new plugin builds.
+
+## ΒΗΜΑΤΑ ΓΙΑ ΤΟΝ ΧΡΗΣΤΗ (χειροκίνητη δοκιμή των νέων DeskContainers) — απλά ελληνικά
+Πλήρης οδηγός: `docs/TRY-NATIVE-CONTAINERS.md`. Συνοπτικά:
+1. Κλείσε το εγκατεστημένο Opsis. Άνοιξε τον φάκελο `Opsis-2.6.0-beta-portable` και κάνε διπλό κλικ στο `Start-Opsis-TEST.bat`.
+2. **Win+D:** άνοιξε 2-3 παράθυρα και πάτα Win+D. Το container πρέπει να φαίνεται πάνω από την επιφάνεια. Πάτα Win+D ξανά: τα παράθυρα γυρίζουν και το container μένει κάτω από αυτά.
+3. **Επανεκκίνηση Explorer:** Task Manager → «Windows Explorer» → Επανεκκίνηση. Σε 1-2 δευτερόλεπτα το container πρέπει να είναι ξανά στη θέση του.
+4. **Δύο οθόνες / DPI:** σύρε το container στη δεύτερη οθόνη, κλείσε και ξανάνοιξε το δοκιμαστικό· πρέπει να ξαναβρεθεί εκεί με σωστό μέγεθος και καθαρά γράμματα. Δοκίμασε και 150 % / 200 % κλίμακα.
+5. **Κλείδωμα (Win+L):** κλείδωσε, ξεκλείδωσε· το γυαλί δεν πρέπει να είναι παγωμένο.
+6. **Drag & drop:** σύρε ένα αρχείο από την Εξερεύνηση μέσα στο container, μετά ξανά το ίδιο (δεν πρέπει να διπλασιάζεται).
+7. Αν κάτι πάει στραβά: διπλό κλικ στο `Rescue-Desktop.bat`.
+8. Πες μου τι είδες. Για μέτρηση πόρων τρέξε και το `toolsesource-logger.ps1` για λίγη ώρα.
 
 ## ΖΗΤΗΘΗΚΕ → ΚΑΤΑΣΤΑΣΗ (λίστα από OPSIS_UNIFIED_MASTER_PLAN, INTAKE, CHANGELOG «Υπόλοιπο», TASKS §22-A) — ενημερώνεται ανά ενότητα
 Σειρά εργασίας: φθηνά/εύκολα πρώτα. ✓ έγινε · ◐ μερικό · ☐ μένει · ⛔ χρειάζεται χρήστη/απόφαση/τρίτο repo.
