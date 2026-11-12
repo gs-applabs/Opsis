@@ -1655,8 +1655,8 @@ namespace MotionDesk.UI
         // Weather-mode only: simulated weather / wind / time of day + window-glass effect
         private void BuildWeatherWallpaperSection(Panel panel, WallpaperSettings settings)
         {
-            AddSection(panel, LocalizationManager.T("Wallpaper.SectionWeather"));
-            AddText(panel, LocalizationManager.T("Wallpaper.WeatherIntro"));
+            var host = AddCardSection(panel, LocalizationManager.T("Wallpaper.SectionWeather"));
+            AddText(host, LocalizationManager.T("Wallpaper.WeatherIntro"));
 
             // simulated weather / time of day (Automatic = live)
             FlowLayoutPanel ComboRow(string labelKey, string[] ids, string idPrefix, string currentId, Action<string> onChange)
@@ -1670,29 +1670,29 @@ namespace MotionDesk.UI
                 row.Controls.Add(combo);
                 return row;
             }
-            panel.Controls.Add(ComboRow("Wallpaper.WeatherSimLabel", WeatherSimIds, "Wallpaper.Sim.", settings.WeatherSimulation, id => WallpaperHostEngine.Instance.SetWeatherSimulation(id)));
-            panel.Controls.Add(ComboRow("Wallpaper.WindSimLabel", WindSimIds, "Wallpaper.Wind.", settings.WindSimulation, id => WallpaperHostEngine.Instance.SetWindSimulation(id)));
-            panel.Controls.Add(ComboRow("Wallpaper.TimeSimLabel", TimeSimIds, "Wallpaper.Time.", settings.TimeSimulation, id => WallpaperHostEngine.Instance.SetTimeSimulation(id)));
+            host.Controls.Add(ComboRow("Wallpaper.WeatherSimLabel", WeatherSimIds, "Wallpaper.Sim.", settings.WeatherSimulation, id => WallpaperHostEngine.Instance.SetWeatherSimulation(id)));
+            host.Controls.Add(ComboRow("Wallpaper.WindSimLabel", WindSimIds, "Wallpaper.Wind.", settings.WindSimulation, id => WallpaperHostEngine.Instance.SetWindSimulation(id)));
+            host.Controls.Add(ComboRow("Wallpaper.TimeSimLabel", TimeSimIds, "Wallpaper.Time.", settings.TimeSimulation, id => WallpaperHostEngine.Instance.SetTimeSimulation(id)));
 
             var glass = new FlatToggle { RowWidth = 700, Text = LocalizationManager.T("Wallpaper.WeatherGlass"), Checked = settings.WeatherGlass, BackColor = UiTheme.Background, Margin = new Padding(0, 6, 0, 10) };
             glass.CheckedChanged += (_, _) => WallpaperHostEngine.Instance.SetWeatherGlass(glass.Checked);
-            panel.Controls.Add(glass);
+            host.Controls.Add(glass);
         }
 
         // ALL wallpaper modes (videos, Waves, Particles, Weather): live weather, location and the clock / date / temperature overlay
         private void BuildInfoOverlaySection(Panel panel, WallpaperSettings settings)
         {
-            AddSection(panel, LocalizationManager.T("Wallpaper.SectionInfo"));
-            AddText(panel, LocalizationManager.T("Wallpaper.InfoIntro"));
+            var host = AddCardSection(panel, LocalizationManager.T("Wallpaper.SectionInfo"));
+            AddText(host, LocalizationManager.T("Wallpaper.InfoIntro"));
 
-            var liveLabel = new Label { Text = LocalizationManager.T("Wallpaper.WeatherLoading"), AutoSize = true, MaximumSize = new Size(740, 0), Font = UiTheme.FontBody, ForeColor = UiTheme.AccentCyan, Margin = new Padding(0, 0, 0, 12) };
-            panel.Controls.Add(liveLabel);
+            var liveLabel = new Label { Text = LocalizationManager.T("Wallpaper.WeatherLoading"), AutoSize = true, MaximumSize = new Size(700, 0), Font = UiTheme.FontBody, ForeColor = UiTheme.AccentCyan, Margin = new Padding(0, 0, 0, 12) };
+            host.Controls.Add(liveLabel);
             _ = RefreshLiveWeatherLabelAsync(liveLabel, settings.WeatherLat, settings.WeatherLon);
 
             // location
             string cityShown = string.IsNullOrWhiteSpace(settings.WeatherCity) ? LocalizationManager.T("Wallpaper.WeatherLocationDefault") : settings.WeatherCity;
             var locLabel = new Label { Text = string.Format(LocalizationManager.T("Wallpaper.WeatherLocationCurrent"), cityShown), AutoSize = true, Font = UiTheme.FontBody, ForeColor = UiTheme.TextSecondary, Margin = new Padding(0, 0, 0, 4) };
-            panel.Controls.Add(locLabel);
+            host.Controls.Add(locLabel);
             var locRow = new FlowLayoutPanel { AutoSize = true, WrapContents = false, Margin = new Padding(0, 0, 0, 10) };
             var cityBox = new TextBox { Width = 240, Text = settings.WeatherCity, BackColor = UiTheme.Surface, ForeColor = UiTheme.TextPrimary, BorderStyle = BorderStyle.FixedSingle, Font = UiTheme.FontBody, Margin = new Padding(0, 5, 10, 0) };
             var setBtn = new HoverButton { Text = LocalizationManager.T("Wallpaper.WeatherLocationSet"), AutoSize = true, Padding = new Padding(16, 6, 16, 6), FlatStyle = FlatStyle.Flat, ForeColor = Color.White, BackColor = UiTheme.AccentBlue, BaseColor = UiTheme.AccentBlue, HoverBackColor = ControlPaint.Light(UiTheme.AccentBlue, 0.15f), TabStop = false, Cursor = Cursors.Hand, Margin = new Padding(0, 2, 0, 0) };
@@ -1765,10 +1765,10 @@ namespace MotionDesk.UI
             cityBox.KeyDown += (_, e) => { if (e.KeyCode == Keys.Enter) { e.SuppressKeyPress = true; ApplyCity(); } };
             locRow.Controls.Add(cityBox);
             locRow.Controls.Add(setBtn);
-            panel.Controls.Add(locRow);
+            host.Controls.Add(locRow);
 
             // Opt-in device location (explicit click + confirmation; rounded to ~1 km; only the rounded point is stored) and a way to delete it again.
-            var privacyRow = new FlowLayoutPanel { AutoSize = true, WrapContents = true, MaximumSize = new Size(740, 0), Margin = new Padding(0, 0, 0, 10) };
+            var privacyRow = new FlowLayoutPanel { AutoSize = true, WrapContents = true, MaximumSize = new Size(700, 0), Margin = new Padding(0, 0, 0, 10) };
             var myLocBtn = NewHoverButton(LocalizationManager.T("Wallpaper.WeatherUseMyLocation"), () => { });
             myLocBtn.Width = 220;
             myLocBtn.Click += async (_, _) =>
@@ -1797,8 +1797,8 @@ namespace MotionDesk.UI
             clearLocBtn.Width = 240; clearLocBtn.Margin = new Padding(10, 0, 0, 0);
             privacyRow.Controls.Add(myLocBtn);
             privacyRow.Controls.Add(clearLocBtn);
-            panel.Controls.Add(privacyRow);
-            panel.Controls.Add(choicesPanel);
+            host.Controls.Add(privacyRow);
+            host.Controls.Add(choicesPanel);
 
             // Ζητήθηκε ρητά: ρώτα μία φορά αν δεν έχει οριστεί ποτέ πόλη, αντί να δείχνουμε σιωπηλά
             // τον καιρό της Αθήνας χωρίς ο χρήστης να το καταλάβει (έτσι βρέθηκε μια αναφορά "δείχνει
@@ -1831,9 +1831,9 @@ namespace MotionDesk.UI
             infoShow.CheckedChanged += (_, _) => CommitInfo();
             infoAll.CheckedChanged += (_, _) => CommitInfo();
             infoF.CheckedChanged += (_, _) => CommitInfo();
-            panel.Controls.Add(infoShow);
-            panel.Controls.Add(infoAll);
-            panel.Controls.Add(infoF);
+            host.Controls.Add(infoShow);
+            host.Controls.Add(infoAll);
+            host.Controls.Add(infoF);
             // ---- font of the overlay: common Windows fonts that are installed, plus "More…" for any other installed font
             var fontRow = new FlowLayoutPanel { AutoSize = true, WrapContents = false, Margin = new Padding(0, 0, 0, 6) };
             fontRow.Controls.Add(new Label { Text = LocalizationManager.T("Wallpaper.InfoFont"), AutoSize = false, Width = 150, Height = 28, TextAlign = ContentAlignment.MiddleLeft, ForeColor = UiTheme.TextSecondary, Font = UiTheme.FontBody });
@@ -1857,11 +1857,11 @@ namespace MotionDesk.UI
             moreFonts.Margin = new Padding(10, 0, 0, 0);
             fontRow.Controls.Add(fontCombo);
             fontRow.Controls.Add(moreFonts);
-            panel.Controls.Add(fontRow);
-            panel.Controls.Add(BuildOptionSlider(LocalizationManager.T("Wallpaper.InfoX"), settings.WeatherInfoX, 0, 100, v => $"{v}%", CommitInfo, t => infoX = t));
-            panel.Controls.Add(BuildOptionSlider(LocalizationManager.T("Wallpaper.InfoY"), settings.WeatherInfoY, 0, 100, v => $"{v}%", CommitInfo, t => infoY = t));
-            panel.Controls.Add(BuildOptionSlider(LocalizationManager.T("Wallpaper.InfoScale"), settings.WeatherInfoScale, 40, 250, v => $"{v}%", CommitInfo, t => infoScale = t));
-            panel.Controls.Add(NewHoverButton(LocalizationManager.T("Wallpaper.InfoReset"), () =>
+            host.Controls.Add(fontRow);
+            host.Controls.Add(BuildOptionSlider(LocalizationManager.T("Wallpaper.InfoX"), settings.WeatherInfoX, 0, 100, v => $"{v}%", CommitInfo, t => infoX = t));
+            host.Controls.Add(BuildOptionSlider(LocalizationManager.T("Wallpaper.InfoY"), settings.WeatherInfoY, 0, 100, v => $"{v}%", CommitInfo, t => infoY = t));
+            host.Controls.Add(BuildOptionSlider(LocalizationManager.T("Wallpaper.InfoScale"), settings.WeatherInfoScale, 40, 250, v => $"{v}%", CommitInfo, t => infoScale = t));
+            host.Controls.Add(NewHoverButton(LocalizationManager.T("Wallpaper.InfoReset"), () =>
             {
                 // back to the default position: centred horizontally, upper third of the screen (the size slider is left alone)
                 if (infoX != null) infoX.Value = 50;
@@ -3846,7 +3846,7 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
             parent.Controls.Add(new Label
             {
                 AutoSize = true,
-                MaximumSize = new Size(780, 0),
+                MaximumSize = new Size(parent is FixedWidthFlowPanel fw ? fw.FixedWidth - 4 : 780, 0),
                 Text = text,
                 Font = UiTheme.FontBody,
                 ForeColor = UiTheme.TextSecondary,
