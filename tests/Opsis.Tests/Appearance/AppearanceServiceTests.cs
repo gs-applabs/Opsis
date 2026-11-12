@@ -98,3 +98,17 @@ public sealed class AppearanceServiceTests : IDisposable
         Assert.False(svc.Started);
     }
 }
+
+public sealed class InstanceGuardTests
+{
+    [Fact]
+    public void ASecondGuardWithTheSameNameIsRefusedUntilReleased()
+    {
+        string name = "OpsisAppearance.Test." + Guid.NewGuid().ToString("N");
+        using var a = new InstanceGuard(); using var b = new InstanceGuard();
+        Assert.True(a.TryAcquire(name)); Assert.True(a.IsOwner);
+        bool second = true; var t = new Thread(() => second = b.TryAcquire(name)); t.Start(); t.Join();
+        Assert.False(second); Assert.False(b.IsOwner);
+        Assert.Equal("OpsisAppearance.Engine", InstanceGuard.DefaultName);   // the name the old stand-alone app / installer use
+    }
+}

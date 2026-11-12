@@ -48,7 +48,7 @@ namespace MotionDesk.Widgets
             PluginHost.Instance.NavigationRequested += key => ShowMainWindow("plugin:" + key);
             // Plugins from user-writable folders run code inside Opsis: ask once, show the content hash, remember the approval (plugin-trust.json).
             // (the approval question is NOT asked while starting: see PluginHost.ConsiderFolder / ResolvePending)
-            if (!safeMode) { PluginHost.Instance.StartAll(); SchedulePluginApproval(); }
+            if (!safeMode) { PluginHost.Instance.StartAll(); SchedulePluginApproval(); try { MotionDesk.Appearance.AppearanceService.Instance.Start(); } catch (Exception) { } }
 
             // Δημιουργία Context Menu για το Tray Icon — ομαδοποιημένο σε: παράθυρο, DeskZones,
             // wallpaper, γρήγορα προφίλ, γρήγορες ρυθμίσεις, έξοδος.
@@ -580,6 +580,7 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
         {
             try { WorkspaceProfileService.Save("Last Session"); WorkspaceProfileService.ExitSaveDone = true; } catch { }
             PluginHost.Instance.StopAll();
+            try { MotionDesk.Appearance.AppearanceService.Instance.Stop(); } catch (Exception) { }   // taskbar look and window effects always go back to Windows
             _hotkeys.Dispose();
             _taskbarWatcher.Dispose();
             try { _nativeContainers?.Dispose(); } catch { }

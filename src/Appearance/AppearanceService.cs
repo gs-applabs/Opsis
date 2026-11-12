@@ -25,6 +25,10 @@ public sealed class AppearanceService
     private readonly IRestorePointService _restorePoints;
     private readonly BackupVault _vault;
     private bool _started;
+    private readonly InstanceGuard _guard = new();
+
+    /// <summary>False when an old stand-alone Opsis Appearance is still running and owns the engine: then nothing is applied from here (read-only page).</summary>
+    public bool EngineActive => _guard.IsOwner;
 
     /// <summary>Raised on the UI thread after the engine changed something the page shows (theme flipped, slideshow advanced, theme applied).</summary>
     public event Action? Changed;
@@ -64,6 +68,7 @@ public sealed class AppearanceService
         if (_started) return;
         _started = true;
         _settings = _store.Load();
+        if (!_guard.TryAcquire()) return;   // the old separate app applies the effects; this one only shows the settings
         ApplySchedule();
         UpdateTimer();
         UpdateSlideTimer();
@@ -75,6 +80,7 @@ public sealed class AppearanceService
     public void Stop()
     {
         _started = false;
+        _guard.Release();
         _barTimer?.Stop(); _barTimer?.Dispose(); _barTimer = null;
         try { _taskbarLook.RestoreAll(); _taskbarShape.RestoreAll(); } catch (Exception) { }
         _timer?.Stop(); _timer?.Dispose(); _timer = null;
