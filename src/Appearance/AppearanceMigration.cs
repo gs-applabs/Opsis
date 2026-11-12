@@ -1,4 +1,4 @@
-// Read-only report about what an installed Opsis Appearance (plugin or stand-alone, 1.x) left on this PC and what Opsis 2.6.0 uses from it.
+// Read-only report about what an older separate appearance app/plugin left on this PC and what Opsis 2.6.0 uses from it.
 // Nothing is copied, changed or deleted: the built-in Appearance reads the SAME files (appearance.json, appearance-original.json, themes\, appearance\backups).
 using System.Text.Json;
 

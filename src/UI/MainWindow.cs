@@ -532,7 +532,6 @@ namespace MotionDesk.UI
             AddNavButton(_nav, LocalizationManager.T("Nav.Settings"), "Settings", ShowSettings, 6);
             AddNavButton(_nav, LocalizationManager.T("Nav.Automation"), "Automation", ShowAutomation, 8);
             AddNavButton(_nav, LocalizationManager.T("Nav.Personalization"), "Personalization", ShowPersonalization, 0);
-            AddNavButton(_nav, LocalizationManager.T("Nav.WinAppearance"), "WinAppearance", ShowWinAppearance, (string?)null);
             AddNavButton(_nav, OpsisStrings.T("ui.theme.title"), "Theme", ShowTheme, (string?)null);
             // Ζητήθηκε ρητά: αντί για απλό "Audio Visualizer", νέα καρτέλα "Διαχείριση Ήχου" με
             // presets ενίσχυσης + ζωντανό visualizer, εμπνευσμένη από τη λογική του FXSound.
@@ -2117,6 +2116,7 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
             _currentPageKey = "Personalization";
             var panel = CreatePagePanel();
             AddText(panel, LocalizationManager.T("Personalization.Intro"));
+            BuildWindowsAppearance(panel);   // Windows look, themes, safety (2.6.0): the same Personalization tab, no sub-tab
 
             // ---------- IconAtlas ----------
             var iconCard = AddCardSection(panel, LocalizationManager.T("Personalization.SectionIconAtlas"));
@@ -2287,83 +2287,7 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                 soundsCard.Controls.Add(row);
             }
 
-            // ---------- .theme Packages ----------
-            var themeCard = AddCardSection(panel, LocalizationManager.T("Personalization.SectionThemePackages"));
-            AddText(themeCard, LocalizationManager.T("Personalization.ThemePackagesIntro"));
-            // Για ΠΛΗΡΗ θέματα (light/dark, accent, εφέ παραθύρων, wallpaper, εισαγωγή/εξαγωγή) υπάρχει το Theme Manager του plugin Opsis Appearance.
-            string LdTheme(string el, string en) => LocalizationManager.CurrentLanguage == "el" ? el : en;
-            AddText(themeCard, LdTheme("Τα παρακάτω .theme των Windows αλλάζουν wallpaper, δείκτες και ήχους. Για πλήρη θέματα (σκούρο/φωτεινό, accent, εφέ παραθύρων, wallpaper, εισαγωγή/εξαγωγή) χρησιμοποίησε το Theme Manager.",
-                "The Windows .theme files below change wallpaper, cursors and sounds. For full themes (dark/light, accent, window effects, wallpaper, import/export) use the Theme Manager."));
-            AddButtonGrid(themeCard, (LdTheme("Άνοιγμα Theme Manager (Opsis Appearance)", "Open Theme Manager (Opsis Appearance)"), (_, _) =>
-            {
-                if (Services.PluginHost.Instance.GetNavigationItems().Any(i => i.Key == "OpsisAppearance")) NavigateTo("plugin:OpsisAppearance");
-                else
-                {
-                    try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("https://github.com/giorstergiopoulos-design/OpsisAppearance/releases/latest") { UseShellExecute = true }); } catch (Exception) { }
-                    _statusLabel.Text = LdTheme("Το plugin Opsis Appearance δεν είναι εγκατεστημένο — άνοιξε η σελίδα λήψης.", "The Opsis Appearance plugin is not installed — opened its download page.");
-                }
-            }));
-
-            var themeList = new FlowLayoutPanel { AutoSize = true, FlowDirection = FlowDirection.TopDown, WrapContents = false };
-            themeCard.Controls.Add(themeList);
-
-            void RefreshThemeList()
-            {
-                // Ίδια διόρθωση scroll-reset με το RefreshActiveList (Widgets page) — καλείται ξανά
-                // μετά το "Αποθήκευση τρέχοντος θέματος", ενδεχομένως ενώ ο χρήστης είναι κυλισμένος
-                // κάτω σε αυτό το (μεγάλο) Personalization page.
-                var savedScroll = panel.AutoScrollPosition;
-                themeList.SuspendLayout();
-                DisposeChildren(themeList);
-                var themes = ThemePackageEngine.ListAvailableThemes();
-                if (themes.Count == 0)
-                {
-                    themeList.Controls.Add(new Label { AutoSize = true, Text = LocalizationManager.T("Personalization.NoThemesFound"), ForeColor = UiTheme.TextMuted, Font = UiTheme.FontBody });
-                }
-                foreach (var theme in themes)
-                {
-                    var row = new Panel { Width = 500, Height = 40, BackColor = UiTheme.Surface, Margin = new Padding(0, 0, 0, 6) };
-                    UiTheme.ApplyRoundedRegion(row, 6);
-                    string label = theme.Name + (theme.BuiltIn ? LocalizationManager.T("Personalization.BuiltInSuffix") : "");
-                    row.Controls.Add(new Label { Text = label, ForeColor = UiTheme.TextPrimary, Font = UiTheme.FontBody, Location = new Point(14, 11), AutoSize = true });
-                    var applyBtn = new HoverButton { Text = LocalizationManager.T("Personalization.ApplyThemeBtn"), Width = 90, Height = 28, Location = new Point(394, 6), FlatStyle = FlatStyle.Flat, ForeColor = UiTheme.TextPrimary, BackColor = UiTheme.SurfaceHover, Cursor = Cursors.Hand };
-                    applyBtn.FlatAppearance.BorderSize = 0;
-                    string capturedPath = theme.Path;
-                    applyBtn.Click += (_, _) => { ThemePackageEngine.ApplyTheme(capturedPath); _statusLabel.Text = LocalizationManager.T("Personalization.ThemeAppliedStatus"); };
-                    row.Controls.Add(applyBtn);
-                    themeList.Controls.Add(row);
-                }
-                themeList.ResumeLayout();
-                panel.AutoScrollPosition = new Point(-savedScroll.X, -savedScroll.Y);
-            }
-            RefreshThemeList();
-
-            AddButtonGrid(themeCard, (LocalizationManager.T("Personalization.SaveCurrentTheme"), (_, _) =>
-            {
-                using var dialog = new Form { Text = LocalizationManager.T("Personalization.ThemeNamePrompt"), StartPosition = FormStartPosition.CenterParent, Size = new Size(420, 150), FormBorderStyle = FormBorderStyle.FixedDialog, MinimizeBox = false, MaximizeBox = false };
-                var box = new TextBox { Text = "Opsis Custom", Dock = DockStyle.Top, Margin = new Padding(12) };
-                var ok = new Button { Text = LocalizationManager.T("Common.OK"), DialogResult = DialogResult.OK, Dock = DockStyle.Bottom, Height = 34 };
-                dialog.Controls.Add(box);
-                dialog.Controls.Add(ok);
-                dialog.AcceptButton = ok;
-                dialog.HandleCreated += (_, _) => GlassBlur.ApplyWindowDropShadow(dialog.Handle);
-                if (dialog.ShowDialog(this) == DialogResult.OK && !string.IsNullOrWhiteSpace(box.Text))
-                {
-                    ThemePackageEngine.SaveCurrentAsTheme(box.Text.Trim());
-                    RefreshThemeList();
-                    _statusLabel.Text = LocalizationManager.T("Personalization.ThemeSavedStatus");
-                }
-            }),
-            // Έτοιμο, "τεχνολογικό" πακέτο θέματος — ζητήθηκε ρητά ένα νέο .theme με tech-themed
-            // wallpaper. Χρησιμοποιεί ΤΟ ΙΔΙΟ οπτικό μοτίβο (circuit-grid) με το νέο ζωντανό
-            // στυλ "TechGrid" του Wallpaper Studio, ως στατική εικόνα (απαίτηση του .theme format).
-            (LocalizationManager.T("Personalization.CreateTechGridTheme"), (_, _) =>
-            {
-                string png = ThemePackageEngine.GenerateTechWallpaperPng();
-                ThemePackageEngine.SaveCurrentAsTheme("Opsis Tech Grid", png);
-                RefreshThemeList();
-                _statusLabel.Text = LocalizationManager.T("Personalization.TechGridThemeCreatedStatus");
-            }));
+            // (the .theme packages are part of the single "Themes" card built by BuildWindowsAppearance)
 
             // ---------- Lock Screen Background ----------
             var lockScreenCard = AddCardSection(panel, LocalizationManager.T("Personalization.SectionLockScreen"));
@@ -4620,16 +4544,12 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                 // στον πίνακα ελέγχου" — πραγματικές ρυθμίσεις των ίδιων των Windows (μητρώο),
                 // όχι δικές μας· βλ. WindowsSystemSettings.cs.
                 var windowsCard = NewCard(LocalizationManager.T("Settings.SectionWindows"));
-                windowsCard.AddControl(Checkbox(LocalizationManager.T("Settings.TransparencyEffects"), WindowsSystemSettings.GetTransparencyEffectsEnabled(),
-                    v => System.Threading.Tasks.Task.Run(() => { try { WindowsSystemSettings.SetTransparencyEffectsEnabled(v); } catch (Exception ex) { RotatingLogger.Write("Transparency effects: " + ex.Message); } })));   // off the UI thread: it talks to the shell (taskbar) and may wait for it
-                var windowsAdvanced = new AdvancedSection();
-                windowsAdvanced.AddControl(Checkbox(LocalizationManager.T("Settings.FastStartup"), WindowsSystemSettings.GetFastStartupEnabled(),
+                windowsCard.AddControl(Checkbox(LocalizationManager.T("Settings.FastStartup"), WindowsSystemSettings.GetFastStartupEnabled(),
                     v =>
                     {
                         if (!WindowsSystemSettings.TrySetFastStartupEnabled(v))
                             MessageBox.Show(this, LocalizationManager.T("Settings.FastStartupAdminRequired"), LocalizationManager.T("Page.Settings.Title"), MessageBoxButtons.OK, MessageBoxIcon.Warning);
                     }));
-                windowsCard.Add(windowsAdvanced);
 
                 // Ζητήθηκε ρητά: ο installer εγκαθιστά ήδη το WebView2 Runtime/.NET 10 Runtime μία
                 // φορά, αλλά ο χρήστης πρέπει να μπορεί να δει/εγκαταστήσει ξανά τα εξωτερικά

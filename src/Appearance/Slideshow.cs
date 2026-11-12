@@ -1,4 +1,4 @@
-// Ported from Opsis Appearance 1.7.5 (MIT, Copyright (c) 2026 giorstergiopoulos-design), now part of Opsis 2.6.0. See docs/APPEARANCE-MIGRATION-LEDGER.md.
+// Part of Opsis (MIT, Copyright (c) 2026 giorstergiopoulos-design).
 namespace MotionDesk.Appearance;
 
 /// <summary>Slideshow ρυθμίσεις: άλλαξε το wallpaper των Windows από έναν φάκελο ανά τακτά διαστήματα (όπως ο Wallpaper Manager του Seelen).</summary>

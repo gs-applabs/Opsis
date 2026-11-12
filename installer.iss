@@ -280,22 +280,22 @@ arabic.CrawlerFailed=تعذّر تنزيل News Crawler (%1).%n%nتم تثبيت
 hindi.CrawlerFailed=News Crawler डाउनलोड नहीं हो सका (%1)।%n%nOpsis सामान्य रूप से इंस्टॉल हो गया। आप News Crawler बाद में यहाँ से इंस्टॉल कर सकते हैं:%n%2
 
 
-; Opsis Appearance is built into Opsis 2.6.0: an installed old app/plugin is detected and uninstalled (data in %AppData%\Opsis stays)
+; The older separate appearance app/plugin is detected and uninstalled (its data in %AppData%\Opsis stays)
 [CustomMessages]
-greek.RemoveOldAppearance=Το Opsis 2.6.0 περιλαμβάνει πλέον την εμφάνιση των Windows (Opsis Appearance). Η ξεχωριστή εφαρμογή/plugin Opsis Appearance θα απεγκατασταθεί για να μη λειτουργούν δύο μηχανές μαζί. Οι ρυθμίσεις και τα θέματά σου διατηρούνται. Να απεγκατασταθεί τώρα;
-english.RemoveOldAppearance=Opsis 2.6.0 now includes the Windows appearance features (Opsis Appearance). The separate Opsis Appearance app/plugin will be uninstalled so two engines do not run together. Your settings and themes are kept. Uninstall it now?
-german.RemoveOldAppearance=Opsis 2.6.0 enthält jetzt die Windows-Darstellung (Opsis Appearance). Die separate App/das Plugin Opsis Appearance wird deinstalliert, damit nicht zwei Engines gleichzeitig laufen. Einstellungen und Designs bleiben erhalten. Jetzt deinstallieren?
-french.RemoveOldAppearance=Opsis 2.6.0 inclut désormais l'apparence de Windows (Opsis Appearance). L'application/le plugin Opsis Appearance séparé sera désinstallé pour éviter que deux moteurs fonctionnent ensemble. Vos paramètres et thèmes sont conservés. Le désinstaller maintenant ?
-spanish.RemoveOldAppearance=Opsis 2.6.0 ya incluye la apariencia de Windows (Opsis Appearance). Se desinstalará la aplicación/plugin Opsis Appearance independiente para que no funcionen dos motores a la vez. Tus ajustes y temas se conservan. ¿Desinstalar ahora?
-korean.RemoveOldAppearance=Opsis 2.6.0에는 이제 Windows 모양 기능(Opsis Appearance)이 포함되어 있습니다. 두 엔진이 동시에 동작하지 않도록 별도의 Opsis Appearance 앱/플러그인을 제거합니다. 설정과 테마는 유지됩니다. 지금 제거할까요?
-chinese.RemoveOldAppearance=Opsis 2.6.0 现已内置 Windows 外观功能（Opsis Appearance）。将卸载独立的 Opsis Appearance 应用/插件，以免两个引擎同时运行。您的设置和主题会保留。现在卸载吗？
-italian.RemoveOldAppearance=Opsis 2.6.0 include ora l'aspetto di Windows (Opsis Appearance). L'app/il plugin Opsis Appearance separato verrà disinstallato per evitare che due motori funzionino insieme. Impostazioni e temi vengono mantenuti. Disinstallare ora?
-russian.RemoveOldAppearance=Opsis 2.6.0 теперь включает оформление Windows (Opsis Appearance). Отдельное приложение/плагин Opsis Appearance будет удалено, чтобы два движка не работали одновременно. Ваши настройки и темы сохранятся. Удалить сейчас?
-japanese.RemoveOldAppearance=Opsis 2.6.0 には Windows の外観機能（Opsis Appearance）が組み込まれました。2 つのエンジンが同時に動作しないよう、別個の Opsis Appearance アプリ/プラグインをアンインストールします。設定とテーマは保持されます。今すぐアンインストールしますか？
-portuguese.RemoveOldAppearance=O Opsis 2.6.0 inclui agora o aspeto do Windows (Opsis Appearance). A aplicação/plugin Opsis Appearance separada será desinstalada para que dois motores não funcionem em conjunto. As suas definições e temas são mantidos. Desinstalar agora?
-turkish.RemoveOldAppearance=Opsis 2.6.0 artık Windows görünümünü (Opsis Appearance) içeriyor. İki motorun birlikte çalışmaması için ayrı Opsis Appearance uygulaması/eklentisi kaldırılacak. Ayarlarınız ve temalarınız korunur. Şimdi kaldırılsın mı?
-arabic.RemoveOldAppearance=يتضمن Opsis 2.6.0 الآن مظهر Windows (Opsis Appearance). ستتم إزالة تطبيق/إضافة Opsis Appearance المنفصل حتى لا يعمل محركان معًا. تُحفظ إعداداتك وسماتك. هل تريد إزالته الآن؟
-hindi.RemoveOldAppearance=Opsis 2.6.0 में अब Windows का रूप (Opsis Appearance) शामिल है। दो इंजन एक साथ न चलें, इसलिए अलग Opsis Appearance ऐप/प्लगइन हटाया जाएगा। आपकी सेटिंग और थीम सुरक्षित रहेंगी। अभी हटाएँ?
+greek.RemoveOldAppearance=Το Opsis 2.6.0 περιλαμβάνει πλέον την εμφάνιση των Windows. Βρέθηκε μια παλαιότερη ξεχωριστή εφαρμογή/plugin εμφάνισης για το Opsis· θα απεγκατασταθεί για να μη λειτουργούν δύο μηχανές μαζί. Οι ρυθμίσεις και τα θέματά σου διατηρούνται. Να απεγκατασταθεί τώρα;
+english.RemoveOldAppearance=Opsis 2.6.0 now includes the Windows appearance features. An older separate appearance app/plugin for Opsis was found; it will be uninstalled so two engines do not run together. Your settings and themes are kept. Uninstall it now?
+german.RemoveOldAppearance=Opsis 2.6.0 enthält jetzt die Windows-Darstellung. Eine ältere separate Darstellungs-App/ein Plugin für Opsis wurde gefunden; sie wird deinstalliert, damit nicht zwei Engines gleichzeitig laufen. Einstellungen und Designs bleiben erhalten. Jetzt deinstallieren?
+french.RemoveOldAppearance=Opsis 2.6.0 inclut désormais l'apparence de Windows. Une ancienne application/un ancien plugin d'apparence séparé pour Opsis a été trouvé ; il sera désinstallé pour éviter que deux moteurs fonctionnent ensemble. Vos paramètres et thèmes sont conservés. Le désinstaller maintenant ?
+spanish.RemoveOldAppearance=Opsis 2.6.0 ya incluye la apariencia de Windows. Se encontró una aplicación/plugin de apariencia independiente anterior para Opsis; se desinstalará para que no funcionen dos motores a la vez. Tus ajustes y temas se conservan. ¿Desinstalar ahora?
+korean.RemoveOldAppearance=Opsis 2.6.0에는 이제 Windows 모양 기능이 포함되어 있습니다. Opsis용 이전 별도 모양 앱/플러그인이 발견되었으며, 두 엔진이 동시에 동작하지 않도록 제거됩니다. 설정과 테마는 유지됩니다. 지금 제거할까요?
+chinese.RemoveOldAppearance=Opsis 2.6.0 现已内置 Windows 外观功能。发现了适用于 Opsis 的旧版独立外观应用/插件，将卸载它，以免两个引擎同时运行。您的设置和主题会保留。现在卸载吗？
+italian.RemoveOldAppearance=Opsis 2.6.0 include ora l'aspetto di Windows. È stata trovata una precedente app/plugin di aspetto separata per Opsis; verrà disinstallata per evitare che due motori funzionino insieme. Impostazioni e temi vengono mantenuti. Disinstallare ora?
+russian.RemoveOldAppearance=Opsis 2.6.0 теперь включает оформление Windows. Найдено прежнее отдельное приложение/плагин оформления для Opsis; оно будет удалено, чтобы два движка не работали одновременно. Ваши настройки и темы сохранятся. Удалить сейчас?
+japanese.RemoveOldAppearance=Opsis 2.6.0 には Windows の外観機能が組み込まれました。Opsis 用の以前の別個の外観アプリ/プラグインが見つかりました。2 つのエンジンが同時に動作しないよう、アンインストールします。設定とテーマは保持されます。今すぐアンインストールしますか？
+portuguese.RemoveOldAppearance=O Opsis 2.6.0 inclui agora o aspeto do Windows. Foi encontrada uma aplicação/plugin de aspeto separada e anterior para o Opsis; será desinstalada para que dois motores não funcionem em conjunto. As suas definições e temas são mantidos. Desinstalar agora?
+turkish.RemoveOldAppearance=Opsis 2.6.0 artık Windows görünümünü içeriyor. Opsis için eski, ayrı bir görünüm uygulaması/eklentisi bulundu; iki motorun birlikte çalışmaması için kaldırılacak. Ayarlarınız ve temalarınız korunur. Şimdi kaldırılsın mı?
+arabic.RemoveOldAppearance=يتضمن Opsis 2.6.0 الآن مظهر Windows. عُثر على تطبيق/إضافة مظهر منفصلة أقدم لـ Opsis؛ ستتم إزالتها حتى لا يعمل محركان معًا. تُحفظ إعداداتك وسماتك. هل تريد إزالتها الآن؟
+hindi.RemoveOldAppearance=Opsis 2.6.0 में अब Windows का रूप शामिल है। Opsis के लिए एक पुराना अलग रूप ऐप/प्लगइन मिला; दो इंजन एक साथ न चलें, इसलिए उसे हटाया जाएगा। आपकी सेटिंग और थीम सुरक्षित रहेंगी। अभी हटाएँ?
 
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: checkedonce
@@ -506,7 +506,7 @@ begin
   RegDeleteValue(HKCU, 'Software\Microsoft\Windows\CurrentVersion\Run', 'MotionDesk Studio');
 end;
 
-// Opsis Appearance (separate app / plugin, Inno AppId below) is built into Opsis 2.6.0. Detect its uninstaller (machine-wide or the old per-user one)
+// The older separate appearance app / plugin (Inno AppId below) is built into Opsis 2.6.0. Detect its uninstaller (machine-wide or the old per-user one)
 // and remove it with its own uninstaller, which keeps the user's data and refuses to delete anything that is not ours.
 function OldAppearanceUninstaller(var Cmd: String): Boolean;
 var
@@ -526,14 +526,14 @@ begin
   if not OldAppearanceUninstaller(Cmd) then Exit;
   if (not WizardSilent) and (SuppressibleMsgBox(CustomMessage('RemoveOldAppearance'), mbConfirmation, MB_YESNO, IDYES) <> IDYES) then
   begin
-    Log('Old Opsis Appearance kept by the user');
+    Log('Older appearance app kept by the user');
     Exit;
   end;
   // MutexName of the old app is waited for by its own uninstaller; its settings (%AppData%\Opsis\appearance.json, themes) are not touched.
   if not Exec(RemoveQuotes(Cmd), '/VERYSILENT /SUPPRESSMSGBOXES /NORESTART', '', SW_HIDE, ewWaitUntilTerminated, ResultCode) then
-    Log('Could not start the Opsis Appearance uninstaller')
+    Log('Could not start the older appearance uninstaller')
   else
-    Log('Opsis Appearance uninstaller finished with code ' + IntToStr(ResultCode));
+    Log('Older appearance uninstaller finished with code ' + IntToStr(ResultCode));
 end;
 
 // The DeskContainers engine (containers\OpsisContainers.exe) keeps its files locked while it runs: stop it before files are replaced.

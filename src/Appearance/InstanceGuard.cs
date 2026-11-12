@@ -1,4 +1,4 @@
-// Ported from Opsis Appearance 1.7.5 (MIT, Copyright (c) 2026 giorstergiopoulos-design). Keeps ONE engine alive if an old stand-alone Opsis Appearance is still installed and running.
+// Part of Opsis (MIT, Copyright (c) 2026 giorstergiopoulos-design).
 namespace MotionDesk.Appearance;
 
 /// <summary>

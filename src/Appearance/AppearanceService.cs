@@ -1,6 +1,4 @@
-// Lifecycle + orchestration of the Appearance engines inside Opsis 2.6.0.
-// Ported from the plugin class of Opsis Appearance 1.7.5 (MIT, Copyright (c) 2026 giorstergiopoulos-design), without the plugin contract,
-// the stand-alone shell, the welcome/family windows, the update popup and the instance guard (see docs/APPEARANCE-MIGRATION-LEDGER.md).
+// Lifecycle + orchestration of the Windows-appearance engines inside Opsis 2.6.0.
 // Low-end friendly: no thread; a 60 s timer only while an automatic theme or the slideshow is on; the window hook only while a window effect is on.
 using System.Windows.Forms;
 

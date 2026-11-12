@@ -41,7 +41,6 @@ and the process exits together with Opsis. Data of earlier builds is migrated au
 - Microsoft.Web.WebView2 (Microsoft Edge WebView2 SDK) - used to render web and video wallpapers.
 - .NET / Windows Forms runtime - MIT, (c) .NET Foundation and contributors.
 - Opsis.UI (shared controls of the Opsis family) - MIT, same author.
-- Opsis Appearance (github.com/giorstergiopoulos-design/OpsisAppearance, MIT, Copyright (c) 2026 giorstergiopoulos-design): its engines (light/dark schedule, accent, window effects, taskbar look, theme manager, slideshow, safety vault) are built into Opsis 2.6.0 under src/Appearance. Functionally inspired by TranslucentTB, RoundedTB and Mica For Everyone (no code copied from them).
 - Weather data comes at run time, without an API key, from free providers: the US National Weather Service (api.weather.gov, US only, open data), Open-Meteo (open-meteo.com, data CC BY 4.0, non-commercial use) and MET Norway (api.met.no, data CC BY 4.0) with wttr.in (github.com/chubin/wttr.in) as the last fallback. Only coordinates rounded to about 1 km, or the city name you type, are sent. Details: docs/WEATHER-PROVIDERS.md.
 
 ## Disclaimer

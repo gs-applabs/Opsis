@@ -6,24 +6,31 @@ using System.Linq;
 using System.Windows.Forms;
 using MotionDesk.Appearance;
 using MotionDesk.Services;
+using MotionDesk.Widgets;
 using UiTheme = MotionDesk.UI.UiTheme;
 
 namespace MotionDesk.UI
 {
-    // "Windows appearance" page (2.6.0): the features of the former Opsis Appearance app / plugin, built into Opsis (docs/APPEARANCE-MIGRATION-LEDGER.md).
+    // "Windows appearance" cards (2.6.0), part of the Personalization page.
     // The engines and the lifecycle live in MotionDesk.Appearance.AppearanceService; this file only builds the cards (shared Opsis.UI controls, shared theme and language).
     public sealed partial class MainWindow
     {
         private int _winAppearanceScroll;
 
-        private void ShowWinAppearance()
+        // Added to the Personalization page (one tab, no sub-tabs). Rarely used rows sit in collapsed "Advanced" sections; the page search finds every row.
+        private void BuildWindowsAppearance(FlowLayoutPanel panel)
         {
-            _currentPageKey = "WinAppearance";
             var svc = AppearanceService.Instance;
-            var panel = CreatePagePanel();
             string T(string k) => LocalizationManager.T(k);
-            void Rebuild() { _winAppearanceScroll = panel.VerticalScroll.Value; BeginInvoke(new Action(() => { if (!IsDisposed && _currentPageKey == "WinAppearance") { ShowWinAppearance(); } })); }
-            void Fail(Exception ex) => MessageBox.Show(this, ex.Message, T("Nav.WinAppearance"), MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            void Rebuild() { _winAppearanceScroll = panel.VerticalScroll.Value; BeginInvoke(new Action(() => { if (!IsDisposed && _currentPageKey == "Personalization") ShowPersonalization(); })); }
+            // a collapsed "Advanced" section inside a card; returns the column to add the rows to
+            FlowLayoutPanel AdvBox(Control card)
+            {
+                var inner = new FlowLayoutPanel { FlowDirection = FlowDirection.TopDown, WrapContents = false, AutoSize = true, Width = 700, Margin = new Padding(0) };
+                var adv = new AdvancedSection(); adv.AddControl(inner); card.Controls.Add(adv);
+                return inner;
+            }
+            void Fail(Exception ex) => MessageBox.Show(this, ex.Message, T("Nav.Personalization"), MessageBoxButtons.OK, MessageBoxIcon.Warning);
             // every change: the user's original values are saved first (once), then the change is made; a failure is shown, never thrown
             void Do(Action change, bool rebuild = false) { try { svc.Backup(); change(); } catch (Exception ex) { Fail(ex); } if (rebuild) Rebuild(); }
 
@@ -118,14 +125,14 @@ namespace MotionDesk.UI
             Bt(accRow, "Win.FromWallpaper", () =>
             {
                 int? c = null; try { c = svc.Engine.WallpaperAccent(); } catch (Exception) { }
-                if (c == null) { MessageBox.Show(this, T("Win.NoWallpaperColor"), T("Nav.WinAppearance")); return; }
+                if (c == null) { MessageBox.Show(this, T("Win.NoWallpaperColor"), T("Nav.Personalization")); return; }
                 Do(() => svc.Engine.Apply(new Look { AccentRgb = c }));
             }, 190);
             ResetButton(theme, 0);
 
             // ---- taskbar (Windows settings)
             var tb = AddCardSection(panel, T("Win.SecTaskbar"));
-            Tg(tb, "Win.Transparency", cur.Transparency == true, v => Do(() => svc.Engine.Apply(new Look { Transparency = v })));
+            Tg(tb, "Settings.TransparencyEffects", WindowsSystemSettings.GetTransparencyEffectsEnabled(), v => System.Threading.Tasks.Task.Run(() => { try { WindowsSystemSettings.SetTransparencyEffectsEnabled(v); } catch (Exception ex) { RotatingLogger.Write("Transparency effects: " + ex.Message); } }));
             Tg(tb, "Win.AccentSurfaces", cur.AccentOnSurfaces == true, v => Do(() => svc.Engine.Apply(new Look { AccentOnSurfaces = v })));
             Tg(tb, "Win.Centered", cur.TaskbarCentered == true, v => Do(() => svc.Engine.Apply(new Look { TaskbarCentered = v })));
             Tg(tb, "Win.TbSearch", cur.ShowSearch == true, v => Do(() => svc.Engine.Apply(new Look { ShowSearch = v })));
@@ -147,16 +154,17 @@ namespace MotionDesk.UI
             }
             var tl = s.TaskbarLook; var ts = s.TaskbarShape;
             Tg(bar, "Win.BarOn", tl.Enabled, v => { tl.Enabled = v; SaveBar(); });
+            var barAdv = AdvBox(bar);
             string[] states = Opts("Win.Opt.Default", "Win.Opt.Clear", "Win.Opt.Blur", "=Acrylic", "Win.Opt.Opaque");
-            var sr = Row(bar);
+            var sr = Row(barAdv);
             Cb(sr, "Win.BarNormal", states, (int)tl.Normal, i => { tl.Normal = (TaskbarState)i; SaveBar(); }, 130);
             Cb(sr, "Win.BarMax", states, (int)tl.Maximized, i => { tl.Maximized = (TaskbarState)i; SaveBar(); }, 130);
             Cb(sr, "Win.BarStart", states, (int)tl.StartOpen, i => { tl.StartOpen = (TaskbarState)i; SaveBar(); }, 130);
-            var tr = Row(bar);
+            var tr = Row(barAdv);
             Bt(tr, "Win.BarTint", () => { if (PickColor(tl.TintRgb) is int c) { tl.TintRgb = c; SaveBar(); } }, 150);
             Nu(tr, "Win.BarStrength", 0, 100, tl.OpacityPercent, v => { tl.OpacityPercent = v; SaveBar(); });
-            Tg(bar, "Win.ShapeOn", ts.Enabled, v => { ts.Enabled = v; SaveBar(); });
-            var shr = Row(bar);
+            Tg(barAdv, "Win.ShapeOn", ts.Enabled, v => { ts.Enabled = v; SaveBar(); });
+            var shr = Row(barAdv);
             Nu(shr, "Win.ShapeRadius", 0, 40, ts.Radius, v => { ts.Radius = v; SaveBar(); });
             Nu(shr, "Win.ShapeGapX", 0, 200, ts.MarginX, v => { ts.MarginX = v; SaveBar(); });
             Nu(shr, "Win.ShapeGapY", 0, 60, ts.MarginY, v => { ts.MarginY = v; SaveBar(); });
@@ -175,12 +183,13 @@ namespace MotionDesk.UI
             Cb(fr2, "Win.TitleBars", Opts("Win.Opt.Off", "Win.Opt.On", "Win.Opt.Follow"), (int)fx.DarkTitle, i => Fx(e => e.DarkTitle = (DarkTitleBars)i), 150);
             Cb(fr2, "Win.Backdrop", Opts("Win.Opt.Default", "Win.Opt.None", "=Mica", "=Acrylic", "=Tabbed"), (int)fx.Backdrop, i => Fx(e => e.Backdrop = (BackdropStyle)i), 150);
             Tg(fxCard, "Win.AutoHideTb", fx.AutoHideTaskbar, v => Fx(e => e.AutoHideTaskbar = v));
-            var fr3 = Row(fxCard);
+            var fxAdv = AdvBox(fxCard);
+            var fr3 = Row(fxAdv);
             fr3.Controls.Add(Lb("Win.Exclude"));
             var ex = new TextBox { Width = 300, Text = string.Join(", ", fx.ExcludedProcesses), BackColor = UiTheme.Background, ForeColor = UiTheme.TextPrimary, Margin = new Padding(0, 4, 8, 0) };
             ex.Leave += (_, _) => Fx(e => e.ExcludedProcesses = ex.Text.Split(new[] { ',', ';', ' ' }, StringSplitOptions.RemoveEmptyEntries).Select(EffectsSettings.NormalizeProcess).Where(x => x.Length > 0).Distinct().ToList());
             fr3.Controls.Add(ex);
-            var fr4 = Row(fxCard);
+            var fr4 = Row(fxAdv);
             Bt(fr4, "Win.CaptionColor", () => { if (PickColor() is int c) Fx(e => e.CaptionRgb = c); }, 190);
             Bt(fr4, "Win.CaptionText", () => { if (PickColor() is int c) Fx(e => e.CaptionTextRgb = c); }, 190);
             Bt(fr4, "Win.ClearColors", () => Fx(e => { e.CaptionRgb = null; e.CaptionTextRgb = null; }), 150);
@@ -278,31 +287,42 @@ namespace MotionDesk.UI
             Bt(tr2, "Win.OpenFolder", () => { try { Directory.CreateDirectory(svc.Themes.Root); System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(svc.Themes.Root) { UseShellExecute = true }); } catch (Exception) { } }, 150);
             th.Controls.Add(new Label { Text = T("Win.WinThemes"), AutoSize = true, ForeColor = UiTheme.AccentCyan, Font = UiTheme.FontBody, Margin = new Padding(0, 12, 0, 4) });
             AddText(th, T("Win.WinThemeNote"));
-            var winThemes = new List<(string Name, string Path)>();
-            foreach (var dir in new[] { Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Resources", "Themes"), Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Microsoft", "Windows", "Themes") })
-            {
-                try { if (Directory.Exists(dir)) foreach (var f in Directory.EnumerateFiles(dir, "*.theme")) winThemes.Add((Path.GetFileNameWithoutExtension(f), f)); } catch (Exception) { }
-            }
+            // Windows .theme files (wallpaper + cursors + sounds): the single list of Opsis, with the signature check of the visual style before one is applied
+            var winThemes = ThemePackageEngine.ListAvailableThemes();
             if (winThemes.Count > 0)
             {
                 var wr = Row(th);
                 var wc = new FlatComboBox { Width = 300, Margin = new Padding(0, 4, 8, 0) };
-                wc.SetItems(winThemes.Select(x => x.Name).ToArray(), winThemes[0].Name);
+                wc.SetItems(winThemes.Select(x => x.Name + (x.BuiltIn ? T("Personalization.BuiltInSuffix") : "")).ToArray(), winThemes[0].Name + (winThemes[0].BuiltIn ? T("Personalization.BuiltInSuffix") : ""));
                 wr.Controls.Add(wc);
                 Bt(wr, "Win.ThemeApply", () =>
                 {
                     int i = wc.SelectedIndex; if (i < 0 || i >= winThemes.Count) return;
                     var safety = ThemeSafety.Check(winThemes[i].Path);
                     if (safety.NeedsWarning && MessageBox.Show(this, ThemeSafety.Explain(safety, LocalizationManager.CurrentLanguage == "el"), T("Win.WinThemes"), MessageBoxButtons.YesNo, MessageBoxIcon.Warning, MessageBoxDefaultButton.Button2) != DialogResult.Yes) return;
-                    try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(winThemes[i].Path) { UseShellExecute = true }); } catch (Exception e) { Fail(e); }
+                    try { ThemePackageEngine.ApplyTheme(winThemes[i].Path); _statusLabel.Text = T("Personalization.ThemeAppliedStatus"); } catch (Exception e) { Fail(e); }
                 }, 130);
             }
+            var wr2 = Row(th);
+            Bt(wr2, "Personalization.SaveCurrentTheme", () =>
+            {
+                string? name = PromptForText(T("Personalization.ThemeNamePrompt"), "Opsis Custom");
+                if (string.IsNullOrWhiteSpace(name)) return;
+                try { ThemePackageEngine.SaveCurrentAsTheme(name.Trim()); _statusLabel.Text = T("Personalization.ThemeSavedStatus"); } catch (Exception e) { Fail(e); }
+                Rebuild();
+            }, 280);
+            Bt(wr2, "Personalization.CreateTechGridTheme", () =>
+            {
+                try { string png = ThemePackageEngine.GenerateTechWallpaperPng(); ThemePackageEngine.SaveCurrentAsTheme("Opsis Tech Grid", png); _statusLabel.Text = T("Personalization.TechGridThemeCreatedStatus"); } catch (Exception e) { Fail(e); }
+                Rebuild();
+            }, 280);
 
             // ---- safety and restore
             var safe = AddCardSection(panel, T("Win.SecSafety"));
             AddText(safe, T("Win.SafetyNote"));
             Tg(safe, "Win.RestorePoint", s.Safety.RestorePointBeforeInvasive, v => { s.Safety.RestorePointBeforeInvasive = v; svc.Store.Save(s); });
-            var sr1 = Row(safe);
+            var safeAdv = AdvBox(safe);
+            var sr1 = Row(safeAdv);
             Bt(sr1, "Win.RestorePointNow", () =>
             {
                 var r = svc.CreateRestorePointNow();
@@ -317,13 +337,12 @@ namespace MotionDesk.UI
                 Rebuild();
             }, 280);
             restore.Enabled = svc.Store.HasBackup;
-            Bt(sr2, "Win.ImportCheck", () =>
+            Bt(sr1, "Win.ImportCheck", () =>
             {
                 var report = AppearanceMigration.Scan(AppPaths.AppDataFolder);
                 MessageBox.Show(this, report.AnythingFound ? AppearanceMigration.Describe(report) : T("Win.ImportNothing"), T("Win.ImportCheck"));
             }, 300);
 
-            SetPage("Nav.WinAppearance", panel);
             if (_winAppearanceScroll > 0) { int keep = _winAppearanceScroll; _winAppearanceScroll = 0; BeginInvoke(new Action(() => { try { panel.VerticalScroll.Value = Math.Min(keep, panel.VerticalScroll.Maximum); panel.PerformLayout(); } catch (Exception) { } })); }
         }
     }
