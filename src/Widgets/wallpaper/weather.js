@@ -560,18 +560,23 @@ function drawHillsLayer(sky, graded) {
 
 // The best-known landmark of the place where the computer is (the weather location, plan 2.1.5), as a distant silhouette in the colour of the hills: it follows the time of day, fog,
 // snow and lightning of the scene. Chosen once per location; off with the "landmarks" setting or when nothing known is within 250 km.
-let landmarkKey = '', landmarkPick = null;
+let landmarkKey = '', landmarkPick = null, landmarkSide = -1, landmarkSideAt = 0;
+function landmarkSideNow() { const n = Date.now(); if (n - landmarkSideAt > 60000) { landmarkSideAt = n; landmarkSide = new Date().getHours() < 13 ? -1 : 1; } return landmarkSide; }
 function drawLandmarkOnHorizon(sky, graded, shade, haze) {
     if (cfg.landmarks === false || !window.OpsisLandmarks) return;
     const key = cfg.lat + ',' + cfg.lon;
     if (key !== landmarkKey) { landmarkKey = key; landmarkPick = window.OpsisLandmarks.pickLandmark(cfg.lat, cfg.lon); }
     if (!landmarkPick) return;
-    let col = mix(graded.hor, shade, 0.7);
-    col = mix(col, haze, clamp(S.fog * 0.8, 0, 0.9));
-    col = mix(col, [212, 222, 238].map(v => v * (0.3 + 0.7 * clamp(sky.amb, 0, 1))), clamp(S.snowCover * 0.6, 0, 0.7));
-    if (flash > 0) col = mix(col, [200, 210, 235], clamp(flash * 0.5, 0, 0.6));
-    const h = Math.max(60, H * 0.2);
-    window.OpsisLandmarks.drawLandmark(skyCtx, landmarkPick.id, W * 0.72, HORIZON + 2, h, rgba(col, 1));
+    const amb = clamp(sky.amb, 0, 1);
+    const pal = {
+        amb, haze, fog: clamp(S.fog, 0, 1), snow: clamp(S.snowCover, 0, 1),
+        night: clamp(1 - amb / 0.35, 0, 1),
+        sunSide: landmarkSideNow(),                                       // the sun rises on the left of the picture and sets on the right
+        warm: mix([255, 236, 205], graded.hor, clamp(sky.glow || 0, 0, 1) * 0.6),
+    };
+    if (flash > 0) pal.amb = clamp(pal.amb + flash * 0.5, 0, 1);
+    const h = Math.max(70, H * 0.24);
+    window.OpsisLandmarks.drawLandmark(skyCtx, landmarkPick.id, W * 0.72, HORIZON + 2, h, pal);
 }
 
 function drawLightning(dt, sky) {

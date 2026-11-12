@@ -24,7 +24,7 @@ public sealed class LandmarksWiringTests
     public void EveryLandmarkHasAKnownPlaceAndPolygons()
     {
         var js = File.ReadAllText(Path.Combine(Wall(), "landmarks.js"));
-        var count = System.Text.RegularExpressions.Regex.Matches(js, @"L\('[a-z]+', '[^']+', -?\d+\.\d+, -?\d+\.\d+, \[").Count;
+        var count = System.Text.RegularExpressions.Regex.Matches(js, @"L\('[a-z]+', '[^']+', -?\d+\.\d+, -?\d+\.\d+, '[a-z]+', \[").Count;
         Assert.True(count >= 20, "landmarks found: " + count);
     }
 }
