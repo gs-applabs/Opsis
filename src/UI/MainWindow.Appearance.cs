@@ -223,7 +223,7 @@ namespace MotionDesk.UI
             {
                 if (v)
                 {
-                    if (WallpaperSlideshow.Images(sl.Folder).Count == 0 && !PickFolder()) { Rebuild(); return; }
+                    if (WallpaperSlideshow.Images(sl.Folder).Count == 0) { _statusLabel.Text = T("Win.SlideNone"); Rebuild(); return; }   // choose a folder first (no dialog pops up by itself)
                     svc.Backup(); sl.Enabled = true; sl.LastChangeUtc = null; svc.SaveSettings();
                 }
                 else svc.StopSlideshow(restoreWallpaper: true);
