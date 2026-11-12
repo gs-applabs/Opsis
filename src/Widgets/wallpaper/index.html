@@ -849,7 +849,7 @@ async function doRefresh() {
 
     if (window.WeatherWallpaper) {
         const wx = cfg.mode === 'Weather';   // οι προσομοιώσεις (καιρός/ώρα/άνεμος) ισχύουν μόνο στο Weather mode — τα υπόλοιπα modes δείχνουν την πραγματική ώρα/θερμοκρασία
-        WeatherWallpaper.setConfig({ weatherSim: wx ? (cfg.weatherSim || 'Auto') : 'Auto', timeSim: wx ? (cfg.timeSim || 'Auto') : 'Auto', windSim: wx ? (cfg.windSim || 'Auto') : 'Auto', glass: cfg.weatherGlass !== false, landmarks: cfg.weatherLandmarks !== false, lat: cfg.weatherLat, lon: cfg.weatherLon });
+        WeatherWallpaper.setConfig({ weatherSim: wx ? (cfg.weatherSim || 'Auto') : 'Auto', timeSim: wx ? (cfg.timeSim || 'Auto') : 'Auto', windSim: wx ? (cfg.windSim || 'Auto') : 'Auto', glass: cfg.weatherGlass !== false, landmarks: cfg.weatherLandmarks !== false, landmarkId: cfg.weatherLandmarkId || 'Auto', lat: cfg.weatherLat, lon: cfg.weatherLon });
     }
     clearTimeout(rotationTimer); clearInterval(rotationTimer);
     rotationTimer = null;

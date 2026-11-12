@@ -1,11 +1,11 @@
-﻿"""
+"""
 Builds the photographic landmark sprites of the weather wallpaper (src/Widgets/wallpaper/landmarks/*.png + ATTRIBUTION.md).
 
 Sources: Wikimedia Commons photos whose licence allows reuse without share-alike (public domain, CC0, CC BY). The licence, author and page of every photo are read from the
 Commons API at build time and written to ATTRIBUTION.md. Each photo is a clear-sky shot: the sky is keyed out (relative blueness), the monument is cropped and scaled to 700 px.
 Run:  python -I build_sprites.py <output folder>      (needs numpy + Pillow + network; the downloaded files are only decoded as images, never executed)
 """
-import sys, os, io, json, re, datetime, urllib.request, urllib.parse
+import sys, os, io, json, re, time, datetime, urllib.request, urllib.parse
 import numpy as np
 from PIL import Image, ImageFilter
 
@@ -22,8 +22,13 @@ def api(params):
         return json.load(r)
 
 def fetch(url):
-    with urllib.request.urlopen(urllib.request.Request(url, headers=UA), timeout=120) as r:
-        return r.read()
+    for attempt in range(4):                      # Commons answers 429 when asked too fast: wait and try again
+        try:
+            with urllib.request.urlopen(urllib.request.Request(url, headers=UA), timeout=120) as r:
+                return r.read()
+        except urllib.error.HTTPError as e:
+            if e.code != 429 or attempt == 3: raise
+            time.sleep(8 * (attempt + 1))
 
 def cutout(im, crop, thr, fade, width=700):
     w, h = im.size
@@ -56,7 +61,7 @@ for sid, title, crop, thr, fade, *rest in SPRITES:
                     'licenseUrl': ii['extmetadata'].get('LicenseUrl', {}).get('value', ''), 'attributionRequired': lic.upper().startswith('CC BY'),
                     'changes': 'Sky removed (colour keying), cropped, scaled to %d px wide, converted to WebP.' % width,
                     'checkedOn': datetime.date.today().isoformat()})
-    print(sid, lic)
+    print(sid, lic); time.sleep(4)
 with open(os.path.join(outdir, 'ATTRIBUTION.md'), 'w', encoding='utf-8') as f:
     f.write('# Landmark photos\n\nThe landmark sprites of the weather wallpaper are cut-outs of photographs from Wikimedia Commons. Only public domain, CC0 and CC BY material is used (no share-alike, no non-commercial, no unknown licences). Every photo was checked individually against the Commons licence data on the date below. Changes: the sky was removed, the picture was cropped and scaled, and converted to WebP.\n\n| Sprite | Photo | Author | Licence | Source | Checked |\n|---|---|---|---|---|---|\n')
     for c in credits: f.write(f"| {c['file']} | {c['commonsTitle']} | {c['author']} | {c['license']} | {c['commonsUrl']} | {c['checkedOn']} |\n")

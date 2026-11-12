@@ -1692,9 +1692,17 @@ namespace MotionDesk.UI
             glass.CheckedChanged += (_, _) => WallpaperHostEngine.Instance.SetWeatherGlass(glass.Checked);
             host.Controls.Add(glass);
 
-            var landmarks = new FlatToggle { RowWidth = 700, Text = LocalizationManager.T("Wallpaper.WeatherLandmarks"), Checked = settings.WeatherLandmarks, BackColor = UiTheme.Background, Margin = new Padding(0, 0, 0, 10) };
-            landmarks.CheckedChanged += (_, _) => WallpaperHostEngine.Instance.SetWeatherLandmarks(landmarks.Checked);
-            host.Controls.Add(landmarks);
+            // the landmark on the horizon: Automatic (nearest to the weather location), none, or ANY landmark the user picks - independent of where the computer is
+            var lmRow = new FlowLayoutPanel { AutoSize = true, WrapContents = false, Margin = new Padding(0, 0, 0, 10) };
+            lmRow.Controls.Add(new Label { Text = LocalizationManager.T("Wallpaper.WeatherLandmarks"), AutoSize = false, Width = 300, Height = 28, TextAlign = ContentAlignment.MiddleLeft, Font = UiTheme.FontBody, ForeColor = UiTheme.TextSecondary });
+            var lmIds = new List<string> { LandmarkCatalog.Auto, LandmarkCatalog.Off }; lmIds.AddRange(LandmarkCatalog.Items.Select(e => e.Id));
+            var lmNames = new List<string> { LocalizationManager.T("Wallpaper.LandmarkAuto"), LocalizationManager.T("Wallpaper.LandmarkOff") }; lmNames.AddRange(LandmarkCatalog.Items.Select(e => e.Name));
+            var lmCurrent = settings.WeatherLandmarks ? (LandmarkCatalog.IsValid(settings.WeatherLandmarkId) ? settings.WeatherLandmarkId : LandmarkCatalog.Auto) : LandmarkCatalog.Off;
+            var lmCombo = new FlatComboBox { Width = 260 };
+            lmCombo.SetItems(lmNames.ToArray(), lmNames[Math.Max(0, lmIds.IndexOf(lmCurrent))]);
+            lmCombo.SelectedIndexChanged += (_, _) => { int i = lmCombo.SelectedIndex; if (i >= 0 && i < lmIds.Count) WallpaperHostEngine.Instance.SetWeatherLandmark(lmIds[i]); };
+            lmRow.Controls.Add(lmCombo);
+            host.Controls.Add(lmRow);
         }
 
         // ALL wallpaper modes (videos, Waves, Particles, Weather): live weather, location and the clock / date / temperature overlay

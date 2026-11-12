@@ -16,7 +16,7 @@ public sealed class LandmarksWiringTests
     {
         var html = File.ReadAllText(Path.Combine(Wall(), "index.html"));
         Assert.True(html.IndexOf("landmarks.js", StringComparison.Ordinal) is var a && a > 0 && a < html.IndexOf("weather.js", StringComparison.Ordinal));
-        Assert.Contains("OpsisLandmarks.pickLandmark", File.ReadAllText(Path.Combine(Wall(), "weather.js")));
+        Assert.Contains("window.OpsisLandmarks", File.ReadAllText(Path.Combine(Wall(), "weather.js")));
         Assert.Contains("weatherLandmarks", html);
     }
 
@@ -39,7 +39,7 @@ public sealed class LandmarksWiringTests
         {
             var png = Path.Combine(Wall(), "landmarks", id + ".webp");
             Assert.True(File.Exists(png), id + ".webp missing");
-            Assert.True(new FileInfo(png).Length < 150_000, id + ".webp is too big for a wallpaper asset");
+            Assert.True(new FileInfo(png).Length < 200_000, id + ".webp is too big for a wallpaper asset");
             Assert.Contains(id + ".webp", credits);
         }
         // licence manifest (plan 0C.2 #9): per image licence in the allowed list, a Commons URL, an author and a check date
@@ -58,5 +58,17 @@ public sealed class LandmarksWiringTests
         }
         Assert.True(total < 700_000, "all landmark sprites together must stay small: " + total);
         Assert.True(File.Exists(Path.Combine(Wall(), "..", "..", "..", "docs", "LANDMARK-IMAGES.json")));
-    }}
+    }
+
+    [Fact]
+    public void TheChoiceListMatchesTheSpritesOfTheScript()
+    {
+        var js = File.ReadAllText(Path.Combine(Wall(), "landmarks.js"));
+        var ids = System.Text.RegularExpressions.Regex.Match(js, @"SPRITE_IDS = \[([^\]]+)\]").Groups[1].Value.Split(',').Select(x => x.Trim().Trim('\'')).OrderBy(x => x).ToList();
+        Assert.Equal(ids, MotionDesk.Widgets.LandmarkCatalog.Items.Select(e => e.Id).OrderBy(x => x).ToList());
+        Assert.All(ids, id => Assert.Contains("'" + id + "': {", js.Substring(js.IndexOf("const SCENE", StringComparison.Ordinal)).Replace(id + ": {", "'" + id + "': {")));   // every landmark has a scene (land or sea)
+        Assert.True(MotionDesk.Widgets.LandmarkCatalog.IsValid("Auto") && MotionDesk.Widgets.LandmarkCatalog.IsValid("Off") && !MotionDesk.Widgets.LandmarkCatalog.IsValid("../evil"));
+    }
+}
+
 

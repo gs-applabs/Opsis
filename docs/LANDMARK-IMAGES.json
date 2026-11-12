@@ -46,5 +46,41 @@
         "changes":  "Sky removed (colour keying), cropped, scaled to 320 px wide, converted to WebP.",
         "checkedOn":  "2026-11-12",
         "monumentRights":  "Monument: Elizabeth Tower, architect C. Barry d. 1860 (public domain; UK law allows photographs of buildings). Photo: CC BY 2.0, attribution required."
+    },
+    {
+        "file":  "patras.webp",
+        "commonsTitle":  "Leuchtturm Patras 2.jpg",
+        "commonsUrl":  "https://commons.wikimedia.org/wiki/File:Leuchtturm_Patras_2.jpg",
+        "author":  "--Xocolatl (talk) 13:17, 9 October 2010 (UTC)",
+        "license":  "Public domain",
+        "licenseUrl":  "",
+        "attributionRequired":  false,
+        "changes":  "Sky removed (colour keying), cropped, scaled to 420 px wide, converted to WebP.",
+        "checkedOn":  "2026-11-12",
+        "monumentRights":  "Monument: lighthouse of Patras, 19th century (public domain). Photo: marked public domain by its author."
+    },
+    {
+        "file":  "rioantirrio.webp",
+        "commonsTitle":  "Rio-Antirrio Bridge.jpg",
+        "commonsUrl":  "https://commons.wikimedia.org/wiki/File:Rio-Antirrio_Bridge.jpg",
+        "author":  "Erik Drost",
+        "license":  "Public domain",
+        "licenseUrl":  "",
+        "attributionRequired":  false,
+        "changes":  "Sky removed (colour keying), cropped, scaled to 520 px wide, converted to WebP.",
+        "checkedOn":  "2026-11-12",
+        "monumentRights":  "FLAG FOR REVIEW: modern structure (2004). The photo is marked public domain by its author; the bridge is a recent work, shown here under the Greek freedom-of-panorama rule for works permanently in public places (Law 2121/1993, art. 26). Remove the file and its list entry if the owner prefers."
+    },
+    {
+        "file":  "nafplio.webp",
+        "commonsTitle":  "The Castle of Bourtzi on 30 March 2019.jpg",
+        "commonsUrl":  "https://commons.wikimedia.org/wiki/File:The_Castle_of_Bourtzi_on_30_March_2019.jpg",
+        "author":  "George E. Koronaios",
+        "license":  "CC0",
+        "licenseUrl":  "http://creativecommons.org/publicdomain/zero/1.0/deed.en",
+        "attributionRequired":  false,
+        "changes":  "Sky removed (colour keying), cropped, scaled to 760 px wide, converted to WebP.",
+        "checkedOn":  "2026-11-12",
+        "monumentRights":  "Monument: Bourtzi, Venetian fortress 1473 (public domain). Photo: CC0."
     }
 ]

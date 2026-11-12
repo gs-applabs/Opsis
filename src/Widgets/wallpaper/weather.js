@@ -560,24 +560,87 @@ function drawHillsLayer(sky, graded) {
 
 // The best-known landmark of the place where the computer is (the weather location, plan 2.1.5), as a distant silhouette in the colour of the hills: it follows the time of day, fog,
 // snow and lightning of the scene. Chosen once per location; off with the "landmarks" setting or when nothing known is within 250 km.
-let landmarkKey = '', landmarkPick = null, landmarkSide = -1, landmarkSideAt = 0;
+let landmarkKey = '', landmarkPick = null, landmarkScene = { scene: 'sea' }, landmarkSide = -1, landmarkSideAt = 0;
 function landmarkSideNow() { const n = Date.now(); if (n - landmarkSideAt > 60000) { landmarkSideAt = n; landmarkSide = new Date().getHours() < 13 ? -1 : 1; } return landmarkSide; }
+
+// Chosen once per setting / location: the user's own choice (any landmark, independent of where the computer is), "Auto" = the nearest one to the weather location, "Off" = none.
+function resolveLandmark() {
+    const key = (cfg.landmarkId || 'Auto') + '|' + cfg.lat + ',' + cfg.lon + '|' + (cfg.landmarks === false);
+    if (key === landmarkKey) return landmarkPick;
+    landmarkKey = key; landmarkPick = null; landmarkScene = { scene: 'sea' };
+    const L = window.OpsisLandmarks;
+    if (cfg.landmarks !== false && L && cfg.landmarkId !== 'Off') {
+        landmarkPick = cfg.landmarkId && cfg.landmarkId !== 'Auto' ? L.byId(cfg.landmarkId) : L.pickLandmark(cfg.lat, cfg.lon);
+        if (landmarkPick) landmarkScene = L.sceneOf(landmarkPick.id);
+    }
+    return landmarkPick;
+}
+const onLand = () => !!(resolveLandmark() && landmarkScene.scene === 'land');
+
+// The landmark as a distant monument in the colour of the air between it and the viewer. On LAND it stands on a base of rock / grass that rises from the plain (the sprite's cut edge is hidden
+// behind the base); in the SEA its foot stands at the waterline.
 function drawLandmarkOnHorizon(sky, graded, shade, haze) {
-    if (cfg.landmarks === false || !window.OpsisLandmarks) return;
-    const key = cfg.lat + ',' + cfg.lon;
-    if (key !== landmarkKey) { landmarkKey = key; landmarkPick = window.OpsisLandmarks.pickLandmark(cfg.lat, cfg.lon); }
-    if (!landmarkPick) return;
+    if (!resolveLandmark()) return;
     const amb = clamp(sky.amb, 0, 1);
     const pal = {
-        amb, haze, fog: clamp(S.fog, 0, 1), snow: clamp(S.snowCover, 0, 1),
-        night: clamp(1 - amb / 0.35, 0, 1),
+        amb, haze, fog: clamp(S.fog, 0, 1), snow: clamp(S.snowCover, 0, 1), night: clamp(1 - amb / 0.35, 0, 1),
         sunSide: landmarkSideNow(),                                       // the sun rises on the left of the picture and sets on the right
         warm: mix([255, 236, 205], graded.hor, clamp(sky.glow || 0, 0, 1) * 0.6),
+        glow: clamp(sky.glow || 0, 0, 1), maxW: W * 0.24,
     };
     if (flash > 0) pal.amb = clamp(pal.amb + flash * 0.5, 0, 1);
-    pal.glow = clamp(sky.glow || 0, 0, 1); pal.maxW = W * 0.24;
-    const h = Math.max(90, H * 0.34);
-    window.OpsisLandmarks.drawLandmark(skyCtx, landmarkPick.id, W * 0.72, HORIZON + 2, h, pal);
+    const maxH = Math.max(90, H * 0.34), L = window.OpsisLandmarks;
+    const size = L.spriteSize(landmarkPick.id, maxH, pal.maxW); if (!size) return;
+    const cx = W * 0.72;
+    if (landmarkScene.scene !== 'land') { L.drawLandmark(skyCtx, landmarkPick.id, cx, HORIZON + 2, maxH, pal); return; }
+    const plinth = Math.round(size.h * (landmarkScene.plinth || 0.05)), baseY = HORIZON - plinth;
+    L.drawLandmark(skyCtx, landmarkPick.id, cx, baseY + Math.round(size.h * 0.05), maxH, pal);
+    // the base: a rocky hill (Acropolis) or a low grassy / sandy mound, shaded like the hills, drawn OVER the foot of the sprite
+    const g = skyCtx, gc = landmarkScene.ground;
+    const baseCol = gc === 'rock' ? [160, 138, 114] : gc === 'sand' ? [186, 162, 120] : [84, 104, 64];
+    let col = mix(scaleCol(baseCol, 0.3 + 0.7 * amb), shade, 0.12);
+    col = mix(col, hazeColor(graded.hor), clamp(0.18 + S.fog * 0.6, 0, 0.9));
+    col = mix(col, [212, 222, 238].map(v => v * (0.3 + 0.7 * amb)), clamp(S.snowCover * 0.7, 0, 0.8));
+    const half = size.w * (gc === 'rock' ? 0.62 : 0.7), slope = size.w * (gc === 'rock' ? 0.38 : 0.55), n = 24, top = baseY + size.h * 0.012;
+    g.fillStyle = rgba(col, 1); g.beginPath(); g.moveTo(cx - half - slope, HORIZON + 2);
+    for (let i = 0; i <= n; i++) {                                         // an uneven crest: small deterministic bumps, steeper sides for rock
+        const t = i / n, x = cx - half + t * 2 * half, bump = (Math.sin(i * 12.9898) * 43758.5453) % 1;
+        g.lineTo(x, top + (gc === 'rock' ? Math.abs(bump) * plinth * 0.22 : Math.abs(bump) * plinth * 0.4));
+    }
+    g.lineTo(cx + half + slope, HORIZON + 2); g.closePath(); g.fill();
+    // a lit edge on the sun side and a darker foot
+    const edge = g.createLinearGradient(0, top, 0, HORIZON + 2); edge.addColorStop(0, rgba(mix(col, [255, 240, 220], 0.18 * amb), 0.55)); edge.addColorStop(0.5, rgba(col, 0)); edge.addColorStop(1, rgba(scaleCol(col, 0.7), 0.35));
+    g.fillStyle = edge; g.fill();
+    if (gc === 'rock') {                                                  // rock strata: a few darker bands following the slope, clipped to the hill
+        g.save(); g.clip();
+        g.strokeStyle = rgba(scaleCol(col, 0.62), 0.35); g.lineWidth = Math.max(1, plinth * 0.03);
+        for (let i = 1; i <= 5; i++) { const y = top + plinth * (i / 6); g.beginPath(); g.moveTo(cx - half - slope, y + plinth * 0.05); g.lineTo(cx - half * 0.2, y); g.lineTo(cx + half + slope, y + plinth * 0.08); g.stroke(); }
+        g.restore();
+    }
+}
+
+// Ground under a land monument instead of the sea: haze at the horizon fading to the dark plain, with the lights of the city at night. No reflections, no ripples.
+let cityDots = null;
+function drawLand(ctx2, sky, graded) {
+    const hz = HORIZON, wh = H - hz, amb = clamp(sky.amb, 0, 1), gc = landmarkScene.ground;
+    const base = gc === 'sand' ? [150, 128, 96] : gc === 'grass' ? [64, 82, 52] : [102, 92, 80];
+    const far = mix(graded.hor, scaleCol(base, 0.4 + 0.6 * amb), 0.55);
+    const near = scaleCol(base, 0.18 + 0.55 * amb);
+    const wg = ctx2.createLinearGradient(0, hz, 0, H);
+    wg.addColorStop(0, rgba(far, 1)); wg.addColorStop(0.35, rgba(mix(far, near, 0.6), 1)); wg.addColorStop(1, rgba(near, 1));
+    ctx2.fillStyle = wg; ctx2.fillRect(0, hz, W, wh);
+    // fields / terraces: a few soft horizontal bands that get wider towards the viewer
+    ctx2.fillStyle = rgba(scaleCol(base, 0.3 * (0.4 + 0.6 * amb)), 0.18);
+    for (let i = 1; i < 6; i++) { const y = hz + wh * (i * i / 36); ctx2.fillRect(0, y, W, Math.max(1, wh * 0.012 * i)); }
+    const night = clamp(1 - amb / 0.35, 0, 1);
+    if (night > 0.05) {
+        if (!cityDots || cityDots.w !== W || cityDots.h !== H) {
+            const pts = []; let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+            for (let i = 0; i < 420; i++) { const d = Math.pow(rnd(), 1.8); pts.push([rnd() * W, hz + 3 + d * wh * 0.9, 1 + d * 1.6, 0.35 + rnd() * 0.65]); }
+            cityDots = { w: W, h: H, pts };
+        }
+        for (const [x, y, r, a] of cityDots.pts) { ctx2.fillStyle = `rgba(255,${200 + (a * 40) | 0},${120 + (a * 60) | 0},${(a * night * 0.8).toFixed(3)})`; ctx2.fillRect(x, y, r, r); }
+    }
 }
 
 function drawLightning(dt, sky) {
@@ -1070,8 +1133,8 @@ function draw(target, dt, profile) {
     c2.setTransform(1, 0, 0, 1, 0, 0);
     c2.globalAlpha = 1; c2.globalCompositeOperation = 'source-over';
     c2.drawImage(skyCv, 0, 0);
-    drawWater(c2, sky, graded);
-    drawRipples(c2, dt, sky.amb);
+    if (onLand()) drawLand(c2, sky, graded);
+    else { drawWater(c2, sky, graded); drawRipples(c2, dt, sky.amb); }
     drawFog(c2, dt, graded, sky.amb);
     drawRain(c2, dt, sky.amb, density);
     drawSnow(c2, dt, sky.amb);

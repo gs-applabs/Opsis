@@ -116,6 +116,10 @@
             M(rect(-0.85, 0, 0.85, 0.42)), M(rect(-0.85, 0.42, 0.85, 0.46)), ...[-0.78, -0.62, -0.46, -0.3, -0.14, 0.02, 0.18, 0.34, 0.5, 0.66].map(x => M(rect(x, 0.46, x + 0.1, 0.52))),
             ...[-0.82, 0.82].flatMap(x => [M(dome(x, 0.42, 0.14, 0.3)), P('l', rect(x - 0.14, 0, x - 0.12, 0.45))]), ...[-0.5, 0.5].map(x => M(rect(x - 0.12, 0.46, x + 0.12, 0.8))), ...[-0.5, 0.5].map(x => M(rect(x - 0.13, 0.8, x + 0.13, 0.86))),
             ...windows(-0.1, 0.1, 0.1, 0.38, 3, 3, 0.4, 0.45), P('d', arc(0, 0, 0.09, 0.2, 0, Math.PI, 10))]),
+        // photo-only landmarks (no vector fallback): place and name only
+        L('patras', 'Lighthouse of Patras', 38.2467, 21.7295, 'stone', []),
+        L('rioantirrio', 'Rio-Antirrio Bridge', 38.3200, 21.7740, 'white', []),
+        L('nafplio', 'Bourtzi, Nafplio', 37.5640, 22.8000, 'stone', []),
     ];
 
     function distKm(lat1, lon1, lat2, lon2) {
@@ -126,13 +130,27 @@
 
     // Photographic sprites (landmarks/<id>.webp, cut-outs of Wikimedia Commons photos with a clear sky, see landmarks/ATTRIBUTION.md). Only landmarks WITH a photo are offered: the hand-built
     // vector shapes above look like drawings, so they stay as a fallback for the future (photoOnly = false) and are not shown by default.
-    const SPRITE_IDS = ['parthenon', 'taj', 'eiffel', 'bigben'];
+    const SPRITE_IDS = ['parthenon', 'taj', 'eiffel', 'bigben', 'patras', 'rioantirrio', 'nafplio'];
+    // where each monument stands: on LAND (a rock / grass base under it, the ground below the horizon instead of the sea) or in the SEA (water below, as before). plinth = height of the base as a fraction of the monument.
+    const SCENE = {
+        parthenon: { scene: 'land', plinth: 0.2, ground: 'rock' }, taj: { scene: 'land', plinth: 0.04, ground: 'sand' }, eiffel: { scene: 'land', plinth: 0.04, ground: 'grass' }, bigben: { scene: 'land', plinth: 0.04, ground: 'grass' },
+        patras: { scene: 'sea' }, rioantirrio: { scene: 'sea' }, nafplio: { scene: 'sea' },
+    };
     let photoOnly = true;
     const sprites = {};                       // id -> { img, ready, tinted: { key, canvas } }
     function sprite(id) {
         let s = sprites[id];
         if (!s) { s = sprites[id] = { img: new Image(), ready: false, tinted: { key: '', canvas: null } }; s.img.onload = () => { s.ready = true; }; s.img.src = 'landmarks/' + id + '.webp'; }
         return s;
+    }
+
+    function byId(id) { const m = LANDMARKS.find(x => x.id === id && SPRITE_IDS.includes(x.id)); return m ? { id: m.id, name: m.name, km: 0 } : null; }
+    function sceneOf(id) { return SCENE[id] || { scene: 'sea' }; }
+    // on-screen size of the sprite once loaded (null while loading), so the caller can build the ground under it
+    function spriteSize(id, maxH, maxW) {
+        const s = sprite(id); if (!s.ready) return null;
+        const sc = Math.min(maxH / s.img.naturalHeight, maxW / s.img.naturalWidth);
+        return { w: Math.round(s.img.naturalWidth * sc), h: Math.round(s.img.naturalHeight * sc) };
     }
 
     // nearest landmark within maxKm of the position; null when nothing is near (the plain hills stay)
@@ -218,6 +236,6 @@
         g.restore(); return true;
     }
 
-    root.OpsisLandmarks = { LANDMARKS, pickLandmark, drawLandmark, distKm, MAT };
+    root.OpsisLandmarks = { LANDMARKS, pickLandmark, byId, sceneOf, spriteSize, drawLandmark, distKm, MAT, SPRITE_IDS };
     if (typeof module !== 'undefined') module.exports = root.OpsisLandmarks;
 })(typeof window !== 'undefined' ? window : globalThis);
