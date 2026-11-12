@@ -155,6 +155,7 @@ namespace MotionDesk.Widgets
                 elVAlign = settings.ElementsVAlign is "Top" or "Bottom" ? settings.ElementsVAlign : "Center",
                 elAccent = settings.ElementsAccent,
                 elCard = settings.ElementsCard,
+                elAuto = settings.ElementsAutoColor,
                 pageLocal = ApiActive,
                 rotateFirstMs = firstMs,
                 imageUri = effectiveMode == "Image" ? MediaSource.ImageUri(settings.ImagePath) : "",
@@ -370,6 +371,7 @@ namespace MotionDesk.Widgets
         public string ElementsClockTheme { get; set; } = "Classic";   // Classic | Minimal | Neon | Mono | Retro (same names as the desktop clock widget)
         public string ElementsBarColor { get; set; } = "";            // "" = same as the accent colour
         public bool ElementsCard { get; set; } = true;          // frosted card behind every element
+        public bool ElementsAutoColor { get; set; } = true;     // without a card: the text turns dark / light with the colour of the wallpaper behind it
         public string ElementsSide { get; set; } = "Left";      // Left | Right: the elements are stacked in a column on that edge of the screen
         public string ElementsVAlign { get; set; } = "Center";  // Top | Center | Bottom
         public Dictionary<string, string> PageProperties { get; set; } = new();   // "<page>|<key>" -> value, see WallpaperManifest

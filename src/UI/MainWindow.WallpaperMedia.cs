@@ -334,6 +334,8 @@ namespace MotionDesk.UI
             var opt = new FlowLayoutPanel { AutoSize = true, WrapContents = false, Margin = new Padding(0, 6, 0, 10) };
             var card = new FlatToggle { RowWidth = 440, Text = L("Frosted card behind the elements", "Θολό πλαίσιο πίσω από τα στοιχεία"),  Checked = settings.ElementsCard, BackColor = UiTheme.Background, Margin = new Padding(0, 4, 8, 0) };
             card.CheckedChanged += (_, _) => Commit(s => s.ElementsCard = card.Checked);
+            var autoColor = new FlatToggle { RowWidth = 440, Text = L("Text colour follows the wallpaper (when there is no card)", "Το χρώμα του κειμένου ακολουθεί το φόντο (όταν δεν υπάρχει πλαίσιο)"), Checked = settings.ElementsAutoColor, BackColor = UiTheme.Background, Margin = new Padding(0, 4, 8, 0) };
+            autoColor.CheckedChanged += (_, _) => Commit(s => s.ElementsAutoColor = autoColor.Checked);
             var accent = new Button { Width = 60, Height = 26, FlatStyle = FlatStyle.Flat, Margin = new Padding(0, 2, 8, 0), Cursor = Cursors.Hand, TabStop = false };
             Color Parse(string t) { try { return ColorTranslator.FromHtml(t); } catch (Exception) { return Color.FromArgb(0, 210, 255); } }
             accent.BackColor = Parse(settings.ElementsAccent);
@@ -345,7 +347,7 @@ namespace MotionDesk.UI
                 accent.BackColor = dlg.Color;
                 Commit(s => s.ElementsAccent = $"#{dlg.Color.R:X2}{dlg.Color.G:X2}{dlg.Color.B:X2}");
             };
-            opt.Controls.Add(card);
+            opt.Controls.Add(card); opt.Controls.Add(autoColor);
             opt.Controls.Add(new Label { Text = L("Accent colour", "Χρώμα έμφασης"), AutoSize = true, Font = UiTheme.FontBody, ForeColor = UiTheme.TextSecondary, Margin = new Padding(0, 8, 6, 0) });
             opt.Controls.Add(accent);
             panel.Controls.Add(opt);

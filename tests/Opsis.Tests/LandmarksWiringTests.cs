@@ -69,6 +69,17 @@ public sealed class LandmarksWiringTests
         Assert.All(ids, id => Assert.Contains("'" + id + "': {", js.Substring(js.IndexOf("const SCENE", StringComparison.Ordinal)).Replace(id + ": {", "'" + id + "': {")));   // every landmark has a scene (land or sea)
         Assert.True(MotionDesk.Widgets.LandmarkCatalog.IsValid("Auto") && MotionDesk.Widgets.LandmarkCatalog.IsValid("Off") && !MotionDesk.Widgets.LandmarkCatalog.IsValid("../evil"));
     }
-}
 
+    [Fact]
+    public void WallpaperElementsFollowTheBackgroundColourWhenThereIsNoCard()
+    {
+        var js = File.ReadAllText(Path.Combine(Wall(), "elements.js"));
+        Assert.Contains("function autoContrast", js);
+        Assert.Contains("c.elAuto !== false", js);                   // on by default, only without the frosted card (!c.elCard)
+        Assert.Contains("!c.elCard", js);
+        Assert.Contains("var(--fg,#fff)", js);
+        var cs = File.ReadAllText(Path.Combine(Wall(), "..", "WallpaperWindow.cs"));
+        Assert.Contains("elAuto = settings.ElementsAutoColor", cs);
+    }
+}
 
