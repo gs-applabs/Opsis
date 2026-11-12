@@ -41,3 +41,9 @@
 | R | Soak/baseline | ⛔ | τρέχει ο χρήστης |
 
 Ενημερώνεται ανά ενότητα μαζί με τα commits.
+
+## Ενημέρωση 2026-11-12
+- ✓ Installer σε σκούρο θέμα όταν τα Windows είναι σκούρα (`WizardStyle=modern dynamic` + dark εικόνες)· ⛔ δεν έτρεξε ο wizard σε πραγματικό σύστημα (μόνο compile).
+- ✓ Ενσωμάτωση Appearance στην Εξατομίκευση (ίδια καρτέλα, κάρτες, «Για προχωρημένους»): `docs/APPEARANCE-MIGRATION-LEDGER.md` (§5 κατάσταση, §6 διπλότυπα/συγχωνεύσεις).
+- ✓ Οικογένεια χωρίς καταργημένες εφαρμογές (catalogue, README, installer, μεταφράσεις, VersionNotes)· Waveframe → Opsis Media Suite.
+- ✓ Καιρός: `docs/WEATHER-PROVIDERS.md` + `docs/WEATHER-BACKPORT.md`· Crawler: ίδιο σύστημα (MET Norway δεύτερη πηγή + opt-in τοποθεσία), commit 507eca6/e06cdc5 στο repo του.

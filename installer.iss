@@ -41,7 +41,7 @@ OutputDir=Output
 OutputBaseFilename=OpsisSetup-2.6.0-beta
 Compression=lzma2/ultra64
 SolidCompression=yes
-WizardStyle=modern
+WizardStyle=modern dynamic
 PrivilegesRequired=admin
 AppMutex=Opsis.SingleInstance
 ; Η εφαρμογή είναι win-x64 (framework-dependent, native WebView2Loader.dll x64) — ο installer
@@ -53,6 +53,10 @@ SetupIconFile=assets\Opsis.ico
 ; Opsis logo on every wizard page instead of the default Inno disk-and-box (images made by installer\make-wizard-images.ps1, no text inside)
 WizardImageFile=installer\wizard\large-100.bmp,installer\wizard\large-125.bmp,installer\wizard\large-150.bmp,installer\wizard\large-200.bmp
 WizardSmallImageFile=installer\wizard\small-100.bmp,installer\wizard\small-125.bmp,installer\wizard\small-150.bmp,installer\wizard\small-200.bmp
+; Dark wizard (Windows in dark mode, checked once when Setup starts): deeper tall pictures, small PNGs with a transparent background, dark top colours
+WizardImageFileDynamicDark=installer\wizard\dark-large-100.bmp,installer\wizard\dark-large-125.bmp,installer\wizard\dark-large-150.bmp,installer\wizard\dark-large-200.bmp
+WizardImageBackColorDynamicDark=#060E19
+WizardSmallImageFileDynamicDark=installer\wizard\dark-small-100.png,installer\wizard\dark-small-125.png,installer\wizard\dark-small-150.png,installer\wizard\dark-small-200.png
 UninstallDisplayIcon={app}\{#MyAppExeName}
 DisableWelcomePage=no
 
