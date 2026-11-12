@@ -253,7 +253,7 @@
   "Cursors.RoleWait": "忙",
   "Cursors.RoleAppStarting": "在后台工作",
   "Cursors.RoleNo": "不可用",
-  "Personalization.SectionDeskStrip": "DeskStrip — 应用程序坞",
+  "Personalization.SectionDeskStrip": "DeskStrip",
   "Personalization.DeskStripIntro": "位于主屏幕底部中央的悬浮程序坞，用于放置固定的应用。将文件拖到其上，或使用“固定应用程序…”。自动隐藏功能尚未实现——请参阅路线图。",
   "Personalization.EnableDeskStrip": "启用 DeskStrip",
   "Personalization.PinApp": "固定应用程序…",

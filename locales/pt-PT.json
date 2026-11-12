@@ -253,7 +253,7 @@
   "Cursors.RoleWait": "Ocupado",
   "Cursors.RoleAppStarting": "A trabalhar em segundo plano",
   "Cursors.RoleNo": "Indisponível",
-  "Personalization.SectionDeskStrip": "DeskStrip — Dock de aplicações",
+  "Personalization.SectionDeskStrip": "DeskStrip",
   "Personalization.DeskStripIntro": "Um dock flutuante de aplicações afixadas, em baixo ao centro do ecrã principal. Arraste um ficheiro para cima dele ou use «Afixar aplicação…». O ocultamento automático ainda não está implementado — veja o roteiro.",
   "Personalization.EnableDeskStrip": "Ativar DeskStrip",
   "Personalization.PinApp": "Afixar aplicação…",

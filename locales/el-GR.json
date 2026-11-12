@@ -291,7 +291,7 @@
   "Cursors.RoleWait": "Απασχολημένο",
   "Cursors.RoleAppStarting": "Εργασία στο παρασκήνιο",
   "Cursors.RoleNo": "Μη διαθέσιμο",
-  "Personalization.SectionDeskStrip": "DeskStrip — Dock Εφαρμογών",
+  "Personalization.SectionDeskStrip": "DeskStrip",
   "Personalization.DeskStripIntro": "Ένα πλωτό dock καρφιτσωμένων εφαρμογών, στο κάτω-κέντρο της κύριας οθόνης. Σύρε ένα αρχείο πάνω του, ή χρησιμοποίησε \"Καρφίτσωμα εφαρμογής…\". Το auto-hide δεν έχει χτιστεί ακόμα — βλ. roadmap.",
   "Personalization.EnableDeskStrip": "Ενεργοποίηση DeskStrip",
   "Personalization.PinApp": "Καρφίτσωμα εφαρμογής…",

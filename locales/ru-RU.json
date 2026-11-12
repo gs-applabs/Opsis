@@ -253,7 +253,7 @@
   "Cursors.RoleWait": "Занято",
   "Cursors.RoleAppStarting": "Работа в фоновом режиме",
   "Cursors.RoleNo": "Недоступно",
-  "Personalization.SectionDeskStrip": "DeskStrip — док приложений",
+  "Personalization.SectionDeskStrip": "DeskStrip",
   "Personalization.DeskStripIntro": "Плавающий док закреплённых приложений внизу по центру основного экрана. Перетащите на него файл или используйте «Закрепить приложение…». Автоскрытие пока не реализовано — см. дорожную карту.",
   "Personalization.EnableDeskStrip": "Включить DeskStrip",
   "Personalization.PinApp": "Закрепить приложение…",

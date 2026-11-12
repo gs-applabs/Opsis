@@ -291,7 +291,7 @@
   "Cursors.RoleWait": "Busy",
   "Cursors.RoleAppStarting": "Working in Background",
   "Cursors.RoleNo": "Unavailable",
-  "Personalization.SectionDeskStrip": "DeskStrip — App Dock",
+  "Personalization.SectionDeskStrip": "DeskStrip",
   "Personalization.DeskStripIntro": "A floating dock of pinned apps, bottom-center of your primary screen. Drag a file onto it, or use \"Pin application…\". Auto-hide isn't built yet — see the roadmap.",
   "Personalization.EnableDeskStrip": "Enable DeskStrip",
   "Personalization.PinApp": "Pin application…",

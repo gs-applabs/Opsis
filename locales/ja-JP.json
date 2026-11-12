@@ -253,7 +253,7 @@
   "Cursors.RoleWait": "待機中",
   "Cursors.RoleAppStarting": "バックグラウンドで作業中",
   "Cursors.RoleNo": "利用不可",
-  "Personalization.SectionDeskStrip": "DeskStrip — アプリ ドック",
+  "Personalization.SectionDeskStrip": "DeskStrip",
   "Personalization.DeskStripIntro": "メイン画面の下部中央に表示される、固定アプリのフローティング ドックです。ファイルをドラッグするか、「アプリケーションを固定…」を使ってください。自動非表示はまだ実装されていません — ロードマップをご覧ください。",
   "Personalization.EnableDeskStrip": "DeskStrip を有効にする",
   "Personalization.PinApp": "アプリケーションを固定…",

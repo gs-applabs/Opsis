@@ -253,7 +253,7 @@
   "Cursors.RoleWait": "Ocupado",
   "Cursors.RoleAppStarting": "Trabajando en segundo plano",
   "Cursors.RoleNo": "No disponible",
-  "Personalization.SectionDeskStrip": "DeskStrip: dock de aplicaciones",
+  "Personalization.SectionDeskStrip": "DeskStrip",
   "Personalization.DeskStripIntro": "Un dock flotante de aplicaciones ancladas, en la parte inferior central de su pantalla principal. Arrastre un archivo sobre él o use «Anclar aplicación…». El ocultamiento automático aún no está implementado; consulte la hoja de ruta.",
   "Personalization.EnableDeskStrip": "Activar DeskStrip",
   "Personalization.PinApp": "Anclar aplicación…",

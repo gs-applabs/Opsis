@@ -253,7 +253,7 @@
   "Cursors.RoleWait": "व्यस्त",
   "Cursors.RoleAppStarting": "पृष्ठभूमि में कार्य",
   "Cursors.RoleNo": "अनुपलब्ध",
-  "Personalization.SectionDeskStrip": "DeskStrip — ऐप डॉक",
+  "Personalization.SectionDeskStrip": "DeskStrip",
   "Personalization.DeskStripIntro": "पिन किए गए ऐप्स का एक तैरता हुआ डॉक, आपकी प्राथमिक स्क्रीन के नीचे बीच में। उस पर कोई फ़ाइल खींचें, या \"एप्लिकेशन पिन करें…\" का उपयोग करें। ऑटो-हाइड अभी नहीं बना है — रोडमैप देखें।",
   "Personalization.EnableDeskStrip": "DeskStrip सक्षम करें",
   "Personalization.PinApp": "एप्लिकेशन पिन करें…",

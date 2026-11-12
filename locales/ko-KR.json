@@ -253,7 +253,7 @@
   "Cursors.RoleWait": "사용 중",
   "Cursors.RoleAppStarting": "백그라운드 작업 중",
   "Cursors.RoleNo": "사용할 수 없음",
-  "Personalization.SectionDeskStrip": "DeskStrip — 앱 도크",
+  "Personalization.SectionDeskStrip": "DeskStrip",
   "Personalization.DeskStripIntro": "주 화면 하단 중앙에 표시되는 고정 앱의 떠 있는 도크입니다. 파일을 끌어다 놓거나 \"애플리케이션 고정…\"을 사용하세요. 자동 숨기기는 아직 구현되지 않았습니다 — 로드맵을 참조하세요.",
   "Personalization.EnableDeskStrip": "DeskStrip 사용",
   "Personalization.PinApp": "애플리케이션 고정…",

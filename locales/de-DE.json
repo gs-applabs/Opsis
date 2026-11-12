@@ -253,7 +253,7 @@
   "Cursors.RoleWait": "Beschäftigt",
   "Cursors.RoleAppStarting": "Hintergrundaktivität",
   "Cursors.RoleNo": "Nicht verfügbar",
-  "Personalization.SectionDeskStrip": "DeskStrip – App-Dock",
+  "Personalization.SectionDeskStrip": "DeskStrip",
   "Personalization.DeskStripIntro": "Ein schwebendes Dock mit angehefteten Apps, unten mittig auf Ihrem Hauptbildschirm. Ziehen Sie eine Datei darauf oder nutzen Sie „Anwendung anheften…“. Automatisches Ausblenden ist noch nicht umgesetzt – siehe Roadmap.",
   "Personalization.EnableDeskStrip": "DeskStrip aktivieren",
   "Personalization.PinApp": "Anwendung anheften…",

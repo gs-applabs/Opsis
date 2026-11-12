@@ -253,7 +253,7 @@
   "Cursors.RoleWait": "Occupato",
   "Cursors.RoleAppStarting": "Operazione in background",
   "Cursors.RoleNo": "Non disponibile",
-  "Personalization.SectionDeskStrip": "DeskStrip — Dock app",
+  "Personalization.SectionDeskStrip": "DeskStrip",
   "Personalization.DeskStripIntro": "Un dock flottante di app bloccate, in basso al centro dello schermo principale. Trascinaci sopra un file oppure usa «Blocca applicazione…». L'auto-nascondimento non è ancora disponibile — vedi la roadmap.",
   "Personalization.EnableDeskStrip": "Abilita DeskStrip",
   "Personalization.PinApp": "Blocca applicazione…",
