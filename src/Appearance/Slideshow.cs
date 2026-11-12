@@ -28,6 +28,11 @@ public static class WallpaperSlideshow
         try
         {
             if (string.IsNullOrWhiteSpace(folder) || !Directory.Exists(folder)) return list;
+            // The list is rebuilt only when the folder changed (files added / removed change its write time): the page and the timer ask often.
+            var stamp = Directory.GetLastWriteTimeUtc(folder);
+            lock (CacheLock)
+                if (_cacheFolder != null && string.Equals(_cacheFolder, folder, StringComparison.OrdinalIgnoreCase) && _cacheStamp == stamp && _cacheList != null)
+                    return new List<string>(_cacheList);
             foreach (var f in Directory.EnumerateFiles(folder))
             {
                 if (!Extensions.Contains(Path.GetExtension(f), StringComparer.OrdinalIgnoreCase)) continue;
@@ -36,8 +41,12 @@ public static class WallpaperSlideshow
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
         list.Sort(StringComparer.OrdinalIgnoreCase);
+        try { lock (CacheLock) { _cacheFolder = folder; _cacheStamp = Directory.GetLastWriteTimeUtc(folder!); _cacheList = new List<string>(list); } } catch (Exception) { }
         return list;
     }
+
+    private static readonly object CacheLock = new();
+    private static string? _cacheFolder; private static DateTime _cacheStamp; private static List<string>? _cacheList;
 
     /// <summary>Η επόμενη εικόνα: τυχαία (ποτέ η ίδια δύο φορές στη σειρά όταν υπάρχουν ≥2) ή η επόμενη με τη σειρά, κυκλικά.</summary>
     public static string? Pick(IReadOnlyList<string> images, string? last, bool shuffle, Random? rng = null)

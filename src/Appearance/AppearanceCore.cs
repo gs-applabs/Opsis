@@ -305,13 +305,24 @@ public sealed class AppearanceEngine
         return (r << 16) | (gr << 8) | b;
     }
 
+    private (string Path, DateTime Stamp, int? Accent)? _accentCache;
+
+    /// <summary>Dominant colour of the current wallpaper. A huge picture (over 40 MB) is not decoded for a 48x48 sample, and the answer is remembered until the file changes.</summary>
     public int? WallpaperAccent()
     {
         try
         {
             if (_reg.Get(Desktop, "WallPaper") is not string path || !File.Exists(path)) return null;
-            using var bmp = new Bitmap(path);
-            return DominantAccent(bmp);
+            var info = new FileInfo(path);
+            if (info.Length > WallpaperSlideshow.MaxImageBytes) return null;
+            if (_accentCache is { } c && c.Path == path && c.Stamp == info.LastWriteTimeUtc) return c.Accent;
+            int? accent;
+            using (var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+            using (var img = Image.FromStream(fs, useEmbeddedColorManagement: false, validateImageData: false))
+            using (var bmp = new Bitmap(img))
+                accent = DominantAccent(bmp);
+            _accentCache = (path, info.LastWriteTimeUtc, accent);
+            return accent;
         }
         catch (Exception) { return null; }
     }

@@ -126,3 +126,37 @@ public sealed class InstanceGuardTests
         Assert.Equal("OpsisAppearance.Engine", InstanceGuard.DefaultName);   // the name the old stand-alone app / installer use
     }
 }
+
+public sealed class AppearanceCachesTests : IDisposable
+{
+    private readonly string _dir = Path.Combine(Path.GetTempPath(), "opsis-appearance-cache-" + Guid.NewGuid().ToString("N"));
+    public AppearanceCachesTests() { Directory.CreateDirectory(_dir); }
+    public void Dispose() { try { Directory.Delete(_dir, true); } catch (Exception) { } }
+
+    [Fact]
+    public void TheSlideshowListIsRebuiltOnlyWhenTheFolderChanges()
+    {
+        File.WriteAllBytes(Path.Combine(_dir, "a.jpg"), new byte[] { 1 });
+        var first = WallpaperSlideshow.Images(_dir);
+        Assert.Single(first);
+        first.Add("tamper");                                                    // callers get a copy, the cache is safe
+        Assert.Single(WallpaperSlideshow.Images(_dir));
+        File.WriteAllBytes(Path.Combine(_dir, "b.png"), new byte[] { 2 });
+        Directory.SetLastWriteTimeUtc(_dir, DateTime.UtcNow.AddMinutes(1));          // make the change visible even on a coarse clock
+        Assert.Equal(2, WallpaperSlideshow.Images(_dir).Count);
+    }
+
+    [Fact]
+    public void TheWallpaperColourIsReadFromASmallSampleAndRemembered()
+    {
+        string pic = Path.Combine(_dir, "red.png");
+        using (var bmp = new System.Drawing.Bitmap(200, 200)) { using var g = System.Drawing.Graphics.FromImage(bmp); g.Clear(System.Drawing.Color.FromArgb(220, 30, 30)); bmp.Save(pic, System.Drawing.Imaging.ImageFormat.Png); }
+        var reg = new FakeRegistry(); reg.Set(@"Control Panel\Desktop", "WallPaper", pic, Microsoft.Win32.RegistryValueKind.String);
+        var engine = new AppearanceEngine(reg, () => { });
+        int? a = engine.WallpaperAccent();
+        Assert.NotNull(a);
+        Assert.True(((a!.Value >> 16) & 0xFF) > 150);                           // red dominates
+        File.Delete(pic);                                                       // remembered: no second decode needed while the file is unchanged... the file is gone now
+        Assert.Null(engine.WallpaperAccent());                                  // a missing file gives null, never an exception
+    }
+}
