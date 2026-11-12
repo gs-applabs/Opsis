@@ -1677,6 +1677,10 @@ namespace MotionDesk.UI
             var glass = new FlatToggle { RowWidth = 700, Text = LocalizationManager.T("Wallpaper.WeatherGlass"), Checked = settings.WeatherGlass, BackColor = UiTheme.Background, Margin = new Padding(0, 6, 0, 10) };
             glass.CheckedChanged += (_, _) => WallpaperHostEngine.Instance.SetWeatherGlass(glass.Checked);
             panel.Controls.Add(glass);
+
+            var landmarks = new FlatToggle { RowWidth = 700, Text = LocalizationManager.T("Wallpaper.WeatherLandmarks"), Checked = settings.WeatherLandmarks, BackColor = UiTheme.Background, Margin = new Padding(0, 0, 0, 10) };
+            landmarks.CheckedChanged += (_, _) => WallpaperHostEngine.Instance.SetWeatherLandmarks(landmarks.Checked);
+            panel.Controls.Add(landmarks);
         }
 
         // ALL wallpaper modes (videos, Waves, Particles, Weather): live weather, location and the clock / date / temperature overlay

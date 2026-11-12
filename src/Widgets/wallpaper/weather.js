@@ -555,6 +555,23 @@ function drawHillsLayer(sky, graded) {
         for (let i = 0; i <= n; i++) g.lineTo((i / n) * W, HORIZON - h.pts[i] * H);
         g.lineTo(W, HORIZON + 2); g.closePath(); g.fill();
     }
+    drawLandmarkOnHorizon(sky, graded, shade, haze);
+}
+
+// The best-known landmark of the place where the computer is (the weather location, plan 2.1.5), as a distant silhouette in the colour of the hills: it follows the time of day, fog,
+// snow and lightning of the scene. Chosen once per location; off with the "landmarks" setting or when nothing known is within 250 km.
+let landmarkKey = '', landmarkPick = null;
+function drawLandmarkOnHorizon(sky, graded, shade, haze) {
+    if (cfg.landmarks === false || !window.OpsisLandmarks) return;
+    const key = cfg.lat + ',' + cfg.lon;
+    if (key !== landmarkKey) { landmarkKey = key; landmarkPick = window.OpsisLandmarks.pickLandmark(cfg.lat, cfg.lon); }
+    if (!landmarkPick) return;
+    let col = mix(graded.hor, shade, 0.7);
+    col = mix(col, haze, clamp(S.fog * 0.8, 0, 0.9));
+    col = mix(col, [212, 222, 238].map(v => v * (0.3 + 0.7 * clamp(sky.amb, 0, 1))), clamp(S.snowCover * 0.6, 0, 0.7));
+    if (flash > 0) col = mix(col, [200, 210, 235], clamp(flash * 0.5, 0, 0.6));
+    const h = Math.max(60, H * 0.2);
+    window.OpsisLandmarks.drawLandmark(skyCtx, landmarkPick.id, W * 0.72, HORIZON + 2, h, rgba(col, 1));
 }
 
 function drawLightning(dt, sky) {

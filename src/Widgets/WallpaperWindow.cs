@@ -177,6 +177,7 @@ namespace MotionDesk.Widgets
                 weatherSim = settings.WeatherSimulation,
                 timeSim = settings.TimeSimulation,
                 weatherGlass = settings.WeatherGlass,
+                weatherLandmarks = settings.WeatherLandmarks,
                 weatherLat = settings.WeatherLat,
                 weatherLon = settings.WeatherLon,
                 rotateMinutes = settings.RotateEveryMinutes,
@@ -400,6 +401,7 @@ namespace MotionDesk.Widgets
         // "Auto" = live wind. Otherwise Calm|LightBreeze|FreshBreeze|Strong|Gale (Beaufort 1/3/5/7/9) — drives waves and cloud speed
         public string WindSimulation { get; set; } = "Auto";
         public bool WeatherGlass { get; set; } = true;   // raindrops on a window pane while it rains
+        public bool WeatherLandmarks { get; set; } = true;   // the best-known landmark of the weather location on the horizon (landmarks.js)
 
         // Clock / date / temperature overlay of the Weather mode. Position is the CENTRE of the block, in % of the screen
         // (default: horizontally centred, in the upper third so it sits in the sky and not on the horizon/desktop icons).
@@ -1610,6 +1612,14 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Count);
         {
             var settings = WallpaperSettings.Load();
             settings.WeatherGlass = enabled;
+            settings.Save();
+            _ = RefreshAllAsync();
+        }
+
+        public void SetWeatherLandmarks(bool enabled)
+        {
+            var settings = WallpaperSettings.Load();
+            settings.WeatherLandmarks = enabled;
             settings.Save();
             _ = RefreshAllAsync();
         }
