@@ -77,6 +77,9 @@ Portable build outside the repo + `docs/TRY-NATIVE-CONTAINERS.md` (Greek). Rescu
 ## Fork switch-off and upgrade (2026-11-12)
 Removed: `containers/` (WPF fork), `ContainersEngine`, `ContainersBridge`, the BuildContainers/CopyContainersToPublish targets, the installer's engine entries. Native settings page, tray menu, quick-hide, desktop-menu verbs and the native host now are the only path; `UseNativeContainers` defaults to true. Installer 2.6.0 beta compiles (8.3 MB, no fork); an upgrade from a 2.4.6.2 install was run with an ISOLATED test installer (other AppId, no admin, own folder): exe became 2.6.0, `containers\` deleted, uninstall entry "2.6.0 beta", uninstall clean, real Opsis untouched (checked). ⛔ Still needs the user: a real upgrade of the installed 2.4.6.1 on the machine and the manual steps above.
 
+## Real upgrade of the installed Opsis (2026-11-12, approved by the user)
+Installed 2.4.6.2 -> 2.6.0 beta with `OpsisSetup-2.6.0-beta.exe` (UAC, /SILENT). Found and fixed on the way: (1) the installer aborts when Opsis is running (AppMutex) - close it first; (2) settings.json written by earlier betas had `UseNativeContainers=false` -> settings schema 2 migration switches it on once (2 tests). After the second install: the installed Opsis started, imported the legacy data (1 container, empty, as in the old data) into `containers-native.json`; the old `%AppData%\Opsis\containers` folder is untouched; backup of the data folder was taken before.
+
 ## Where I stopped
 Native core: tray/hotkeys, z-order, first-start import, budgets, equivalence table done. Next (in order): tabs/portals/notes rendering, settings page for the native core, Spot Search + profile hotkeys, hiding originals (with the rescue path), then the fork switch-off. Also 2.4.6.2 worktree: real plugin e2e with the new plugin builds.
 
@@ -89,7 +92,8 @@ Native core: tray/hotkeys, z-order, first-start import, budgets, equivalence tab
 5. **Κλείδωμα (Win+L):** κλείδωσε, ξεκλείδωσε· το γυαλί δεν πρέπει να είναι παγωμένο.
 6. **Drag & drop:** σύρε ένα αρχείο από την Εξερεύνηση μέσα στο container, μετά ξανά το ίδιο (δεν πρέπει να διπλασιάζεται).
 7. Αν κάτι πάει στραβά: διπλό κλικ στο `Rescue-Desktop.bat`.
-8. Πες μου τι είδες. Για μέτρηση πόρων τρέξε και το `toolsesource-logger.ps1` για λίγη ώρα.
+8. Πες μου τι είδες. Για μέτρηση πόρων τρέξε και το `tools
+esource-logger.ps1` για λίγη ώρα.
 
 ## ΖΗΤΗΘΗΚΕ → ΚΑΤΑΣΤΑΣΗ (λίστα από OPSIS_UNIFIED_MASTER_PLAN, INTAKE, CHANGELOG «Υπόλοιπο», TASKS §22-A) — ενημερώνεται ανά ενότητα
 Σειρά εργασίας: φθηνά/εύκολα πρώτα. ✓ έγινε · ◐ μερικό · ☐ μένει · ⛔ χρειάζεται χρήστη/απόφαση/τρίτο repo.
