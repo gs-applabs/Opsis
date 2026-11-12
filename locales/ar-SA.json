@@ -205,6 +205,7 @@
   "About.InstructionsList": "1. الأدوات: انتقل إلى صفحة «الأدوات» واختر أداة لإظهارها على سطح المكتب. اسحب شريط العنوان لتحريكها، ☰ للخيارات، 🔒/🔓 لتثبيت موضعها، ✕ للإغلاق.\n2. DeskZones: يفتح Ctrl+Shift+N محرر تخطيط المناطق؛ اضغط مع الاستمرار على Shift أثناء سحب أي نافذة لمحاذاتها إلى منطقة.\n3. DeskContainers: قائمة علبة النظام ← أضف حاوية، ثم اسحب الملفات/المجلدات إليها لتجميعها.\n4. الخلفية: انتقل إلى صفحة «الخلفية»، أضف فيديو وفعّله. يتوقف التشغيل مؤقتًا تلقائيًا عندما يعمل تطبيق آخر بملء الشاشة.\n5. التخصيص: تغطي صفحة «التخصيص» (Ctrl+0) أيقونات النظام والمؤشرات والأصوات.\n6. توفّر أيقونة علبة النظام (أسفل اليمين بجانب الساعة) وصولًا سريعًا إلى الملفات الشخصية والخلفية والإعدادات دون فتح النافذة الرئيسية.",
   "About.SectionLicense": "الترخيص",
   "About.LicenseSummary": "برنامج مجاني ومفتوح المصدر بموجب ترخيص MIT — حر في الاستخدام والتعديل وإعادة التوزيع، ويُقدَّم «كما هو» دون أي ضمان. يرد نص الترخيص الكامل والمكونات التابعة لجهات خارجية في ملف LICENSE داخل مجلد التثبيت.",
+  "About.LandmarkCredits": "Landmark photos (weather wallpaper): Wikimedia Commons cut-outs. Eiffel Tower and Big Ben by salomon10, CC BY 2.0 (creativecommons.org/licenses/by/2.0); Parthenon (Jebulon) and Taj Mahal (Mustang Joe) CC0. Full list: landmarks\\ATTRIBUTION.md.",
   "About.LicenseButton": "الترخيص",
   "Common.NoActiveWidgets": "لا توجد أدوات نشطة.",
   "Common.NoActiveZones": "لا توجد DeskZones نشطة.",

@@ -243,6 +243,7 @@
   "About.PluginUninstallQueued": "Plugin stopped - its files will be fully removed the next time Opsis starts.",
   "About.SectionLicense": "License",
   "About.LicenseSummary": "Free and open-source software under the MIT License — free to use, modify and redistribute, provided \"as is\" with no warranty. Full license text and third-party components are listed in the LICENSE file in the install folder.",
+  "About.LandmarkCredits": "Landmark photos (weather wallpaper): Wikimedia Commons cut-outs. Eiffel Tower and Big Ben by salomon10, CC BY 2.0 (creativecommons.org/licenses/by/2.0); Parthenon (Jebulon) and Taj Mahal (Mustang Joe) CC0. Full list: landmarks\\ATTRIBUTION.md.",
   "About.LicenseButton": "License",
   "Common.NoActiveWidgets": "No active widgets.",
   "Common.NoActiveZones": "No active DeskZones.",

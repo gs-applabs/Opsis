@@ -3435,6 +3435,7 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
 
             AddSection(panel, LocalizationManager.T("About.SectionLicense"));
             AddText(panel, LocalizationManager.T("About.LicenseSummary"));
+            AddText(panel, LocalizationManager.T("About.LandmarkCredits"));
             // Ζητήθηκε ρητά "το κουμπί της άδειας χρήσης να εμφανίζεται όπως στο GearWin" — χωρίς
             // ακριβές screenshot αναφοράς του GearWin εδώ, τουλάχιστον διαφοροποιείται οπτικά από
             // τα γενικά full-width κουμπιά ενεργειών της σελίδας (accent-χρωματισμένο "pill", auto-

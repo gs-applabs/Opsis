@@ -243,6 +243,7 @@
   "About.PluginUninstallQueued": "Το plugin σταμάτησε — τα αρχεία του θα αφαιρεθούν πλήρως στην επόμενη εκκίνηση του Opsis.",
   "About.SectionLicense": "Άδεια χρήσης",
   "About.LicenseSummary": "Δωρεάν λογισμικό ανοιχτού κώδικα υπό την άδεια MIT — χρήση, τροποποίηση και αναδιανομή ελεύθερη, χωρίς καμία εγγύηση (\"ως έχει\"). Πλήρες κείμενο άδειας και βιβλιοθήκες τρίτων στο αρχείο LICENSE στον φάκελο εγκατάστασης.",
+  "About.LandmarkCredits": "Φωτογραφίες αξιοθέατων (wallpaper καιρού): αποκόμματα από το Wikimedia Commons. Eiffel και Big Ben του salomon10, CC BY 2.0 (creativecommons.org/licenses/by/2.0)· Παρθενώνας (Jebulon) και Taj Mahal (Mustang Joe) CC0. Πλήρης λίστα: landmarks\\ATTRIBUTION.md.",
   "About.LicenseButton": "Άδεια χρήσης",
   "Common.NoActiveWidgets": "Δεν υπάρχουν ενεργά widgets.",
   "Common.NoActiveZones": "Δεν υπάρχουν ενεργές DeskZones.",

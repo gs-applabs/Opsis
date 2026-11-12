@@ -124,14 +124,14 @@
         return 6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     }
 
-    // Photographic sprites (landmarks/<id>.png, cut-outs of Wikimedia Commons photos with a clear sky, see landmarks/ATTRIBUTION.md). Only landmarks WITH a photo are offered: the hand-built
+    // Photographic sprites (landmarks/<id>.webp, cut-outs of Wikimedia Commons photos with a clear sky, see landmarks/ATTRIBUTION.md). Only landmarks WITH a photo are offered: the hand-built
     // vector shapes above look like drawings, so they stay as a fallback for the future (photoOnly = false) and are not shown by default.
     const SPRITE_IDS = ['parthenon', 'taj', 'eiffel', 'bigben'];
     let photoOnly = true;
     const sprites = {};                       // id -> { img, ready, tinted: { key, canvas } }
     function sprite(id) {
         let s = sprites[id];
-        if (!s) { s = sprites[id] = { img: new Image(), ready: false, tinted: { key: '', canvas: null } }; s.img.onload = () => { s.ready = true; }; s.img.src = 'landmarks/' + id + '.png'; }
+        if (!s) { s = sprites[id] = { img: new Image(), ready: false, tinted: { key: '', canvas: null } }; s.img.onload = () => { s.ready = true; }; s.img.src = 'landmarks/' + id + '.webp'; }
         return s;
     }
 
