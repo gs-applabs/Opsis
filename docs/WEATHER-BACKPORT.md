@@ -4,7 +4,7 @@
 Patch έτοιμο: `docs/weather-backport/0001-weather-providers-for-2.4.6.2.patch` (git format-patch, γραμμένο ώστε να εφαρμόζεται και στο `main` της 2.4.6.x).
 
 ## Επαλήθευση που έγινε
-Σε **ξεχωριστό προσωρινό worktree** (όχι στο `C:\w\Opsis-2.4.6.x`) πάνω στο `main` @ `9c97bf1`:
+Σε **ξεχωριστό προσωρινό worktree** (όχι στο worktree της 2.4.6.x) πάνω στο `main` @ `9c97bf1`:
 `git am --3way` εφαρμόστηκε χωρίς συγκρούσεις (αυτόματη συγχώνευση του `MainWindow.cs`) και τα tests περνούν: **221 passed, 0 failed** (52 καινούργια του καιρού). Η 2.4.6.x δεν έχει `AppVersion`, γι' αυτό ο κώδικας διαβάζει την έκδοση απευθείας από το assembly.
 
 ## Βήματα για τη συνεδρία της 2.4.6.2
@@ -16,7 +16,7 @@ cd tests/Opsis.Tests
 dotnet test -m:1 -p:UseSharedCompilation=false -nodeReuse:false
 ```
 Αν το patch έχει μετατραπεί σε CRLF από το checkout (σφάλμα «corrupt patch»): `git am --3way --ignore-whitespace …` ή `dos2unix` στο αρχείο. Αν το `git am` σταματήσει με σύγκρουση σε `src/UI/MainWindow.cs` ή `locales/*.json`: τα σημεία είναι (α) το μπλοκ μετά το `panel.Controls.Add(locRow);` (κουμπιά τοποθεσίας) και η `SourceLine`, (β) 10 νέα κλειδιά `Wallpaper.Weather*` μετά το `Wallpaper.WeatherLocationCurrent` σε κάθε γλώσσα. Λύσε χειροκίνητα, `git add`, `git am --continue`.
-Εναλλακτικά `git cherry-pick <sha>` από το repo `C:\w\Opsis` αν ο κλάδος είναι ορατός (shared git store).
+Εναλλακτικά `git cherry-pick <sha>` από το repo του 2.6.0 αν ο κλάδος είναι ορατός (shared git store).
 
 ## Αρχεία που αγγίζει
 Νέα: `src/Widgets/WeatherProviders.cs`, `src/Widgets/DeviceLocation.cs`, `tests/Opsis.Tests/WeatherProvidersTests.cs`, `docs/WEATHER-PROVIDERS.md` (μετονομασία από `WEATHER_PROVIDERS.md`).
