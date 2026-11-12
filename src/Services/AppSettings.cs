@@ -161,8 +161,11 @@ namespace MotionDesk.Services
         // 2.6.0: the shared settings file of the Opsis family (Opsis.UI.SettingsStore): "schemaVersion" in the file, step migrations (none yet: version 1 is the
         // first numbered shape), atomic write with a .bak of the last good file, and a damaged file is moved to .corrupt instead of being silently ignored.
         // The store is cheap to create, so it follows AppPaths.AppDataFolder (tests / OPSIS_APPDATA) on every call.
-        public const int SchemaVersion = 1;
-        private static SettingsStore<AppSettings> Store() => new(ConfigPath, SchemaVersion);
+        public const int SchemaVersion = 2;
+        private static SettingsStore<AppSettings> Store() => NewStore(ConfigPath);
+
+        /// <summary>Version 2 (2.6.0): the native DeskContainers core is the default. Earlier betas wrote UseNativeContainers=false into the file, which would keep the new core OFF after an upgrade: the step turns it on once.</summary>
+        internal static SettingsStore<AppSettings> NewStore(string path) => new SettingsStore<AppSettings>(path, SchemaVersion).AddMigration(1, o => o["UseNativeContainers"] = true);
 
         public static AppSettings Load() => Store().Load();
 
