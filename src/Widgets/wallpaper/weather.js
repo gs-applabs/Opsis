@@ -575,7 +575,8 @@ function drawLandmarkOnHorizon(sky, graded, shade, haze) {
         warm: mix([255, 236, 205], graded.hor, clamp(sky.glow || 0, 0, 1) * 0.6),
     };
     if (flash > 0) pal.amb = clamp(pal.amb + flash * 0.5, 0, 1);
-    const h = Math.max(70, H * 0.24);
+    pal.glow = clamp(sky.glow || 0, 0, 1); pal.maxW = W * 0.24;
+    const h = Math.max(90, H * 0.34);
     window.OpsisLandmarks.drawLandmark(skyCtx, landmarkPick.id, W * 0.72, HORIZON + 2, h, pal);
 }
 

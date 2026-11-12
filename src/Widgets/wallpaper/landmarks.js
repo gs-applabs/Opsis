@@ -124,11 +124,22 @@
         return 6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     }
 
+    // Photographic sprites (landmarks/<id>.png, cut-outs of Wikimedia Commons photos with a clear sky, see landmarks/ATTRIBUTION.md). Only landmarks WITH a photo are offered: the hand-built
+    // vector shapes above look like drawings, so they stay as a fallback for the future (photoOnly = false) and are not shown by default.
+    const SPRITE_IDS = ['parthenon', 'taj', 'eiffel', 'bigben'];
+    let photoOnly = true;
+    const sprites = {};                       // id -> { img, ready, tinted: { key, canvas } }
+    function sprite(id) {
+        let s = sprites[id];
+        if (!s) { s = sprites[id] = { img: new Image(), ready: false, tinted: { key: '', canvas: null } }; s.img.onload = () => { s.ready = true; }; s.img.src = 'landmarks/' + id + '.png'; }
+        return s;
+    }
+
     // nearest landmark within maxKm of the position; null when nothing is near (the plain hills stay)
     function pickLandmark(lat, lon, maxKm = 250) {
         if (typeof lat !== 'number' || typeof lon !== 'number' || isNaN(lat) || isNaN(lon)) return null;
         let best = null, bd = Infinity;
-        for (const m of LANDMARKS) { const d = distKm(lat, lon, m.lat, m.lon); if (d < bd) { bd = d; best = m; } }
+        for (const m of LANDMARKS) { if (photoOnly && !SPRITE_IDS.includes(m.id)) continue; const d = distKm(lat, lon, m.lat, m.lon); if (d < bd) { bd = d; best = m; } }
         return best && bd <= maxKm ? { id: best.id, name: best.name, km: Math.round(bd) } : null;
     }
 
@@ -136,8 +147,45 @@
     const mixc = (a, b, t) => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
     const css = (c, a = 1) => `rgba(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])},${a})`;
 
-    // pal: { amb 0..1 (daylight), haze [r,g,b] (colour of the distant air), fog 0..1, sunSide -1 (light from the left) .. 1 (right), warm [r,g,b] (sun / sky tint), night 0..1, snow 0..1 }
+    // pal: { amb 0..1 (daylight), haze [r,g,b] (colour of the distant air), fog 0..1, sunSide -1 (light from the left) .. 1 (right), warm [r,g,b] (sun / sky tint), night 0..1, snow 0..1, maxW px }
+    // h = maximum height in px. Photographic sprites are tinted by the light of the scene (multiply by the ambient colour, warm floodlight at night, haze of the distance) in an
+    // offscreen canvas that is rebuilt only when the quantised light changes (a few times per day), so a frame costs one drawImage.
     function drawLandmark(g, id, cx, baseY, h, pal) {
+        if (SPRITE_IDS.includes(id)) return drawSprite(g, id, cx, baseY, h, pal);
+        return drawProcedural(g, id, cx, baseY, h, pal);
+    }
+
+    function drawSprite(g, id, cx, baseY, maxH, pal) {
+        const s = sprite(id); if (!s.ready) return false;
+        const iw = s.img.naturalWidth, ih = s.img.naturalHeight;
+        const scale = Math.min(maxH / ih, (pal.maxW || maxH * 1.5) / iw);
+        const w = Math.max(8, Math.round(iw * scale)), h = Math.max(8, Math.round(ih * scale));
+        const amb = clamp01(pal.amb), night = clamp01(pal.night || 0), fog = clamp01(pal.fog || 0), snow = clamp01(pal.snow || 0);
+        const key = [w, h, Math.round(amb * 14), Math.round(night * 8), Math.round(fog * 10), Math.round(snow * 5), Math.round((pal.glow || 0) * 4)].join('/');
+        const t = s.tinted;
+        if (t.key !== key) {
+            const c = t.canvas || (t.canvas = document.createElement('canvas')); c.width = w; c.height = h;
+            const o = c.getContext('2d'); o.clearRect(0, 0, w, h); o.imageSmoothingQuality = 'high'; o.drawImage(s.img, 0, 0, w, h);
+            // daylight: the photo is a bright afternoon shot, so full ambient = unchanged; dusk and night multiply it down and towards the warm / cool light of the sky
+            const warm = pal.warm || [255, 236, 205], dusk = clamp01((pal.glow || 0) * (1 - amb) * 1.6);
+            const dayMul = mixc([62, 74, 110], [255, 255, 255], Math.pow(amb, 0.8));
+            const mul = mixc(dayMul, [dayMul[0] * warm[0] / 255, dayMul[1] * warm[1] / 255, dayMul[2] * warm[2] / 255], dusk * 0.6);
+            o.globalCompositeOperation = 'multiply'; o.fillStyle = css(mul); o.fillRect(0, 0, w, h);
+            o.globalCompositeOperation = 'destination-in'; o.drawImage(s.img, 0, 0, w, h);            // restore the alpha the multiply fill covered
+            o.globalCompositeOperation = 'source-atop';
+            if (night > 0.05) { o.fillStyle = css([255, 196, 120], 0.2 * night); o.fillRect(0, 0, w, h); }  // warm floodlight on the stone at night
+            if (snow > 0.05) { o.fillStyle = css([232, 238, 250], 0.18 * snow); o.fillRect(0, 0, w, h); }
+            const haze = pal.haze || [200, 210, 225];
+            o.fillStyle = css(haze, 0.1 + fog * 0.65); o.fillRect(0, 0, w, h);                         // the air between us and the monument, thicker in fog
+            o.globalCompositeOperation = 'source-over';
+            t.key = key;
+        }
+        g.save(); g.imageSmoothingQuality = 'high';
+        g.drawImage(t.canvas, Math.round(cx - w / 2), Math.round(baseY - h + h * 0.02));
+        g.restore(); return true;
+    }
+
+    function drawProcedural(g, id, cx, baseY, h, pal) {
         const m = LANDMARKS.find(x => x.id === id); if (!m) return false;
         const amb = clamp01(pal.amb), night = clamp01(pal.night || 0), fog = clamp01(pal.fog || 0), side = pal.sunSide >= 0 ? 1 : -1;
         const haze = pal.haze || [200, 210, 225], warm = pal.warm || [255, 236, 205];

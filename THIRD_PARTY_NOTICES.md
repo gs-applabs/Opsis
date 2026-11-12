@@ -46,3 +46,7 @@ and the process exits together with Opsis. Data of earlier builds is migrated au
 ## Disclaimer
 
 The software is provided "as is" (see LICENSE). It injects a window behind the desktop icons and customises system icons and cursors: use it at your own risk.
+
+## Landmark photos (weather wallpaper)
+Cut-outs of Wikimedia Commons photographs (public domain, CC0, CC BY 2.0): see src/Widgets/wallpaper/landmarks/ATTRIBUTION.md for author, licence and source of every photo.
+
