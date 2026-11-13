@@ -4732,7 +4732,7 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
             {
                 var row = new FlowLayoutPanel { AutoSize = true, WrapContents = false, Margin = new Padding(marginLeft, 2, 0, 4) };
                 row.Controls.Add(new Label { Text = label + ":", AutoSize = true, ForeColor = UiTheme.TextSecondary, Font = UiTheme.FontBody, Padding = new Padding(0, 6, 8, 0) });
-                var numeric = new NumericUpDown { Minimum = min, Maximum = max, Value = value, Width = 80 };
+                var numeric = new NumericUpDown { Minimum = min, Maximum = max, Value = Math.Clamp(value, min, max), Width = 80 };
                 numeric.ValueChanged += (_, _) => ApplySetting(label, () => onChange((int)numeric.Value));
                 row.Controls.Add(numeric);
                 row.Controls.Add(new Label { Text = unit, AutoSize = true, ForeColor = UiTheme.TextMuted, Font = UiTheme.FontBody, Padding = new Padding(8, 6, 0, 0) });
