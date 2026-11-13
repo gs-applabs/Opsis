@@ -48,3 +48,13 @@
 - ✓ Οικογένεια χωρίς καταργημένες εφαρμογές (catalogue, README, installer, μεταφράσεις, VersionNotes)· Waveframe → Opsis Media Suite.
 - ✓ Καιρός: `docs/WEATHER-PROVIDERS.md` + `docs/WEATHER-BACKPORT.md`· Crawler: ίδιο σύστημα (MET Norway δεύτερη πηγή + opt-in τοποθεσία), commit 507eca6/e06cdc5 στο repo του.
 - ✓ Εξατομίκευση: cache λίστας εικόνων slideshow, δείγμα χρώματος wallpaper με όριο μεγέθους και μνήμη, εγγραφή tray «Εναλλαγή Φωτεινό / Σκούρο» (14 γλώσσες).
+
+## ΕΤΟΙΜΟ ΓΙΑ MERGE — κλάδος claude/2-6-0-app-418714 (ci-2.6.0-app), κώδικας στο commit c389cb4
+(μετά από αυτό μόνο αυτή η ενότητα docs). Build 0 σφάλματα, 424 tests Opsis passed, UI audit + installer-e2e + plugin-e2e + security-scan πέρασαν στο GitHub runner (πριν τις τελευταίες αλλαγές· ξαναδοκιμάζονται παρακάτω).
+
+**Έγιναν:** Ενσωμάτωση εμφάνισης Windows στην Εξατομίκευση (ίδια καρτέλα, κάρτες, «Για προχωρημένους», συγχώνευση θεμάτων/διαφάνειας, ledger , εισαγωγέας μόνο-ανάγνωσης, installer ανιχνεύει/απεγκαθιστά το παλιό, ουδέτερα κείμενα) · οικογένεια/catalogue/README/installer/μεταφράσεις χωρίς καταργημένες εφαρμογές · σκούρος installer · καιρός με παρόχους NWS/Open-Meteo/MET + ήλιος/σελήνη + opt-in τοποθεσία + όνομα περιοχής (offline GeoNames, προαιρετικό OSM) + πηγή στις ρυθμίσεις · music overlay GSMTC · δεξί κλικ επιφάνειας (opt-in) · βιβλιοθήκη βίντεο (κουμπιά, drag&drop) · perf §9 · εκκίνηση πρώτα (opt-in εργασία Task Scheduler) · τίτλος παραθύρου «Opsis 2.6.0 beta» · contract plugins με rich feeds · πλευρικό μενού με όλα τα στοιχεία · διόρθωση σφάλματος DeskContainers · tray Φωτεινό/Σκούρο.
+**Lockscreen GIF:** ΔΕΝ υλοποιήθηκε εγγραφή στο cache συστήματος (αλλάζει ACL/αρχεία συστήματος και ανεπίσημο χαρακτηριστικό Windows· δεν δοκιμάζεται χωρίς πραγματικό lock screen). Υπάρχει σαφές κείμενο στην Εξατομίκευση και κουμπί προς το έργο LockscreenGif (MIT).
+**2.4.6.2:**  (patches + βήματα στο ).
+
+**ΔΕΝ δοκιμάστηκε (χρειάζεται πραγματικό Windows 11):** εφέ παραθύρων/taskbar look/στρογγυλό taskbar · Windows Location και δικαιώματα · αίτημα Nominatim (μόνο mock)· εκκίνηση-πρώτα (η εργασία δεν δημιουργήθηκε ποτέ, μόνο XML σε test) · wizard/εγκατάσταση/απεγκατάσταση του installer (μόνο compile + silent e2e στον runner) · πλευρικό μενού σε μικρή οθόνη (μόνο λογική) · 150/200 % DPI · μνήμη 16 βίντεο · drag&drop με ποντίκι · μέτρηση πόρων.
+**Εκτός πεδίου / εκκρεμή:** κάρτες στις υπόλοιπες πυκνές σελίδες (Audio, DeskZones, Widgets, υπόλοιπο Wallpaper) · ενοποίηση ενημερώσεων plugins (θέλει contract) · Lockscreen GIF εγγραφή cache.
