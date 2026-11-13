@@ -144,7 +144,10 @@ namespace MotionDesk.Services
         public bool PauseWhenDesktopCovered { get; set; } = true;
 
         /// <summary>2.6.0: draw the DeskStrip glass with the GPU glass layer (Opsis.Glass): real transparency, live refraction of what is behind. Off until tested on real machines.</summary>
+        /// <summary>Old on/off switch; kept so an explicit "on" from an earlier beta keeps its choice (see <see cref="GpuGlassMode"/>).</summary>
         public bool UseGpuGlass { get; set; }
+        /// <summary>GPU glass of widgets / DeskStrip / containers: "Auto" (default: decided from the computer and the current load), "Always", "Blur", "Solid". Null = take it from <c>UseGpuGlass</c>.</summary>
+        public string? GpuGlassMode { get; set; }
         /// <summary>2.6.0: the native DeskContainers core (own data file containers-native.json, pipe opsis-containers-v1-*). The WPF fork was removed; on first start the 2.4.x data is imported read-only.</summary>
         public bool UseNativeContainers { get; set; } = true;
         /// <summary>Dropping a desktop icon into a container hides the desktop original (as the old engine did). The originals are ALWAYS given back on exit, at the next start and by --restore-desktop-icons.</summary>

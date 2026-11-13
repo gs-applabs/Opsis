@@ -4503,8 +4503,18 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                     v => { var a = AppSettings.Load(); a.UiSoundsEnabled = v; a.Save(); }));
                 var appearanceAdvanced = new AdvancedSection();
                 appearanceAdvanced.AddControl(BuildOpacityRow());
-                appearanceAdvanced.AddControl(Checkbox(LocalizationManager.T("Settings.GpuGlass"), AppSettings.Load().UseGpuGlass,
-                    v => { var a = AppSettings.Load(); a.UseGpuGlass = v; a.Save(); }, LocalizationManager.T("Settings.GpuGlassDesc"), restart: true));
+                {
+                    // GPU glass of widgets / DeskStrip / containers: Auto (default) decides from the computer and the current load; the line below says what is used now and why
+                    var modes = new[] { "Auto", "Always", "Blur", "Solid" };
+                    var names = new[] { Lx("Αυτόματο (προτεινόμενο)", "Automatic (recommended)"), Lx("Πάντα glass", "Always glass"), Lx("Απλό blur", "Simple blur"), Lx("Συμπαγές", "Solid") };
+                    var cur = GlassPolicy.ParseMode(AppSettings.Load().GpuGlassMode, AppSettings.Load().UseGpuGlass).ToString();
+                    var status = new Label { AutoSize = true, ForeColor = UiTheme.TextSecondary, Font = UiTheme.FontBody, Margin = new Padding(0, 0, 0, 8), MaximumSize = new Size(640, 0), Text = Lx("Τώρα: ", "Now: ") + GlassService.Describe() };
+                    var holder = new FlowLayoutPanel { AutoSize = true, FlowDirection = FlowDirection.TopDown, WrapContents = false, Margin = new Padding(0) };
+                    FxCombo(holder, Lx("Glass σε widgets / DeskStrip / containers", "Glass for widgets / DeskStrip / containers"), names, names[Math.Max(0, Array.IndexOf(modes, cur))],
+                        v => { var a = AppSettings.Load(); a.GpuGlassMode = modes[Math.Max(0, Array.IndexOf(names, v))]; a.Save(); status.Text = Lx("Τώρα: ", "Now: ") + GlassService.Describe(); });
+                    holder.Controls.Add(status);
+                    appearanceAdvanced.AddControl(holder);
+                }
                 appearanceAdvanced.AddControl(Checkbox(LocalizationManager.T("Settings.DesktopMenu"), AppSettings.Load().DesktopMenuEnabled,
                     v => { var a = AppSettings.Load(); a.DesktopMenuEnabled = v; a.Save(); try { DesktopMenu.Apply(v); } catch (Exception) { } }, LocalizationManager.T("Settings.DesktopMenuDesc"), restart: true));
                 // music overlay (plan 2.1.6): live, no restart

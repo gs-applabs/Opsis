@@ -20,7 +20,29 @@ namespace MotionDesk.Services
         /// <summary>Diagnostics: while true Refresh() does not touch the conditions (a test holds them).</summary>
         internal static volatile bool Hold;
 
-        public static bool Enabled => AppSettings.Peek().UseGpuGlass && !SafeModeService.IsSafeMode && Environment.OSVersion.Version.Build >= 22000 && !_failed;
+        private static GlassLevel _level = GlassLevel.Solid; private static string _reason = ""; private static DateTime _decidedAt;
+        private static HardwareInfo? _hw;
+
+        /// <summary>What is used right now and why (for the settings page).</summary>
+        public static string Describe() { Decide(); return GlassPolicy.Describe(_level, _reason); }
+        internal static GlassLevel Level { get { Decide(); return _level; } }
+
+        private static void Decide()
+        {
+            if ((DateTime.UtcNow - _decidedAt).TotalMilliseconds < 800) return;
+            _decidedAt = DateTime.UtcNow;
+            try
+            {
+                var s = AppSettings.Peek(); var act = AppActivity.Snapshot; _hw ??= HardwareInfo.Detect();
+                var inp = new GlassInputs(_hw.RamMb, _hw.PhysicalCores, _hw.Adapters, _hw.OnBattery, Environment.OSVersion.Version.Build, SafeModeService.IsSafeMode, Opsis.UI.GlassEnvironment.TransparencyEnabled,
+                    System.Windows.Forms.SystemInformation.HighContrast, act.Remote, act.Locked, act.Fullscreen, act.BatterySaver, _failed, PerformanceGovernor.EffectiveTier);
+                (_level, _reason) = GlassPolicy.Decide(GlassPolicy.ParseMode(s.GpuGlassMode, s.UseGpuGlass), inp);
+            }
+            catch (Exception) { _level = GlassLevel.Solid; _reason = "could not read the computer's state"; }
+        }
+
+        /// <summary>True while the GPU glass may be used: the policy says Full or Frosted (no static default: the choice comes from the computer and follows the load live).</summary>
+        public static bool Enabled { get { Decide(); return _level is GlassLevel.Full or GlassLevel.Frosted; } }
 
         /// <summary>The manager when glass is enabled and the GPU part is ready; null otherwise (the caller keeps its non-GPU look).</summary>
         public static OpsisGlass.GlassManager? Manager
@@ -57,7 +79,7 @@ namespace MotionDesk.Services
                 var wp = WallpaperHostEngine_IsLive();
                 var c = new OpsisGlass.GlassConditions
                 {
-                    Tier = PerformanceGovernor.EffectiveTier switch { HardwareTier.High => OpsisGlass.GlassTier.High, HardwareTier.Balanced => OpsisGlass.GlassTier.Balanced, _ => OpsisGlass.GlassTier.Low },
+                    Tier = Level switch { GlassLevel.Full => OpsisGlass.GlassTier.High, GlassLevel.Frosted => OpsisGlass.GlassTier.Balanced, _ => OpsisGlass.GlassTier.Low },     // Blur / Solid: the manager suspends and the windows keep their simple look
                     LiveBackdrop = wp,
                     Locked = act.Locked, RemoteSession = act.Remote, FullscreenApp = act.Fullscreen, BatterySaver = act.BatterySaver,
                     SafeMode = SafeModeService.IsSafeMode
