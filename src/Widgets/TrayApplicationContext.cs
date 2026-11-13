@@ -28,8 +28,12 @@ namespace MotionDesk.Widgets
         public static event Action? ExitRequested;
         public static void RequestExit() => ExitRequested?.Invoke();
 
+        /// <summary>Lets any window ("Settings…" in its own right-click menu) open a page of the main window.</summary>
+        public static Action<string>? OpenPage;
+
         public TrayApplicationContext()
         {
+            OpenPage = p => { try { ShowMainWindow(p); } catch (Exception) { } };
             // Safe mode (v2.0 handoff, Φάση 1 §S): αν ενεργό, παραλείπονται plugins/wallpaper/
             // "Last Session" παρακάτω — μόνο το βασικό UI. Ο μετρητής crash μηδενίζεται μετά από
             // 30s επιτυχούς λειτουργίας (one-shot timer πιο κάτω), όχι αμέσως, ώστε ένα crash λίγο

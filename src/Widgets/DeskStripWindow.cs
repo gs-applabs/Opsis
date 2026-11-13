@@ -118,8 +118,11 @@ namespace MotionDesk.Widgets
 
             Microsoft.Win32.SystemEvents.DisplaySettingsChanged += OnScreenChanged;
             Microsoft.Win32.SystemEvents.UserPreferenceChanged += OnScreenChanged;
+            Action look = () => { if (IsHandleCreated && !IsDisposed) try { BeginInvoke(() => { ApplyLayout(animate: false); Invalidate(); }); } catch (Exception) { } };
+            MotionDesk.UI.ThemeManager.Changed += look; MotionDesk.UI.ThemeManager.Repainted += look;                       // live: theme / tint / glass changes repaint the open strip
             FormClosed += (_, _) =>
             {
+                MotionDesk.UI.ThemeManager.Changed -= look; MotionDesk.UI.ThemeManager.Repainted -= look;
                 Microsoft.Win32.SystemEvents.DisplaySettingsChanged -= OnScreenChanged;
                 Microsoft.Win32.SystemEvents.UserPreferenceChanged -= OnScreenChanged;
                 _saveTimer.Stop(); _pollTimer.Stop(); _animTimer.Stop(); _hideTimer.Stop(); _hoverTimer.Stop();
@@ -652,6 +655,7 @@ namespace MotionDesk.Widgets
             if (it.Windows.Count > 0)
                 menu.Items.Add(it.Windows.Count > 1 ? "Κλείσιμο όλων των παραθύρων / Close all windows" : "Κλείσιμο παραθύρου / Close window", null, (_, _) => { foreach (var w in it.Windows.ToList()) WinApi.Close(w); });
             menu.Items.Add(new ToolStripSeparator());
+            menu.Items.Add(LocalizationManager.T("DCM.DeskStripSettings"), null, (_, _) => TrayApplicationContext.OpenPage?.Invoke("DeskStrip"));
             menu.Items.Add(it.Pinned ? LocalizationManager.T("DCMenu.Unpin") : "Καρφίτσωμα στο dock / Pin to dock", null, (_, _) =>
             {
                 if (it.Pinned) UnpinApp(it.Key); else PinApp(it.Target ?? it.Key);

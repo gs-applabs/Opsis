@@ -242,6 +242,17 @@ namespace MotionDesk.Containers
         public Container Model { get; }
         public bool GlassOn => MotionDesk.Services.GlassService.Enabled;
         public event Action<Container>? Changed;
+        /// <summary>The user asked for this container's own settings (title bar right-click menu).</summary>
+        public event Action<string>? SettingsRequested;
+
+        /// <summary>Live settings: takes the look (title bar, appearance, title, lock) from the stored container, so a change made anywhere shows at once without recreating the window.</summary>
+        public void ApplyStyle(Container stored)
+        {
+            Model.Title = stored.Title; Model.Locked = stored.Locked; Model.TitleBar = stored.TitleBar; Model.Appearance = stored.Appearance;
+            if (IsHandleCreated) { Dirty(); Invalidate(); }
+        }
+        /// <summary>The global look (theme, glass, tint, performance tier) changed: repaint with the current settings.</summary>
+        public void Restyle() { if (IsHandleCreated) { Dirty(); Invalidate(); } }
         /// <summary>Raised after files were dropped in (the host may hide their desktop originals) and after an item was removed (the host gives its original back).</summary>
         public event Action<IReadOnlyList<string>>? ItemsAdded; public event Action<string>? ItemRemoved;
 
@@ -532,6 +543,7 @@ namespace MotionDesk.Containers
                 menu.Items.Add(new ToolStripSeparator());
             }
             else { Add("Edit note...", EditNote); menu.Items.Add(new ToolStripSeparator()); }
+            Add(MotionDesk.Services.LocalizationManager.T("DCM.ContainerSettings"), () => SettingsRequested?.Invoke(Model.Id));
             Add(Model.Locked ? "Unlock container" : "Lock container" , () => { Model.Locked = !Model.Locked; Dirty(); Changed?.Invoke(Model); });
             Add(Model.RolledUp ? "Unroll" : "Roll up", ToggleRollUp);
             menu.Closed += (_, _) => BeginInvoke(() => menu.Dispose());

@@ -67,7 +67,7 @@ namespace MotionDesk.UI
                     foreach (Control old in holder.Controls.Cast<Control>().ToList()) { holder.Controls.Remove(old); old.Dispose(); }
                     var c = host.Containers().ElementAtOrDefault(sel); if (c == null) return;
                     string id = c.Id; var tb = c.TitleBar;
-                    void Style(string key, object value) { host.Service.Handle("set-title-style", new System.Text.Json.Nodes.JsonObject { ["id"] = id, [key] = System.Text.Json.Nodes.JsonValue.Create(value) }); host.Sync(); }
+                    void Style(string key, object value) { host.Flush(); host.Service.Handle("set-title-style", new System.Text.Json.Nodes.JsonObject { ["id"] = id, [key] = System.Text.Json.Nodes.JsonValue.Create(value) }); host.Sync(); }
                     var colorRow = new FlowLayoutPanel { AutoSize = true, WrapContents = false, Margin = new Padding(0, 2, 0, 6) };
                     colorRow.Controls.Add(new Label { Text = Lx("Χρώμα τίτλου (#RRGGBB ή Auto):", "Title bar colour (#RRGGBB or Auto):"), AutoSize = true, ForeColor = UiTheme.TextSecondary, Font = UiTheme.FontBody, Padding = new Padding(0, 6, 10, 0) });
                     var colorBox = new TextBox { Width = 110, Text = tb.Color };
@@ -77,7 +77,7 @@ namespace MotionDesk.UI
                     holder.Controls.Add(SettingsView.NumericRow(Lx("Ύψος τίτλου", "Title bar height"), tb.Height, 16, 96, v => Style("height", v), 0, "px"));
                     holder.Controls.Add(SettingsView.NumericRow(Lx("Μέγεθος γραμματοσειράς τίτλου", "Title font size"), (int)tb.FontSize, 6, 36, v => Style("fontSize", (float)v), 0, "pt"));
                     holder.Controls.Add(SettingsView.Checkbox(Lx("Κλείδωμα (δεν μετακινείται/αλλάζει μέγεθος)", "Locked (cannot move or resize)"), c.Locked,
-                        v => { host.Service.Update(d => { var x = d.Containers.FirstOrDefault(k => k.Id == id); if (x == null) return false; x.Locked = v; return true; }); host.Sync(); }));
+                        v => host.Apply(id, x => { x.Locked = v; return true; })));
                     holder.Controls.Add(SettingsView.Checkbox(Lx("Κρυμμένο", "Hidden"), c.Hidden, v => host.SetHidden(id, v)));
                     var del = new HoverButton { Text = LocalizationManager.T("DCX.DeleteContainer"), Width = 230, Height = 32, FlatStyle = FlatStyle.Flat, ForeColor = UiTheme.TextPrimary, BackColor = UiTheme.SurfaceHover, Cursor = Cursors.Hand, Margin = new Padding(0, 6, 0, 0) };
                     del.FlatAppearance.BorderSize = 0;

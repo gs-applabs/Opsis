@@ -39,7 +39,23 @@ namespace MotionDesk.Containers
             _z.Tick += (_, _) => ReseatZOrder(); _z.Start();
             if (pipeName != null) { _pipe = new PipeServer(pipeName, new HostApi(this)); _pipe.Start(); }
             Microsoft.Win32.SystemEvents.DisplaySettingsChanged += OnDisplayChanged;
+            // live settings: a change of the global look (theme / tint / glass / performance tier / language) repaints the open windows, debounced into one repaint
+            _look.Tick += (_, _) => { _look.Stop(); foreach (var w in _windows.Values) w.Restyle(); };
+            MotionDesk.UI.ThemeManager.Changed += OnLookChanged; MotionDesk.UI.ThemeManager.Repainted += OnLookChanged;
+            MotionDesk.Services.HardwareProfileService.ProfileChanged += OnTierChanged; MotionDesk.Services.LocalizationManager.Changed += OnLookChanged;
             Current = this;
+            Sync();
+        }
+
+        private readonly System.Windows.Forms.Timer _look = new() { Interval = 150 };
+        private void OnTierChanged(MotionDesk.Services.HardwareTier _) => OnLookChanged();
+        private void OnLookChanged() { if (_ui.IsHandleCreated && !_ui.IsDisposed) try { _ui.BeginInvoke(() => { _look.Stop(); _look.Start(); }); } catch (Exception) { } }
+
+        /// <summary>Changes one container through the service and shows it at once (flushes pending window changes first so nothing is overwritten).</summary>
+        public void Apply(string id, Func<Container, bool> change)
+        {
+            Flush();
+            _service.Update(doc => { var c = doc.Containers.FirstOrDefault(x => x.Id == id); return c != null && change(c); });
             Sync();
         }
 
@@ -126,11 +142,12 @@ namespace MotionDesk.Containers
                 {
                     if (_windows.TryGetValue(id, out var existing))
                     {
-                        var b = Place(model, mons); if (existing.Bounds != b && !_dirty.ContainsKey(id)) existing.Bounds = b;
+                        if (!_dirty.ContainsKey(id)) { existing.ApplyStyle(model); var b = Place(model, mons); if (existing.Bounds != b) existing.Bounds = b; }
                         continue;
                     }
                     var w = new ContainerWindow(model, () => _windows.Where(p => p.Key != id).Select(p => p.Value.Bounds)) { Bounds = Place(model, mons) };
                     w.Changed += c => { _dirty[c.Id] = c; if (!_save.Enabled) _save.Start(); };
+                    w.SettingsRequested += cid => ContainerSettingsForm.Open(this, cid);
                     w.ItemsAdded += paths => { if (MotionDesk.Services.AppSettings.Load().HideOriginalsOnDrop) MotionDesk.Widgets.DesktopIconVisibilityEngine.HideOriginals(paths); };
                     w.ItemRemoved += p => MotionDesk.Widgets.DesktopIconVisibilityEngine.RestoreOriginals(p);
                     _windows[id] = w; w.Show(); DesktopZOrder.Place(w.Handle);
@@ -190,6 +207,8 @@ namespace MotionDesk.Containers
         {
             if (ReferenceEquals(Current, this)) Current = null;
             Microsoft.Win32.SystemEvents.DisplaySettingsChanged -= OnDisplayChanged;
+            MotionDesk.UI.ThemeManager.Changed -= OnLookChanged; MotionDesk.UI.ThemeManager.Repainted -= OnLookChanged;
+            MotionDesk.Services.HardwareProfileService.ProfileChanged -= OnTierChanged; MotionDesk.Services.LocalizationManager.Changed -= OnLookChanged; _look.Dispose();
             try { MotionDesk.Widgets.DesktopIconVisibilityEngine.RestoreOriginals(); } catch (Exception) { }          // every exit gives the hidden originals back
             Flush(); _save.Dispose(); _rules.Dispose(); _z.Dispose(); _pipe?.Dispose();
             foreach (var w in _windows.Values) { w.Close(); w.Dispose(); }

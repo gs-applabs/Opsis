@@ -271,11 +271,20 @@ namespace MotionDesk.Services
                 Opsis.Containers.PipeClient.Send(pipe, "show", new System.Text.Json.Nodes.JsonObject { ["id"] = id }); Pump(600);
                 report.Add($"show via pipe -> windows={host.Windows.Count} (expected 1)");
                 var w = host.Windows.First();
+                // live settings: every change shows in the OPEN window (same object, no recreation)
+                void Live(string what, bool ok) => report.Add((ok ? "live ok: " : "FAIL live: ") + what);
+                Opsis.Containers.PipeClient.Send(pipe, "set-title-style", new System.Text.Json.Nodes.JsonObject { ["id"] = id, ["color"] = "#aa3300", ["height"] = 52, ["opacity"] = 40, ["fontSize"] = 14 }); Pump(400);
+                Live("title colour/height/opacity/font via pipe", ReferenceEquals(host.Windows.First(), w) && w.Model.TitleBar.Color == "#aa3300" && w.Model.TitleBar.Height == 52 && w.Model.TitleBar.Opacity == 40 && (int)w.Model.TitleBar.FontSize == 14);
+                host.Apply(id, k => { k.Appearance.IconSize = 72; k.Locked = true; return true; });
+                Live("icon size + lock via host.Apply", w.Model.Appearance.IconSize == 72 && w.Model.Locked);
+                host.Apply(id, k => { k.Title = "Renamed"; return true; });
+                Live("title text", w.Model.Title == "Renamed");
+                host.Apply(id, k => { k.TitleBar.Height = 28; k.Locked = false; return true; });
                 var moved = new Rectangle(w.Left + 50, w.Top + 40, w.Width, w.Height);
                 w.AcceptDrop(new[] { Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "notepad.exe") }, new Point(60, 80));
                 Pump(900);   // debounced save
                 var doc = new Opsis.Containers.ContainersStore(file).Load();
-                report.Add($"window change saved: items={doc.Containers[0].Items.Count} (expected 1), titleColor={doc.Containers[0].TitleBar.Color} (expected #336699)");
+                report.Add($"window change saved: items={doc.Containers[0].Items.Count} (expected 1), titleColor={doc.Containers[0].TitleBar.Color} (expected #aa3300)");
                 var ta = Opsis.Containers.PipeClient.Send(pipe, "toggle-all"); Pump(500);
                 report.Add($"toggle-all -> resp={ta.ToJsonString()} windows={host.Windows.Count} (expected true, 0)");
                 ta = Opsis.Containers.PipeClient.Send(pipe, "toggle-all"); Pump(500);
@@ -286,7 +295,7 @@ namespace MotionDesk.Services
             catch (Exception ex) { report.Add("EXCEPTION: " + ex); }
             finally { GlassService.Shutdown(); }
             File.WriteAllLines(Path.Combine(folder, "container-host.txt"), report);
-            return report.Any(l => l.StartsWith("EXCEPTION")) ? 1 : 0;
+            return report.Any(l => l.StartsWith("EXCEPTION") || l.StartsWith("FAIL")) ? 1 : 0;
         }
 
         /// <summary>Renders the music overlay card for a made-up track onto a dark stand-in (no desktop content) and checks the placement rule.</summary>
