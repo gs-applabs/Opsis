@@ -95,6 +95,17 @@ namespace MotionDesk.Containers
             Sync();
         }
 
+        public void ShowSpotSearch() { var f = new SpotSearchForm(() => _service.Snapshot()); f.FormClosed += (_, _) => f.Dispose(); f.Show(); }
+
+        /// <summary>Profile hotkeys: next / previous layout snapshot (the saved layouts act as profiles). Returns the name that was loaded, or null when there is none.</summary>
+        public string? CycleSnapshot(int direction)
+        {
+            var names = SnapshotNames(); if (names.Count == 0) return null;
+            _snapIndex = ((_snapIndex + direction) % names.Count + names.Count) % names.Count;
+            LoadSnapshot(names[_snapIndex]); return names[_snapIndex];
+        }
+        private int _snapIndex = -1;
+
         public void SetHidden(string id, bool hidden) { _service.Handle(hidden ? "hide" : "show", new System.Text.Json.Nodes.JsonObject { ["id"] = id }); Sync(); }
         public void Focus(string id) { if (_windows.TryGetValue(id, out var w)) w.FocusForKeyboard(); }
         public string SaveSnapshot(string name) { Flush(); var r = _service.Handle("snapshot-save", new System.Text.Json.Nodes.JsonObject { ["name"] = name }); return r?["saved"]?.ToString() ?? ""; }

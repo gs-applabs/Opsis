@@ -194,6 +194,9 @@ namespace MotionDesk.Widgets
                     // global hotkeys of the native containers: Ctrl+Alt+Shift+H = hide / show all, Ctrl+Alt+Shift+N = new container at the cursor (neither is a Windows default)
                     _hotkeys.RegisterCtrlAltShift(Keys.H, () => host.ToggleAll());
                     _hotkeys.RegisterCtrlAltShift(Keys.N, () => host.NewContainerAtCursor());
+                    _hotkeys.RegisterCtrl(Keys.Oemtilde, () => host.ShowSpotSearch());                              // Spot Search (Ctrl+`), as in the old engine
+                    _hotkeys.RegisterCtrlAltShift(Keys.OemCloseBrackets, () => host.CycleSnapshot(1));            // next / previous layout snapshot = profile hotkeys
+                    _hotkeys.RegisterCtrlAltShift(Keys.OemOpenBrackets, () => host.CycleSnapshot(-1));
                 }
                 catch (Exception ex) { RotatingLogger.Write("native containers failed to start: " + ex.Message); }
             }
