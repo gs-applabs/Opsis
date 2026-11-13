@@ -12,14 +12,35 @@ namespace MotionDesk.UI
         /// <summary>Set by the main window once it is attached to the Glass manager.</summary>
         public static bool MainAttached;
         /// <summary>True while the main window shows the Windows backdrop (Acrylic / Mica): surfaces painted with the key colour (pure black) then let the backdrop show through.</summary>
-        public static bool SeeThrough => MainAttached && GlassManager.State is { Active: true } st && st.Backdrop != BackdropKind.None;
+        public static bool SeeThrough => MainAttached && GlassManager.State is { Active: true } st && st.Backdrop != BackdropKind.None && ThemeManager.Current.IsDark;     // light themes keep their own light surfaces (dark text on a see-through backdrop is not reliably readable)
         private static UiPalette? _forRaw, _result;
         private static int _forVersion = -1;
         private static int _version;
 
         /// <summary>Called once at start: the machine tier comes from the performance governor, every Glass change re-colours the app.</summary>
+        private static string? _lastBase;
+
+        /// <summary>The Opsis theme mode that a base-theme choice of the Theme page stands for (null = unknown key).</summary>
+        internal static string? ModeForBase(string? baseKey) => baseKey?.ToLowerInvariant() switch
+        {
+            "light" => "Light", "dark" => "Dark", "midnight" => "Midnight", "forest" => "Forest", "dawn" => "Dawn", "contrast" => "Contrast", _ => null
+        };
+
+        /// <summary>The Theme page stores the chosen base theme in the Glass settings, but Opsis' palette comes from ThemeManager: when the choice CHANGES, ThemeManager follows (live, saved). Returns true when it switched.</summary>
+        private static bool SyncBaseTheme()
+        {
+            var b = GlassManager.Settings.BaseTheme;
+            if (string.Equals(b, _lastBase, StringComparison.OrdinalIgnoreCase)) return false;
+            _lastBase = b;
+            var mode = ModeForBase(b);
+            if (mode == null || string.Equals(MotionDesk.Services.AppSettings.Load().ThemeMode, mode, StringComparison.Ordinal)) return false;
+            ThemeManager.SetMode(mode);                                   // saves, rebuilds the palette and raises Changed
+            return true;
+        }
+
         public static void Install(GlassSettings saved)
         {
+            _lastBase = saved.BaseTheme;                                  // what is stored now is not a change
             GlassManager.ManageTheme = false; // Opsis keeps its own live theme adapter (OpsisUiTokens)
             GlassEnvironment.MachineTierOverride = () => MotionDesk.Services.PerformanceGovernor.EffectiveTier switch
             {
@@ -27,7 +48,7 @@ namespace MotionDesk.UI
                 MotionDesk.Services.HardwareTier.Balanced => GlassTier.Medium,
                 _ => GlassTier.Low
             };
-            GlassManager.Changed += () => { _version++; ThemeManager.NotifyChanged(); };
+            GlassManager.Changed += () => { _version++; if (!SyncBaseTheme()) ThemeManager.NotifyChanged(); };
             GlassManager.Apply(saved);
         }
 

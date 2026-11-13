@@ -3033,8 +3033,8 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
             string Ld(string el, string en) => LocalizationManager.CurrentLanguage == "el" ? el : en;
             AddSection(panel, Ld("Ισοσταθμιστής 10 ζωνών (σε όλο το σύστημα)", "10-band equalizer (system-wide)"));
             AddText(panel, Ld(
-                "Σύρε τις ζώνες (διπλό κλικ = μηδέν). Εφαρμόζεται σε ΟΛΟΝ τον ήχο των Windows μέσω Equalizer APO. Μπορείς να εισάγεις presets από το Waveframe (αρχείο .txt ή .json) και να εξάγεις τα δικά σου.",
-                "Drag the bands (double-click = zero). Applied to ALL Windows audio through Equalizer APO. You can import presets from Waveframe (.txt or .json) and export your own."));
+                "Σύρε τις ζώνες (διπλό κλικ = μηδέν). Εφαρμόζεται σε ΟΛΟΝ τον ήχο των Windows μέσω Equalizer APO. Μπορείς να εισάγεις presets από το Opsis Media Suite (αρχείο .txt ή .json) και να εξάγεις τα δικά σου.",
+                "Drag the bands (double-click = zero). Applied to ALL Windows audio through Equalizer APO. You can import presets from Opsis Media Suite (.txt or .json) and export your own."));
 
             var settings = AppSettings.Load();
             var eq = new EqBandsControl { Width = 700, Height = 220, Margin = new Padding(0, 0, 0, 8) };
@@ -3063,7 +3063,7 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                 b.FlatAppearance.BorderSize = 0; b.Click += click; return b;
             }
 
-            // Presets: τα 16 του Waveframe + τα δικά σου
+            // Presets: τα 16 του Opsis Media Suite + τα δικά σου
             var combo = new FlatComboBox { Width = 260, Margin = new Padding(0, 0, 8, 6) };
             List<(string Label, AudioEqProfile Profile)> entries = new();
             void FillCombo(string? select)
@@ -3102,9 +3102,9 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
             panel.Controls.Add(row1);
 
             var row2 = new FlowLayoutPanel { AutoSize = true, WrapContents = false, Margin = new Padding(0, 0, 0, 10) };
-            row2.Controls.Add(Btn(Ld("Εισαγωγή (Waveframe / Equalizer APO)…", "Import (Waveframe / Equalizer APO)…"), 290, (_, _) =>
+            row2.Controls.Add(Btn(Ld("Εισαγωγή (Opsis Media Suite / Equalizer APO)…", "Import (Opsis Media Suite / Equalizer APO)…"), 290, (_, _) =>
             {
-                using var dlg = new OpenFileDialog { Filter = "Waveframe / Equalizer APO (*.txt;*.json)|*.txt;*.json|*.*|*.*", Title = Ld("Εισαγωγή EQ", "Import EQ") };
+                using var dlg = new OpenFileDialog { Filter = "Opsis Media Suite / Equalizer APO (*.txt;*.json)|*.txt;*.json|*.*|*.*", Title = Ld("Εισαγωγή EQ", "Import EQ") };
                 if (dlg.ShowDialog(this) != DialogResult.OK) return;
                 try
                 {
@@ -3200,7 +3200,7 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
             AddText(panel, LocalizationManager.T("About.Body"));
             // the Opsis family and what this version brings (the full history is behind the button further down)
             AddSection(panel, Lx("Η οικογένεια Opsis", "The Opsis family"));
-            AddText(panel, Lx("Opsis (αυτή η εφαρμογή) · Waveframe · Media Player Pro · GearWin. Οι εφαρμογές της οικογένειας μοιράζονται την ίδια εμφάνιση (Opsis.UI) και τον ίδιο μηχανισμό ενημέρωσης.", "Opsis (this app) · Waveframe · Media Player Pro · GearWin. The family shares one look (Opsis.UI) and one update mechanism."));
+            AddText(panel, Lx("Opsis (αυτή η εφαρμογή) · Opsis News Crawler · GearWin · Kombos · Opsis Media Suite. Οι εφαρμογές της οικογένειας μοιράζονται την ίδια εμφάνιση (Opsis.UI) και τον ίδιο μηχανισμό ενημέρωσης.", "Opsis (this app) · Opsis News Crawler · GearWin · Kombos · Opsis Media Suite. The family shares one look (Opsis.UI) and one update mechanism."));
             var notes260 = LocalizationManager.T("VersionNotes.2.6.0");
             if (!string.IsNullOrWhiteSpace(notes260) && !notes260.StartsWith("VersionNotes.")) { AddSection(panel, Lx("Τι φέρνει η 2.6.0", "What 2.6.0 brings")); AddText(panel, notes260); }
 

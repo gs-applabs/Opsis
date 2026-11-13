@@ -116,3 +116,49 @@ public sealed class DesktopCoverageDecisionTests
     [Fact] public void ACoveringWindowBelowAnotherCoveringWindowStillCountsOnce() =>
         Assert.Equal(new[] { "A" }, Run(W(MaxA), W(MaxA, pid: 11)));
 }
+
+[Collection("glass")]
+public sealed class BaseThemeTests
+{
+    [Theory]
+    [InlineData("dark", "Dark")] [InlineData("light", "Light")] [InlineData("midnight", "Midnight")] [InlineData("forest", "Forest")] [InlineData("dawn", "Dawn")] [InlineData("contrast", "Contrast")]
+    public void EveryBaseThemeOfThePageMapsToAThemeMode(string key, string mode) => Assert.Equal(mode, GlassHost.ModeForBase(key));
+
+    [Fact]
+    public void EachBaseThemeChangesTheColoursInSolidAndInGlass_AndLightGlassIsLight()
+    {
+        GlassEnvironment.TransparencyEnabledOverride = () => true; GlassEnvironment.HighContrastOverride = () => false;
+        GlassEnvironment.Windows11Override = () => true; GlassEnvironment.MachineTierOverride = () => GlassTier.High;
+        try
+        {
+            GlassManager.ManageTheme = false;
+            var raws = new[] { UiPalette.Dark(0.5), UiPalette.Light() }.Concat(UiPalette.NamedThemes.Select(n => UiPalette.Named(n)!)).ToList();
+            foreach (var mode in new[] { "Solid", "Glass" })
+            {
+                GlassManager.Apply(new GlassSettings { Mode = mode, TintColor = "#00BCD4", Intensity = 40 });
+                var results = raws.Select(r => GlassHost.Apply(r)).ToList();
+                // different base themes give different backgrounds, surfaces and sidebars, in both modes
+                Assert.Equal(raws.Count, results.Select(r => r.Background.ToArgb()).Distinct().Count());
+                Assert.Equal(raws.Count, results.Select(r => r.Surface.ToArgb()).Distinct().Count());
+                // the dark / light nature of the base theme is kept, and the text stays readable on every surface
+                for (int i = 0; i < raws.Count; i++)
+                {
+                    Assert.Equal(raws[i].IsDark, results[i].IsDark);
+                    Assert.True(Contrast.Ratio(results[i].TextPrimary, results[i].Surface) >= 4.5, $"{mode} theme {i}");
+                }
+            }
+            // light glass: light backgrounds and dark text (the tint must not turn a light theme dark)
+            GlassManager.Apply(new GlassSettings { Mode = "Glass", TintColor = "#00BCD4", Intensity = 40 });
+            var light = GlassHost.Apply(UiPalette.Light()); var dark = GlassHost.Apply(UiPalette.Dark(0.5));
+            Assert.True(light.Background.GetBrightness() > 0.6f, "light glass background " + light.Background);
+            Assert.True(dark.Background.GetBrightness() < 0.35f, "dark glass background " + dark.Background);
+            Assert.True(light.TextPrimary.GetBrightness() < 0.4f, "light glass text is dark");
+        }
+        finally
+        {
+            GlassManager.Apply(new GlassSettings()); GlassManager.ManageTheme = true;
+            GlassEnvironment.TransparencyEnabledOverride = null; GlassEnvironment.HighContrastOverride = null;
+            GlassEnvironment.Windows11Override = null; GlassEnvironment.MachineTierOverride = null;
+        }
+    }
+}
