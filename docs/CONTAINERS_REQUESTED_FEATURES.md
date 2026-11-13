@@ -36,3 +36,19 @@ Status: DONE = implemented and checked (test or live) · DONE-U = implemented, n
 
 ## Why the tests did not catch the drag and drop problems
 The earlier tests called `AcceptDrop` and `MoveItem` directly, so the OLE drop target, the real mouse and the cross-container case were never exercised. Two real bugs were hidden by that: a drag between containers re-ordered by the wrong container's index, and style changes were lost on the next window move. `--test-container-dnd` now drives the real mouse (cursor moves + button down / up), a stand-in Explorer window starts a genuine OLE drag, and the checks wait and retry instead of sleeping once. It is a diagnostic, not part of `dotnet test`, because it moves the real cursor.
+
+## From the user's own request history (`OPSIS-USER-REQUEST-HISTORY.md`, container-related lines only)
+| Request (as worded by the user) | Status |
+|---|---|
+| DeskZones should work like FancyZones, not like Fences | not part of the containers core (DeskZones is a separate page) |
+| DeskContainers: resizable, multiple colour palette, auto-hide, visual effects such as opacity %, a menu with options like Fences, and extra ideas | resizable DONE · palette DONE · opacity DONE · menu DONE (right-click settings) · **auto-hide MISSING** · launch / glow effects MISSING |
+| Fences-style double click on an empty desktop spot hides / shows desktop icons, except Computer, the user folder and Recycle Bin | exists as a setting of the quick-hide on the DeskContainers page, with the "icons that stay visible" list (not changed here) |
+| "Create container from these icons / files" (Fences function) built into DeskContainers | DONE-U (rubber-band offer after a selection of 2 or more icons) |
+| Rename every "fence" to "OpsisContainer" | not checked in this pass |
+| Deleting a container must bring its icons back; Opsis needs a New / Delete container button; old buttons back, connected to the new core | DONE (delete restores the originals; buttons are on the DeskContainers page) |
+| Title bar with its own colour and size, Windows 11 22H2+ | DONE |
+| Settings of containers, DeskStrip and widgets apply live; container settings reachable from the container | DONE |
+| Drag and drop from the desktop like the old containers and Fences | implemented; real desktop icon NOT verified (see above) |
+| "Opsis teal" as a separate preset in Base theme | NOT done: the base-theme list lives in the shared Opsis.UI library (`GlassSettingsPage`), so it needs a change there; the Glass tint already defaults to teal `#00BCD4` |
+
+Still MISSING from everything above: auto-hide after idle, launch effects / glow, auto-organise rules, a UI for rules, the "Opsis teal" base theme.
