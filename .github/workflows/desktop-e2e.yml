@@ -4,6 +4,8 @@ name: desktop-e2e
 
 on:
   workflow_dispatch:
+  push:
+    branches: [ci-desktop-e2e]
 
 permissions:
   contents: read
