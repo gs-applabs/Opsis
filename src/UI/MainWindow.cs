@@ -3196,8 +3196,13 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
             _currentPageKey = "About";
             var panel = CreatePagePanel();
             var version = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version;
-            AddText(panel, string.Format(LocalizationManager.T("About.VersionLine"), version?.ToString(3) ?? "1.0.0"));
+            AddText(panel, string.Format(LocalizationManager.T("About.VersionLine"), AppVersion.Label));
             AddText(panel, LocalizationManager.T("About.Body"));
+            // the Opsis family and what this version brings (the full history is behind the button further down)
+            AddSection(panel, Lx("Η οικογένεια Opsis", "The Opsis family"));
+            AddText(panel, Lx("Opsis (αυτή η εφαρμογή) · Waveframe · Media Player Pro · GearWin. Οι εφαρμογές της οικογένειας μοιράζονται την ίδια εμφάνιση (Opsis.UI) και τον ίδιο μηχανισμό ενημέρωσης.", "Opsis (this app) · Waveframe · Media Player Pro · GearWin. The family shares one look (Opsis.UI) and one update mechanism."));
+            var notes260 = LocalizationManager.T("VersionNotes.2.6.0");
+            if (!string.IsNullOrWhiteSpace(notes260) && !notes260.StartsWith("VersionNotes.")) { AddSection(panel, Lx("Τι φέρνει η 2.6.0", "What 2.6.0 brings")); AddText(panel, notes260); }
 
             // Κάρτες ανά θέμα (πρώην ξεχωριστή σελίδα "Βοήθεια") — ζητήθηκε ρητά να ενσωματωθεί
             // εδώ αφού είχαν ίδιες πληροφορίες με τη σελίδα Σχετικά (About.InstructionsList/
