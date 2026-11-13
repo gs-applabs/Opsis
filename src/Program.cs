@@ -66,6 +66,19 @@ namespace MotionDesk
                 Environment.Exit(0);
                 return;
             }
+            // test of the originals mechanism on the real desktop: hides the icon of ONE existing desktop file, then either dies (crash) or gives it back; prints only counts
+            if (args.Length == 3 && args[0] == "--test-originals")
+            {
+                var file = System.IO.Directory.EnumerateFiles(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory)).FirstOrDefault(f => (System.IO.File.GetAttributes(f) & System.IO.FileAttributes.Hidden) == 0);
+                if (file == null) { System.IO.File.WriteAllText(args[2], "no file on the desktop to test with"); Environment.Exit(4); return; }
+                int n = Widgets.DesktopIconVisibilityEngine.HideOriginals(new[] { file });
+                System.IO.File.WriteAllText(args[2], "hidden=" + n);
+                if (args[1] == "die") System.Diagnostics.Process.GetCurrentProcess().Kill();
+                n = Widgets.DesktopIconVisibilityEngine.RestoreOriginals();
+                System.IO.File.AppendAllText(args[2], " restored=" + n);
+                Environment.Exit(0);
+                return;
+            }
             if (args.Length == 1 && args[0] == "--test-icons-hide-and-die")
             {
                 Widgets.DesktopIconVisibilityEngine.Instance.HideForTest();

@@ -147,6 +147,8 @@ namespace MotionDesk.Services
         public bool UseGpuGlass { get; set; }
         /// <summary>2.6.0: the native DeskContainers core (own data file containers-native.json, pipe opsis-containers-v1-*). The WPF fork was removed; on first start the 2.4.x data is imported read-only.</summary>
         public bool UseNativeContainers { get; set; } = true;
+        /// <summary>Dropping a desktop icon into a container hides the desktop original (as the old engine did). The originals are ALWAYS given back on exit, at the next start and by --restore-desktop-icons.</summary>
+        public bool HideOriginalsOnDrop { get; set; } = true;
         /// <summary>Music overlay (plan 2.1.6): a glass card with the cover / title / artist of whatever any player is playing. Off by default.</summary>
         public bool MusicOverlayEnabled { get; set; }
         /// <summary>Opt-in: "New DeskContainer" / "Next animated wallpaper" in the desktop right-click menu (per-user registry verbs, see DesktopMenu).</summary>

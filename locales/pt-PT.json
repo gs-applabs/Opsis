@@ -608,6 +608,7 @@
   "DCM.Snapshots": "Instantâneos do layout",
   "DCM.SaveSnapshot": "Guardar o layout atual",
   "DCM.NewPortal": "Novo portal (vista de pasta)",
+  "DCM.RestoreIcons": "Repor os ícones do ambiente de trabalho",
   "DCM.Reload": "Recarregar todos os DeskContainers",
   "DCM.Backup": "Fazer cópia agora",
   "DCM.EngineCard": "Motor DeskContainers",

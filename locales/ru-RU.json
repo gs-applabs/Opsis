@@ -608,6 +608,7 @@
   "DCM.Snapshots": "Снимки раскладки",
   "DCM.SaveSnapshot": "Сохранить текущую раскладку",
   "DCM.NewPortal": "Новый портал (вид папки)",
+  "DCM.RestoreIcons": "Вернуть значки рабочего стола",
   "DCM.Reload": "Перезагрузить все DeskContainers",
   "DCM.Backup": "Создать резервную копию",
   "DCM.EngineCard": "Движок DeskContainers",

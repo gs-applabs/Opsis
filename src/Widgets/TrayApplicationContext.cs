@@ -553,6 +553,7 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
             menu.DropDownItems.Add(snaps);
             menu.DropDownItems.Add(new ToolStripSeparator());
             menu.DropDownItems.Add(T("DCM.QuickHide") + " / " + T("DCM.QuickShow"), null, (s, e) => host.ToggleAll());
+            menu.DropDownItems.Add(T("DCM.RestoreIcons"), null, (s, e) => { DesktopIconVisibilityEngine.Instance.RestoreIfHidden(); });
             menu.DropDownItems.Add(T("DCM.OpenSettingsPage"), null, (s, e) => ShowMainWindow("DeskZones"));
         }
 

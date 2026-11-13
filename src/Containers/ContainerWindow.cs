@@ -242,6 +242,8 @@ namespace MotionDesk.Containers
         public Container Model { get; }
         public bool GlassOn => MotionDesk.Services.GlassService.Enabled;
         public event Action<Container>? Changed;
+        /// <summary>Raised after files were dropped in (the host may hide their desktop originals) and after an item was removed (the host gives its original back).</summary>
+        public event Action<IReadOnlyList<string>>? ItemsAdded; public event Action<string>? ItemRemoved;
 
         public ContainerWindow(Container model, Func<IEnumerable<Rectangle>>? others = null)
         {
@@ -541,7 +543,7 @@ namespace MotionDesk.Containers
         {
             if (Model.Kind != ContainerKind.Data) return;
             if (index < 0 || index >= Items.Count) return;
-            Items.RemoveAt(index); _selected = -1; _scroll = ContainerLayout.ClampScroll(_scroll, Client, Items.Count, Metrics); Dirty(); Changed?.Invoke(Model);
+            var removed = Items[index].Path; Items.RemoveAt(index); ItemRemoved?.Invoke(removed); _selected = -1; _scroll = ContainerLayout.ClampScroll(_scroll, Client, Items.Count, Metrics); Dirty(); Changed?.Invoke(Model);
         }
 
         // ---- drag and drop (phase 3): items are REFERENCES, dropping never copies or moves the file --------------------
@@ -554,7 +556,7 @@ namespace MotionDesk.Containers
             var at = ContainerLayout.DropIndex(clientPoint, Client, Items.Count, Metrics, _scroll);
             var plan = DropRules.Plan(paths, Items, at, p => System.IO.Directory.Exists(p));
             if (plan.Effect != DropEffect.AddReference) return 0;
-            Items.InsertRange(plan.InsertAt, plan.Add);
+            Items.InsertRange(plan.InsertAt, plan.Add); ItemsAdded?.Invoke(plan.Add.Select(a => a.Path).ToList());
             _scroll = ContainerLayout.ClampScroll(_scroll, Client, Items.Count, Metrics); Dirty(); Changed?.Invoke(Model);
             return plan.Add.Count;
         }

@@ -608,6 +608,7 @@
   "DCM.Snapshots": "Instantanés de disposition",
   "DCM.SaveSnapshot": "Enregistrer la disposition actuelle",
   "DCM.NewPortal": "Nouveau portail (vue d'un dossier)",
+  "DCM.RestoreIcons": "Restaurer les icônes du bureau",
   "DCM.Reload": "Recharger tous les DeskContainers",
   "DCM.Backup": "Sauvegarder maintenant",
   "DCM.EngineCard": "Moteur DeskContainers",

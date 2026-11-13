@@ -608,6 +608,7 @@
   "DCM.Snapshots": "लेआउट स्नैपशॉट",
   "DCM.SaveSnapshot": "वर्तमान लेआउट सहेजें",
   "DCM.NewPortal": "नया पोर्टल (फ़ोल्डर दृश्य)",
+  "DCM.RestoreIcons": "डेस्कटॉप आइकन पुनर्स्थापित करें",
   "DCM.Reload": "सभी DeskContainers फिर से लोड करें",
   "DCM.Backup": "अभी बैकअप लें",
   "DCM.EngineCard": "DeskContainers इंजन",

@@ -715,6 +715,7 @@
   "DCM.Snapshots": "Layout snapshots",
   "DCM.SaveSnapshot": "Save the current layout",
   "DCM.NewPortal": "New portal (folder view)",
+  "DCM.RestoreIcons": "Restore desktop icons",
   "DCM.Reload": "Reload all DeskContainers",
   "DCM.Backup": "Back up now",
   "DCM.EngineCard": "DeskContainers engine",

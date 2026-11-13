@@ -46,6 +46,7 @@ namespace MotionDesk.UI
                 v => { var a = AppSettings.Load(); a.UseNativeContainers = v; a.Save(); }, Lx("Τα containers ομαδοποιούν συντομεύσεις/αρχεία σε γυάλινα παράθυρα στην επιφάνεια εργασίας.", "Containers group shortcuts and files in glass windows on the desktop."), restart: true));
             var host = MotionDesk.Containers.ContainerHost.Current;
             if (host == null) { AddText(engine, Lx("Τα containers δεν τρέχουν αυτή τη στιγμή (απενεργοποιημένα ή ασφαλής λειτουργία).", "Containers are not running right now (disabled or safe mode).")); return; }
+            engine.Controls.Add(SettingsView.Checkbox(Lx("Απόκρυψη του αρχικού εικονιδίου της επιφάνειας όταν το ρίχνεις σε container", "Hide the desktop icon when you drop it into a container"), AppSettings.Load().HideOriginalsOnDrop, v => { var a = AppSettings.Load(); a.HideOriginalsOnDrop = v; a.Save(); if (!v) MotionDesk.Widgets.DesktopIconVisibilityEngine.RestoreOriginals(); }, Lx("Τα εικονίδια επιστρέφουν πάντα όταν κλείσει το Opsis, στην επόμενη εκκίνηση και με «Επαναφορά εικονιδίων».", "Icons always come back when Opsis exits, at the next start and with Restore desktop icons.")));
             AddText(engine, Lx("Συντομεύσεις: Ctrl+Alt+Shift+N νέο container, Ctrl+Alt+Shift+H απόκρυψη/εμφάνιση όλων.", "Shortcuts: Ctrl+Alt+Shift+N new container, Ctrl+Alt+Shift+H hide / show all."));
 
             AddIconButtonGrid(panel,

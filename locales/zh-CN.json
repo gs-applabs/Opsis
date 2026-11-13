@@ -608,6 +608,7 @@
   "DCM.Snapshots": "布局快照",
   "DCM.SaveSnapshot": "保存当前布局",
   "DCM.NewPortal": "新建门户（文件夹视图）",
+  "DCM.RestoreIcons": "恢复桌面图标",
   "DCM.Reload": "重新加载所有 DeskContainers",
   "DCM.Backup": "立即备份",
   "DCM.EngineCard": "DeskContainers 引擎",

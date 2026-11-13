@@ -155,6 +155,89 @@ namespace MotionDesk.Widgets
         private Point _lastDownPos;
         private bool _hidden;
 
+        // ---- originals of icons that were dropped into a container (2.6.0): ONE mechanism (the same remote list-view calls as the quick-hide), its own state file ----
+        // Hiding moves the desktop icon out of the screen and remembers where it was; restoring puts it back BY NAME. The state file lives only while icons are hidden, so every start of
+        // Opsis (after an exit, a crash, a kill or an upgrade) and the command "Opsis.exe --restore-desktop-icons" can bring them back.
+        private static string OriginalsStatePath => Path.Combine(Services.AppPaths.AppDataFolder, "desktop-originals-hidden.json");
+
+        private static IEnumerable<string> IconNames(string path)
+        {
+            var n = Path.GetFileName(path.TrimEnd('\\', '/')); if (string.IsNullOrEmpty(n)) yield break;
+            yield return n; var w = Path.GetFileNameWithoutExtension(n); if (!string.IsNullOrEmpty(w) && w != n) yield return w;
+        }
+
+        private static bool IsOnDesktop(string path)
+        {
+            try
+            {
+                var dir = Path.GetDirectoryName(Path.GetFullPath(path.TrimEnd('\\', '/'))) ?? "";
+                return string.Equals(dir, Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory), StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(dir, Environment.GetFolderPath(Environment.SpecialFolder.CommonDesktopDirectory), StringComparison.OrdinalIgnoreCase);
+            }
+            catch (Exception) { return false; }
+        }
+
+        private static List<SavedIconPos> LoadOriginals() { try { return File.Exists(OriginalsStatePath) ? JsonSerializer.Deserialize<List<SavedIconPos>>(File.ReadAllText(OriginalsStatePath)) ?? new() : new(); } catch (Exception) { return new(); } }
+
+        private static void WithDesktopList(Action<IntPtr, IntPtr, int> work)
+        {
+            IntPtr list = FindDesktopListView(); if (list == IntPtr.Zero) return;
+            GetWindowThreadProcessId(list, out uint pid);
+            IntPtr hp = OpenProcess(PROCESS_VM_OPERATION | PROCESS_VM_READ | PROCESS_VM_WRITE, false, pid); if (hp == IntPtr.Zero) return;
+            try { work(hp, list, SendMessage(list, LVM_GETITEMCOUNT, IntPtr.Zero, IntPtr.Zero).ToInt32()); } finally { CloseHandle(hp); }
+        }
+
+        /// <summary>Hides the desktop icons of the given files (only files that really are on the desktop). Returns how many were hidden.</summary>
+        public static int HideOriginals(IEnumerable<string> paths)
+        {
+            var want = paths.Where(IsOnDesktop).SelectMany(IconNames).ToHashSet(StringComparer.OrdinalIgnoreCase); if (want.Count == 0) return 0;
+            int hidden = 0;
+            try
+            {
+                var saved = LoadOriginals();
+                WithDesktopList((hp, list, count) =>
+                {
+                    for (int i = 0; i < count; i++)
+                    {
+                        var name = GetItemTextRemote(hp, list, i);
+                        if (!want.Contains(name) || saved.Any(x => string.Equals(x.Name, name, StringComparison.OrdinalIgnoreCase))) continue;
+                        var pos = GetItemPositionRemote(hp, list, i);
+                        if (pos.X <= -5000) continue;                                         // already hidden by the quick-hide: do not overwrite its saved place
+                        saved.Add(new SavedIconPos { Index = i, Name = name, X = pos.X, Y = pos.Y });
+                        SetItemPositionRemote(list, i, -10000, -10000); hidden++;
+                    }
+                });
+                if (hidden > 0) { Directory.CreateDirectory(Path.GetDirectoryName(OriginalsStatePath)!); MotionDesk.Services.AtomicFile.WriteAllText(OriginalsStatePath, JsonSerializer.Serialize(saved)); }
+            }
+            catch (Exception) { }
+            return hidden;
+        }
+
+        /// <summary>Puts hidden originals back (all of them, or only those of <paramref name="onlyPath"/>). Safe to call at any time; returns how many came back.</summary>
+        public static int RestoreOriginals(string? onlyPath = null)
+        {
+            var saved = LoadOriginals(); if (saved.Count == 0) return 0;
+            var only = onlyPath == null ? null : IconNames(onlyPath).ToHashSet(StringComparer.OrdinalIgnoreCase);
+            int back = 0;
+            try
+            {
+                WithDesktopList((hp, list, count) =>
+                {
+                    for (int i = 0; i < count; i++)
+                    {
+                        var name = GetItemTextRemote(hp, list, i);
+                        var sv = saved.FirstOrDefault(x => string.Equals(x.Name, name, StringComparison.OrdinalIgnoreCase));
+                        if (sv == null || (only != null && !only.Contains(name))) continue;
+                        SetItemPositionRemote(list, i, sv.X, sv.Y); saved.Remove(sv); back++;
+                    }
+                });
+                if (saved.Count == 0) { try { File.Delete(OriginalsStatePath); } catch (Exception) { } }
+                else MotionDesk.Services.AtomicFile.WriteAllText(OriginalsStatePath, JsonSerializer.Serialize(saved));
+            }
+            catch (Exception) { }
+            return back;
+        }
+
         private static string StateFilePath => Path.Combine(Services.AppPaths.AppDataFolder, "desktopicons_hidden_state.json");
 
         public void Start()
@@ -173,6 +256,7 @@ namespace MotionDesk.Widgets
             // ΜΟΝΟ όσο είναι κρυμμένα), τα εικονίδια έμεναν για πάντα εκτός οθόνης (-10000,-10000).
             // Τα επαναφέρουμε στην εκκίνηση.
             if (File.Exists(StateFilePath)) RestoreIfHidden();
+            if (File.Exists(OriginalsStatePath)) RestoreOriginals();            // originals hidden by a container that never got to give them back (crash, kill, upgrade)
         }
 
         /// <summary>Rescue / test helpers (2.6.0 beta). DumpPositions is read-only: one line "name TAB x TAB y" per desktop icon.</summary>
@@ -197,6 +281,7 @@ namespace MotionDesk.Widgets
         // Επαναφέρει τα κρυμμένα εικονίδια (αν υπάρχουν) — καλείται στην έξοδο και στην εκκίνηση.
         public void RestoreIfHidden()
         {
+            try { RestoreOriginals(); } catch (Exception) { }
             if (!_hidden && !File.Exists(StateFilePath)) return;
             try
             {

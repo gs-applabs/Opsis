@@ -608,6 +608,7 @@
   "DCM.Snapshots": "لقطات التخطيط",
   "DCM.SaveSnapshot": "حفظ التخطيط الحالي",
   "DCM.NewPortal": "بوابة جديدة (عرض مجلد)",
+  "DCM.RestoreIcons": "استعادة أيقونات سطح المكتب",
   "DCM.Reload": "إعادة تحميل كل DeskContainers",
   "DCM.Backup": "نسخ احتياطي الآن",
   "DCM.EngineCard": "محرك DeskContainers",

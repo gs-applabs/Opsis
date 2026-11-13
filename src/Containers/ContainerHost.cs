@@ -131,6 +131,8 @@ namespace MotionDesk.Containers
                     }
                     var w = new ContainerWindow(model, () => _windows.Where(p => p.Key != id).Select(p => p.Value.Bounds)) { Bounds = Place(model, mons) };
                     w.Changed += c => { _dirty[c.Id] = c; if (!_save.Enabled) _save.Start(); };
+                    w.ItemsAdded += paths => { if (MotionDesk.Services.AppSettings.Load().HideOriginalsOnDrop) MotionDesk.Widgets.DesktopIconVisibilityEngine.HideOriginals(paths); };
+                    w.ItemRemoved += p => MotionDesk.Widgets.DesktopIconVisibilityEngine.RestoreOriginals(p);
                     _windows[id] = w; w.Show(); DesktopZOrder.Place(w.Handle);
                 }
             }
@@ -188,6 +190,7 @@ namespace MotionDesk.Containers
         {
             if (ReferenceEquals(Current, this)) Current = null;
             Microsoft.Win32.SystemEvents.DisplaySettingsChanged -= OnDisplayChanged;
+            try { MotionDesk.Widgets.DesktopIconVisibilityEngine.RestoreOriginals(); } catch (Exception) { }          // every exit gives the hidden originals back
             Flush(); _save.Dispose(); _rules.Dispose(); _z.Dispose(); _pipe?.Dispose();
             foreach (var w in _windows.Values) { w.Close(); w.Dispose(); }
             _windows.Clear(); _ui.Dispose();
