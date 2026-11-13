@@ -907,5 +907,12 @@
   "Win.TitleBars": "Barre del titolo scure",
   "Win.WinThemeNote": "I file .theme di Windows qui sotto cambiano anche cursori e suoni. Gli stili visivi personalizzati richiedono un patcher di firma che Opsis non installa: usa solo temi da fonti fidate.",
   "Win.WinThemes": "Temi di Windows (.theme)",
-  "Tray.ToggleLightDark": "Passa a chiaro / scuro"
+  "Tray.ToggleLightDark": "Passa a chiaro / scuro",
+  "Settings.StartEarly": "Avvia Opsis prima delle altre app di avvio",
+  "Settings.StartEarlyDesc": "Aggiunge un’attività per utente che avvia Opsis all’accesso senza il solito ritardo, così il livello desktop e i plugin si caricano con il desktop. Senza diritti di amministratore; disattivandola l’attività viene rimossa.",
+  "Wallpaper.WeatherReverseOn": "Nome del luogo più preciso da OpenStreetMap (online, solo quando premo «Usa la mia posizione»)",
+  "Wallpaper.WeatherReverseConsent": "Quando premi «Usa la mia posizione», il punto arrotondato (circa 1 km) viene inviato UNA volta a OpenStreetMap Nominatim via HTTPS per ottenere un nome di quartiere / paese più preciso. In altri momenti non viene inviato nulla e si salva solo il nome. Senza questa opzione il nome viene da una tabella offline (Grecia) e nulla lascia il PC. Attivare?",
+  "Wallpaper.WeatherPlaceLine": "Luogo: {0} (fonte: {1})",
+  "Personalization.LockGifInfo": "Schermata di blocco animata (GIF): Windows non la supporta ufficialmente. Lo strumento gratuito open source LockscreenGif (MIT) lo fa sostituendo file nella cartella cache della schermata di blocco e, nelle build recenti di Windows 11, disattivando una funzione Windows non documentata (approvazione amministratore, forse riavvio). Può fallire o cambiare dopo un aggiornamento di Windows, quindi Opsis non lo fa da sé: usalo solo se lo accetti. Opsis non modifica mai questi file di sistema.",
+  "Personalization.LockGifOpen": "Apri la pagina del progetto LockscreenGif"
 }

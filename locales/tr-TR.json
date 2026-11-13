@@ -907,5 +907,12 @@
   "Win.TitleBars": "Koyu başlık çubukları",
   "Win.WinThemeNote": "Aşağıdaki Windows .theme dosyaları imleç ve sesleri de değiştirir. Özel görsel stiller, Opsis’in kurmadığı bir imza yamacı gerektirir: yalnızca güvendiğiniz kaynaklardan gelen temaları kullanın.",
   "Win.WinThemes": "Windows temaları (.theme)",
-  "Tray.ToggleLightDark": "Açık / Koyu geçişi"
+  "Tray.ToggleLightDark": "Açık / Koyu geçişi",
+  "Settings.StartEarly": "Opsis’i diğer başlangıç uygulamalarından önce başlat",
+  "Settings.StartEarlyDesc": "Oturum açılırken Opsis’i olağan gecikme olmadan başlatan, kullanıcıya özel bir görev ekler; böylece masaüstü katmanı ve eklentiler masaüstüyle birlikte yüklenir. Yönetici hakkı gerekmez; kapatınca görev kaldırılır.",
+  "Wallpaper.WeatherReverseOn": "OpenStreetMap’ten daha kesin yer adı (çevrimiçi, yalnızca “Konumumu kullan”a bastığımda)",
+  "Wallpaper.WeatherReverseConsent": "“Konumumu kullan”a bastığınızda yuvarlanmış nokta (yaklaşık 1 km) daha kesin bir mahalle / köy adı için BİR kez HTTPS ile OpenStreetMap Nominatim’e gönderilir. Başka zaman hiçbir şey gönderilmez ve yalnızca ad saklanır. Bu seçenek olmadan ad çevrimdışı bir tablodan (Yunanistan) gelir ve PC’den hiçbir şey çıkmaz. Açılsın mı?",
+  "Wallpaper.WeatherPlaceLine": "Yer: {0} (kaynak: {1})",
+  "Personalization.LockGifInfo": "Hareketli kilit ekranı (GIF): Windows bunu resmen desteklemez. Ücretsiz açık kaynaklı LockscreenGif (MIT) aracı, kilit ekranı önbellek klasöründeki dosyaları değiştirerek ve yeni Windows 11 sürümlerinde belgelenmemiş bir Windows özelliğini kapatarak (yönetici onayı, belki yeniden başlatma) bunu yapar. Başarısız olabilir veya bir Windows güncellemesinden sonra değişebilir; bu yüzden Opsis bunu kendisi yapmaz: yalnızca kabul ediyorsanız kullanın. Opsis bu sistem dosyalarını asla değiştirmez.",
+  "Personalization.LockGifOpen": "LockscreenGif proje sayfasını aç"
 }

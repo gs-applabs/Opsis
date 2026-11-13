@@ -907,5 +907,12 @@
   "Win.TitleBars": "深色标题栏",
   "Win.WinThemeNote": "下面的 Windows .theme 文件也会更改光标和声音。自定义视觉样式需要 Opsis 不会安装的签名补丁程序：请仅使用来自可信来源的主题。",
   "Win.WinThemes": "Windows 主题 (.theme)",
-  "Tray.ToggleLightDark": "切换浅色 / 深色"
+  "Tray.ToggleLightDark": "切换浅色 / 深色",
+  "Settings.StartEarly": "在其他启动项之前启动 Opsis",
+  "Settings.StartEarlyDesc": "添加一个按用户的任务，在登录时无需通常的启动延迟即启动 Opsis，使桌面层和插件随桌面一起加载。无需管理员权限；关闭后该任务会被删除。",
+  "Wallpaper.WeatherReverseOn": "来自 OpenStreetMap 的更准确地名（联网，仅在我点击“使用我的位置”时）",
+  "Wallpaper.WeatherReverseConsent": "点击“使用我的位置”时，取整后的点（约 1 公里）会通过 HTTPS 仅发送一次到 OpenStreetMap Nominatim，以获得更准确的街区/村庄名称。其他时候不发送任何内容，只保存名称。不启用此选项时，名称来自离线表（希腊），不会有任何内容离开电脑。是否开启？",
+  "Wallpaper.WeatherPlaceLine": "地点：{0}（来源：{1}）",
+  "Personalization.LockGifInfo": "动态锁屏（GIF）：Windows 官方不支持。免费开源工具 LockscreenGif（MIT）通过替换锁屏缓存文件夹中的文件，并在较新的 Windows 11 版本中关闭一项未公开文档的 Windows 功能（需要管理员批准，可能需要重启）来实现。它可能失败或在 Windows 更新后改变，因此 Opsis 不自行执行：仅在您接受这些前提时使用。Opsis 绝不会修改这些系统文件。",
+  "Personalization.LockGifOpen": "打开 LockscreenGif 项目页面"
 }

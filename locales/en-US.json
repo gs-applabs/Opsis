@@ -930,5 +930,12 @@
   "Win.TitleBars": "Dark title bars",
   "Win.WinThemeNote": "The Windows .theme files below also change cursors and sounds. Custom visual styles need a signature patcher that Opsis does not install: use only themes from sources you trust.",
   "Win.WinThemes": "Windows themes (.theme)",
-  "Tray.ToggleLightDark": "Switch Light / Dark"
+  "Tray.ToggleLightDark": "Switch Light / Dark",
+  "Settings.StartEarly": "Start Opsis before other start-up apps",
+  "Settings.StartEarlyDesc": "Adds a per-user task that starts Opsis at sign-in without the usual start-up delay, so the desktop layer and plugins load with the desktop. No administrator rights; turning it off removes the task.",
+  "Wallpaper.WeatherReverseOn": "More exact place name from OpenStreetMap (online, only when I press \"Use my location\")",
+  "Wallpaper.WeatherReverseConsent": "When you press \"Use my location\", the rounded point (about 1 km) is sent ONCE to OpenStreetMap Nominatim over HTTPS to get a more exact neighbourhood / village name. Nothing is sent at other times and only the name is stored. Without this option the name comes from an offline table (Greece) and nothing leaves the PC. Turn on?",
+  "Wallpaper.WeatherPlaceLine": "Place: {0} (source: {1})",
+  "Personalization.LockGifInfo": "Animated lock screen (GIF): Windows does not support it officially. The free open-source tool LockscreenGif (MIT) does it by replacing files in the lock-screen cache folder and, on recent Windows 11 builds, by turning off an undocumented Windows feature (administrator approval, maybe a restart). It can fail or change after a Windows update, so Opsis does not do this itself: use it only if you accept that. Opsis never changes these system files.",
+  "Personalization.LockGifOpen": "Open the LockscreenGif project page"
 }

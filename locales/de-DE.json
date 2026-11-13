@@ -907,5 +907,12 @@
   "Win.TitleBars": "Dunkle Titelleisten",
   "Win.WinThemeNote": "Die unten aufgeführten Windows-.theme-Dateien ändern auch Mauszeiger und Sounds. Eigene visuelle Stile benötigen einen Signatur-Patcher, den Opsis nicht installiert: nutze nur Designs aus vertrauenswürdigen Quellen.",
   "Win.WinThemes": "Windows-Designs (.theme)",
-  "Tray.ToggleLightDark": "Hell / Dunkel umschalten"
+  "Tray.ToggleLightDark": "Hell / Dunkel umschalten",
+  "Settings.StartEarly": "Opsis vor anderen Autostart-Apps starten",
+  "Settings.StartEarlyDesc": "Fügt eine Aufgabe pro Benutzer hinzu, die Opsis bei der Anmeldung ohne die übliche Verzögerung startet, damit Desktop-Ebene und Plugins mit dem Desktop laden. Keine Administratorrechte; beim Ausschalten wird die Aufgabe entfernt.",
+  "Wallpaper.WeatherReverseOn": "Genauerer Ortsname von OpenStreetMap (online, nur wenn ich „Meinen Standort verwenden“ drücke)",
+  "Wallpaper.WeatherReverseConsent": "Beim Drücken von „Meinen Standort verwenden“ wird der gerundete Punkt (ca. 1 km) EINMAL per HTTPS an OpenStreetMap Nominatim gesendet, um einen genaueren Viertel-/Dorfnamen zu erhalten. Sonst wird nichts gesendet, gespeichert wird nur der Name. Ohne diese Option stammt der Name aus einer Offline-Tabelle (Griechenland) und nichts verlässt den PC. Einschalten?",
+  "Wallpaper.WeatherPlaceLine": "Ort: {0} (Quelle: {1})",
+  "Personalization.LockGifInfo": "Animierter Sperrbildschirm (GIF): Windows unterstützt das nicht offiziell. Das kostenlose Open-Source-Tool LockscreenGif (MIT) ersetzt dafür Dateien im Cache-Ordner des Sperrbildschirms und schaltet bei neueren Windows-11-Builds ein undokumentiertes Windows-Feature ab (Administratorfreigabe, evtl. Neustart). Es kann fehlschlagen oder sich nach einem Windows-Update ändern, daher macht Opsis das nicht selbst: nutze es nur, wenn du das akzeptierst. Opsis ändert diese Systemdateien nie.",
+  "Personalization.LockGifOpen": "Projektseite von LockscreenGif öffnen"
 }

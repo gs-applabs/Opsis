@@ -907,5 +907,12 @@
   "Win.TitleBars": "Barres de titre sombres",
   "Win.WinThemeNote": "Les fichiers .theme de Windows ci-dessous modifient aussi curseurs et sons. Les styles visuels personnalisés exigent un patcher de signature qu’Opsis n’installe pas : n’utilisez que des thèmes de sources fiables.",
   "Win.WinThemes": "Thèmes Windows (.theme)",
-  "Tray.ToggleLightDark": "Basculer clair / sombre"
+  "Tray.ToggleLightDark": "Basculer clair / sombre",
+  "Settings.StartEarly": "Démarrer Opsis avant les autres applications de démarrage",
+  "Settings.StartEarlyDesc": "Ajoute une tâche par utilisateur qui lance Opsis à l’ouverture de session sans le délai habituel, pour que la couche bureau et les plugins se chargent avec le bureau. Sans droits d’administrateur ; la désactiver supprime la tâche.",
+  "Wallpaper.WeatherReverseOn": "Nom de lieu plus précis via OpenStreetMap (en ligne, seulement quand j’appuie sur « Utiliser ma position »)",
+  "Wallpaper.WeatherReverseConsent": "Quand vous appuyez sur « Utiliser ma position », le point arrondi (environ 1 km) est envoyé UNE fois à OpenStreetMap Nominatim en HTTPS pour obtenir un nom de quartier / village plus précis. Rien n’est envoyé à d’autres moments et seul le nom est enregistré. Sans cette option, le nom vient d’une table hors ligne (Grèce) et rien ne quitte le PC. Activer ?",
+  "Wallpaper.WeatherPlaceLine": "Lieu : {0} (source : {1})",
+  "Personalization.LockGifInfo": "Écran de verrouillage animé (GIF) : Windows ne le prend pas en charge officiellement. L’outil libre et gratuit LockscreenGif (MIT) le fait en remplaçant des fichiers du dossier de cache de l’écran de verrouillage et, sur les versions récentes de Windows 11, en désactivant une fonctionnalité Windows non documentée (approbation administrateur, redémarrage possible). Il peut échouer ou changer après une mise à jour de Windows ; Opsis ne le fait donc pas lui-même : utilisez-le seulement si vous l’acceptez. Opsis ne modifie jamais ces fichiers système.",
+  "Personalization.LockGifOpen": "Ouvrir la page du projet LockscreenGif"
 }
