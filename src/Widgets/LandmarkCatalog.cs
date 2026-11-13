@@ -11,9 +11,6 @@ namespace MotionDesk.Widgets
             new("patras", "Lighthouse of Patras"),
             new("rioantirrio", "Rio-Antirrio Bridge"),
             new("nafplio", "Bourtzi, Nafplio"),
-            new("eiffel", "Eiffel Tower, Paris"),
-            new("bigben", "Big Ben, London"),
-            new("taj", "Taj Mahal, Agra"),
         };
 
         public const string Auto = "Auto", Off = "Off";

@@ -25,7 +25,7 @@ public sealed class LandmarksWiringTests
     {
         var js = File.ReadAllText(Path.Combine(Wall(), "landmarks.js"));
         var count = System.Text.RegularExpressions.Regex.Matches(js, @"L\('[a-z]+', '[^']+', -?\d+\.\d+, -?\d+\.\d+, '[a-z]+', \[").Count;
-        Assert.True(count >= 20, "landmarks found: " + count);
+        Assert.True(count >= 2, "vector landmarks found: " + count);     // Greek landmarks only (2.6.0): Parthenon and the White Tower keep a vector fallback
     }
 
     [Fact]
