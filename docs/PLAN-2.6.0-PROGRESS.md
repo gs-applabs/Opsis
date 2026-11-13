@@ -1,4 +1,4 @@
-﻿# PLAN 2.6.0 - progress (branch `2.6.0-beta`, local only, never pushed)
+# PLAN 2.6.0 - progress (branch `2.6.0-beta`, local only, never pushed)
 
 Updated 2026-11-10. Rule of this file: if a session is cut off, the next one starts from "Where I stopped".
 
@@ -134,5 +134,5 @@ esource-logger.ps1` για λίγη ώρα.
 
 
 ## Weather wallpaper (simple weather, 2026-11-13)
-Done: fbm clouds (cumulus / stratus / cirrus, self-shadowed, facing the sun), textured moon, sun bloom and rays, bird silhouettes, five ridged mountain ranges with atmospheric perspective, snow caps, wind-swayed conifers, slow parallax, Milky Way, rainbow. Already existing and kept: layered rain with splashes and ripples, snow of several sizes with wind, water with waves and reflections, lightning, fog. NOT done: rain motion blur and wet-surface sheen, snow accumulation on the ground, foam on waves, Fresnel reflection model, deciduous foliage, per-tier layer budgets (only a simple low-density cut of the texture / trees), frame-time measurements, screenshots of every hour of the day.
+Done: fbm clouds (cumulus / stratus / cirrus, self-shadowed, facing the sun), textured moon, sun bloom and rays, bird silhouettes, five ridged mountain ranges with atmospheric perspective, snow caps, wind-swayed conifers, slow parallax, Milky Way, rainbow. Already existing and kept: layered rain with splashes and ripples, snow of several sizes with wind, water with waves and reflections, lightning, fog. Also done later the same day: rain motion blur (wide faint + thin sharp stroke), wet sheen, snow bank and ice along the shore, foam crests, Fresnel gradient on the water, deciduous crowns. NOT done (next week): per-tier layer budgets (only a simple low-density cut of the texture / trees), frame-time measurements, screenshots of every hour of the day.
 

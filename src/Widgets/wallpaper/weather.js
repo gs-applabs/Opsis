@@ -332,7 +332,7 @@ function buildHills() {
         }
         const rnd = mulberry32(sp.seed * 7);
         const trees = [];
-        if (sp.trees) for (let i = 0; i < 70; i++) { const idx = Math.floor(rnd() * samples); trees.push({ idx, h: 0.012 + rnd() * 0.02 * (0.5 + sp.depth * 0.5), ph: rnd() * TAU, w: 0.55 + rnd() * 0.35 }); }
+        if (sp.trees) for (let i = 0; i < 70; i++) { const idx = Math.floor(rnd() * samples); trees.push({ idx, h: 0.012 + rnd() * 0.02 * (0.5 + sp.depth * 0.5), ph: rnd() * TAU, w: 0.55 + rnd() * 0.35, broad: rnd() < 0.4 }); }
         hills.push({ ...sp, pts, trees });
     }
 }
@@ -712,16 +712,37 @@ function drawHillsLayer(sky, graded) {
             const sway = (0.4 + S.wind * 0.05) * K, tc = mix(col, [10, 22, 16], 0.55);
             g.fillStyle = rgba(tc, 0.95); g.beginPath();
             for (const t of h.trees) {
+                if (t.broad) continue;
                 const x = (t.idx / n) * W, y = HORIZON - h.pts[t.idx] * H + 2, th = t.h * H, tw = th * t.w * 0.5, sw = Math.sin(animTime * (1.1 + S.wind * 0.04) + t.ph) * sway;
                 g.moveTo(x - tw, y); g.lineTo(x + sw * 0.5, y - th * 0.55 + sw * 0.3); g.lineTo(x + tw, y);
                 g.moveTo(x - tw * 0.75, y - th * 0.35); g.lineTo(x + sw, y - th); g.lineTo(x + tw * 0.75, y - th * 0.35);
             }
             g.fill();
+            // deciduous trees: a thin trunk and a round, swaying crown (bare and pale under snow)
+            const leaf = mix(mix(col, [40, 92, 48], 0.5 * (1 - S.snowCover)), [225, 232, 242], clamp(S.snowCover * 0.8, 0, 0.8));
+            g.fillStyle = rgba(mix(leaf, [8, 14, 10], 0.25), 0.95); g.beginPath();
+            for (const t of h.trees) {
+                if (!t.broad) continue;
+                const x = (t.idx / n) * W, y = HORIZON - h.pts[t.idx] * H + 2, th = t.h * H, sw = Math.sin(animTime * (0.9 + S.wind * 0.05) + t.ph) * sway * 1.4, r = th * 0.34;
+                g.rect(x - r * 0.12, y - th * 0.5, r * 0.24, th * 0.5);
+                g.moveTo(x + sw + r, y - th * 0.72); g.arc(x + sw, y - th * 0.72, r, 0, TAU);
+                g.moveTo(x + sw - r * 0.5 + r * 0.7, y - th * 0.95); g.arc(x + sw - r * 0.5, y - th * 0.95, r * 0.7, 0, TAU);
+            }
+            g.fill();
         }
         g.restore();
     }
+    // snow settles: a white bank along the shore and a thin sheet of ice on the water close to it
+    if (S.snowCover > 0.04 && !onLand()) {
+        const sc = clamp(S.snowCover, 0, 1), tab = snowTab || (snowTab = noiseTable(606)), bw = 6 * K * (0.6 + sc);
+        g.fillStyle = rgba([232, 238, 248].map(v => v * (0.45 + 0.55 * amb)), 0.9 * sc);
+        g.beginPath(); g.moveTo(0, HORIZON + 4);
+        for (let x = 0; x <= W; x += 10) g.lineTo(x, HORIZON - bw * (0.4 + 1.4 * vnoise(tab, x * 0.02, 3.3)));
+        g.lineTo(W, HORIZON + 4); g.closePath(); g.fill();
+    }
     drawLandmarkOnHorizon(sky, graded, shade, haze);
 }
+let snowTab = null;
 
 // The best-known landmark of the place where the computer is (the weather location, plan 2.1.5), as a distant silhouette in the colour of the hills: it follows the time of day, fog,
 // snow and lightning of the scene. Chosen once per location; off with the "landmarks" setting or when nothing known is within 250 km.
@@ -1104,6 +1125,31 @@ function drawWater(ctx2, sky, graded) {
     ctx2.fillStyle = hg; ctx2.fillRect(0, hz - 6, W, wh * 0.14 + 6);
 }
 
+// Fresnel: a flat water surface reflects the sky strongly at grazing angles (near the horizon) and shows its depth when looked at steeply (near the viewer)
+function drawFresnel(ctx2, graded) {
+    if (S.snowCover > 0.6) return;
+    const a = 0.3 * (1 - S.fog * 0.5) * (1 - 0.4 * S.rain);
+    const fg = ctx2.createLinearGradient(0, HORIZON, 0, H);
+    fg.addColorStop(0, rgba(graded.hor, a)); fg.addColorStop(0.18, rgba(graded.hor, a * 0.45)); fg.addColorStop(0.6, rgba(graded.hor, a * 0.1)); fg.addColorStop(1, rgba(graded.hor, 0));
+    ctx2.fillStyle = fg; ctx2.fillRect(0, HORIZON, W, H - HORIZON);
+}
+
+// Foam: short white crests that flash on the waves when the wind is up or it rains hard; a fixed set of crests (no per-frame allocation), more visible and bigger toward the viewer
+let foam = null;
+function drawFoam(ctx2, amb) {
+    const power = clamp((S.wind - 12) / 40 + S.rain * 0.35 + S.storm * 0.4, 0, 1);
+    if (power < 0.05 || S.snowCover > 0.5 || lastDensity < 0.35) return;
+    if (!foam) { const r = mulberry32(31); foam = Array.from({ length: 90 }, () => ({ x: r(), z: Math.pow(r(), 1.6), w: 0.5 + r(), ph: r() * TAU, sp: 0.4 + r() * 1.2 })); }
+    const col = mix([150, 165, 190], [250, 252, 255], clamp(amb + 0.15, 0, 1));
+    const span = H - HORIZON;
+    for (const f of foam) {
+        const flash = Math.sin(animTime * f.sp + f.ph); if (flash < 0.35) continue;
+        const a = (flash - 0.35) / 0.65 * power * (0.2 + 0.5 * f.z);
+        const y = HORIZON + span * (0.04 + 0.9 * f.z), w = (8 + 48 * f.z) * f.w * K, x = ((f.x + animTime * 0.002 * S.dir * (0.5 + f.z)) % 1 + 1) % 1 * W;
+        ctx2.fillStyle = rgba(col, a); ctx2.beginPath(); ctx2.ellipse(x, y, w, Math.max(0.7, w * 0.05), 0, 0, TAU); ctx2.fill();
+    }
+}
+
 function drawRipples(ctx2, dt, amb) {
     if (S.snowCover > 0.6) { ripples.length = 0; return; }
     const col = mix([120, 140, 170], [225, 235, 250], clamp(amb + 0.15, 0, 1));
@@ -1133,8 +1179,7 @@ function drawRain(ctx2, dt, amb, density) {
     const wind = S.windX;
     for (const L of layers) {
         const n = Math.round(L.arr.length * Math.min(1, intensity * 1.15));
-        ctx2.strokeStyle = rgba(col, L.a * (0.55 + 0.45 * intensity));
-        ctx2.lineWidth = L.w * Math.sqrt(K);
+        const aL = L.a * (0.55 + 0.45 * intensity), wL = L.w * Math.sqrt(K);
         ctx2.beginPath();
         for (let i = 0; i < n; i++) {
             const d = L.arr[i];
@@ -1154,7 +1199,15 @@ function drawRain(ctx2, dt, amb, density) {
             ctx2.moveTo(d.x, d.y);
             ctx2.lineTo(d.x - wind * K * (d.v / 1200) * k, d.y - d.v * K * k);
         }
-        ctx2.stroke();
+        // motion blur: the same streaks once wide and faint, once thin and sharp (one path, two strokes)
+        ctx2.strokeStyle = rgba(col, aL * 0.4); ctx2.lineWidth = wL * 3.2; ctx2.stroke();
+        ctx2.strokeStyle = rgba(col, aL); ctx2.lineWidth = wL; ctx2.stroke();
+    }
+    // wet surfaces: a soft specular sheen on the ground / water that grows with the rain
+    if (intensity > 0.2) {
+        const wg = ctx2.createLinearGradient(0, HORIZON, 0, H);
+        wg.addColorStop(0, rgba(col, 0.1 * intensity)); wg.addColorStop(0.5, rgba(col, 0.03 * intensity)); wg.addColorStop(1, rgba(col, 0));
+        ctx2.fillStyle = wg; ctx2.fillRect(0, HORIZON, W, H - HORIZON);
     }
     // splash droplets
     if (splashes.length) {
@@ -1353,7 +1406,7 @@ function draw(target, dt, profile) {
     drawBirds(c2, dt, sky);
     if (onPhoto()) drawScenePhoto(c2, sky, graded);
     else if (onLand()) drawLand(c2, sky, graded);
-    else { drawWater(c2, sky, graded); drawRipples(c2, dt, sky.amb); }
+    else { drawWater(c2, sky, graded); drawFresnel(c2, graded); drawFoam(c2, sky.amb); drawRipples(c2, dt, sky.amb); }
     drawFog(c2, dt, graded, sky.amb);
     drawRain(c2, dt, sky.amb, density);
     drawSnow(c2, dt, sky.amb);
