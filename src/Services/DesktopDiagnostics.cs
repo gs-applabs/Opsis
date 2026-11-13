@@ -482,6 +482,51 @@ namespace MotionDesk.Services
         }
 
         /// <summary>
+        /// Shell events on a container: "show desktop" (what Win+D does) and a RESTART OF EXPLORER. After each the container must still be visible, and above the desktop in the real z-order
+        /// chain once the host has re-seated it. Only runs on a CI runner (GITHUB_ACTIONS) or with OPSIS_E2E_SHELL=1, because it minimises every window and kills explorer.exe.
+        /// </summary>
+        public static int TestContainerShellEvents(string folder)
+        {
+            Directory.CreateDirectory(folder);
+            var report = new System.Collections.Generic.List<string>();
+            if (Environment.GetEnvironmentVariable("GITHUB_ACTIONS") != "true" && Environment.GetEnvironmentVariable("OPSIS_E2E_SHELL") != "1") { report.Add("SKIPPED: not a CI runner (set OPSIS_E2E_SHELL=1 to run here)"); File.WriteAllLines(Path.Combine(folder, "container-shell.txt"), report); return 0; }
+            void Pump(int ms) { var end = DateTime.UtcNow.AddMilliseconds(ms); while (DateTime.UtcNow < end) { Application.DoEvents(); System.Threading.Thread.Sleep(10); } }
+            var file = Path.Combine(folder, "shell-test.json"); if (File.Exists(file)) File.Delete(file);
+            bool ok = true;
+            try
+            {
+                using var host = new MotionDesk.Containers.ContainerHost(new Opsis.Containers.ContainersStore(file));
+                host.Service.Handle("create", new System.Text.Json.Nodes.JsonObject { ["title"] = "Shell", ["x"] = 300, ["y"] = 300, ["width"] = 300, ["height"] = 200 });
+                host.Sync(); Pump(800);
+                var win = host.Windows.First();
+                bool Above()
+                {
+                    var chain = MotionDesk.Containers.DesktopZOrder.Chain(); var c = chain.IndexOf(win.Handle);
+                    var top = MotionDesk.Containers.DesktopZOrder.DesktopWindows().Select(h => chain.IndexOf(h)).Where(i => i >= 0).DefaultIfEmpty(-1).Min();
+                    return win.Visible && c >= 0 && top >= 0 && c < top;
+                }
+                report.Add("start: visible and above the desktop = " + Above()); ok &= Above();
+                // Win+D: show the desktop
+                dynamic shell = Activator.CreateInstance(Type.GetTypeFromProgID("Shell.Application")!)!;
+                shell.ToggleDesktop(); Pump(2500);
+                bool afterD = Above(); report.Add("after Win+D (show desktop): visible and above the desktop = " + afterD); ok &= afterD;
+                shell.ToggleDesktop(); Pump(1500);
+                // Explorer restart
+                foreach (var p in Process.GetProcessesByName("explorer")) { try { p.Kill(); } catch (Exception) { } }
+                Pump(1500);
+                var until = DateTime.UtcNow.AddSeconds(40);
+                while (DateTime.UtcNow < until && Process.GetProcessesByName("explorer").Length == 0) Pump(500);
+                if (Process.GetProcessesByName("explorer").Length == 0) { try { Process.Start("explorer.exe"); } catch (Exception) { } Pump(3000); report.Add("explorer did not come back by itself: started it"); }
+                Pump(6000);                                                                      // the host re-seats every second
+                bool afterE = Above(); report.Add("after the Explorer restart: visible and above the desktop = " + afterE); ok &= afterE;
+            }
+            catch (Exception ex) { report.Add("EXCEPTION: " + ex); ok = false; }
+            finally { GlassService.Shutdown(); }
+            File.WriteAllLines(Path.Combine(folder, "container-shell.txt"), report);
+            return ok ? 0 : 1;
+        }
+
+        /// <summary>
         /// Cost of N glass containers over a moving stand-in (my own window): CPU of this process, private memory, handles, GDI/USER objects, capture/render counts, for the budgets of
         /// the design doc (section 6). Idle containers (nothing moving behind them) are measured as well. Nothing from the desktop is captured or saved.
         /// </summary>

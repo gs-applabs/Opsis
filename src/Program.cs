@@ -133,6 +133,11 @@ namespace MotionDesk
                 return;
             }
 
+            if (args.Length == 2 && args[0] == "--test-container-shell")
+            {
+                ApplicationConfiguration.Initialize();
+                Environment.Exit(Services.DesktopDiagnostics.TestContainerShellEvents(args[1]));
+            }
             if (args.Length == 2 && args[0] == "--test-container-dnd")
             {
                 ApplicationConfiguration.Initialize();

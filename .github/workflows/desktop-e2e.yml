@@ -1,0 +1,42 @@
+# Desktop checks that need a real Windows session (GitHub-hosted runner): Win+D, an Explorer restart, the real-mouse drag and drop, hover roll-up and click launch of containers, z-order.
+# Manual run (workflow_dispatch). Nothing here is published; the build is only used by the checks.
+name: desktop-e2e
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  desktop:
+    runs-on: windows-2025
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Build
+        shell: pwsh
+        run: dotnet build MotionDeskStudio.csproj -c Release --nologo -v q
+      - name: Desktop checks
+        shell: pwsh
+        run: |
+          $exe = (Get-ChildItem bin -Recurse -Filter Opsis.exe | Sort-Object LastWriteTime -Descending | Select-Object -First 1).FullName
+          $env:OPSIS_APPDATA = "$env:RUNNER_TEMP\opsis-data"; New-Item -ItemType Directory -Force $env:OPSIS_APPDATA | Out-Null
+          $out = "$env:RUNNER_TEMP\desktop-e2e"; New-Item -ItemType Directory -Force $out | Out-Null
+          $failed = @()
+          foreach ($t in @('--test-container-zorder','--test-container-host','--test-container-dnd','--test-container-shell')) {
+            $p = Start-Process $exe -ArgumentList $t,"$out\$($t.TrimStart('-'))" -PassThru
+            if (-not $p.WaitForExit(240000)) { Stop-Process -Id $p.Id -Force; $failed += "$t (timeout)" }
+            elseif ($p.ExitCode -ne 0) { $failed += "$t (exit $($p.ExitCode))" }
+            "$t -> exit $($p.ExitCode)"
+          }
+          Get-ChildItem $out -Recurse -Filter *.txt | ForEach-Object { "--- $($_.Name)"; Get-Content $_.FullName }
+          if ($failed.Count -gt 0) { throw "failed: $($failed -join ', ')" }
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: desktop-e2e-reports
+          path: ${{ runner.temp }}/desktop-e2e
