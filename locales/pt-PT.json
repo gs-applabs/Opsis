@@ -778,5 +778,8 @@
   "Tray.Welcome": "Guia de boas-vindas",
   "Tray.Family": "A família Opsis",
   "Welcome.Body": "O Opsis personaliza o seu ambiente de trabalho:\n\n•  Fundo: vídeo, página web, imagem, meteorologia e mais, atrás dos ícones.\n•  Widgets e DeskContainers: relógio, monitor do sistema e contentores que agrupam ícones.\n•  DeskZones e DeskStrip: encaixe janelas em zonas e um dock para as suas aplicações.\n•  Definições: cada página tem pesquisa; as alterações guardam-se logo e aparecem na barra de estado.\n•  O ícone do tabuleiro abre tudo; os plugins (News Crawler, Appearance, ...) acrescentam páginas.",
-  "Family.NoList": "A lista de aplicações da família não foi encontrada."
+  "Family.NoList": "A lista de aplicações da família não foi encontrada.",
+  "Wallpaper.WeatherReverseOn": "Nome de local mais exato do OpenStreetMap (online, só quando carrego em «Usar a minha localização»)",
+  "Wallpaper.WeatherReverseConsent": "Ao carregar em «Usar a minha localização», o ponto arredondado (cerca de 1 km) é enviado UMA vez ao OpenStreetMap Nominatim por HTTPS para obter um nome de bairro / aldeia mais exato. Noutros momentos nada é enviado e só o nome é guardado. Sem esta opção o nome vem de uma tabela offline (Grécia) e nada sai do PC. Ativar?",
+  "Wallpaper.WeatherPlaceLine": "Local: {0} (fonte: {1})"
 }

@@ -801,5 +801,8 @@
   "Tray.Welcome": "Welcome guide",
   "Tray.Family": "The Opsis family",
   "Welcome.Body": "Opsis customises your desktop:\n\n•  Wallpaper: video, web page, image, weather and more, behind your icons.\n•  Widgets and DeskContainers: clock, system monitor and containers that group your icons.\n•  DeskZones and DeskStrip: snap windows into zones and a dock for your apps.\n•  Settings: every option has a search box; changes are saved at once and shown in the status bar.\n•  The tray icon opens everything; plugins (News Crawler, Appearance, ...) add their own pages.",
-  "Family.NoList": "The list of family apps was not found."
+  "Family.NoList": "The list of family apps was not found.",
+  "Wallpaper.WeatherReverseOn": "More exact place name from OpenStreetMap (online, only when I press \"Use my location\")",
+  "Wallpaper.WeatherReverseConsent": "When you press \"Use my location\", the rounded point (about 1 km) is sent ONCE to OpenStreetMap Nominatim over HTTPS to get a more exact neighbourhood / village name. Nothing is sent at other times and only the name is stored. Without this option the name comes from an offline table (Greece) and nothing leaves the PC. Turn on?",
+  "Wallpaper.WeatherPlaceLine": "Place: {0} (source: {1})"
 }

@@ -778,5 +778,8 @@
   "Tray.Welcome": "Willkommensanleitung",
   "Tray.Family": "Die Opsis-Familie",
   "Welcome.Body": "Opsis gestaltet Ihren Desktop:\n\n•  Hintergrund: Video, Webseite, Bild, Wetter und mehr hinter Ihren Symbolen.\n•  Widgets und DeskContainers: Uhr, Systemmonitor und Container, die Symbole gruppieren.\n•  DeskZones und DeskStrip: Fenster in Zonen einrasten und ein Dock für Ihre Apps.\n•  Einstellungen: jede Seite hat eine Suche; Änderungen werden sofort gespeichert und in der Statusleiste angezeigt.\n•  Das Tray-Symbol öffnet alles; Plugins (News Crawler, Appearance, ...) fügen eigene Seiten hinzu.",
-  "Family.NoList": "Die Liste der Familien-Apps wurde nicht gefunden."
+  "Family.NoList": "Die Liste der Familien-Apps wurde nicht gefunden.",
+  "Wallpaper.WeatherReverseOn": "Genauerer Ortsname von OpenStreetMap (online, nur wenn ich „Meinen Standort verwenden“ drücke)",
+  "Wallpaper.WeatherReverseConsent": "Beim Drücken von „Meinen Standort verwenden“ wird der gerundete Punkt (ca. 1 km) EINMAL per HTTPS an OpenStreetMap Nominatim gesendet, um einen genaueren Viertel-/Dorfnamen zu erhalten. Sonst wird nichts gesendet, gespeichert wird nur der Name. Ohne diese Option stammt der Name aus einer Offline-Tabelle (Griechenland) und nichts verlässt den PC. Einschalten?",
+  "Wallpaper.WeatherPlaceLine": "Ort: {0} (Quelle: {1})"
 }

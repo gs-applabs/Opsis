@@ -778,5 +778,8 @@
   "Tray.Welcome": "Guide de bienvenue",
   "Tray.Family": "La famille Opsis",
   "Welcome.Body": "Opsis personnalise votre bureau :\n\n•  Fond d’écran : vidéo, page web, image, météo et plus, derrière vos icônes.\n•  Widgets et DeskContainers : horloge, moniteur système et conteneurs qui regroupent vos icônes.\n•  DeskZones et DeskStrip : fixez les fenêtres dans des zones et un dock pour vos applications.\n•  Paramètres : chaque page a une recherche ; les changements sont enregistrés aussitôt et affichés dans la barre d’état.\n•  L’icône de la zone de notification ouvre tout ; les plugins (News Crawler, Appearance, ...) ajoutent leurs pages.",
-  "Family.NoList": "La liste des applications de la famille est introuvable."
+  "Family.NoList": "La liste des applications de la famille est introuvable.",
+  "Wallpaper.WeatherReverseOn": "Nom de lieu plus précis via OpenStreetMap (en ligne, seulement quand j’appuie sur « Utiliser ma position »)",
+  "Wallpaper.WeatherReverseConsent": "Quand vous appuyez sur « Utiliser ma position », le point arrondi (environ 1 km) est envoyé UNE fois à OpenStreetMap Nominatim en HTTPS pour obtenir un nom de quartier / village plus précis. Rien n’est envoyé à d’autres moments et seul le nom est enregistré. Sans cette option, le nom vient d’une table hors ligne (Grèce) et rien ne quitte le PC. Activer ?",
+  "Wallpaper.WeatherPlaceLine": "Lieu : {0} (source : {1})"
 }

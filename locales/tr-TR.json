@@ -778,5 +778,8 @@
   "Tray.Welcome": "Karşılama kılavuzu",
   "Tray.Family": "Opsis ailesi",
   "Welcome.Body": "Opsis masaüstünüzü özelleştirir:\n\n•  Duvar kâğıdı: video, web sayfası, resim, hava durumu ve daha fazlası, simgelerin arkasında.\n•  Widget'lar ve DeskContainers: saat, sistem izleyici ve simgeleri gruplayan kapsayıcılar.\n•  DeskZones ve DeskStrip: pencereleri bölgelere oturtun ve uygulamalarınız için bir dock.\n•  Ayarlar: her sayfada arama vardır; değişiklikler hemen kaydedilir ve durum çubuğunda gösterilir.\n•  Tepsi simgesi her şeyi açar; eklentiler (News Crawler, Appearance, ...) kendi sayfalarını ekler.",
-  "Family.NoList": "Aile uygulamalarının listesi bulunamadı."
+  "Family.NoList": "Aile uygulamalarının listesi bulunamadı.",
+  "Wallpaper.WeatherReverseOn": "OpenStreetMap’ten daha kesin yer adı (çevrimiçi, yalnızca “Konumumu kullan”a bastığımda)",
+  "Wallpaper.WeatherReverseConsent": "“Konumumu kullan”a bastığınızda yuvarlanmış nokta (yaklaşık 1 km) daha kesin bir mahalle / köy adı için BİR kez HTTPS ile OpenStreetMap Nominatim’e gönderilir. Başka zaman hiçbir şey gönderilmez ve yalnızca ad saklanır. Bu seçenek olmadan ad çevrimdışı bir tablodan (Yunanistan) gelir ve PC’den hiçbir şey çıkmaz. Açılsın mı?",
+  "Wallpaper.WeatherPlaceLine": "Yer: {0} (kaynak: {1})"
 }

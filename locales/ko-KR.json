@@ -778,5 +778,8 @@
   "Tray.Welcome": "시작 안내",
   "Tray.Family": "Opsis 패밀리",
   "Welcome.Body": "Opsis는 바탕 화면을 사용자 지정합니다:\n\n•  배경 화면: 아이콘 뒤에 동영상, 웹 페이지, 이미지, 날씨 등.\n•  위젯 및 DeskContainers: 시계, 시스템 모니터, 아이콘을 묶는 컨테이너.\n•  DeskZones 및 DeskStrip: 창을 영역에 맞추고 앱용 독.\n•  설정: 모든 페이지에 검색이 있으며 변경 사항은 즉시 저장되어 상태 표시줄에 표시됩니다.\n•  트레이 아이콘으로 모든 것을 열 수 있으며 플러그인(News Crawler, Appearance 등)이 자체 페이지를 추가합니다.",
-  "Family.NoList": "패밀리 앱 목록을 찾을 수 없습니다."
+  "Family.NoList": "패밀리 앱 목록을 찾을 수 없습니다.",
+  "Wallpaper.WeatherReverseOn": "OpenStreetMap에서 더 정확한 지명(온라인, '내 위치 사용'을 누를 때만)",
+  "Wallpaper.WeatherReverseConsent": "'내 위치 사용'을 누르면 반올림한 지점(약 1 km)이 더 정확한 동네/마을 이름을 얻기 위해 HTTPS로 OpenStreetMap Nominatim에 한 번만 전송됩니다. 다른 때에는 아무것도 전송되지 않고 이름만 저장됩니다. 이 옵션이 없으면 이름은 오프라인 표(그리스)에서 가져오며 PC 밖으로 아무것도 나가지 않습니다. 켤까요?",
+  "Wallpaper.WeatherPlaceLine": "장소: {0} (출처: {1})"
 }

@@ -778,5 +778,8 @@
   "Tray.Welcome": "ようこそガイド",
   "Tray.Family": "Opsis ファミリー",
   "Welcome.Body": "Opsis はデスクトップをカスタマイズします:\n\n•  壁紙: アイコンの後ろに動画、Web ページ、画像、天気など。\n•  ウィジェットと DeskContainers: 時計、システム モニター、アイコンをまとめるコンテナー。\n•  DeskZones と DeskStrip: ウィンドウをゾーンにスナップし、アプリ用のドック。\n•  設定: 各ページに検索があり、変更はすぐ保存されてステータス バーに表示されます。\n•  トレイ アイコンからすべて開けます。プラグイン (News Crawler、Appearance など) が独自のページを追加します。",
-  "Family.NoList": "ファミリー アプリの一覧が見つかりません。"
+  "Family.NoList": "ファミリー アプリの一覧が見つかりません。",
+  "Wallpaper.WeatherReverseOn": "OpenStreetMap からより正確な地名（オンライン、「現在地を使用」を押したときのみ）",
+  "Wallpaper.WeatherReverseConsent": "「現在地を使用」を押すと、丸めた地点（約 1 km）が、より正確な地区・村の名前を得るために HTTPS で OpenStreetMap Nominatim へ 1 回だけ送信されます。それ以外のときは何も送信されず、保存されるのは名前だけです。このオプションがない場合、名前はオフラインの表（ギリシャ）から取得され、PC から何も出ません。オンにしますか？",
+  "Wallpaper.WeatherPlaceLine": "場所: {0}（出典: {1}）"
 }

@@ -778,5 +778,8 @@
   "Tray.Welcome": "欢迎指南",
   "Tray.Family": "Opsis 家族",
   "Welcome.Body": "Opsis 可自定义你的桌面：\n\n•  壁纸：在图标后方显示视频、网页、图片、天气等。\n•  小组件和 DeskContainers：时钟、系统监视器以及对图标分组的容器。\n•  DeskZones 和 DeskStrip：将窗口吸附到区域，并提供应用程序坞。\n•  设置：每个页面都有搜索；更改会立即保存并显示在状态栏中。\n•  托盘图标可打开一切；插件（News Crawler、Appearance 等）会添加自己的页面。",
-  "Family.NoList": "未找到家族应用列表。"
+  "Family.NoList": "未找到家族应用列表。",
+  "Wallpaper.WeatherReverseOn": "来自 OpenStreetMap 的更准确地名（联网，仅在我点击“使用我的位置”时）",
+  "Wallpaper.WeatherReverseConsent": "点击“使用我的位置”时，取整后的点（约 1 公里）会通过 HTTPS 仅发送一次到 OpenStreetMap Nominatim，以获得更准确的街区/村庄名称。其他时候不发送任何内容，只保存名称。不启用此选项时，名称来自离线表（希腊），不会有任何内容离开电脑。是否开启？",
+  "Wallpaper.WeatherPlaceLine": "地点：{0}（来源：{1}）"
 }
