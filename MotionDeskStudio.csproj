@@ -117,6 +117,7 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <Link>assets\Opsis.ico</Link>
     </None>
+    <EmbeddedResource Include="src\Widgets\Data\gazetteer-gr.tsv.gz" LogicalName="gazetteer-gr.tsv.gz" />
     <None Include="suite\apps.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <Link>suite\apps.json</Link>
