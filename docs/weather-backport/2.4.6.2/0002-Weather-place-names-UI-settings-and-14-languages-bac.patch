@@ -1,0 +1,357 @@
+From cd335c29594d4c3238f3a561858947c286c32768 Mon Sep 17 00:00:00 2001
+From: giorstergiopoulos-design
+ <giorstergiopoulos-design@users.noreply.github.com>
+Date: Fri, 13 Nov 2026 09:48:03 +0200
+Subject: [PATCH 2/4] Weather place names: UI, settings and 14 languages
+ (backport of the 2.6.0 change)
+
+Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
+---
+ locales/ar-SA.json             |  7 +++++--
+ locales/de-DE.json             |  7 +++++--
+ locales/el-GR.json             |  7 +++++--
+ locales/en-US.json             |  7 +++++--
+ locales/es-ES.json             |  7 +++++--
+ locales/fr-FR.json             |  7 +++++--
+ locales/hi-IN.json             |  7 +++++--
+ locales/it-IT.json             |  7 +++++--
+ locales/ja-JP.json             |  7 +++++--
+ locales/ko-KR.json             |  7 +++++--
+ locales/pt-PT.json             |  7 +++++--
+ locales/ru-RU.json             |  7 +++++--
+ locales/tr-TR.json             |  7 +++++--
+ locales/zh-CN.json             |  7 +++++--
+ src/UI/MainWindow.cs           | 25 ++++++++++++++++++++-----
+ src/Widgets/WallpaperWindow.cs | 14 +++++++++++++-
+ 16 files changed, 103 insertions(+), 34 deletions(-)
+
+diff --git a/locales/ar-SA.json b/locales/ar-SA.json
+index 6ceb46b..e21ae22 100644
+--- a/locales/ar-SA.json
++++ b/locales/ar-SA.json
+@@ -779,5 +779,8 @@
+   "Tray.Welcome": "دليل الترحيب",
+   "Tray.Family": "عائلة Opsis",
+   "Welcome.Body": "يخصّص Opsis سطح المكتب لديك:\n\n•  الخلفية: فيديو أو صفحة ويب أو صورة أو طقس وغير ذلك خلف الأيقونات.\n•  الأدوات وDeskContainers: ساعة ومراقب النظام وحاويات تجمّع الأيقونات.\n•  DeskZones وDeskStrip: تثبيت النوافذ في مناطق وشريط لتطبيقاتك.\n•  الإعدادات: لكل صفحة بحث؛ تُحفظ التغييرات فورًا وتظهر في شريط الحالة.\n•  أيقونة الدرج تفتح كل شيء؛ والإضافات (News Crawler وAppearance ...) تضيف صفحاتها.",
+-  "Family.NoList": "لم يتم العثور على قائمة تطبيقات العائلة."
+-}
+\ No newline at end of file
++  "Family.NoList": "لم يتم العثور على قائمة تطبيقات العائلة.",
++  "Wallpaper.WeatherReverseOn": "اسم مكان أدق من OpenStreetMap (عبر الإنترنت، فقط عند الضغط على «استخدام موقعي»)",
++  "Wallpaper.WeatherReverseConsent": "عند الضغط على «استخدام موقعي» تُرسل النقطة المقرّبة (نحو 1 كم) مرة واحدة إلى OpenStreetMap Nominatim عبر HTTPS للحصول على اسم حي/قرية أدق. لا يُرسل شيء في أوقات أخرى ولا يُحفظ سوى الاسم. بدون هذا الخيار يأتي الاسم من جدول دون اتصال (اليونان) ولا يغادر شيء الحاسوب. هل تفعّله؟",
++  "Wallpaper.WeatherPlaceLine": "المكان: {0} (المصدر: {1})"
++}
+diff --git a/locales/de-DE.json b/locales/de-DE.json
+index 37aef59..12a7055 100644
+--- a/locales/de-DE.json
++++ b/locales/de-DE.json
+@@ -779,5 +779,8 @@
+   "Tray.Welcome": "Willkommensanleitung",
+   "Tray.Family": "Die Opsis-Familie",
+   "Welcome.Body": "Opsis gestaltet Ihren Desktop:\n\n•  Hintergrund: Video, Webseite, Bild, Wetter und mehr hinter Ihren Symbolen.\n•  Widgets und DeskContainers: Uhr, Systemmonitor und Container, die Symbole gruppieren.\n•  DeskZones und DeskStrip: Fenster in Zonen einrasten und ein Dock für Ihre Apps.\n•  Einstellungen: jede Seite hat eine Suche; Änderungen werden sofort gespeichert und in der Statusleiste angezeigt.\n•  Das Tray-Symbol öffnet alles; Plugins (News Crawler, Appearance, ...) fügen eigene Seiten hinzu.",
+-  "Family.NoList": "Die Liste der Familien-Apps wurde nicht gefunden."
+-}
+\ No newline at end of file
++  "Family.NoList": "Die Liste der Familien-Apps wurde nicht gefunden.",
++  "Wallpaper.WeatherReverseOn": "Genauerer Ortsname von OpenStreetMap (online, nur wenn ich „Meinen Standort verwenden“ drücke)",
++  "Wallpaper.WeatherReverseConsent": "Beim Drücken von „Meinen Standort verwenden“ wird der gerundete Punkt (ca. 1 km) EINMAL per HTTPS an OpenStreetMap Nominatim gesendet, um einen genaueren Viertel-/Dorfnamen zu erhalten. Sonst wird nichts gesendet, gespeichert wird nur der Name. Ohne diese Option stammt der Name aus einer Offline-Tabelle (Griechenland) und nichts verlässt den PC. Einschalten?",
++  "Wallpaper.WeatherPlaceLine": "Ort: {0} (Quelle: {1})"
++}
+diff --git a/locales/el-GR.json b/locales/el-GR.json
+index 1e9119a..913a243 100644
+--- a/locales/el-GR.json
++++ b/locales/el-GR.json
+@@ -802,5 +802,8 @@
+   "Tray.Welcome": "Οδηγός καλωσορίσματος",
+   "Tray.Family": "Η οικογένεια Opsis",
+   "Welcome.Body": "Το Opsis προσαρμόζει την επιφάνεια εργασίας σου:\n\n•  Wallpaper: βίντεο, ιστοσελίδα, εικόνα, καιρός και άλλα, πίσω από τα εικονίδια.\n•  Widgets και DeskContainers: ρολόι, παρακολούθηση συστήματος και containers που ομαδοποιούν τα εικονίδια.\n•  DeskZones και DeskStrip: ζώνες για τα παράθυρα και dock για τις εφαρμογές σου.\n•  Ρυθμίσεις: κάθε σελίδα έχει αναζήτηση· οι αλλαγές αποθηκεύονται αμέσως και φαίνονται στη γραμμή κατάστασης.\n•  Το εικονίδιο tray ανοίγει τα πάντα· τα plugins (News Crawler, Appearance, ...) προσθέτουν δικές τους σελίδες.",
+-  "Family.NoList": "Δεν βρέθηκε η λίστα των εφαρμογών της οικογένειας."
+-}
+\ No newline at end of file
++  "Family.NoList": "Δεν βρέθηκε η λίστα των εφαρμογών της οικογένειας.",
++  "Wallpaper.WeatherReverseOn": "Πιο ακριβές όνομα περιοχής από το OpenStreetMap (online, μόνο όταν πατάω «Χρήση της τοποθεσίας μου»)",
++  "Wallpaper.WeatherReverseConsent": "Όταν πατάς «Χρήση της τοποθεσίας μου», το στρογγυλοποιημένο σημείο (περίπου 1 χλμ.) στέλνεται ΜΙΑ φορά στο OpenStreetMap Nominatim μέσω HTTPS για πιο ακριβές όνομα συνοικίας/χωριού. Άλλη στιγμή δεν στέλνεται τίποτα και αποθηκεύεται μόνο το όνομα. Χωρίς αυτή την επιλογή το όνομα βγαίνει από τοπικό πίνακα (Ελλάδα) και τίποτα δεν φεύγει από τον υπολογιστή. Ενεργοποίηση;",
++  "Wallpaper.WeatherPlaceLine": "Περιοχή: {0} (πηγή: {1})"
++}
+diff --git a/locales/en-US.json b/locales/en-US.json
+index db85bab..23581ff 100644
+--- a/locales/en-US.json
++++ b/locales/en-US.json
+@@ -802,5 +802,8 @@
+   "Tray.Welcome": "Welcome guide",
+   "Tray.Family": "The Opsis family",
+   "Welcome.Body": "Opsis customises your desktop:\n\n•  Wallpaper: video, web page, image, weather and more, behind your icons.\n•  Widgets and DeskContainers: clock, system monitor and containers that group your icons.\n•  DeskZones and DeskStrip: snap windows into zones and a dock for your apps.\n•  Settings: every option has a search box; changes are saved at once and shown in the status bar.\n•  The tray icon opens everything; plugins (News Crawler, Appearance, ...) add their own pages.",
+-  "Family.NoList": "The list of family apps was not found."
+-}
+\ No newline at end of file
++  "Family.NoList": "The list of family apps was not found.",
++  "Wallpaper.WeatherReverseOn": "More exact place name from OpenStreetMap (online, only when I press \"Use my location\")",
++  "Wallpaper.WeatherReverseConsent": "When you press \"Use my location\", the rounded point (about 1 km) is sent ONCE to OpenStreetMap Nominatim over HTTPS to get a more exact neighbourhood / village name. Nothing is sent at other times and only the name is stored. Without this option the name comes from an offline table (Greece) and nothing leaves the PC. Turn on?",
++  "Wallpaper.WeatherPlaceLine": "Place: {0} (source: {1})"
++}
+diff --git a/locales/es-ES.json b/locales/es-ES.json
+index 3e12e10..437e561 100644
+--- a/locales/es-ES.json
++++ b/locales/es-ES.json
+@@ -779,5 +779,8 @@
+   "Tray.Welcome": "Guía de bienvenida",
+   "Tray.Family": "La familia Opsis",
+   "Welcome.Body": "Opsis personaliza tu escritorio:\n\n•  Fondo: vídeo, página web, imagen, tiempo y más, detrás de tus iconos.\n•  Widgets y DeskContainers: reloj, monitor del sistema y contenedores que agrupan tus iconos.\n•  DeskZones y DeskStrip: ajusta ventanas a zonas y un dock para tus apps.\n•  Ajustes: cada página tiene búsqueda; los cambios se guardan al instante y se muestran en la barra de estado.\n•  El icono de la bandeja lo abre todo; los plugins (News Crawler, Appearance, ...) añaden sus páginas.",
+-  "Family.NoList": "No se encontró la lista de apps de la familia."
+-}
+\ No newline at end of file
++  "Family.NoList": "No se encontró la lista de apps de la familia.",
++  "Wallpaper.WeatherReverseOn": "Nombre de lugar más exacto de OpenStreetMap (en línea, solo al pulsar «Usar mi ubicación»)",
++  "Wallpaper.WeatherReverseConsent": "Al pulsar «Usar mi ubicación», el punto redondeado (unos 1 km) se envía UNA vez a OpenStreetMap Nominatim por HTTPS para obtener un nombre de barrio / pueblo más exacto. En otros momentos no se envía nada y solo se guarda el nombre. Sin esta opción el nombre sale de una tabla sin conexión (Grecia) y nada sale del PC. ¿Activar?",
++  "Wallpaper.WeatherPlaceLine": "Lugar: {0} (fuente: {1})"
++}
+diff --git a/locales/fr-FR.json b/locales/fr-FR.json
+index 664a79c..59b59fa 100644
+--- a/locales/fr-FR.json
++++ b/locales/fr-FR.json
+@@ -779,5 +779,8 @@
+   "Tray.Welcome": "Guide de bienvenue",
+   "Tray.Family": "La famille Opsis",
+   "Welcome.Body": "Opsis personnalise votre bureau :\n\n•  Fond d’écran : vidéo, page web, image, météo et plus, derrière vos icônes.\n•  Widgets et DeskContainers : horloge, moniteur système et conteneurs qui regroupent vos icônes.\n•  DeskZones et DeskStrip : fixez les fenêtres dans des zones et un dock pour vos applications.\n•  Paramètres : chaque page a une recherche ; les changements sont enregistrés aussitôt et affichés dans la barre d’état.\n•  L’icône de la zone de notification ouvre tout ; les plugins (News Crawler, Appearance, ...) ajoutent leurs pages.",
+-  "Family.NoList": "La liste des applications de la famille est introuvable."
+-}
+\ No newline at end of file
++  "Family.NoList": "La liste des applications de la famille est introuvable.",
++  "Wallpaper.WeatherReverseOn": "Nom de lieu plus précis via OpenStreetMap (en ligne, seulement quand j’appuie sur « Utiliser ma position »)",
++  "Wallpaper.WeatherReverseConsent": "Quand vous appuyez sur « Utiliser ma position », le point arrondi (environ 1 km) est envoyé UNE fois à OpenStreetMap Nominatim en HTTPS pour obtenir un nom de quartier / village plus précis. Rien n’est envoyé à d’autres moments et seul le nom est enregistré. Sans cette option, le nom vient d’une table hors ligne (Grèce) et rien ne quitte le PC. Activer ?",
++  "Wallpaper.WeatherPlaceLine": "Lieu : {0} (source : {1})"
++}
+diff --git a/locales/hi-IN.json b/locales/hi-IN.json
+index 23cc7b3..ff97918 100644
+--- a/locales/hi-IN.json
++++ b/locales/hi-IN.json
+@@ -779,5 +779,8 @@
+   "Tray.Welcome": "स्वागत गाइड",
+   "Tray.Family": "Opsis परिवार",
+   "Welcome.Body": "Opsis आपके डेस्कटॉप को अनुकूलित करता है:\n\n•  वॉलपेपर: आइकनों के पीछे वीडियो, वेब पेज, छवि, मौसम और बहुत कुछ।\n•  विजेट और DeskContainers: घड़ी, सिस्टम मॉनिटर और आइकनों को समूहित करने वाले कंटेनर।\n•  DeskZones और DeskStrip: विंडो को ज़ोन में स्नैप करें और ऐप्स के लिए डॉक।\n•  सेटिंग: हर पेज पर खोज है; बदलाव तुरंत सहेजे जाते हैं और स्टेटस बार में दिखते हैं।\n•  ट्रे आइकन सब कुछ खोलता है; प्लगइन (News Crawler, Appearance, ...) अपने पेज जोड़ते हैं।",
+-  "Family.NoList": "परिवार के ऐप्स की सूची नहीं मिली।"
+-}
+\ No newline at end of file
++  "Family.NoList": "परिवार के ऐप्स की सूची नहीं मिली।",
++  "Wallpaper.WeatherReverseOn": "OpenStreetMap से अधिक सटीक स्थान नाम (ऑनलाइन, केवल जब मैं “मेरा स्थान उपयोग करें” दबाऊँ)",
++  "Wallpaper.WeatherReverseConsent": "“मेरा स्थान उपयोग करें” दबाने पर पूर्णांकित बिंदु (लगभग 1 किमी) अधिक सटीक मोहल्ले/गाँव के नाम के लिए HTTPS से OpenStreetMap Nominatim को एक बार भेजा जाता है। अन्य समय कुछ नहीं भेजा जाता और केवल नाम सहेजा जाता है। इस विकल्प के बिना नाम ऑफ़लाइन तालिका (ग्रीस) से आता है और पीसी से कुछ बाहर नहीं जाता। चालू करें?",
++  "Wallpaper.WeatherPlaceLine": "स्थान: {0} (स्रोत: {1})"
++}
+diff --git a/locales/it-IT.json b/locales/it-IT.json
+index f811e9e..ec467d6 100644
+--- a/locales/it-IT.json
++++ b/locales/it-IT.json
+@@ -779,5 +779,8 @@
+   "Tray.Welcome": "Guida di benvenuto",
+   "Tray.Family": "La famiglia Opsis",
+   "Welcome.Body": "Opsis personalizza il desktop:\n\n•  Sfondo: video, pagina web, immagine, meteo e altro, dietro le icone.\n•  Widget e DeskContainers: orologio, monitor di sistema e contenitori che raggruppano le icone.\n•  DeskZones e DeskStrip: aggancia le finestre a zone e un dock per le app.\n•  Impostazioni: ogni pagina ha una ricerca; le modifiche si salvano subito e compaiono nella barra di stato.\n•  L’icona nella barra apre tutto; i plugin (News Crawler, Appearance, ...) aggiungono le loro pagine.",
+-  "Family.NoList": "L’elenco delle app della famiglia non è stato trovato."
+-}
+\ No newline at end of file
++  "Family.NoList": "L’elenco delle app della famiglia non è stato trovato.",
++  "Wallpaper.WeatherReverseOn": "Nome del luogo più preciso da OpenStreetMap (online, solo quando premo «Usa la mia posizione»)",
++  "Wallpaper.WeatherReverseConsent": "Quando premi «Usa la mia posizione», il punto arrotondato (circa 1 km) viene inviato UNA volta a OpenStreetMap Nominatim via HTTPS per ottenere un nome di quartiere / paese più preciso. In altri momenti non viene inviato nulla e si salva solo il nome. Senza questa opzione il nome viene da una tabella offline (Grecia) e nulla lascia il PC. Attivare?",
++  "Wallpaper.WeatherPlaceLine": "Luogo: {0} (fonte: {1})"
++}
+diff --git a/locales/ja-JP.json b/locales/ja-JP.json
+index ea4b036..45185b6 100644
+--- a/locales/ja-JP.json
++++ b/locales/ja-JP.json
+@@ -779,5 +779,8 @@
+   "Tray.Welcome": "ようこそガイド",
+   "Tray.Family": "Opsis ファミリー",
+   "Welcome.Body": "Opsis はデスクトップをカスタマイズします:\n\n•  壁紙: アイコンの後ろに動画、Web ページ、画像、天気など。\n•  ウィジェットと DeskContainers: 時計、システム モニター、アイコンをまとめるコンテナー。\n•  DeskZones と DeskStrip: ウィンドウをゾーンにスナップし、アプリ用のドック。\n•  設定: 各ページに検索があり、変更はすぐ保存されてステータス バーに表示されます。\n•  トレイ アイコンからすべて開けます。プラグイン (News Crawler、Appearance など) が独自のページを追加します。",
+-  "Family.NoList": "ファミリー アプリの一覧が見つかりません。"
+-}
+\ No newline at end of file
++  "Family.NoList": "ファミリー アプリの一覧が見つかりません。",
++  "Wallpaper.WeatherReverseOn": "OpenStreetMap からより正確な地名（オンライン、「現在地を使用」を押したときのみ）",
++  "Wallpaper.WeatherReverseConsent": "「現在地を使用」を押すと、丸めた地点（約 1 km）が、より正確な地区・村の名前を得るために HTTPS で OpenStreetMap Nominatim へ 1 回だけ送信されます。それ以外のときは何も送信されず、保存されるのは名前だけです。このオプションがない場合、名前はオフラインの表（ギリシャ）から取得され、PC から何も出ません。オンにしますか？",
++  "Wallpaper.WeatherPlaceLine": "場所: {0}（出典: {1}）"
++}
+diff --git a/locales/ko-KR.json b/locales/ko-KR.json
+index b70a444..70f7049 100644
+--- a/locales/ko-KR.json
++++ b/locales/ko-KR.json
+@@ -779,5 +779,8 @@
+   "Tray.Welcome": "시작 안내",
+   "Tray.Family": "Opsis 패밀리",
+   "Welcome.Body": "Opsis는 바탕 화면을 사용자 지정합니다:\n\n•  배경 화면: 아이콘 뒤에 동영상, 웹 페이지, 이미지, 날씨 등.\n•  위젯 및 DeskContainers: 시계, 시스템 모니터, 아이콘을 묶는 컨테이너.\n•  DeskZones 및 DeskStrip: 창을 영역에 맞추고 앱용 독.\n•  설정: 모든 페이지에 검색이 있으며 변경 사항은 즉시 저장되어 상태 표시줄에 표시됩니다.\n•  트레이 아이콘으로 모든 것을 열 수 있으며 플러그인(News Crawler, Appearance 등)이 자체 페이지를 추가합니다.",
+-  "Family.NoList": "패밀리 앱 목록을 찾을 수 없습니다."
+-}
+\ No newline at end of file
++  "Family.NoList": "패밀리 앱 목록을 찾을 수 없습니다.",
++  "Wallpaper.WeatherReverseOn": "OpenStreetMap에서 더 정확한 지명(온라인, '내 위치 사용'을 누를 때만)",
++  "Wallpaper.WeatherReverseConsent": "'내 위치 사용'을 누르면 반올림한 지점(약 1 km)이 더 정확한 동네/마을 이름을 얻기 위해 HTTPS로 OpenStreetMap Nominatim에 한 번만 전송됩니다. 다른 때에는 아무것도 전송되지 않고 이름만 저장됩니다. 이 옵션이 없으면 이름은 오프라인 표(그리스)에서 가져오며 PC 밖으로 아무것도 나가지 않습니다. 켤까요?",
++  "Wallpaper.WeatherPlaceLine": "장소: {0} (출처: {1})"
++}
+diff --git a/locales/pt-PT.json b/locales/pt-PT.json
+index e8af112..3f151ca 100644
+--- a/locales/pt-PT.json
++++ b/locales/pt-PT.json
+@@ -779,5 +779,8 @@
+   "Tray.Welcome": "Guia de boas-vindas",
+   "Tray.Family": "A família Opsis",
+   "Welcome.Body": "O Opsis personaliza o seu ambiente de trabalho:\n\n•  Fundo: vídeo, página web, imagem, meteorologia e mais, atrás dos ícones.\n•  Widgets e DeskContainers: relógio, monitor do sistema e contentores que agrupam ícones.\n•  DeskZones e DeskStrip: encaixe janelas em zonas e um dock para as suas aplicações.\n•  Definições: cada página tem pesquisa; as alterações guardam-se logo e aparecem na barra de estado.\n•  O ícone do tabuleiro abre tudo; os plugins (News Crawler, Appearance, ...) acrescentam páginas.",
+-  "Family.NoList": "A lista de aplicações da família não foi encontrada."
+-}
+\ No newline at end of file
++  "Family.NoList": "A lista de aplicações da família não foi encontrada.",
++  "Wallpaper.WeatherReverseOn": "Nome de local mais exato do OpenStreetMap (online, só quando carrego em «Usar a minha localização»)",
++  "Wallpaper.WeatherReverseConsent": "Ao carregar em «Usar a minha localização», o ponto arredondado (cerca de 1 km) é enviado UMA vez ao OpenStreetMap Nominatim por HTTPS para obter um nome de bairro / aldeia mais exato. Noutros momentos nada é enviado e só o nome é guardado. Sem esta opção o nome vem de uma tabela offline (Grécia) e nada sai do PC. Ativar?",
++  "Wallpaper.WeatherPlaceLine": "Local: {0} (fonte: {1})"
++}
+diff --git a/locales/ru-RU.json b/locales/ru-RU.json
+index 4180d3d..9c44ed3 100644
+--- a/locales/ru-RU.json
++++ b/locales/ru-RU.json
+@@ -779,5 +779,8 @@
+   "Tray.Welcome": "Приветственное руководство",
+   "Tray.Family": "Семейство Opsis",
+   "Welcome.Body": "Opsis настраивает ваш рабочий стол:\n\n•  Обои: видео, веб-страница, изображение, погода и другое — за значками.\n•  Виджеты и DeskContainers: часы, системный монитор и контейнеры, группирующие значки.\n•  DeskZones и DeskStrip: привязка окон к зонам и док для приложений.\n•  Настройки: на каждой странице есть поиск; изменения сохраняются сразу и отображаются в строке состояния.\n•  Значок в трее открывает всё; плагины (News Crawler, Appearance, ...) добавляют свои страницы.",
+-  "Family.NoList": "Список приложений семейства не найден."
+-}
+\ No newline at end of file
++  "Family.NoList": "Список приложений семейства не найден.",
++  "Wallpaper.WeatherReverseOn": "Более точное название места из OpenStreetMap (онлайн, только когда я нажимаю «Использовать моё местоположение»)",
++  "Wallpaper.WeatherReverseConsent": "При нажатии «Использовать моё местоположение» округлённая точка (около 1 км) ОДИН раз отправляется в OpenStreetMap Nominatim по HTTPS, чтобы получить более точное название района / села. В остальное время ничего не отправляется, сохраняется только название. Без этой опции название берётся из офлайн-таблицы (Греция), и ничего не покидает ПК. Включить?",
++  "Wallpaper.WeatherPlaceLine": "Место: {0} (источник: {1})"
++}
+diff --git a/locales/tr-TR.json b/locales/tr-TR.json
+index bab8f3a..683856c 100644
+--- a/locales/tr-TR.json
++++ b/locales/tr-TR.json
+@@ -779,5 +779,8 @@
+   "Tray.Welcome": "Karşılama kılavuzu",
+   "Tray.Family": "Opsis ailesi",
+   "Welcome.Body": "Opsis masaüstünüzü özelleştirir:\n\n•  Duvar kâğıdı: video, web sayfası, resim, hava durumu ve daha fazlası, simgelerin arkasında.\n•  Widget'lar ve DeskContainers: saat, sistem izleyici ve simgeleri gruplayan kapsayıcılar.\n•  DeskZones ve DeskStrip: pencereleri bölgelere oturtun ve uygulamalarınız için bir dock.\n•  Ayarlar: her sayfada arama vardır; değişiklikler hemen kaydedilir ve durum çubuğunda gösterilir.\n•  Tepsi simgesi her şeyi açar; eklentiler (News Crawler, Appearance, ...) kendi sayfalarını ekler.",
+-  "Family.NoList": "Aile uygulamalarının listesi bulunamadı."
+-}
+\ No newline at end of file
++  "Family.NoList": "Aile uygulamalarının listesi bulunamadı.",
++  "Wallpaper.WeatherReverseOn": "OpenStreetMap’ten daha kesin yer adı (çevrimiçi, yalnızca “Konumumu kullan”a bastığımda)",
++  "Wallpaper.WeatherReverseConsent": "“Konumumu kullan”a bastığınızda yuvarlanmış nokta (yaklaşık 1 km) daha kesin bir mahalle / köy adı için BİR kez HTTPS ile OpenStreetMap Nominatim’e gönderilir. Başka zaman hiçbir şey gönderilmez ve yalnızca ad saklanır. Bu seçenek olmadan ad çevrimdışı bir tablodan (Yunanistan) gelir ve PC’den hiçbir şey çıkmaz. Açılsın mı?",
++  "Wallpaper.WeatherPlaceLine": "Yer: {0} (kaynak: {1})"
++}
+diff --git a/locales/zh-CN.json b/locales/zh-CN.json
+index 1476a32..129be34 100644
+--- a/locales/zh-CN.json
++++ b/locales/zh-CN.json
+@@ -779,5 +779,8 @@
+   "Tray.Welcome": "欢迎指南",
+   "Tray.Family": "Opsis 家族",
+   "Welcome.Body": "Opsis 可自定义你的桌面：\n\n•  壁纸：在图标后方显示视频、网页、图片、天气等。\n•  小组件和 DeskContainers：时钟、系统监视器以及对图标分组的容器。\n•  DeskZones 和 DeskStrip：将窗口吸附到区域，并提供应用程序坞。\n•  设置：每个页面都有搜索；更改会立即保存并显示在状态栏中。\n•  托盘图标可打开一切；插件（News Crawler、Appearance 等）会添加自己的页面。",
+-  "Family.NoList": "未找到家族应用列表。"
+-}
+\ No newline at end of file
++  "Family.NoList": "未找到家族应用列表。",
++  "Wallpaper.WeatherReverseOn": "来自 OpenStreetMap 的更准确地名（联网，仅在我点击“使用我的位置”时）",
++  "Wallpaper.WeatherReverseConsent": "点击“使用我的位置”时，取整后的点（约 1 公里）会通过 HTTPS 仅发送一次到 OpenStreetMap Nominatim，以获得更准确的街区/村庄名称。其他时候不发送任何内容，只保存名称。不启用此选项时，名称来自离线表（希腊），不会有任何内容离开电脑。是否开启？",
++  "Wallpaper.WeatherPlaceLine": "地点：{0}（来源：{1}）"
++}
+diff --git a/src/UI/MainWindow.cs b/src/UI/MainWindow.cs
+index 5a71ee2..b30d3b1 100644
+--- a/src/UI/MainWindow.cs
++++ b/src/UI/MainWindow.cs
+@@ -1659,7 +1659,7 @@ namespace MotionDesk.UI
+ 
+             // location
+             string cityShown = string.IsNullOrWhiteSpace(settings.WeatherCity) ? LocalizationManager.T("Wallpaper.WeatherLocationDefault") : settings.WeatherCity;
+-            var locLabel = new Label { Text = string.Format(LocalizationManager.T("Wallpaper.WeatherLocationCurrent"), cityShown), AutoSize = true, Font = UiTheme.FontBody, ForeColor = UiTheme.TextSecondary, Margin = new Padding(0, 0, 0, 4) };
++            var locLabel = new Label { Text = string.Format(LocalizationManager.T("Wallpaper.WeatherLocationCurrent"), cityShown) + PlaceSourceLine(settings.WeatherPlaceDetail, settings.WeatherPlaceSource), AutoSize = true, Font = UiTheme.FontBody, ForeColor = UiTheme.TextSecondary, Margin = new Padding(0, 0, 0, 4) };
+             panel.Controls.Add(locLabel);
+             var locRow = new FlowLayoutPanel { AutoSize = true, WrapContents = false, Margin = new Padding(0, 0, 0, 10) };
+             var cityBox = new TextBox { Width = 240, Text = settings.WeatherCity, BackColor = UiTheme.Surface, ForeColor = UiTheme.TextPrimary, BorderStyle = BorderStyle.FixedSingle, Font = UiTheme.FontBody, Margin = new Padding(0, 5, 10, 0) };
+@@ -1684,7 +1684,7 @@ namespace MotionDesk.UI
+ 
+             void ApplyMatch(WeatherService.GeocodeMatch m)
+             {
+-                WallpaperHostEngine.Instance.SetWeatherLocation(m.Name, m.Lat, m.Lon);
++                WallpaperHostEngine.Instance.SetWeatherLocation(m.Name, m.Lat, m.Lon, "Open-Meteo (CC BY 4.0)", string.IsNullOrEmpty(m.Country) ? m.Name : $"{m.Name}, {m.Country}");
+                 locLabel.Text = string.Format(LocalizationManager.T("Wallpaper.WeatherLocationCurrent"), m.Name);
+                 cityBox.Text = m.Name;
+                 ClearChoices();
+@@ -1736,6 +1736,14 @@ namespace MotionDesk.UI
+             panel.Controls.Add(locRow);
+ 
+             // Opt-in device location (explicit click + confirmation; rounded to ~1 km; only the rounded point is stored) and a way to delete it again.
++            var reverseToggle = new FlatToggle { RowWidth = 700, Text = LocalizationManager.T("Wallpaper.WeatherReverseOn"), Checked = settings.WeatherReverseGeocode, BackColor = UiTheme.Background, Margin = new Padding(0, 2, 0, 2) };
++            reverseToggle.CheckedChanged += (_, _) =>
++            {
++                if (reverseToggle.Checked && MessageBox.Show(this, LocalizationManager.T("Wallpaper.WeatherReverseConsent"), LocalizationManager.T("Wallpaper.WeatherReverseOn"), MessageBoxButtons.YesNo, MessageBoxIcon.Question, MessageBoxDefaultButton.Button2) != DialogResult.Yes)
++                { reverseToggle.Checked = false; return; }
++                WallpaperHostEngine.Instance.SetWeatherReverseGeocode(reverseToggle.Checked);
++            };
++            panel.Controls.Add(reverseToggle);
+             var privacyRow = new FlowLayoutPanel { AutoSize = true, WrapContents = true, MaximumSize = new Size(740, 0), Margin = new Padding(0, 0, 0, 10) };
+             var myLocBtn = NewHoverButton(LocalizationManager.T("Wallpaper.WeatherUseMyLocation"), () => { });
+             myLocBtn.Width = 220;
+@@ -1747,9 +1755,12 @@ namespace MotionDesk.UI
+                 {
+                     var here = await DeviceLocation.GetApproximateAsync();
+                     if (here == null) { locLabel.Text = LocalizationManager.T("Wallpaper.WeatherLocationDenied"); return; }
+-                    string name = LocalizationManager.T("Wallpaper.WeatherMyLocation");
+-                    WallpaperHostEngine.Instance.SetWeatherLocation(name, here.Value.Lat, here.Value.Lon);
+-                    locLabel.Text = string.Format(LocalizationManager.T("Wallpaper.WeatherLocationCurrent"), name);
++                    // the name: the offline table of Greece first; the online lookup only if the person allowed it (one request, only now)
++                    bool greek = LocalizationManager.CurrentLanguage == "el";
++                    var placed = await PlaceNaming.ResolveAsync(here.Value.Lat, here.Value.Lon, greek, WallpaperSettings.Load().WeatherReverseGeocode, LocalizationManager.T("Wallpaper.WeatherMyLocation"));
++                    string name = placed.Name;
++                    WallpaperHostEngine.Instance.SetWeatherLocation(name, here.Value.Lat, here.Value.Lon, placed.Source, placed.Detail);
++                    locLabel.Text = string.Format(LocalizationManager.T("Wallpaper.WeatherLocationCurrent"), name) + PlaceSourceLine(placed.Detail, placed.Source);
+                     cityBox.Text = "";
+                     _ = RefreshLiveWeatherLabelAsync(liveLabel, here.Value.Lat, here.Value.Lon);
+                 }
+@@ -1876,6 +1887,10 @@ namespace MotionDesk.UI
+             catch (Exception) { return ""; }
+         }
+ 
++        // "(Ampelokipoi . Athens . Attica) source: GeoNames": exactly which name was used and where it came from
++        private static string PlaceSourceLine(string? detail, string? source) =>
++            string.IsNullOrWhiteSpace(source) ? "" : Environment.NewLine + string.Format(LocalizationManager.T("Wallpaper.WeatherPlaceLine"), string.IsNullOrWhiteSpace(detail) ? "-" : detail, source);
++
+         private static string CodeToSimId(int code) => code switch
+         {
+             0 => "Clear", 1 or 2 => "PartlyCloudy", 3 => "Cloudy", 45 or 48 => "Fog", 51 or 53 or 55 or 56 or 57 => "Drizzle",
+diff --git a/src/Widgets/WallpaperWindow.cs b/src/Widgets/WallpaperWindow.cs
+index 65e0294..a940b6e 100644
+--- a/src/Widgets/WallpaperWindow.cs
++++ b/src/Widgets/WallpaperWindow.cs
+@@ -387,6 +387,10 @@ namespace MotionDesk.Widgets
+ 
+         // "Weather" mode: the scene follows the real time of day + live weather of this location (default: Athens, like the weather widget).
+         public string WeatherCity { get; set; } = string.Empty;
++        // Where the place name came from and the full hierarchy (shown in the settings); the online lookup is OPT-IN and runs only when "Use my location" is pressed.
++        public string WeatherPlaceSource { get; set; } = string.Empty;
++        public string WeatherPlaceDetail { get; set; } = string.Empty;
++        public bool WeatherReverseGeocode { get; set; } = false;
+         public double WeatherLat { get; set; } = 37.9838;
+         public double WeatherLon { get; set; } = 23.7275;
+         // Ζητήθηκε ρητά: αν ο χρήστης δεν έχει ορίσει ποτέ πόλη, ο καιρός δείχνει σιωπηλά τον
+@@ -1534,14 +1538,22 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Count);
+         }
+ 
+         // ---- "Weather" mode settings (each change refreshes the running wallpaper)
+-        public void SetWeatherLocation(string city, double lat, double lon)
++        public void SetWeatherLocation(string city, double lat, double lon, string source = "", string detail = "")
+         {
+             var settings = WallpaperSettings.Load();
+             settings.WeatherCity = city; settings.WeatherLat = lat; settings.WeatherLon = lon;
++            settings.WeatherPlaceSource = source; settings.WeatherPlaceDetail = detail;
+             settings.Save();
+             _ = RefreshAllAsync();
+         }
+ 
++        public void SetWeatherReverseGeocode(bool on)
++        {
++            var settings = WallpaperSettings.Load();
++            settings.WeatherReverseGeocode = on;
++            settings.Save();
++        }
++
+         public void MarkWeatherLocationPrompted()
+         {
+             var settings = WallpaperSettings.Load();
+-- 
+2.56.0.windows.4
+
