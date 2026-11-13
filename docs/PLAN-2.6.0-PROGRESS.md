@@ -1,4 +1,4 @@
-# PLAN 2.6.0 - progress (branch `2.6.0-beta`, local only, never pushed)
+﻿# PLAN 2.6.0 - progress (branch `2.6.0-beta`, local only, never pushed)
 
 Updated 2026-11-10. Rule of this file: if a session is cut off, the next one starts from "Where I stopped".
 
@@ -81,7 +81,7 @@ Removed: `containers/` (WPF fork), `ContainersEngine`, `ContainersBridge`, the B
 Installed 2.4.6.2 -> 2.6.0 beta with `OpsisSetup-2.6.0-beta.exe` (UAC, /SILENT). Found and fixed on the way: (1) the installer aborts when Opsis is running (AppMutex) - close it first; (2) settings.json written by earlier betas had `UseNativeContainers=false` -> settings schema 2 migration switches it on once (2 tests). After the second install: the installed Opsis started, imported the legacy data (1 container, empty, as in the old data) into `containers-native.json`; the old `%AppData%\Opsis\containers` folder is untouched; backup of the data folder was taken before.
 
 ## Where I stopped
-Native core: tray/hotkeys, z-order, first-start import, budgets, equivalence table done. Next (in order): tabs/portals/notes rendering, settings page for the native core, Spot Search + profile hotkeys, hiding originals (with the rescue path), then the fork switch-off. Also 2.4.6.2 worktree: real plugin e2e with the new plugin builds.
+THE CORE IS FINISHED (2026-11-13): tabs / portals / notes, Spot Search, profile hotkeys, hide-originals with mandatory restore, settings page, tray, fork removed, upgrade importer, equivalence table final (no open rows), docs/RELEASE-2.6.0-CHECKLIST.md with the Greek steps for the user. Not started on purpose (usage limit, core first): the final release steps (name 2.6.0 without beta, list R with CI, VM upgrade, compatibility packages, contract 1.0.0.0, release assets). Frozen features: music overlay, lockscreen, desktop right-click, weather beyond what is merged.
 
 ## ΒΗΜΑΤΑ ΓΙΑ ΤΟΝ ΧΡΗΣΤΗ (χειροκίνητη δοκιμή των νέων DeskContainers) — απλά ελληνικά
 Πλήρης οδηγός: `docs/TRY-NATIVE-CONTAINERS.md`. Συνοπτικά:
@@ -131,3 +131,4 @@ esource-logger.ps1` για λίγη ώρα.
 | 29 | Opsis ξεκινά ΠΡΩΤΟ στην εκκίνηση Windows (§22-1) | ☐ scheduled task με καθυστέρηση |
 | 30 | Explorer restart → μαύρη οθόνη (§22-5) | ◐ υπάρχει ExplorerRestartWatcher (+tests) από 2.4.x· ⛔ επιβεβαίωση σε πραγματικό restart |
 | 31 | Μέτρηση RAM/CPU baseline, soak logger | ⛔ τρέχει ο χρήστης (tools/resource-logger.ps1) |
+
