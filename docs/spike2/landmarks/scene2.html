@@ -1,0 +1,13 @@
+<!doctype html><meta charset="utf-8"><base href="../../../src/Widgets/wallpaper/"><body style="margin:0;background:#000;overflow:hidden"><canvas id="c" width="1280" height="720"></canvas>
+<script src="landmarks.js"></script><script src="weather.js"></script>
+<script>
+const q = new URLSearchParams(location.search), id = q.get('id') || 'parthenon', time = q.get('time') || 'Day', wx = q.get('wx') || 'Clear';
+const cv = document.getElementById('c'), g = cv.getContext('2d');
+WeatherWallpaper.setConfig({ timeSim: time, weatherSim: wx, windSim: 'Auto', glass: false, landmarks: true, landmarkId: id, lat: 37.98, lon: 23.73 });
+WeatherWallpaper.resize(1280, 720, 1);
+let n = 0;
+(function step() {
+  WeatherWallpaper.draw(g, 0.1, { id: 'High' });
+  if (++n < 400) { if (n % 20 === 0) setTimeout(step, 0); else step(); } else document.title = 'done';
+})();
+</script>

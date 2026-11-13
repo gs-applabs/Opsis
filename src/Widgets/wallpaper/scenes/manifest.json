@@ -1,0 +1,14 @@
+[
+ {
+  "file": "acropolis.webp",
+  "lights": "acropolis-lights.webp",
+  "commonsTitle": "The Acropolis of Athens from Mount Lycabettus on March 14, 2020.jpg",
+  "commonsUrl": "https://commons.wikimedia.org/wiki/File:The_Acropolis_of_Athens_from_Mount_Lycabettus_on_March_14,_2020.jpg",
+  "author": "George E. Koronaios",
+  "license": "CC0",
+  "licenseUrl": "http://creativecommons.org/publicdomain/zero/1.0/deed.en",
+  "attributionRequired": false,
+  "changes": "Cropped, widened with blurred mirrored edges, top faded to transparency, scaled to 2400 px wide, converted to WebP; the lights image is generated from the photo.",
+  "checkedOn": "2026-11-12"
+ }
+]

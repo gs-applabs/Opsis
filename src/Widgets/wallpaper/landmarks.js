@@ -133,9 +133,11 @@
     const SPRITE_IDS = ['parthenon', 'taj', 'eiffel', 'bigben', 'patras', 'rioantirrio', 'nafplio'];
     // where each monument stands: on LAND (a rock / grass base under it, the ground below the horizon instead of the sea) or in the SEA (water below, as before). plinth = height of the base as a fraction of the monument.
     const SCENE = {
-        parthenon: { scene: 'land', plinth: 0.2, ground: 'rock' }, taj: { scene: 'land', plinth: 0.04, ground: 'sand' }, eiffel: { scene: 'land', plinth: 0.04, ground: 'grass' }, bigben: { scene: 'land', plinth: 0.04, ground: 'grass' },
+        parthenon: { scene: 'photo' },                                    // a real aerial photograph of the Acropolis and Athens replaces sprite + landscape (scenes/acropolis.webp)
+        taj: { scene: 'land', plinth: 0, ground: 'grass' }, eiffel: { scene: 'land', plinth: 0, ground: 'grass' }, bigben: { scene: 'land', plinth: 0, ground: 'grass' },
         patras: { scene: 'sea' }, rioantirrio: { scene: 'sea' }, nafplio: { scene: 'sea' },
     };
+    const PHOTO_SCENES = { parthenon: { file: 'scenes/acropolis.webp', lights: 'scenes/acropolis-lights.webp' } };
     let photoOnly = true;
     const sprites = {};                       // id -> { img, ready, tinted: { key, canvas } }
     function sprite(id) {
@@ -146,6 +148,7 @@
 
     function byId(id) { const m = LANDMARKS.find(x => x.id === id && SPRITE_IDS.includes(x.id)); return m ? { id: m.id, name: m.name, km: 0 } : null; }
     function sceneOf(id) { return SCENE[id] || { scene: 'sea' }; }
+    function photoScene(id) { return PHOTO_SCENES[id] || null; }
     // on-screen size of the sprite once loaded (null while loading), so the caller can build the ground under it
     function spriteSize(id, maxH, maxW) {
         const s = sprite(id); if (!s.ready) return null;
@@ -236,6 +239,6 @@
         g.restore(); return true;
     }
 
-    root.OpsisLandmarks = { LANDMARKS, pickLandmark, byId, sceneOf, spriteSize, drawLandmark, distKm, MAT, SPRITE_IDS };
+    root.OpsisLandmarks = { LANDMARKS, pickLandmark, byId, sceneOf, photoScene, spriteSize, drawLandmark, distKm, MAT, SPRITE_IDS };
     if (typeof module !== 'undefined') module.exports = root.OpsisLandmarks;
 })(typeof window !== 'undefined' ? window : globalThis);

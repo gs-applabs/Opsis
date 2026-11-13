@@ -160,7 +160,7 @@ namespace MotionDesk.Services
                             clicked++;
                         }
                     }
-                    catch (Exception ex) { problems.Add($"[{key}] control '{c.Name}' '{c.Text}' threw {ex.GetType().Name}: {ex.Message}"); }
+                    catch (Exception ex) { problems.Add($"[{key}] control '{c.Name}' '{c.Text}' threw {ex.GetType().Name}: {ex.Message} @ {string.Join(" <- ", (ex.StackTrace ?? "").Split('\n').Take(3).Select(l => l.Trim()))} [{c.GetType().Name} #{clicked}]"); }
                     slowest = Math.Max(slowest, t.ElapsedMilliseconds);
                     if (t.ElapsedMilliseconds > 3000) problems.Add($"[{key}] a control took {t.ElapsedMilliseconds} ms (UI freeze)");
                 }

@@ -1,0 +1,22 @@
+﻿<!doctype html><meta charset="utf-8"><body style="margin:0;background:#000"><base href="../../../src/Widgets/wallpaper/"><canvas id="c" width="1280" height="720"></canvas>
+<script src="landmarks.js"></script>
+<script src="landscapes.js"></script>
+<script>
+const q = new URLSearchParams(location.search), id = q.get('id') || 'parthenon', mode = q.get('mode') || 'day';
+const cv = document.getElementById('c'), g = cv.getContext('2d'), W = 1280, H = 720, HZ = Math.round(H * 0.62);
+const P = { day: { amb: 1, haze: [190, 210, 235], fog: 0.05, night: 0, sunSide: -1, warm: [255, 240, 215], glow: 0.1, sky: ['#2a72d0', '#bfe0f8'] },
+            dusk: { amb: 0.4, haze: [220, 150, 120], fog: 0.2, night: 0.1, sunSide: 1, warm: [255, 170, 110], glow: 0.9, sky: ['#2a3f80', '#ff9d6b'] },
+            night: { amb: 0.05, haze: [30, 44, 80], fog: 0.1, night: 1, sunSide: 1, warm: [200, 210, 255], glow: 0, sky: ['#04070f', '#16264a'] } }[mode];
+P.maxW = W * 0.24;
+const gr = g.createLinearGradient(0, 0, 0, HZ); gr.addColorStop(0, P.sky[0]); gr.addColorStop(1, P.sky[1]); g.fillStyle = gr; g.fillRect(0, 0, W, HZ);
+g.fillStyle = '#222'; g.fillRect(0, HZ, W, H - HZ);
+const L = OpsisLandmarks, sc = L.sceneOf(id), maxH = H * 0.34, cx = W * 0.72;
+function go() {
+  const size = L.spriteSize(id, maxH, P.maxW); if (!size) { setTimeout(go, 50); return; }
+  const plinth = Math.round(size.h * (sc.plinth || 0)), land = OpsisLandscapes.get(sc.kind, W, H, HZ, cx, size.w, size.h, plinth, P);
+  g.drawImage(land.above, 0, 0); L.drawLandmark(g, id, cx, land.top + Math.round(size.h * 0.012), maxH, P); g.drawImage(land.below, 0, HZ);
+  document.title = 'done';
+}
+go();
+</script>
+

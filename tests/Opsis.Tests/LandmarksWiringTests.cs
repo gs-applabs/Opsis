@@ -81,5 +81,21 @@ public sealed class LandmarksWiringTests
         var cs = File.ReadAllText(Path.Combine(Wall(), "..", "WallpaperWindow.cs"));
         Assert.Contains("elAuto = settings.ElementsAutoColor", cs);
     }
+
+    [Fact]
+    public void ScenePhotosHaveAnAllowedLicenceAndStaySmall()
+    {
+        var dir = Path.Combine(Wall(), "scenes");
+        var manifest = System.Text.Json.JsonDocument.Parse(File.ReadAllText(Path.Combine(dir, "manifest.json"))).RootElement;
+        long total = 0;
+        foreach (var e in manifest.EnumerateArray())
+        {
+            Assert.Matches(@"^(Public domain|CC0|CC BY [0-9.]+)$", e.GetProperty("license").GetString()!);
+            Assert.StartsWith("https://commons.wikimedia.org/wiki/File:", e.GetProperty("commonsUrl").GetString());
+            total += new FileInfo(Path.Combine(dir, e.GetProperty("file").GetString()!)).Length + new FileInfo(Path.Combine(dir, e.GetProperty("lights").GetString()!)).Length;
+        }
+        Assert.True(total < 1_000_000, "scene photos together: " + total);
+        Assert.Contains("scenes/acropolis.webp", File.ReadAllText(Path.Combine(Wall(), "landmarks.js")));
+    }
 }
 

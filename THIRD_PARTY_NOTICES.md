@@ -52,3 +52,5 @@ Cut-outs of Wikimedia Commons photographs, each checked on its own (public domai
 
 Additional landmark photos: Lighthouse of Patras (public domain), Rio-Antirrio Bridge (public domain, see docs/LANDMARK-IMAGES.md), Bourtzi Nafplio (CC0).
 
+Aerial scene of the Acropolis and Athens: The Acropolis of Athens from Mount Lycabettus on March 14, 2020, by George E. Koronaios (CC0), cropped, widened and faded (see docs/LANDMARK-IMAGES.md).
+

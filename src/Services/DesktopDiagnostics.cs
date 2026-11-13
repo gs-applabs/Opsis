@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -10,12 +10,12 @@ using MotionDesk.Widgets;
 
 namespace MotionDesk.Services
 {
-    // `Opsis.exe --diag` : headless διαγνωστικό για "το wallpaper / ο καιρός δεν φαίνεται". Γράφει αναφορά στο
-    // %AppData%\Opsis\diagnostics.txt και την τυπώνει στην κονσόλα. Δεν αγγίζει ρυθμίσεις.
-    //   - έκδοση Windows, WebView2 Runtime, οθόνες, hardware tier
-    //   - δομή Progman/WorkerW/SHELLDLL_DefView (το σημείο που άλλαξε στα Windows 11 24H2/25H2+)
-    //   - ΠΡΑΓΜΑΤΙΚΟ τεστ attach: ένα magenta παράθυρο μπαίνει πίσω από τα εικονίδια και διαβάζεται pixel της οθόνης
-    //   - τεστ παρόχων καιρού (Open-Meteo, wttr.in)
+    // `Opsis.exe --diag` : headless Ξ΄ΞΉΞ±Ξ³Ξ½Ο‰ΟƒΟ„ΞΉΞΊΟ Ξ³ΞΉΞ± "Ο„ΞΏ wallpaper / ΞΏ ΞΊΞ±ΞΉΟΟΟ‚ Ξ΄ΞµΞ½ Ο†Ξ±Ξ―Ξ½ΞµΟ„Ξ±ΞΉ". Ξ“ΟΞ¬Ο†ΞµΞΉ Ξ±Ξ½Ξ±Ο†ΞΏΟΞ¬ ΟƒΟ„ΞΏ
+    // %AppData%\Opsis\diagnostics.txt ΞΊΞ±ΞΉ Ο„Ξ·Ξ½ Ο„Ο…Ο€ΟΞ½ΞµΞΉ ΟƒΟ„Ξ·Ξ½ ΞΊΞΏΞ½ΟƒΟΞ»Ξ±. Ξ”ΞµΞ½ Ξ±Ξ³Ξ³Ξ―Ξ¶ΞµΞΉ ΟΟ…ΞΈΞΌΞ―ΟƒΞµΞΉΟ‚.
+    //   - Ξ­ΞΊΞ΄ΞΏΟƒΞ· Windows, WebView2 Runtime, ΞΏΞΈΟΞ½ΞµΟ‚, hardware tier
+    //   - Ξ΄ΞΏΞΌΞ® Progman/WorkerW/SHELLDLL_DefView (Ο„ΞΏ ΟƒΞ·ΞΌΞµΞ―ΞΏ Ο€ΞΏΟ… Ξ¬Ξ»Ξ»Ξ±ΞΎΞµ ΟƒΟ„Ξ± Windows 11 24H2/25H2+)
+    //   - Ξ Ξ΅Ξ‘Ξ“ΞΞ‘Ξ¤Ξ™ΞΞ Ο„ΞµΟƒΟ„ attach: Ξ­Ξ½Ξ± magenta Ο€Ξ±ΟΞ¬ΞΈΟ…ΟΞΏ ΞΌΟ€Ξ±Ξ―Ξ½ΞµΞΉ Ο€Ξ―ΟƒΟ‰ Ξ±Ο€Ο Ο„Ξ± ΞµΞΉΞΊΞΏΞ½Ξ―Ξ΄ΞΉΞ± ΞΊΞ±ΞΉ Ξ΄ΞΉΞ±Ξ²Ξ¬Ξ¶ΞµΟ„Ξ±ΞΉ pixel Ο„Ξ·Ο‚ ΞΏΞΈΟΞ½Ξ·Ο‚
+    //   - Ο„ΞµΟƒΟ„ Ο€Ξ±ΟΟΟ‡Ο‰Ξ½ ΞΊΞ±ΞΉΟΞΏΟ (Open-Meteo, wttr.in)
     public static class DesktopDiagnostics
     {
         /// <summary>
@@ -390,6 +390,32 @@ namespace MotionDesk.Services
             return report.Any(l => l.StartsWith("EXCEPTION")) ? 1 : 0;
         }
 
+        /// <summary>Test helper: loads a local HTML page in WebView2 (same engine as the wallpaper), waits until its title becomes "done", saves a PNG of the page. Used to look at the landscapes without the desktop.</summary>
+        public static int ShotHtml(string url, string png)
+        {
+            int result = 1;
+            using var form = new Form { FormBorderStyle = FormBorderStyle.None, StartPosition = FormStartPosition.Manual, Location = new Point(-3000, 0), Size = new Size(1280, 720), ShowInTaskbar = false };
+            var web = new Microsoft.Web.WebView2.WinForms.WebView2 { Dock = DockStyle.Fill };
+            form.Controls.Add(web);
+            form.Shown += async (_, _) =>
+            {
+                try
+                {
+                    var env = await Microsoft.Web.WebView2.Core.CoreWebView2Environment.CreateAsync(null, Path.Combine(Path.GetTempPath(), "opsis-shot-webview"));
+                    await web.EnsureCoreWebView2Async(env);
+                    web.Source = new Uri(url);
+                    for (int i = 0; i < 300 && web.CoreWebView2.DocumentTitle != "done"; i++) await System.Threading.Tasks.Task.Delay(50);
+                    await System.Threading.Tasks.Task.Delay(300);
+                    using var fs = File.Create(png);
+                    await web.CoreWebView2.CapturePreviewAsync(Microsoft.Web.WebView2.Core.CoreWebView2CapturePreviewImageFormat.Png, fs);
+                    result = web.CoreWebView2.DocumentTitle == "done" ? 0 : 3;
+                }
+                catch (Exception ex) { File.WriteAllText(png + ".err.txt", ex.ToString()); result = 2; }
+                finally { form.Close(); }
+            };
+            Application.Run(form);
+            return result;
+        }
         private sealed class StageForm : Form
         {
             public StageForm() { SetStyle(ControlStyles.OptimizedDoubleBuffer | ControlStyles.AllPaintingInWmPaint | ControlStyles.UserPaint, true); }
@@ -528,8 +554,8 @@ namespace MotionDesk.Services
             return report.Contains("RESULT=FAIL") || wv == null ? 1 : 0;
         }
 
-        // Magenta παράθυρο -> attach όπως το wallpaper -> διάβασε pixel οθόνης. Αν είναι magenta, το attach δουλεύει και
-        // το παράθυρο είναι ΟΡΑΤΟ πίσω από τα εικονίδια. Αλλιώς: attach "πέτυχε" αλλά δεν εμφανίζεται (το σύμπτωμα).
+        // Magenta Ο€Ξ±ΟΞ¬ΞΈΟ…ΟΞΏ -> attach ΟΟ€Ο‰Ο‚ Ο„ΞΏ wallpaper -> Ξ΄ΞΉΞ¬Ξ²Ξ±ΟƒΞµ pixel ΞΏΞΈΟΞ½Ξ·Ο‚. Ξ‘Ξ½ ΞµΞ―Ξ½Ξ±ΞΉ magenta, Ο„ΞΏ attach Ξ΄ΞΏΟ…Ξ»ΞµΟΞµΞΉ ΞΊΞ±ΞΉ
+        // Ο„ΞΏ Ο€Ξ±ΟΞ¬ΞΈΟ…ΟΞΏ ΞµΞ―Ξ½Ξ±ΞΉ ΞΞ΅Ξ‘Ξ¤Ξ Ο€Ξ―ΟƒΟ‰ Ξ±Ο€Ο Ο„Ξ± ΞµΞΉΞΊΞΏΞ½Ξ―Ξ΄ΞΉΞ±. Ξ‘Ξ»Ξ»ΞΉΟΟ‚: attach "Ο€Ξ­Ο„Ο…Ο‡Ξµ" Ξ±Ξ»Ξ»Ξ¬ Ξ΄ΞµΞ½ ΞµΞΌΟ†Ξ±Ξ½Ξ―Ξ¶ΞµΟ„Ξ±ΞΉ (Ο„ΞΏ ΟƒΟΞΌΟ€Ο„Ο‰ΞΌΞ±).
         private static string AttachProbe()
         {
             var screen = Screen.PrimaryScreen ?? Screen.AllScreens[0];
@@ -603,7 +629,7 @@ namespace MotionDesk.Services
                             int x = screen.Bounds.X + screen.Bounds.Width * gx / 14, y = screen.Bounds.Y + screen.Bounds.Height * gy / 9;
                             IntPtr root = GetAncestor(WindowFromPoint(new POINT { X = x, Y = y }), 2);
                             string rc = Cls(root);
-                            if (rc != "Progman" && rc != "WorkerW") continue;   // πάνω από το σημείο υπάρχει άλλο παράθυρο/taskbar
+                            if (rc != "Progman" && rc != "WorkerW") continue;   // Ο€Ξ¬Ξ½Ο‰ Ξ±Ο€Ο Ο„ΞΏ ΟƒΞ·ΞΌΞµΞ―ΞΏ Ο…Ο€Ξ¬ΟΟ‡ΞµΞΉ Ξ¬Ξ»Ξ»ΞΏ Ο€Ξ±ΟΞ¬ΞΈΟ…ΟΞΏ/taskbar
                             uncovered++;
                             using var bmp = new Bitmap(1, 1);
                             using (var g = Graphics.FromImage(bmp)) g.CopyFromScreen(x, y, 0, 0, new Size(1, 1));
@@ -645,14 +671,14 @@ namespace MotionDesk.Services
             return list;
         }
 
-        // Ενεργοποιεί το ΠΡΑΓΜΑΤΙΚΟ wallpaper του Opsis (WallpaperWindow + WebView2 + Waves) και συγκρίνει pixels της
-        // επιφάνειας εργασίας πριν/μετά. (Με OPSIS_APPDATA απομονωμένο, δεν αγγίζει τις ρυθμίσεις του χρήστη.)
+        // Ξ•Ξ½ΞµΟΞ³ΞΏΟ€ΞΏΞΉΞµΞ― Ο„ΞΏ Ξ Ξ΅Ξ‘Ξ“ΞΞ‘Ξ¤Ξ™ΞΞ wallpaper Ο„ΞΏΟ… Opsis (WallpaperWindow + WebView2 + Waves) ΞΊΞ±ΞΉ ΟƒΟ…Ξ³ΞΊΟΞ―Ξ½ΞµΞΉ pixels Ο„Ξ·Ο‚
+        // ΞµΟ€ΞΉΟ†Ξ¬Ξ½ΞµΞΉΞ±Ο‚ ΞµΟΞ³Ξ±ΟƒΞ―Ξ±Ο‚ Ο€ΟΞΉΞ½/ΞΌΞµΟ„Ξ¬. (ΞΞµ OPSIS_APPDATA Ξ±Ο€ΞΏΞΌΞΏΞ½Ο‰ΞΌΞ­Ξ½ΞΏ, Ξ΄ΞµΞ½ Ξ±Ξ³Ξ³Ξ―Ξ¶ΞµΞΉ Ο„ΞΉΟ‚ ΟΟ…ΞΈΞΌΞ―ΟƒΞµΞΉΟ‚ Ο„ΞΏΟ… Ο‡ΟΞ®ΟƒΟ„Ξ·.)
         private static string RealWallpaperProbe()
         {
             var o = new StringBuilder();
             dynamic? shell = null;
             void Pump(int ms) { var end = DateTime.UtcNow.AddMilliseconds(ms); while (DateTime.UtcNow < end) { Application.DoEvents(); System.Threading.Thread.Sleep(15); } }
-            Pump(2500);   // άφησε τα Windows να ολοκληρώσουν το προηγούμενο restore του ToggleDesktop
+            Pump(2500);   // Ξ¬Ο†Ξ·ΟƒΞµ Ο„Ξ± Windows Ξ½Ξ± ΞΏΞ»ΞΏΞΊΞ»Ξ·ΟΟΟƒΞΏΟ…Ξ½ Ο„ΞΏ Ο€ΟΞΏΞ·Ξ³ΞΏΟΞΌΞµΞ½ΞΏ restore Ο„ΞΏΟ… ToggleDesktop
             if (_showDesktop) { try { shell = Activator.CreateInstance(Type.GetTypeFromProgID("Shell.Application")!); shell!.ToggleDesktop(); } catch (Exception) { shell = null; } }
             try
             {
@@ -699,7 +725,7 @@ namespace MotionDesk.Services
             finally { if (shell != null) { try { shell.ToggleDesktop(); } catch (Exception) { } } }
         }
 
-        /// <summary>`Opsis.exe --render-sysmon <folder>`: αποδίδει το System Monitor widget σε PNG με δεδομένα δοκιμής (οπτικός έλεγχος).</summary>
+        /// <summary>`Opsis.exe --render-sysmon <folder>`: Ξ±Ο€ΞΏΞ΄Ξ―Ξ΄ΞµΞΉ Ο„ΞΏ System Monitor widget ΟƒΞµ PNG ΞΌΞµ Ξ΄ΞµΞ΄ΞΏΞΌΞ­Ξ½Ξ± Ξ΄ΞΏΞΊΞΉΞΌΞ®Ο‚ (ΞΏΟ€Ο„ΞΉΞΊΟΟ‚ Ξ­Ξ»ΞµΞ³Ο‡ΞΏΟ‚).</summary>
         public static int RenderSysmon(string folder)
         {
             Directory.CreateDirectory(folder);
@@ -712,7 +738,7 @@ namespace MotionDesk.Services
                 {
                     cpu = Math.Clamp(cpu + rnd.Next(-12, 13), 3, 96); ram = Math.Clamp(ram + rnd.Next(-3, 4), 30, 80);
                     net = Math.Clamp(net + rnd.Next(-150, 160), 0, 2500); gpu = Math.Clamp(gpu + rnd.Next(-10, 11), 0, 70);
-                    c.SetCpu(cpu); c.SetRam(ram, $"{(100 - ram) * 160 / 100:0} / 16384 MB free"); c.SetNetwork(net, net / 5); c.SetGpu(gpu, "54°C");
+                    c.SetCpu(cpu); c.SetRam(ram, $"{(100 - ram) * 160 / 100:0} / 16384 MB free"); c.SetNetwork(net, net / 5); c.SetGpu(gpu, "54Β°C");
                 }
                 using var bmp = new Bitmap(w, h);
                 c.DrawToBitmap(bmp, new Rectangle(0, 0, w, h));
@@ -732,7 +758,7 @@ namespace MotionDesk.Services
         [StructLayout(LayoutKind.Sequential)] private struct WCAD { public int Attr; public IntPtr Data; public int Size; }
         [DllImport("user32.dll")] private static extern int SetWindowCompositionAttribute(IntPtr h, ref WCAD d);
 
-        /// <summary>`--test-transparency <folder>`: 3 τεχνικές "διάφανου" widget πάνω στο ΠΡΑΓΜΑΤΙΚΟ desktop + screenshot.</summary>
+        /// <summary>`--test-transparency <folder>`: 3 Ο„ΞµΟ‡Ξ½ΞΉΞΊΞ­Ο‚ "Ξ΄ΞΉΞ¬Ο†Ξ±Ξ½ΞΏΟ…" widget Ο€Ξ¬Ξ½Ο‰ ΟƒΟ„ΞΏ Ξ Ξ΅Ξ‘Ξ“ΞΞ‘Ξ¤Ξ™ΞΞ desktop + screenshot.</summary>
         public static int TestTransparency(string folder)
         {
             Directory.CreateDirectory(folder);
@@ -743,7 +769,7 @@ namespace MotionDesk.Services
                 var f = new Form { FormBorderStyle = FormBorderStyle.None, StartPosition = FormStartPosition.Manual, ShowInTaskbar = false,
                     Bounds = new Rectangle(sc.Bounds.X + x, sc.Bounds.Y + 420, 380, 220), BackColor = back, TopMost = true };
                 if (key != null) f.TransparencyKey = key.Value;
-                var lbl = new Label { Text = "22.1°C", AutoSize = false, Dock = DockStyle.Top, Height = 90, Font = new Font("Segoe UI Semibold", 38), ForeColor = Color.White, BackColor = Color.Transparent, TextAlign = ContentAlignment.MiddleCenter };
+                var lbl = new Label { Text = "22.1Β°C", AutoSize = false, Dock = DockStyle.Top, Height = 90, Font = new Font("Segoe UI Semibold", 38), ForeColor = Color.White, BackColor = Color.Transparent, TextAlign = ContentAlignment.MiddleCenter };
                 var sub = new Label { Text = name, AutoSize = false, Dock = DockStyle.Top, Height = 40, Font = new Font("Segoe UI", 14), ForeColor = Color.FromArgb(220, 255, 255, 255), BackColor = Color.Transparent, TextAlign = ContentAlignment.MiddleCenter };
                 f.Controls.Add(sub); f.Controls.Add(lbl);
                 f.Paint += (_, e) => { e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias; using var br = new SolidBrush(Color.FromArgb(0, 200, 230)); e.Graphics.FillEllipse(br, 20, 150, 340, 14); };
@@ -774,7 +800,7 @@ namespace MotionDesk.Services
             return 0;
         }
 
-        /// <summary>`--test-widgets <folder> [mode]`: ανοίγει τα πραγματικά native widgets με το δοσμένο WidgetsThemeMode (π.χ. Transparent) πάνω στο desktop + screenshot.</summary>
+        /// <summary>`--test-widgets <folder> [mode]`: Ξ±Ξ½ΞΏΞ―Ξ³ΞµΞΉ Ο„Ξ± Ο€ΟΞ±Ξ³ΞΌΞ±Ο„ΞΉΞΊΞ¬ native widgets ΞΌΞµ Ο„ΞΏ Ξ΄ΞΏΟƒΞΌΞ­Ξ½ΞΏ WidgetsThemeMode (Ο€.Ο‡. Transparent) Ο€Ξ¬Ξ½Ο‰ ΟƒΟ„ΞΏ desktop + screenshot.</summary>
         public static int TestWidgets(string folder, string mode)
         {
             Directory.CreateDirectory(folder);
@@ -834,7 +860,7 @@ namespace MotionDesk.Services
         [DllImport("user32.dll")] private static extern bool SetCursorPos(int x, int y);
         [DllImport("user32.dll")] private static extern bool GetCursorPos(out POINT p);
 
-        /// <summary>`--test-deskstrip <folder> [position]`: ανοίγει το νέο dock με πραγματικές εφαρμογές και βγάζει screenshots (κανονικό, hover+preview).</summary>
+        /// <summary>`--test-deskstrip <folder> [position]`: Ξ±Ξ½ΞΏΞ―Ξ³ΞµΞΉ Ο„ΞΏ Ξ½Ξ­ΞΏ dock ΞΌΞµ Ο€ΟΞ±Ξ³ΞΌΞ±Ο„ΞΉΞΊΞ­Ο‚ ΞµΟ†Ξ±ΟΞΌΞΏΞ³Ξ­Ο‚ ΞΊΞ±ΞΉ Ξ²Ξ³Ξ¬Ξ¶ΞµΞΉ screenshots (ΞΊΞ±Ξ½ΞΏΞ½ΞΉΞΊΟ, hover+preview).</summary>
         public static int TestDeskStrip(string folder, string position)
         {
             Directory.CreateDirectory(folder);
@@ -863,7 +889,7 @@ namespace MotionDesk.Services
                     bmp.Save(Path.Combine(folder, name + ".png"), System.Drawing.Imaging.ImageFormat.Png);
                 }
                 Shot("dock_" + position + "_idle");
-                // hover πάνω από το 2ο εικονίδιο (καρφιτσωμένο, μη τρέχον) και μετά πάνω από το 1ο (τρέχον: preview)
+                // hover Ο€Ξ¬Ξ½Ο‰ Ξ±Ο€Ο Ο„ΞΏ 2ΞΏ ΞµΞΉΞΊΞΏΞ½Ξ―Ξ΄ΞΉΞΏ (ΞΊΞ±ΟΟ†ΞΉΟ„ΟƒΟ‰ΞΌΞ­Ξ½ΞΏ, ΞΌΞ· Ο„ΟΞ­Ο‡ΞΏΞ½) ΞΊΞ±ΞΉ ΞΌΞµΟ„Ξ¬ Ο€Ξ¬Ξ½Ο‰ Ξ±Ο€Ο Ο„ΞΏ 1ΞΏ (Ο„ΟΞ­Ο‡ΞΏΞ½: preview)
                 var b = win.Bounds;
                 bool vert = position is "Left" or "Right";
                 Point At(double frac) => vert ? new Point(b.Left + b.Width / 2, b.Top + (int)(b.Height * frac)) : new Point(b.Left + (int)(b.Width * frac), b.Top + b.Height / 2 + 4);
@@ -883,8 +909,8 @@ namespace MotionDesk.Services
             return 0;
         }
 
-        // Καλεί ΑΠΕΥΘΕΙΑΣ το OnMouseMove του dock (χωρίς να πειράξει τον πραγματικό δείκτη του χρήστη· τα Windows θα έστελναν
-        // αμέσως WM_MOUSELEAVE αν στέλναμε μηνύματα ενώ ο δείκτης δεν είναι πάνω από το παράθυρο).
+        // ΞΞ±Ξ»ΞµΞ― Ξ‘Ξ Ξ•Ξ¥ΞΞ•Ξ™Ξ‘Ξ£ Ο„ΞΏ OnMouseMove Ο„ΞΏΟ… dock (Ο‡Ο‰ΟΞ―Ο‚ Ξ½Ξ± Ο€ΞµΞΉΟΞ¬ΞΎΞµΞΉ Ο„ΞΏΞ½ Ο€ΟΞ±Ξ³ΞΌΞ±Ο„ΞΉΞΊΟ Ξ΄ΞµΞ―ΞΊΟ„Ξ· Ο„ΞΏΟ… Ο‡ΟΞ®ΟƒΟ„Ξ·Β· Ο„Ξ± Windows ΞΈΞ± Ξ­ΟƒΟ„ΞµΞ»Ξ½Ξ±Ξ½
+        // Ξ±ΞΌΞ­ΟƒΟ‰Ο‚ WM_MOUSELEAVE Ξ±Ξ½ ΟƒΟ„Ξ­Ξ»Ξ½Ξ±ΞΌΞµ ΞΌΞ·Ξ½ΟΞΌΞ±Ο„Ξ± ΞµΞ½Ο ΞΏ Ξ΄ΞµΞ―ΞΊΟ„Ξ·Ο‚ Ξ΄ΞµΞ½ ΞµΞ―Ξ½Ξ±ΞΉ Ο€Ξ¬Ξ½Ο‰ Ξ±Ο€Ο Ο„ΞΏ Ο€Ξ±ΟΞ¬ΞΈΟ…ΟΞΏ).
         private static void MoveMouse(Form dock, bool vertical, double frac)
         {
             int x = vertical ? dock.Width / 2 : (int)(dock.Width * frac), y = vertical ? (int)(dock.Height * frac) : dock.Height / 2 + 4;
@@ -892,7 +918,7 @@ namespace MotionDesk.Services
                 .Invoke(dock, new object[] { new MouseEventArgs(MouseButtons.None, 0, x, y, 0) });
         }
 
-        /// <summary>`--test-containers <folder>`: Folder Portal (ζωντανή ενημέρωση, πλοήγηση, αντιγραφή), κανονικό container, επιλογή, screenshot.</summary>
+        /// <summary>`--test-containers <folder>`: Folder Portal (Ξ¶Ο‰Ξ½Ο„Ξ±Ξ½Ξ® ΞµΞ½Ξ·ΞΌΞ­ΟΟ‰ΟƒΞ·, Ο€Ξ»ΞΏΞ®Ξ³Ξ·ΟƒΞ·, Ξ±Ξ½Ο„ΞΉΞ³ΟΞ±Ο†Ξ®), ΞΊΞ±Ξ½ΞΏΞ½ΞΉΞΊΟ container, ΞµΟ€ΞΉΞ»ΞΏΞ³Ξ®, screenshot.</summary>
         // `Opsis.exe --test-wallpaper-icons <log>`: runs the real wallpaper engine through the sequences that used to hide the desktop icons
         // (clock/date overlay on and off, mode changes, Enable twice, Disable) and checks after every step that SHELLDLL_DefView (the icons)
         // is still ABOVE every wallpaper window of this process. Use with OPSIS_APPDATA pointing to a temp folder.
@@ -961,7 +987,7 @@ namespace MotionDesk.Services
         [DllImport("user32.dll")] private static extern uint GetWindowThreadProcessId(IntPtr h, out uint pid);
         [DllImport("user32.dll")] private static extern void mouse_event(uint flags, uint dx, uint dy, uint data, UIntPtr extra);
 
-        /// <summary>`--test-iconhide`: διπλό κλικ σε κενό σημείο της επιφάνειας εργασίας (πραγματικά κλικ), με και χωρίς wallpaper, και έλεγχος αν κρύβονται/ξαναφαίνονται τα εικονίδια.</summary>
+        /// <summary>`--test-iconhide`: Ξ΄ΞΉΟ€Ξ»Ο ΞΊΞ»ΞΉΞΊ ΟƒΞµ ΞΊΞµΞ½Ο ΟƒΞ·ΞΌΞµΞ―ΞΏ Ο„Ξ·Ο‚ ΞµΟ€ΞΉΟ†Ξ¬Ξ½ΞµΞΉΞ±Ο‚ ΞµΟΞ³Ξ±ΟƒΞ―Ξ±Ο‚ (Ο€ΟΞ±Ξ³ΞΌΞ±Ο„ΞΉΞΊΞ¬ ΞΊΞ»ΞΉΞΊ), ΞΌΞµ ΞΊΞ±ΞΉ Ο‡Ο‰ΟΞ―Ο‚ wallpaper, ΞΊΞ±ΞΉ Ξ­Ξ»ΞµΞ³Ο‡ΞΏΟ‚ Ξ±Ξ½ ΞΊΟΟΞ²ΞΏΞ½Ο„Ξ±ΞΉ/ΞΎΞ±Ξ½Ξ±Ο†Ξ±Ξ―Ξ½ΞΏΞ½Ο„Ξ±ΞΉ Ο„Ξ± ΞµΞΉΞΊΞΏΞ½Ξ―Ξ΄ΞΉΞ±.</summary>
         public static int TestIconHide(string mode)
         {
             dynamic? shell = null;
@@ -1060,3 +1086,4 @@ namespace MotionDesk.Services
         }
     }
 }
+

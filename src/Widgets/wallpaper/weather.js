@@ -1,6 +1,6 @@
-// Opsis — "Weather" wallpaper: a procedural scene driven by the real time of day (sun/moon/stars,
+﻿// Opsis β€” "Weather" wallpaper: a procedural scene driven by the real time of day (sun/moon/stars,
 // sunrise & sunset computed from the location) and the live weather (clouds, rain, snow, fog, thunderstorms).
-// Everything is drawn with Canvas 2D — no external assets, no network access from this file (the C# bridge supplies the weather).
+// Everything is drawn with Canvas 2D β€” no external assets, no network access from this file (the C# bridge supplies the weather).
 // Public API (used by index.html): WeatherWallpaper.setConfig(cfg), .setWeather(data), .resize(w, h, dpr), .draw(dtSeconds, profile).
 (function () {
 'use strict';
@@ -29,7 +29,7 @@ const rgba = (c, a) => `rgba(${c[0] | 0},${c[1] | 0},${c[2] | 0},${a})`;
 const lum = (c) => 0.299 * c[0] + 0.587 * c[1] + 0.114 * c[2];
 const scaleCol = (c, k) => [c[0] * k, c[1] * k, c[2] * k];
 
-// Beaufort scale (continuous 0..12) from km/h — the thresholds are the standard upper limits of Bf 0..11
+// Beaufort scale (continuous 0..12) from km/h β€” the thresholds are the standard upper limits of Bf 0..11
 const BF_LIMITS = [1, 6, 12, 20, 29, 39, 50, 62, 75, 89, 103, 118];
 function beaufort(kmh) {
     if (kmh < 1) return Math.max(0, kmh);
@@ -539,6 +539,7 @@ function drawCloudsLayer(sky, dt) {
 function hazeColor(hor) { return mix(hor, [190, 196, 206], 0.4); }
 
 function drawHillsLayer(sky, graded) {
+    if (onPhoto()) return;                                               // the aerial photograph has its own horizon
     const g = skyCtx;
     const amb = clamp(sky.amb, 0, 1);
     const shade = scaleCol([22, 32, 46], 0.28 + 0.72 * amb);
@@ -576,6 +577,63 @@ function resolveLandmark() {
     return landmarkPick;
 }
 const onLand = () => !!(resolveLandmark() && landmarkScene.scene === 'land');
+const onPhoto = () => !!(resolveLandmark() && landmarkScene.scene === 'photo');
+
+// ---- aerial photograph as the landscape (Athens: the Acropolis and the city from Lycabettus, CC0, scenes/manifest.json) ----
+// The picture fades to transparent at the top, so the animated sky (clouds, sun, moon, stars) shows through the haze of the gulf. It is tinted by the light of the scene in an
+// offscreen canvas rebuilt only when the quantised light changes; at night a second image with warm window lights is added on top.
+const photoState = { img: null, lights: null, ready: false, lightsReady: false, id: '', canvas: null, key: '' };
+function drawScenePhoto(c2, sky, graded) {
+    const L = window.OpsisLandmarks, ps = L.photoScene(landmarkPick.id); if (!ps) return;
+    if (photoState.id !== landmarkPick.id) {
+        photoState.id = landmarkPick.id; photoState.ready = photoState.lightsReady = false; photoState.key = '';
+        photoState.img = new Image(); photoState.img.onload = () => { photoState.ready = true; }; photoState.img.src = ps.file;
+        photoState.lights = new Image(); photoState.lights.onload = () => { photoState.lightsReady = true; }; photoState.lights.src = ps.lights;
+    }
+    if (!photoState.ready) return;
+    const iw = photoState.img.naturalWidth, ih = photoState.img.naturalHeight, sc = Math.max(W / iw, 0.1), w = W, h = Math.round(ih * sc);
+    const amb = clamp(sky.amb, 0, 1), night = clamp(1 - amb / 0.35, 0, 1), fog = clamp(S.fog, 0, 1), glow = clamp(sky.glow || 0, 0, 1);
+    const key = [w, h, Math.round(amb * 14), Math.round(night * 8), Math.round(fog * 10), Math.round(glow * 4), Math.round(S.snowCover * 4)].join('/');
+    if (photoState.key !== key) {
+        const c = photoState.canvas || (photoState.canvas = makeCanvas(w, h)); if (c.width !== w || c.height !== h) { c.width = w; c.height = h; }
+        const o = c.getContext('2d'); o.clearRect(0, 0, w, h); o.imageSmoothingQuality = 'high'; o.drawImage(photoState.img, 0, 0, w, h);
+        const warm = mix([255, 236, 205], graded.hor, glow * 0.6), dusk = clamp(glow * (1 - amb) * 1.6, 0, 1);
+        const dm = mix([62, 74, 110], [255, 255, 255], Math.pow(amb, 0.8)), mul = [0, 1, 2].map(i => dm[i] * (1 - dusk * 0.6 + dusk * 0.6 * warm[i] / 255));
+        o.globalCompositeOperation = 'multiply'; o.fillStyle = `rgb(${mul[0] | 0},${mul[1] | 0},${mul[2] | 0})`; o.fillRect(0, 0, w, h);
+        o.globalCompositeOperation = 'destination-in'; o.drawImage(photoState.img, 0, 0, w, h);                    // keep the alpha of the photo
+        o.globalCompositeOperation = 'source-atop';
+        if (fog > 0.02) { const hz = mix(graded.hor, [200, 205, 212], 0.4); o.fillStyle = rgba(hz, fog * 0.7); o.fillRect(0, 0, w, h); }
+        if (S.snowCover > 0.05) { o.fillStyle = `rgba(232,238,250,${(0.16 * S.snowCover).toFixed(2)})`; o.fillRect(0, 0, w, h); }
+        o.globalCompositeOperation = 'source-over'; photoState.key = key;
+    }
+    const y = H - h;                                                       // the photo stands on the bottom edge; if it is taller than the screen its hazy top is cut
+    c2.drawImage(photoState.canvas, 0, y);
+    if (night > 0.05 && photoState.lightsReady) { c2.save(); c2.globalAlpha = Math.min(1, night * 0.95); c2.globalCompositeOperation = 'lighter'; c2.drawImage(photoState.lights, 0, y, w, h); c2.restore(); }
+}
+
+// ---- birds: flocks of gulls / swifts crossing the sky on clear days, wings beating, each bird a little different ----
+let birds = [], birdWait = 4;
+function drawBirds(g, dt, sky) {
+    const day = clamp(sky.amb * 1.5 - 0.15, 0, 1) * (1 - clamp(S.rain * 1.2, 0, 1)) * (1 - S.fog * 0.8) * (1 - S.snowCover * 0.6) * (1 - clamp(BFN / 9, 0, 1) * 0.6);
+    if (day < 0.1 && birds.length === 0) return;
+    birdWait -= dt;
+    if (birdWait <= 0 && day > 0.35 && birds.length < 16) {
+        const n = 3 + Math.floor(Math.random() * 6), dir = Math.random() < 0.5 ? 1 : -1, y0 = HORIZON * (0.12 + Math.random() * 0.5), sp = W * (0.035 + Math.random() * 0.03);
+        for (let i = 0; i < n; i++) birds.push({ x: dir > 0 ? -30 - i * 26 : W + 30 + i * 26, y: y0 + (i % 2 ? 1 : -1) * i * 9 + (Math.random() - 0.5) * 14, vx: dir * sp * (0.9 + Math.random() * 0.2), ph: Math.random() * 6, f: 5 + Math.random() * 3, s: (8 + Math.random() * 6) * Math.max(0.8, H / 1080) });
+        birdWait = 12 + Math.random() * 30;
+    }
+    if (birds.length === 0) return;
+    g.save(); g.lineCap = 'round';
+    for (let i = birds.length - 1; i >= 0; i--) {
+        const b = birds[i]; b.x += b.vx * dt; b.ph += b.f * dt; b.y += Math.sin(b.ph * 0.35) * 6 * dt;
+        if (b.x < -80 || b.x > W + 80) { birds.splice(i, 1); continue; }
+        const wing = Math.sin(b.ph), a = 0.72 * day * clamp(1 - Math.abs(b.y - HORIZON * 0.4) / (HORIZON * 0.9), 0.35, 1);
+        g.strokeStyle = `rgba(22,26,34,${a.toFixed(3)})`; g.lineWidth = Math.max(1, b.s * 0.24);
+        g.beginPath(); g.moveTo(b.x - b.s, b.y - wing * b.s * 0.55); g.quadraticCurveTo(b.x - b.s * 0.45, b.y - wing * b.s * 0.95 - b.s * 0.15, b.x, b.y);
+        g.quadraticCurveTo(b.x + b.s * 0.45, b.y - wing * b.s * 0.95 - b.s * 0.15, b.x + b.s, b.y - wing * b.s * 0.55); g.stroke();
+    }
+    g.restore();
+}
 
 // The landmark as a distant monument in the colour of the air between it and the viewer. On LAND it stands on a base of rock / grass that rises from the plain (the sprite's cut edge is hidden
 // behind the base); in the SEA its foot stands at the waterline.
@@ -590,33 +648,11 @@ function drawLandmarkOnHorizon(sky, graded, shade, haze) {
     };
     if (flash > 0) pal.amb = clamp(pal.amb + flash * 0.5, 0, 1);
     const maxH = Math.max(90, H * 0.34), L = window.OpsisLandmarks;
+    if (landmarkScene.scene === 'photo') return;
     const size = L.spriteSize(landmarkPick.id, maxH, pal.maxW); if (!size) return;
-    const cx = W * 0.72;
-    if (landmarkScene.scene !== 'land') { L.drawLandmark(skyCtx, landmarkPick.id, cx, HORIZON + 2, maxH, pal); return; }
-    const plinth = Math.round(size.h * (landmarkScene.plinth || 0.05)), baseY = HORIZON - plinth;
-    L.drawLandmark(skyCtx, landmarkPick.id, cx, baseY + Math.round(size.h * 0.05), maxH, pal);
-    // the base: a rocky hill (Acropolis) or a low grassy / sandy mound, shaded like the hills, drawn OVER the foot of the sprite
-    const g = skyCtx, gc = landmarkScene.ground;
-    const baseCol = gc === 'rock' ? [160, 138, 114] : gc === 'sand' ? [186, 162, 120] : [84, 104, 64];
-    let col = mix(scaleCol(baseCol, 0.3 + 0.7 * amb), shade, 0.12);
-    col = mix(col, hazeColor(graded.hor), clamp(0.18 + S.fog * 0.6, 0, 0.9));
-    col = mix(col, [212, 222, 238].map(v => v * (0.3 + 0.7 * amb)), clamp(S.snowCover * 0.7, 0, 0.8));
-    const half = size.w * (gc === 'rock' ? 0.62 : 0.7), slope = size.w * (gc === 'rock' ? 0.38 : 0.55), n = 24, top = baseY + size.h * 0.012;
-    g.fillStyle = rgba(col, 1); g.beginPath(); g.moveTo(cx - half - slope, HORIZON + 2);
-    for (let i = 0; i <= n; i++) {                                         // an uneven crest: small deterministic bumps, steeper sides for rock
-        const t = i / n, x = cx - half + t * 2 * half, bump = (Math.sin(i * 12.9898) * 43758.5453) % 1;
-        g.lineTo(x, top + (gc === 'rock' ? Math.abs(bump) * plinth * 0.22 : Math.abs(bump) * plinth * 0.4));
-    }
-    g.lineTo(cx + half + slope, HORIZON + 2); g.closePath(); g.fill();
-    // a lit edge on the sun side and a darker foot
-    const edge = g.createLinearGradient(0, top, 0, HORIZON + 2); edge.addColorStop(0, rgba(mix(col, [255, 240, 220], 0.18 * amb), 0.55)); edge.addColorStop(0.5, rgba(col, 0)); edge.addColorStop(1, rgba(scaleCol(col, 0.7), 0.35));
-    g.fillStyle = edge; g.fill();
-    if (gc === 'rock') {                                                  // rock strata: a few darker bands following the slope, clipped to the hill
-        g.save(); g.clip();
-        g.strokeStyle = rgba(scaleCol(col, 0.62), 0.35); g.lineWidth = Math.max(1, plinth * 0.03);
-        for (let i = 1; i <= 5; i++) { const y = top + plinth * (i / 6); g.beginPath(); g.moveTo(cx - half - slope, y + plinth * 0.05); g.lineTo(cx - half * 0.2, y); g.lineTo(cx + half + slope, y + plinth * 0.08); g.stroke(); }
-        g.restore();
-    }
+    if (landmarkScene.scene === 'photo') return;                          // the photo scene replaces the hills, the monument and the ground (drawScenePhoto)
+    if (landmarkScene.scene !== 'land') { L.drawLandmark(skyCtx, landmarkPick.id, W * 0.72, HORIZON + 2, maxH, pal); return; }
+    L.drawLandmark(skyCtx, landmarkPick.id, W * 0.72, HORIZON - Math.round(size.h * 0.01), maxH, pal);
 }
 
 // Ground under a land monument instead of the sea: haze at the horizon fading to the dark plain, with the lights of the city at night. No reflections, no ripples.
@@ -704,18 +740,18 @@ function buildWaterAssets() {
     glints = Array.from({ length: 70 }, () => ({ u: rnd(), x: rnd(), len: 0.04 + rnd() * 0.12, sp: 0.4 + rnd() * 1.4, a: 0.35 + rnd() * 0.65 }));
 }
 
-// Ζητήθηκε ρητά "εφάρμοσε διάφορους κυματισμούς, αποχρώσεις και εφέ στις γραμμές" (βελτίωση
-// κυμάτων) — έρευνα σε αντίστοιχες canvas-based τεχνικές (layered sine waves, γεμισμένες -όχι
-// μόνο γραμμές- ώστε η μία λωρίδα να καλύπτει την επόμενη, gradient ανά λωρίδα, άθροισμα δύο
-// συχνοτήτων για πιο οργανικό σχήμα) έδειξε ότι η προηγούμενη υλοποίηση είχε ΜΟΝΟ texture
-// (glints/whitecaps) χωρίς καθόλου πραγματικό ΣΧΗΜΑ κύματος. Σε πραγματική ανοιχτή θάλασσα από
-// απόσταση τα μακρινά κύματα "συμπιέζονται" από την προοπτική σε ορατές, επαναλαμβανόμενες
-// φωτεινές/σκοτεινές λωρίδες κοντά στον ορίζοντα (το κοντινό νερό παραμένει σωστά texture-based
-// — αυτό καλύπτεται ήδη από τα glints/whitecaps πιο κάτω, δεν αγγίζεται).
+// Ξ–Ξ·Ο„Ξ®ΞΈΞ·ΞΊΞµ ΟΞ·Ο„Ξ¬ "ΞµΟ†Ξ¬ΟΞΌΞΏΟƒΞµ Ξ΄ΞΉΞ¬Ο†ΞΏΟΞΏΟ…Ο‚ ΞΊΟ…ΞΌΞ±Ο„ΞΉΟƒΞΌΞΏΟΟ‚, Ξ±Ο€ΞΏΟ‡ΟΟΟƒΞµΞΉΟ‚ ΞΊΞ±ΞΉ ΞµΟ†Ξ­ ΟƒΟ„ΞΉΟ‚ Ξ³ΟΞ±ΞΌΞΌΞ­Ο‚" (Ξ²ΞµΞ»Ο„Ξ―Ο‰ΟƒΞ·
+// ΞΊΟ…ΞΌΞ¬Ο„Ο‰Ξ½) β€” Ξ­ΟΞµΟ…Ξ½Ξ± ΟƒΞµ Ξ±Ξ½Ο„Ξ―ΟƒΟ„ΞΏΞΉΟ‡ΞµΟ‚ canvas-based Ο„ΞµΟ‡Ξ½ΞΉΞΊΞ­Ο‚ (layered sine waves, Ξ³ΞµΞΌΞΉΟƒΞΌΞ­Ξ½ΞµΟ‚ -ΟΟ‡ΞΉ
+// ΞΌΟΞ½ΞΏ Ξ³ΟΞ±ΞΌΞΌΞ­Ο‚- ΟΟƒΟ„Ξµ Ξ· ΞΌΞ―Ξ± Ξ»Ο‰ΟΞ―Ξ΄Ξ± Ξ½Ξ± ΞΊΞ±Ξ»ΟΟ€Ο„ΞµΞΉ Ο„Ξ·Ξ½ ΞµΟ€ΟΞΌΞµΞ½Ξ·, gradient Ξ±Ξ½Ξ¬ Ξ»Ο‰ΟΞ―Ξ΄Ξ±, Ξ¬ΞΈΟΞΏΞΉΟƒΞΌΞ± Ξ΄ΟΞΏ
+// ΟƒΟ…Ο‡Ξ½ΞΏΟ„Ξ®Ο„Ο‰Ξ½ Ξ³ΞΉΞ± Ο€ΞΉΞΏ ΞΏΟΞ³Ξ±Ξ½ΞΉΞΊΟ ΟƒΟ‡Ξ®ΞΌΞ±) Ξ­Ξ΄ΞµΞΉΞΎΞµ ΟΟ„ΞΉ Ξ· Ο€ΟΞΏΞ·Ξ³ΞΏΟΞΌΞµΞ½Ξ· Ο…Ξ»ΞΏΟ€ΞΏΞ―Ξ·ΟƒΞ· ΞµΞ―Ο‡Ξµ ΞΞΞΞ texture
+// (glints/whitecaps) Ο‡Ο‰ΟΞ―Ο‚ ΞΊΞ±ΞΈΟΞ»ΞΏΟ… Ο€ΟΞ±Ξ³ΞΌΞ±Ο„ΞΉΞΊΟ Ξ£Ξ§Ξ—ΞΞ‘ ΞΊΟΞΌΞ±Ο„ΞΏΟ‚. Ξ£Ξµ Ο€ΟΞ±Ξ³ΞΌΞ±Ο„ΞΉΞΊΞ® Ξ±Ξ½ΞΏΞΉΟ‡Ο„Ξ® ΞΈΞ¬Ξ»Ξ±ΟƒΟƒΞ± Ξ±Ο€Ο
+// Ξ±Ο€ΟΟƒΟ„Ξ±ΟƒΞ· Ο„Ξ± ΞΌΞ±ΞΊΟΞΉΞ½Ξ¬ ΞΊΟΞΌΞ±Ο„Ξ± "ΟƒΟ…ΞΌΟ€ΞΉΞ­Ξ¶ΞΏΞ½Ο„Ξ±ΞΉ" Ξ±Ο€Ο Ο„Ξ·Ξ½ Ο€ΟΞΏΞΏΟ€Ο„ΞΉΞΊΞ® ΟƒΞµ ΞΏΟΞ±Ο„Ξ­Ο‚, ΞµΟ€Ξ±Ξ½Ξ±Ξ»Ξ±ΞΌΞ²Ξ±Ξ½ΟΞΌΞµΞ½ΞµΟ‚
+// Ο†Ο‰Ο„ΞµΞΉΞ½Ξ­Ο‚/ΟƒΞΊΞΏΟ„ΞµΞΉΞ½Ξ­Ο‚ Ξ»Ο‰ΟΞ―Ξ΄ΞµΟ‚ ΞΊΞΏΞ½Ο„Ξ¬ ΟƒΟ„ΞΏΞ½ ΞΏΟΞ―Ξ¶ΞΏΞ½Ο„Ξ± (Ο„ΞΏ ΞΊΞΏΞ½Ο„ΞΉΞ½Ο Ξ½ΞµΟΟ Ο€Ξ±ΟΞ±ΞΌΞ­Ξ½ΞµΞΉ ΟƒΟ‰ΟƒΟ„Ξ¬ texture-based
+// β€” Ξ±Ο…Ο„Ο ΞΊΞ±Ξ»ΟΟ€Ο„ΞµΟ„Ξ±ΞΉ Ξ®Ξ΄Ξ· Ξ±Ο€Ο Ο„Ξ± glints/whitecaps Ο€ΞΉΞΏ ΞΊΞ¬Ο„Ο‰, Ξ΄ΞµΞ½ Ξ±Ξ³Ξ³Ξ―Ξ¶ΞµΟ„Ξ±ΞΉ).
 function drawHorizonSwell(ctx2, sky, graded) {
     if (S.snowCover > 0.5) return;
     const hz = HORIZON, wh = H - hz;
-    const bands = 3 + Math.round(clamp(BFN / 2.5, 0, 1) * 3);   // 3..6 λωρίδες ανάλογα τον άνεμο
+    const bands = 3 + Math.round(clamp(BFN / 2.5, 0, 1) * 3);   // 3..6 Ξ»Ο‰ΟΞ―Ξ΄ΞµΟ‚ Ξ±Ξ½Ξ¬Ξ»ΞΏΞ³Ξ± Ο„ΞΏΞ½ Ξ¬Ξ½ΞµΞΌΞΏ
     const bandH = Math.min(26, wh * 0.11) * K;
     const amp = (1.2 + BFN * 0.9) * K;
     const speed = 0.5 + BFN * 0.1;
@@ -724,7 +760,7 @@ function drawHorizonSwell(ctx2, sky, graded) {
     ctx2.save();
     ctx2.beginPath(); ctx2.rect(0, hz, W, Math.min(wh, bandH * bands * 1.6)); ctx2.clip();
     for (let i = 0; i < bands; i++) {
-        const k = i / Math.max(1, bands - 1);     // 0 = πιο κοντά στον ορίζοντα, 1 = πιο κοντά στον θεατή
+        const k = i / Math.max(1, bands - 1);     // 0 = Ο€ΞΉΞΏ ΞΊΞΏΞ½Ο„Ξ¬ ΟƒΟ„ΞΏΞ½ ΞΏΟΞ―Ξ¶ΞΏΞ½Ο„Ξ±, 1 = Ο€ΞΉΞΏ ΞΊΞΏΞ½Ο„Ξ¬ ΟƒΟ„ΞΏΞ½ ΞΈΞµΞ±Ο„Ξ®
         const y0 = hz + i * bandH * (0.78 + k * 0.5);
         const ph = i * 1.7;
         const crestLine = [];
@@ -744,7 +780,7 @@ function drawHorizonSwell(ctx2, sky, graded) {
         g.addColorStop(1, rgba(trough, 0));
         ctx2.fillStyle = g;
         ctx2.fill();
-        // αχνή φωτεινή "κορυφογραμμή" πάνω στην ίδια κυματιστή γραμμή — το κλασικό catch-light effect
+        // Ξ±Ο‡Ξ½Ξ® Ο†Ο‰Ο„ΞµΞΉΞ½Ξ® "ΞΊΞΏΟΟ…Ο†ΞΏΞ³ΟΞ±ΞΌΞΌΞ®" Ο€Ξ¬Ξ½Ο‰ ΟƒΟ„Ξ·Ξ½ Ξ―Ξ΄ΞΉΞ± ΞΊΟ…ΞΌΞ±Ο„ΞΉΟƒΟ„Ξ® Ξ³ΟΞ±ΞΌΞΌΞ® β€” Ο„ΞΏ ΞΊΞ»Ξ±ΟƒΞΉΞΊΟ catch-light effect
         ctx2.beginPath();
         crestLine.forEach((p, pi) => pi ? ctx2.lineTo(p[0], p[1]) : ctx2.moveTo(p[0], p[1]));
         ctx2.strokeStyle = rgba(crest, 0.4 * (1 - k * 0.3));
@@ -779,7 +815,7 @@ function drawWater(ctx2, sky, graded) {
         reflCtx.save(); reflCtx.translate(0, rh); reflCtx.scale(1, -1);
         reflCtx.drawImage(skyCv, 0, hz - srcH, W, srcH, 0, 0, rw, rh);
         reflCtx.restore();
-        // 2) erase the mirrored sun/moon DISC (a perfect mirrored disc is what made the old reflection look cartoonish) — the
+        // 2) erase the mirrored sun/moon DISC (a perfect mirrored disc is what made the old reflection look cartoonish) β€” the
         //    glitter path below replaces it
         if (celest && celest.power > 0.02) {
             const cx = celest.x / 3, cy = ((hz - celest.y) / 1.25) / 3, rr = Math.max(8, celest.r * 3.4 / 3);
@@ -1006,12 +1042,12 @@ function drawFog(ctx2, dt, graded, amb) {
 }
 
 // ---- rain on the "window glass"
-// ΔΙΟΡΘΩΣΗ "το εφέ των σταγόνων στην οθόνη δεν λειτουργεί" (2ο γύρο, μετά το reorder-fix
-// παραπάνω): οι σταγόνες ΟΝΤΩΣ ζωγραφίζονταν (επιβεβαιώθηκε live σε headless Chromium, πλάι-σε-
-// πλάι frame diff), αλλά με τόσο μικρή ακτίνα (1.6-6px) και τόσο χαμηλό alpha (0.05-0.22) που σε
-// πραγματική απόσταση θέασης desktop ήταν ουσιαστικά αόρατες — "δεν λειτουργεί" από την οπτική
-// γωνία του χρήστη, ακόμα κι αν τεχνικά ζωγραφιζόταν κάθε frame. Μεγαλύτερες σταγόνες + σαφώς
-// μεγαλύτερο alpha παντού, πιο κοντά στο πώς φαίνεται το αντίστοιχο εφέ του Lively Wallpaper.
+// Ξ”Ξ™ΞΞ΅ΞΞ©Ξ£Ξ— "Ο„ΞΏ ΞµΟ†Ξ­ Ο„Ο‰Ξ½ ΟƒΟ„Ξ±Ξ³ΟΞ½Ο‰Ξ½ ΟƒΟ„Ξ·Ξ½ ΞΏΞΈΟΞ½Ξ· Ξ΄ΞµΞ½ Ξ»ΞµΞΉΟ„ΞΏΟ…ΟΞ³ΞµΞ―" (2ΞΏ Ξ³ΟΟΞΏ, ΞΌΞµΟ„Ξ¬ Ο„ΞΏ reorder-fix
+// Ο€Ξ±ΟΞ±Ο€Ξ¬Ξ½Ο‰): ΞΏΞΉ ΟƒΟ„Ξ±Ξ³ΟΞ½ΞµΟ‚ ΞΞΞ¤Ξ©Ξ£ Ξ¶Ο‰Ξ³ΟΞ±Ο†Ξ―Ξ¶ΞΏΞ½Ο„Ξ±Ξ½ (ΞµΟ€ΞΉΞ²ΞµΞ²Ξ±ΞΉΟΞΈΞ·ΞΊΞµ live ΟƒΞµ headless Chromium, Ο€Ξ»Ξ¬ΞΉ-ΟƒΞµ-
+// Ο€Ξ»Ξ¬ΞΉ frame diff), Ξ±Ξ»Ξ»Ξ¬ ΞΌΞµ Ο„ΟΟƒΞΏ ΞΌΞΉΞΊΟΞ® Ξ±ΞΊΟ„Ξ―Ξ½Ξ± (1.6-6px) ΞΊΞ±ΞΉ Ο„ΟΟƒΞΏ Ο‡Ξ±ΞΌΞ·Ξ»Ο alpha (0.05-0.22) Ο€ΞΏΟ… ΟƒΞµ
+// Ο€ΟΞ±Ξ³ΞΌΞ±Ο„ΞΉΞΊΞ® Ξ±Ο€ΟΟƒΟ„Ξ±ΟƒΞ· ΞΈΞ­Ξ±ΟƒΞ·Ο‚ desktop Ξ®Ο„Ξ±Ξ½ ΞΏΟ…ΟƒΞΉΞ±ΟƒΟ„ΞΉΞΊΞ¬ Ξ±ΟΟΞ±Ο„ΞµΟ‚ β€” "Ξ΄ΞµΞ½ Ξ»ΞµΞΉΟ„ΞΏΟ…ΟΞ³ΞµΞ―" Ξ±Ο€Ο Ο„Ξ·Ξ½ ΞΏΟ€Ο„ΞΉΞΊΞ®
+// Ξ³Ο‰Ξ½Ξ―Ξ± Ο„ΞΏΟ… Ο‡ΟΞ®ΟƒΟ„Ξ·, Ξ±ΞΊΟΞΌΞ± ΞΊΞΉ Ξ±Ξ½ Ο„ΞµΟ‡Ξ½ΞΉΞΊΞ¬ Ξ¶Ο‰Ξ³ΟΞ±Ο†ΞΉΞ¶ΟΟ„Ξ±Ξ½ ΞΊΞ¬ΞΈΞµ frame. ΞΞµΞ³Ξ±Ξ»ΟΟ„ΞµΟΞµΟ‚ ΟƒΟ„Ξ±Ξ³ΟΞ½ΞµΟ‚ + ΟƒΞ±Ο†ΟΟ‚
+// ΞΌΞµΞ³Ξ±Ξ»ΟΟ„ΞµΟΞΏ alpha Ο€Ξ±Ξ½Ο„ΞΏΟ, Ο€ΞΉΞΏ ΞΊΞΏΞ½Ο„Ξ¬ ΟƒΟ„ΞΏ Ο€ΟΟ‚ Ο†Ξ±Ξ―Ξ½ΞµΟ„Ξ±ΞΉ Ο„ΞΏ Ξ±Ξ½Ο„Ξ―ΟƒΟ„ΞΏΞΉΟ‡ΞΏ ΞµΟ†Ξ­ Ο„ΞΏΟ… Lively Wallpaper.
 function updateGlass(dt) {
     const want = cfg.glass && S.rain > 0.12 ? Math.round((34 + 150 * S.rain) * Math.min(1.4, W / 1920 + 0.2)) : 0;
     while (glass.length < want && Math.random() < 0.6) {
@@ -1116,13 +1152,13 @@ function draw(target, dt, profile) {
     drawHillsLayer(sky, graded);
 
     // ---- composite
-    // ΔΙΟΡΘΩΣΗ "το εφέ των σταγόνων στην οθόνη δεν λειτουργεί": το updateGlass (που ΓΕΜΙΖΕΙ το
-    // glass[] array) καλούνταν ΜΕΤΑ τον υπολογισμό του useGlass — στο πρώτο frame που αρχίζει η
-    // βροχή, glass.length ήταν ακόμα 0 ΤΗ ΣΤΙΓΜΗ του ελέγχου, οπότε useGlass έβγαινε false και το
-    // drawGlass παραλειπόταν ΕΝΤΕΛΩΣ για εκείνο το frame (και κάθε φορά που το glass[] άδειαζε
-    // προσωρινά κοντά στο κατώφλι βροχής 0.12, το effect έσβηνε/αναβόσβηνε αντί να παραμένει
-    // σταθερό). Τώρα το updateGlass τρέχει ΠΡΩΤΑ, ώστε το useGlass να βλέπει πάντα την
-    // ενημερωμένη κατάσταση του ΙΔΙΟΥ frame.
+    // Ξ”Ξ™ΞΞ΅ΞΞ©Ξ£Ξ— "Ο„ΞΏ ΞµΟ†Ξ­ Ο„Ο‰Ξ½ ΟƒΟ„Ξ±Ξ³ΟΞ½Ο‰Ξ½ ΟƒΟ„Ξ·Ξ½ ΞΏΞΈΟΞ½Ξ· Ξ΄ΞµΞ½ Ξ»ΞµΞΉΟ„ΞΏΟ…ΟΞ³ΞµΞ―": Ο„ΞΏ updateGlass (Ο€ΞΏΟ… Ξ“Ξ•ΞΞ™Ξ–Ξ•Ξ™ Ο„ΞΏ
+    // glass[] array) ΞΊΞ±Ξ»ΞΏΟΞ½Ο„Ξ±Ξ½ ΞΞ•Ξ¤Ξ‘ Ο„ΞΏΞ½ Ο…Ο€ΞΏΞ»ΞΏΞ³ΞΉΟƒΞΌΟ Ο„ΞΏΟ… useGlass β€” ΟƒΟ„ΞΏ Ο€ΟΟΟ„ΞΏ frame Ο€ΞΏΟ… Ξ±ΟΟ‡Ξ―Ξ¶ΞµΞΉ Ξ·
+    // Ξ²ΟΞΏΟ‡Ξ®, glass.length Ξ®Ο„Ξ±Ξ½ Ξ±ΞΊΟΞΌΞ± 0 Ξ¤Ξ— Ξ£Ξ¤Ξ™Ξ“ΞΞ— Ο„ΞΏΟ… ΞµΞ»Ξ­Ξ³Ο‡ΞΏΟ…, ΞΏΟ€ΟΟ„Ξµ useGlass Ξ­Ξ²Ξ³Ξ±ΞΉΞ½Ξµ false ΞΊΞ±ΞΉ Ο„ΞΏ
+    // drawGlass Ο€Ξ±ΟΞ±Ξ»ΞµΞΉΟ€ΟΟ„Ξ±Ξ½ Ξ•ΞΞ¤Ξ•Ξ›Ξ©Ξ£ Ξ³ΞΉΞ± ΞµΞΊΞµΞ―Ξ½ΞΏ Ο„ΞΏ frame (ΞΊΞ±ΞΉ ΞΊΞ¬ΞΈΞµ Ο†ΞΏΟΞ¬ Ο€ΞΏΟ… Ο„ΞΏ glass[] Ξ¬Ξ΄ΞµΞΉΞ±Ξ¶Ξµ
+    // Ο€ΟΞΏΟƒΟ‰ΟΞΉΞ½Ξ¬ ΞΊΞΏΞ½Ο„Ξ¬ ΟƒΟ„ΞΏ ΞΊΞ±Ο„ΟΟ†Ξ»ΞΉ Ξ²ΟΞΏΟ‡Ξ®Ο‚ 0.12, Ο„ΞΏ effect Ξ­ΟƒΞ²Ξ·Ξ½Ξµ/Ξ±Ξ½Ξ±Ξ²ΟΟƒΞ²Ξ·Ξ½Ξµ Ξ±Ξ½Ο„Ξ― Ξ½Ξ± Ο€Ξ±ΟΞ±ΞΌΞ­Ξ½ΞµΞΉ
+    // ΟƒΟ„Ξ±ΞΈΞµΟΟ). Ξ¤ΟΟΞ± Ο„ΞΏ updateGlass Ο„ΟΞ­Ο‡ΞµΞΉ Ξ Ξ΅Ξ©Ξ¤Ξ‘, ΟΟƒΟ„Ξµ Ο„ΞΏ useGlass Ξ½Ξ± Ξ²Ξ»Ξ­Ο€ΞµΞΉ Ο€Ξ¬Ξ½Ο„Ξ± Ο„Ξ·Ξ½
+    // ΞµΞ½Ξ·ΞΌΞµΟΟ‰ΞΌΞ­Ξ½Ξ· ΞΊΞ±Ο„Ξ¬ΟƒΟ„Ξ±ΟƒΞ· Ο„ΞΏΟ… Ξ™Ξ”Ξ™ΞΞ¥ frame.
     updateGlass(dt);
     const useGlass = cfg.glass && glass.length > 0;
     let c2 = target;
@@ -1133,7 +1169,9 @@ function draw(target, dt, profile) {
     c2.setTransform(1, 0, 0, 1, 0, 0);
     c2.globalAlpha = 1; c2.globalCompositeOperation = 'source-over';
     c2.drawImage(skyCv, 0, 0);
-    if (onLand()) drawLand(c2, sky, graded);
+    drawBirds(c2, dt, sky);
+    if (onPhoto()) drawScenePhoto(c2, sky, graded);
+    else if (onLand()) drawLand(c2, sky, graded);
     else { drawWater(c2, sky, graded); drawRipples(c2, dt, sky.amb); }
     drawFog(c2, dt, graded, sky.amb);
     drawRain(c2, dt, sky.amb, density);
@@ -1156,9 +1194,9 @@ window.WeatherWallpaper = {
     info: () => {
         const m = localMinutes();
         const d = new Date(Date.now() + (offsetMinutes() + new Date().getTimezoneOffset()) * 60000);   // wall-clock date at the location
-        // Ζητήθηκε ρητά "εμφάνιση ανέμου μαζί με την ώρα/ημερομηνία/θερμοκρασία στην επιφάνεια
-        // εργασίας" — windKmh/beaufort εκτίθενται εδώ ώστε το index.html να τα δείξει στο ίδιο
-        // overlay (βλ. updateWeatherInfo). S.wind είναι ήδη σε km/h (βλ. computeTargets).
+        // Ξ–Ξ·Ο„Ξ®ΞΈΞ·ΞΊΞµ ΟΞ·Ο„Ξ¬ "ΞµΞΌΟ†Ξ¬Ξ½ΞΉΟƒΞ· Ξ±Ξ½Ξ­ΞΌΞΏΟ… ΞΌΞ±Ξ¶Ξ― ΞΌΞµ Ο„Ξ·Ξ½ ΟΟΞ±/Ξ·ΞΌΞµΟΞΏΞΌΞ·Ξ½Ξ―Ξ±/ΞΈΞµΟΞΌΞΏΞΊΟΞ±ΟƒΞ―Ξ± ΟƒΟ„Ξ·Ξ½ ΞµΟ€ΞΉΟ†Ξ¬Ξ½ΞµΞΉΞ±
+        // ΞµΟΞ³Ξ±ΟƒΞ―Ξ±Ο‚" β€” windKmh/beaufort ΞµΞΊΟ„Ξ―ΞΈΞµΞ½Ο„Ξ±ΞΉ ΞµΞ΄Ο ΟΟƒΟ„Ξµ Ο„ΞΏ index.html Ξ½Ξ± Ο„Ξ± Ξ΄ΞµΞ―ΞΎΞµΞΉ ΟƒΟ„ΞΏ Ξ―Ξ΄ΞΉΞΏ
+        // overlay (Ξ²Ξ». updateWeatherInfo). S.wind ΞµΞ―Ξ½Ξ±ΞΉ Ξ®Ξ΄Ξ· ΟƒΞµ km/h (Ξ²Ξ». computeTargets).
         return { h: Math.floor(m / 60) % 24, m: Math.floor(m % 60), date: d, temp: data && data.ok ? data.temp : null, code: cfg.weatherSim && cfg.weatherSim !== 'Auto' ? ({ Clear: 0, PartlyCloudy: 2, Cloudy: 3, Drizzle: 51, Rain: 63, HeavyRain: 65, Thunderstorm: 95, Snow: 73, Fog: 45 })[cfg.weatherSim] : (data && data.ok ? data.code : null), windKmh: Math.round(S.wind), beaufort: BFN };
     },
     // test helpers (headless screenshots)
@@ -1167,3 +1205,4 @@ window.WeatherWallpaper = {
     _warm: (secs, ctx2, profile) => { for (let i = 0; i < secs * 30; i++) draw(ctx2, 1 / 30, profile); },
 };
 })();
+
