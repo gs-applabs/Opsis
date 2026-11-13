@@ -226,7 +226,7 @@ namespace MotionDesk.UI
                     }
                     case "checkbox":
                     {
-                        var cb = new FlatCheckBox { Text = "", AutoSize = false, Width = 30, Height = 30, Checked = current.Equals("true", StringComparison.OrdinalIgnoreCase), BackColor = UiTheme.Background, Margin = new Padding(0, 4, 0, 0) };
+                        var cb = new FlatCheckBox { Text = "", AutoSize = false, Width = 30, Height = 30, Checked = current.Equals("true", StringComparison.OrdinalIgnoreCase), BackColor = UiTheme.PageBackground, Margin = new Padding(0, 4, 0, 0) };
                         cb.CheckedChanged += (_, _) => Save(prop, cb.Checked ? "true" : "false");
                         row.Controls.Add(cb);
                         break;
@@ -315,7 +315,7 @@ namespace MotionDesk.UI
             {
                 var id = el.Id;
                 var row = new FlowLayoutPanel { AutoSize = true, WrapContents = false, Margin = new Padding(0, 0, 0, 4) };
-                var cb = new FlatCheckBox { Text = ElementName(id), AutoSize = false, Width = 190, Height = 28, Checked = el.Enabled, BackColor = UiTheme.Background, Margin = new Padding(0, 4, 8, 0) };
+                var cb = new FlatCheckBox { Text = ElementName(id), AutoSize = false, Width = 190, Height = 28, Checked = el.Enabled, BackColor = UiTheme.PageBackground, Margin = new Padding(0, 4, 8, 0) };
                 cb.CheckedChanged += (_, _) => Commit(s => s.Elements.First(e => e.Id == id).Enabled = cb.Checked);
                 row.Controls.Add(cb);
 
@@ -332,9 +332,9 @@ namespace MotionDesk.UI
             }
 
             var opt = new FlowLayoutPanel { AutoSize = true, WrapContents = false, Margin = new Padding(0, 6, 0, 10) };
-            var card = new FlatToggle { RowWidth = 440, Text = L("Frosted card behind the elements", "Θολό πλαίσιο πίσω από τα στοιχεία"),  Checked = settings.ElementsCard, BackColor = UiTheme.Background, Margin = new Padding(0, 4, 8, 0) };
+            var card = new FlatToggle { RowWidth = 440, Text = L("Frosted card behind the elements", "Θολό πλαίσιο πίσω από τα στοιχεία"),  Checked = settings.ElementsCard, BackColor = UiTheme.PageBackground, Margin = new Padding(0, 4, 8, 0) };
             card.CheckedChanged += (_, _) => Commit(s => s.ElementsCard = card.Checked);
-            var autoColor = new FlatToggle { RowWidth = 440, Text = L("Text colour follows the wallpaper (when there is no card)", "Το χρώμα του κειμένου ακολουθεί το φόντο (όταν δεν υπάρχει πλαίσιο)"), Checked = settings.ElementsAutoColor, BackColor = UiTheme.Background, Margin = new Padding(0, 4, 8, 0) };
+            var autoColor = new FlatToggle { RowWidth = 440, Text = L("Text colour follows the wallpaper (when there is no card)", "Το χρώμα του κειμένου ακολουθεί το φόντο (όταν δεν υπάρχει πλαίσιο)"), Checked = settings.ElementsAutoColor, BackColor = UiTheme.PageBackground, Margin = new Padding(0, 4, 8, 0) };
             autoColor.CheckedChanged += (_, _) => Commit(s => s.ElementsAutoColor = autoColor.Checked);
             var accent = new Button { Width = 60, Height = 26, FlatStyle = FlatStyle.Flat, Margin = new Padding(0, 2, 8, 0), Cursor = Cursors.Hand, TabStop = false };
             Color Parse(string t) { try { return ColorTranslator.FromHtml(t); } catch (Exception) { return Color.FromArgb(0, 210, 255); } }

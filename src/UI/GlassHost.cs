@@ -9,6 +9,10 @@ namespace MotionDesk.UI
     // OpsisUiTokens, widgets, dialogs) follows without changing a line. The tinted copy is cached: one new palette per (raw palette, Glass change).
     internal static class GlassHost
     {
+        /// <summary>Set by the main window once it is attached to the Glass manager.</summary>
+        public static bool MainAttached;
+        /// <summary>True while the main window shows the Windows backdrop (Acrylic / Mica): surfaces painted with the key colour (pure black) then let the backdrop show through.</summary>
+        public static bool SeeThrough => MainAttached && GlassManager.State is { Active: true } st && st.Backdrop != BackdropKind.None;
         private static UiPalette? _forRaw, _result;
         private static int _forVersion = -1;
         private static int _version;

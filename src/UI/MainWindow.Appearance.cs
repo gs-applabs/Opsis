@@ -59,7 +59,7 @@ namespace MotionDesk.UI
             NumericUpDown Nu(FlowLayoutPanel row, string labelKey, int min, int max, int value, Action<int> on)
             {
                 row.Controls.Add(Lb(labelKey));
-                var n = new NumericUpDown { Minimum = min, Maximum = max, Value = Math.Clamp(value, min, max), Width = 70, BackColor = UiTheme.Background, ForeColor = UiTheme.TextPrimary, Margin = new Padding(0, 4, 12, 0) };
+                var n = new NumericUpDown { Minimum = min, Maximum = max, Value = Math.Clamp(value, min, max), Width = 70, BackColor = UiTheme.PageBackground, ForeColor = UiTheme.TextPrimary, Margin = new Padding(0, 4, 12, 0) };
                 n.ValueChanged += (_, _) => on((int)n.Value);
                 row.Controls.Add(n); return n;
             }
@@ -91,9 +91,9 @@ namespace MotionDesk.UI
             if (s.Mode == ThemeMode.AutoFixed)
             {
                 var hrs = Row(theme);
-                hrs.Controls.Add(Lb("Win.LightAt")); var la = new TextBox { Width = 60, Text = s.LightAt, BackColor = UiTheme.Background, ForeColor = UiTheme.TextPrimary, Margin = new Padding(0, 4, 12, 0) };
+                hrs.Controls.Add(Lb("Win.LightAt")); var la = new TextBox { Width = 60, Text = s.LightAt, BackColor = UiTheme.PageBackground, ForeColor = UiTheme.TextPrimary, Margin = new Padding(0, 4, 12, 0) };
                 hrs.Controls.Add(la);
-                hrs.Controls.Add(Lb("Win.DarkAt")); var da = new TextBox { Width = 60, Text = s.DarkAt, BackColor = UiTheme.Background, ForeColor = UiTheme.TextPrimary, Margin = new Padding(0, 4, 12, 0) };
+                hrs.Controls.Add(Lb("Win.DarkAt")); var da = new TextBox { Width = 60, Text = s.DarkAt, BackColor = UiTheme.PageBackground, ForeColor = UiTheme.TextPrimary, Margin = new Padding(0, 4, 12, 0) };
                 hrs.Controls.Add(da);
                 void SaveHours() { if (TimeSpan.TryParse(la.Text, out _)) s.LightAt = la.Text; if (TimeSpan.TryParse(da.Text, out _)) s.DarkAt = da.Text; svc.SaveSettings(); }
                 la.Leave += (_, _) => SaveHours(); da.Leave += (_, _) => SaveHours();
@@ -101,9 +101,9 @@ namespace MotionDesk.UI
             if (s.Mode == ThemeMode.AutoSun)
             {
                 var geo = Row(theme);
-                geo.Controls.Add(Lb("Win.Lat")); var lat = new NumericUpDown { DecimalPlaces = 2, Minimum = -90, Maximum = 90, Value = (decimal)Math.Clamp(s.Latitude, -90, 90), Width = 80, BackColor = UiTheme.Background, ForeColor = UiTheme.TextPrimary, Margin = new Padding(0, 4, 12, 0) };
+                geo.Controls.Add(Lb("Win.Lat")); var lat = new NumericUpDown { DecimalPlaces = 2, Minimum = -90, Maximum = 90, Value = (decimal)Math.Clamp(s.Latitude, -90, 90), Width = 80, BackColor = UiTheme.PageBackground, ForeColor = UiTheme.TextPrimary, Margin = new Padding(0, 4, 12, 0) };
                 geo.Controls.Add(lat);
-                geo.Controls.Add(Lb("Win.Lon")); var lon = new NumericUpDown { DecimalPlaces = 2, Minimum = -180, Maximum = 180, Value = (decimal)Math.Clamp(s.Longitude, -180, 180), Width = 80, BackColor = UiTheme.Background, ForeColor = UiTheme.TextPrimary, Margin = new Padding(0, 4, 12, 0) };
+                geo.Controls.Add(Lb("Win.Lon")); var lon = new NumericUpDown { DecimalPlaces = 2, Minimum = -180, Maximum = 180, Value = (decimal)Math.Clamp(s.Longitude, -180, 180), Width = 80, BackColor = UiTheme.PageBackground, ForeColor = UiTheme.TextPrimary, Margin = new Padding(0, 4, 12, 0) };
                 geo.Controls.Add(lon);
                 var off = Nu(geo, "Win.OffsetMin", -180, 180, s.SunOffsetMinutes, v => { s.SunOffsetMinutes = v; svc.SaveSettings(); });
                 lat.ValueChanged += (_, _) => { s.Latitude = (double)lat.Value; svc.SaveSettings(); };
@@ -186,7 +186,7 @@ namespace MotionDesk.UI
             var fxAdv = AdvBox(fxCard);
             var fr3 = Row(fxAdv);
             fr3.Controls.Add(Lb("Win.Exclude"));
-            var ex = new TextBox { Width = 300, Text = string.Join(", ", fx.ExcludedProcesses), BackColor = UiTheme.Background, ForeColor = UiTheme.TextPrimary, Margin = new Padding(0, 4, 8, 0) };
+            var ex = new TextBox { Width = 300, Text = string.Join(", ", fx.ExcludedProcesses), BackColor = UiTheme.PageBackground, ForeColor = UiTheme.TextPrimary, Margin = new Padding(0, 4, 8, 0) };
             ex.Leave += (_, _) => Fx(e => e.ExcludedProcesses = ex.Text.Split(new[] { ',', ';', ' ' }, StringSplitOptions.RemoveEmptyEntries).Select(EffectsSettings.NormalizeProcess).Where(x => x.Length > 0).Distinct().ToList());
             fr3.Controls.Add(ex);
             var fr4 = Row(fxAdv);
@@ -241,7 +241,7 @@ namespace MotionDesk.UI
             // ---- themes: full themes (.opsistheme) and the Windows .theme files in one place
             var th = AddCardSection(panel, T("Win.SecThemes"));
             var items = svc.Themes.List();
-            var list = new ListBox { Width = 440, Height = 150, IntegralHeight = false, BackColor = UiTheme.Background, ForeColor = UiTheme.TextPrimary, BorderStyle = BorderStyle.None, Margin = new Padding(0, 2, 0, 6) };
+            var list = new ListBox { Width = 440, Height = 150, IntegralHeight = false, BackColor = UiTheme.PageBackground, ForeColor = UiTheme.TextPrimary, BorderStyle = BorderStyle.None, Margin = new Padding(0, 2, 0, 6) };
             foreach (var it in items) list.Items.Add(it.Name);
             if (items.Count > 0) list.SelectedIndex = 0;
             th.Controls.Add(list);

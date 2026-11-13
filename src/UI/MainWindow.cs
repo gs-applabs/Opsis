@@ -98,6 +98,7 @@ namespace MotionDesk.UI
         {
             base.OnHandleCreated(e);
             GlassBlur.DisableNativeBorderAccent(Handle);
+            GlassHost.MainAttached = true; GlassManager.Attach(this);      // the Windows backdrop (Acrylic / Mica) behind the window; page and sidebar use the key colour while it is on
         }
 
         public MainWindow()
@@ -599,17 +600,17 @@ namespace MotionDesk.UI
 
         private void ApplyChromeColors()
         {
-            BackColor = UiTheme.Background;
+            BackColor = UiTheme.PageBackground;
             ForeColor = UiTheme.TextPrimary;
-            _sidebar.BackColor = UiTheme.Sidebar;
-            _sidebarLayout.BackColor = UiTheme.Sidebar;
-            _brandPanel.BackColor = UiTheme.Sidebar;
-            _brandDot.BackColor = UiTheme.Sidebar;
-            _content.BackColor = UiTheme.Background;
-            _header.BackColor = UiTheme.Background;
+            _sidebar.BackColor = UiTheme.NavBackground;
+            _sidebarLayout.BackColor = UiTheme.NavBackground;
+            _brandPanel.BackColor = UiTheme.NavBackground;
+            _brandDot.BackColor = UiTheme.NavBackground;
+            _content.BackColor = UiTheme.PageBackground;
+            _header.BackColor = UiTheme.PageBackground;
             _headerRule.BackColor = UiTheme.Border;
             _pageTitle.ForeColor = UiTheme.TextPrimary;
-            _status.BackColor = UiTheme.Sidebar;
+            _status.BackColor = UiTheme.NavBackground;
             _statusLabel.ForeColor = UiTheme.TextSecondary;
             _brandLabel.ForeColor = UiTheme.TextPrimary;
             _brandSubLabel.ForeColor = UiTheme.TextMuted;
@@ -621,9 +622,9 @@ namespace MotionDesk.UI
 
             // Handoff Φάση 8: Mica backdrop + στρογγυλεμένες γωνίες στο κύριο παράθυρο — σιωπηλό
             // no-op σε Win10/παλαιότερο Win11 (βλ. σχόλιο στο UiTheme.ApplyMicaBackdrop). Fallback σε
-            // Low-End ικανότητα: καθόλου Mica (μένει το συμπαγές UiTheme.Background από πάνω, ήδη
+            // Low-End ικανότητα: καθόλου Mica (μένει το συμπαγές UiTheme.PageBackground από πάνω, ήδη
             // εφαρμοσμένο) — ζητήθηκε ρητά "fallback σε συμπαγές χρώμα σε Low-End".
-            if (IsHandleCreated)
+            if (IsHandleCreated && !GlassHost.SeeThrough)
             {
                 GlassBlur.ApplyMicaBackdrop(Handle, enabled: Services.PerformanceProfile.ForFeature(Services.PerfFeature.Effects).BlurEffects);
                 GlassBlur.ApplyRoundedCorners(Handle);
@@ -696,7 +697,7 @@ namespace MotionDesk.UI
                 base.OnPaint(e);
                 var g = e.Graphics;
                 g.SmoothingMode = SmoothingMode.AntiAlias;
-                g.Clear(UiTheme.Background); // Clear, not an antialiased FillRectangle: that leaves a faint line on the edge pixels
+                g.Clear(UiTheme.PageBackground); // Clear, not an antialiased FillRectangle: that leaves a faint line on the edge pixels
 
                 double t = _getT();
                 var colors = new[] { UiTheme.AccentCyan, UiTheme.AccentBlue, UiTheme.AccentCyan };
@@ -709,7 +710,7 @@ namespace MotionDesk.UI
                     for (int x = 0; x <= Width; x += 16)
                         pts.Add(new PointF(x, (float)(baseline + Math.Sin(phase + x * 0.012) * amp)));
                     if (pts.Count < 2) continue;
-                    using var pen = new Pen(Color.FromArgb(HeaderWaveStyle.Alpha(UiTheme.Background, colors[i], i), colors[i]), 2f) { LineJoin = LineJoin.Round };
+                    using var pen = new Pen(Color.FromArgb(HeaderWaveStyle.Alpha(UiTheme.PageBackground, colors[i], i), colors[i]), 2f) { LineJoin = LineJoin.Round };
                     g.DrawLines(pen, pts.ToArray());
                 }
             }
@@ -788,7 +789,7 @@ namespace MotionDesk.UI
                     // Τώρα 40 px με 1 px περιθώριο, και το περίγραμμα πέφτει ακριβώς πάνω σε pixel (offset 0,5), ίδιο πάχος σε όλες τις πλευρές.
                     const int tile = 40;
                     var tileRect = new Rectangle((Width - tile) / 2, (Height - tile) / 2, tile - 1, tile - 1);
-                    var bg = IsActive ? UiTheme.SurfaceHover : (_hover ? UiTheme.Surface : UiTheme.Sidebar);
+                    var bg = IsActive ? UiTheme.SurfaceHover : (_hover ? UiTheme.Surface : UiTheme.NavBackground);
                     g.TranslateTransform(0.5f, 0.5f);
                     using (var bgBrush = new SolidBrush(bg))
                     using (var path = UiTheme.RoundedPath(tileRect, 6))
@@ -803,7 +804,7 @@ namespace MotionDesk.UI
                     return;
                 }
 
-                var expandedBg = IsActive ? UiTheme.SurfaceHover : (_hover ? UiTheme.Surface : UiTheme.Sidebar);
+                var expandedBg = IsActive ? UiTheme.SurfaceHover : (_hover ? UiTheme.Surface : UiTheme.NavBackground);
                 using (var bgBrush = new SolidBrush(expandedBg))
                 using (var path = UiTheme.RoundedPath(new Rectangle(4, 2, Width - 8, Height - 4), 8))
                     g.FillPath(bgBrush, path);
@@ -1358,7 +1359,7 @@ namespace MotionDesk.UI
                 ("Add", LocalizationManager.T("Wallpaper.AddFolderButton"), (_, _) => { ChooseWallpaperFolder(); ShowWallpaper(); }),
                 ("Delete", LocalizationManager.T("Wallpaper.ClearPlaylist"), (_, _) => { WallpaperHostEngine.Instance.ClearVideo(); ShowWallpaper(); }));
 
-            var subfoldersCheck = new FlatToggle { RowWidth = 700, Text = LocalizationManager.T("Wallpaper.IncludeSubfolders"), Checked = settings.IncludeSubfolders, BackColor = UiTheme.Background, Margin = new Padding(0, 4, 0, 6) };
+            var subfoldersCheck = new FlatToggle { RowWidth = 700, Text = LocalizationManager.T("Wallpaper.IncludeSubfolders"), Checked = settings.IncludeSubfolders, BackColor = UiTheme.PageBackground, Margin = new Padding(0, 4, 0, 6) };
             subfoldersCheck.CheckedChanged += (_, _) => WallpaperHostEngine.Instance.SetIncludeSubfolders(subfoldersCheck.Checked);
             panel.Controls.Add(subfoldersCheck);
 
@@ -1469,7 +1470,7 @@ namespace MotionDesk.UI
                 }
                 nameLabel.MouseDown += StartDrag; nameLabel.MouseMove += MaybeDrag; nameLabel.MouseUp += (_, _) => pressed = false;
                 // thumbnail (Windows Shell) + duration (FFmpeg, if present) — loaded in the background, the row never waits for them
-                var thumb = new PictureBox { Location = new Point(28, 3), Size = new Size(68, 36), SizeMode = PictureBoxSizeMode.Zoom, BackColor = UiTheme.Background, Cursor = Cursors.Hand };
+                var thumb = new PictureBox { Location = new Point(28, 3), Size = new Size(68, 36), SizeMode = PictureBoxSizeMode.Zoom, BackColor = UiTheme.PageBackground, Cursor = Cursors.Hand };
                 thumb.Click += (_, _) => enabledCheck.Checked = !enabledCheck.Checked;
                 thumb.MouseDown += StartDrag; thumb.MouseMove += MaybeDrag; thumb.MouseUp += (_, _) => pressed = false;
                 foreach (var dc in new Control[] { row, enabledCheck, thumb, nameLabel, removeBtn }) AttachDrop(dc);
@@ -1489,7 +1490,7 @@ namespace MotionDesk.UI
 
             if (settings.Mode == "Video")
             {
-            var shuffle = new FlatToggle { RowWidth = 700, Text = LocalizationManager.T("Wallpaper.Shuffle"), Checked = settings.Shuffle, BackColor = UiTheme.Background, Margin = new Padding(0, 4, 0, 10) };
+            var shuffle = new FlatToggle { RowWidth = 700, Text = LocalizationManager.T("Wallpaper.Shuffle"), Checked = settings.Shuffle, BackColor = UiTheme.PageBackground, Margin = new Padding(0, 4, 0, 10) };
             shuffle.CheckedChanged += (_, _) => WallpaperHostEngine.Instance.SetShuffle(shuffle.Checked);
             panel.Controls.Add(shuffle);
 
@@ -1507,7 +1508,7 @@ namespace MotionDesk.UI
             // false): το wallpaper ήταν πάντα σιωπηλό πριν, δεν αλλάζει συμπεριφορά χωρίς ρητή
             // ενεργοποίηση από τον χρήστη.
             AddSection(panel, LocalizationManager.T("Wallpaper.SectionAudio"));
-            var audioEnabledCheck = new FlatToggle { RowWidth = 700, Text = LocalizationManager.T("Wallpaper.AudioEnabled"), Checked = settings.AudioEnabled, BackColor = UiTheme.Background, Margin = new Padding(0, 4, 0, 8) };
+            var audioEnabledCheck = new FlatToggle { RowWidth = 700, Text = LocalizationManager.T("Wallpaper.AudioEnabled"), Checked = settings.AudioEnabled, BackColor = UiTheme.PageBackground, Margin = new Padding(0, 4, 0, 8) };
             panel.Controls.Add(audioEnabledCheck);
             panel.Controls.Add(SettingsView.Checkbox(LocalizationManager.T("Wallpaper.AutoMuteOtherAudio"), AppSettings.Load().AutoMuteWhenOtherAudio,
                 v => { var a = AppSettings.Load(); a.AutoMuteWhenOtherAudio = v; a.Save(); }));
@@ -1688,7 +1689,7 @@ namespace MotionDesk.UI
             host.Controls.Add(ComboRow("Wallpaper.WindSimLabel", WindSimIds, "Wallpaper.Wind.", settings.WindSimulation, id => WallpaperHostEngine.Instance.SetWindSimulation(id)));
             host.Controls.Add(ComboRow("Wallpaper.TimeSimLabel", TimeSimIds, "Wallpaper.Time.", settings.TimeSimulation, id => WallpaperHostEngine.Instance.SetTimeSimulation(id)));
 
-            var glass = new FlatToggle { RowWidth = 700, Text = LocalizationManager.T("Wallpaper.WeatherGlass"), Checked = settings.WeatherGlass, BackColor = UiTheme.Background, Margin = new Padding(0, 6, 0, 10) };
+            var glass = new FlatToggle { RowWidth = 700, Text = LocalizationManager.T("Wallpaper.WeatherGlass"), Checked = settings.WeatherGlass, BackColor = UiTheme.PageBackground, Margin = new Padding(0, 6, 0, 10) };
             glass.CheckedChanged += (_, _) => WallpaperHostEngine.Instance.SetWeatherGlass(glass.Checked);
             host.Controls.Add(glass);
 
@@ -1851,9 +1852,9 @@ namespace MotionDesk.UI
                 if (infoX == null || infoY == null || infoScale == null || infoShow == null || infoF == null || infoAll == null) return;
                 WallpaperHostEngine.Instance.SetWeatherInfo(infoShow.Checked, infoAll.Checked, infoX.Value, infoY.Value, infoScale.Value, infoF.Checked);
             }
-            infoShow = new FlatToggle { RowWidth = 700, Text = LocalizationManager.T("Wallpaper.WeatherInfo"), Checked = settings.WeatherShowInfo, BackColor = UiTheme.Background, Margin = new Padding(0, 8, 0, 4) };
-            infoF = new FlatToggle { RowWidth = 700, Text = LocalizationManager.T("Wallpaper.Fahrenheit"), Checked = settings.WeatherFahrenheit, BackColor = UiTheme.Background, Margin = new Padding(0, 0, 0, 6) };
-            infoAll = new FlatToggle { RowWidth = 700, Text = LocalizationManager.T("Wallpaper.InfoAllModes"), Checked = settings.InfoOnAllModes, BackColor = UiTheme.Background, Margin = new Padding(0, 0, 0, 4) };
+            infoShow = new FlatToggle { RowWidth = 700, Text = LocalizationManager.T("Wallpaper.WeatherInfo"), Checked = settings.WeatherShowInfo, BackColor = UiTheme.PageBackground, Margin = new Padding(0, 8, 0, 4) };
+            infoF = new FlatToggle { RowWidth = 700, Text = LocalizationManager.T("Wallpaper.Fahrenheit"), Checked = settings.WeatherFahrenheit, BackColor = UiTheme.PageBackground, Margin = new Padding(0, 0, 0, 6) };
+            infoAll = new FlatToggle { RowWidth = 700, Text = LocalizationManager.T("Wallpaper.InfoAllModes"), Checked = settings.InfoOnAllModes, BackColor = UiTheme.PageBackground, Margin = new Padding(0, 0, 0, 4) };
             infoShow.CheckedChanged += (_, _) => CommitInfo();
             infoAll.CheckedChanged += (_, _) => CommitInfo();
             infoF.CheckedChanged += (_, _) => CommitInfo();
@@ -1987,7 +1988,7 @@ namespace MotionDesk.UI
                 };
             while (rules.Count < 3) rules.Add(new WallpaperScheduleRule { Enabled = false, StartMinutes = 0, EndMinutes = 0, Mode = "Waves" });
 
-            var master = new FlatToggle { RowWidth = 700, Text = LocalizationManager.T("Wallpaper.ScheduleEnable"), Checked = settings.ScheduleEnabled, BackColor = UiTheme.Background, Margin = new Padding(0, 2, 0, 8) };
+            var master = new FlatToggle { RowWidth = 700, Text = LocalizationManager.T("Wallpaper.ScheduleEnable"), Checked = settings.ScheduleEnabled, BackColor = UiTheme.PageBackground, Margin = new Padding(0, 2, 0, 8) };
             panel.Controls.Add(master);
 
             var times = Enumerable.Range(0, 48).Select(i => $"{i / 2:00}:{i % 2 * 30:00}").ToArray();
@@ -1997,7 +1998,7 @@ namespace MotionDesk.UI
             foreach (var rule in rules)
             {
                 var rowPanel = new FlowLayoutPanel { AutoSize = true, WrapContents = false, Margin = new Padding(0, 0, 0, 4) };
-                var on = new FlatCheckBox { Checked = rule.Enabled, AutoSize = false, Width = 30, Height = 30, BackColor = UiTheme.Background, Margin = new Padding(0, 2, 6, 0) };
+                var on = new FlatCheckBox { Checked = rule.Enabled, AutoSize = false, Width = 30, Height = 30, BackColor = UiTheme.PageBackground, Margin = new Padding(0, 2, 6, 0) };
                 var start = new FlatComboBox { Width = 90 }; start.SetItems(times, Fmt(rule.StartMinutes));
                 var end = new FlatComboBox { Width = 90, Margin = new Padding(8, 3, 3, 3) }; end.SetItems(times, Fmt(rule.EndMinutes));
                 var modeLabels = ScheduleModes.Select(m => m).ToArray();
@@ -2535,7 +2536,7 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
             var keepIconsBtn = new HoverButton { Text = LdKeep("Εικονίδια που μένουν ορατά…", "Icons that stay visible…"), Width = 260, Height = 32, Margin = new Padding(0, 0, 0, 10), FlatStyle = FlatStyle.Flat, ForeColor = UiTheme.TextPrimary, BackColor = UiTheme.SurfaceHover, Cursor = Cursors.Hand };
             keepIconsBtn.FlatAppearance.BorderSize = 0;
             keepIconsBtn.Click += (_, _) => ShowKeepIconsDialog();
-            var quickHideCheck = new FlatToggle { RowWidth = 700, Text = LocalizationManager.T("DeskZones.QuickHideDoubleClick"), Checked = AppSettings.Load().QuickHideDoubleClickEnabled, BackColor = UiTheme.Background, Margin = new Padding(0, 0, 0, 10) };
+            var quickHideCheck = new FlatToggle { RowWidth = 700, Text = LocalizationManager.T("DeskZones.QuickHideDoubleClick"), Checked = AppSettings.Load().QuickHideDoubleClickEnabled, BackColor = UiTheme.PageBackground, Margin = new Padding(0, 0, 0, 10) };
             quickHideCheck.CheckedChanged += (_, _) =>
             {
                 var a = AppSettings.Load(); a.QuickHideDoubleClickEnabled = quickHideCheck.Checked; a.Save();
@@ -2572,14 +2573,14 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                 Text = LocalizationManager.T("Command.PaletteTitle"),
                 StartPosition = FormStartPosition.CenterParent,
                 Size = new Size(560, 430),
-                BackColor = UiTheme.Background,
+                BackColor = UiTheme.PageBackground,
                 ForeColor = UiTheme.TextPrimary,
                 FormBorderStyle = FormBorderStyle.FixedDialog,
                 MaximizeBox = false,
                 MinimizeBox = false
             };
             dialog.HandleCreated += (_, _) => { int d = UiTheme.Background.GetBrightness() < 0.5f ? 1 : 0; try { DwmSetWindowAttribute(dialog.Handle, DWMWA_USE_IMMERSIVE_DARK_MODE, ref d, sizeof(int)); } catch (DllNotFoundException) { } };
-            dialog.HandleCreated += (_, _) => GlassBlur.ApplyWindowDropShadow(dialog.Handle);
+            dialog.HandleCreated += (_, _) => { GlassBlur.ApplyWindowDropShadow(dialog.Handle); GlassManager.Attach(dialog); };
 
             var box = new TextBox
             {
@@ -2594,7 +2595,7 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
             {
                 Dock = DockStyle.Fill,
                 Font = new Font("Segoe UI", 11),
-                BackColor = UiTheme.Background,
+                BackColor = UiTheme.PageBackground,
                 ForeColor = UiTheme.TextPrimary,
                 BorderStyle = BorderStyle.None,
                 DrawMode = DrawMode.OwnerDrawFixed,
@@ -2604,7 +2605,7 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
             {
                 if (e.Index < 0) return;
                 bool selected = (e.State & DrawItemState.Selected) != 0;
-                using var bg = new SolidBrush(selected ? UiTheme.SurfaceHover : UiTheme.Background);
+                using var bg = new SolidBrush(selected ? UiTheme.SurfaceHover : UiTheme.PageBackground);
                 e.Graphics.FillRectangle(bg, e.Bounds);
                 using var textBrush = new SolidBrush(selected ? UiTheme.AccentCyan : UiTheme.TextPrimary);
                 e.Graphics.DrawString(list.Items[e.Index].ToString(), e.Font!, textBrush, e.Bounds.X + 10, e.Bounds.Y + 5);
@@ -2763,7 +2764,7 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
             int topTick = 0; bool topBusy = false;
 
             // notification when CPU/RAM stay above 90% for a minute (works while the app lives in the tray)
-            var alertsCheck = new FlatToggle { RowWidth = 700, Text = LocalizationManager.T("Performance.AlertsEnable"), Checked = AppSettings.Load().UsageAlertsEnabled, BackColor = UiTheme.Background, Margin = new Padding(0, 4, 0, 10) };
+            var alertsCheck = new FlatToggle { RowWidth = 700, Text = LocalizationManager.T("Performance.AlertsEnable"), Checked = AppSettings.Load().UsageAlertsEnabled, BackColor = UiTheme.PageBackground, Margin = new Padding(0, 4, 0, 10) };
             alertsCheck.CheckedChanged += (_, _) => { var a = AppSettings.Load(); a.UsageAlertsEnabled = alertsCheck.Checked; a.Save(); };
             panel.Controls.Add(alertsCheck);
 
@@ -2822,7 +2823,7 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
             foreach (var rule in AutomationService.Instance.Rules)
             {
                 var row = new FlowLayoutPanel { AutoSize = true, WrapContents = false, Margin = new Padding(0, 2, 0, 4) };
-                var check = new FlatCheckBox { Text = $"{rule.Name}  ·  {rule.TriggerProcess}  →  {rule.Profile}", Checked = rule.Enabled, AutoSize = true, BackColor = UiTheme.Background, Padding = new Padding(0, 4, 0, 0) };
+                var check = new FlatCheckBox { Text = $"{rule.Name}  ·  {rule.TriggerProcess}  →  {rule.Profile}", Checked = rule.Enabled, AutoSize = true, BackColor = UiTheme.PageBackground, Padding = new Padding(0, 4, 0, 0) };
                 check.CheckedChanged += (_, _) => { rule.Enabled = check.Checked; AutomationService.Instance.Save(); };
                 row.Controls.Add(check);
 
@@ -2892,7 +2893,7 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
             dialog.Controls.Add(profileLabel); dialog.Controls.Add(profileBox);
             dialog.Controls.Add(okBtn); dialog.Controls.Add(cancelBtn);
             dialog.AcceptButton = okBtn; dialog.CancelButton = cancelBtn;
-            dialog.HandleCreated += (_, _) => GlassBlur.ApplyWindowDropShadow(dialog.Handle);
+            dialog.HandleCreated += (_, _) => { GlassBlur.ApplyWindowDropShadow(dialog.Handle); GlassManager.Attach(dialog); };
 
             if (dialog.ShowDialog(this) != DialogResult.OK || string.IsNullOrWhiteSpace(nameBox.Text)) return false;
             rule.Name = nameBox.Text.Trim();
@@ -3153,7 +3154,7 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
             var intro = new Label { Text = Ld("Τσέκαρε ό,τι θέλεις να ΜΕΝΕΙ ορατό όταν κάνεις διπλό κλικ σε κενό σημείο της επιφάνειας εργασίας. Τα υπόλοιπα κρύβονται (και ξαναφαίνονται με νέο διπλό κλικ).",
                 "Tick what should STAY visible when you double-click an empty spot of the desktop. Everything else is hidden (and comes back with another double-click)."),
                 Left = 12, Top = 10, Width = 436, Height = 52, ForeColor = UiTheme.TextSecondary };
-            var list = new CheckedListBox { Left = 12, Top = 66, Width = 436, Height = 340, CheckOnClick = true, BackColor = UiTheme.Background, ForeColor = UiTheme.TextPrimary, BorderStyle = BorderStyle.FixedSingle };
+            var list = new CheckedListBox { Left = 12, Top = 66, Width = 436, Height = 340, CheckOnClick = true, BackColor = UiTheme.PageBackground, ForeColor = UiTheme.TextPrimary, BorderStyle = BorderStyle.FixedSingle };
 
             var special = new (string Label, Guid Id, Func<bool> Get, Action<bool> Set)[]
             {
@@ -3180,7 +3181,7 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
             var cancel = new Button { Text = LocalizationManager.T("Common.Cancel"), DialogResult = DialogResult.Cancel, Left = 358, Top = 424, Width = 90, Height = 32 };
             dialog.Controls.AddRange(new Control[] { intro, list, ok, cancel });
             dialog.AcceptButton = ok; dialog.CancelButton = cancel;
-            dialog.HandleCreated += (_, _) => GlassBlur.ApplyWindowDropShadow(dialog.Handle);
+            dialog.HandleCreated += (_, _) => { GlassBlur.ApplyWindowDropShadow(dialog.Handle); GlassManager.Attach(dialog); };
             if (dialog.ShowDialog(this) != DialogResult.OK) return;
 
             for (int i = 0; i < special.Length; i++) special[i].Set(list.GetItemChecked(i));
@@ -3245,7 +3246,7 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                         Text = LocalizationManager.T("About.PluginEnabled"),
                         AutoSize = true,
                         Checked = Services.PluginHost.Instance.IsPluginEnabled(capturedId),
-                        BackColor = UiTheme.Background,
+                        BackColor = UiTheme.PageBackground,
                         Margin = new Padding(0, 0, 0, 6)
                     };
                     enableToggle.CheckedChanged += (_, _) => Services.PluginHost.Instance.SetPluginEnabled(capturedId, enableToggle.Checked);
@@ -3284,7 +3285,7 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
             // ΚΑΙ επιβεβαίωση, μόνο από τα releases αυτού του repo, επαληθευμένο με SHA-256.
             AddSection(panel, LocalizationManager.T("About.UpdateHeading"));
             var updateStatus = new Label { Text = string.Format(LocalizationManager.T("About.UpdateCurrentVersion"), UpdateCheckService.CurrentVersion.ToString(3)), AutoSize = true, MaximumSize = new Size(740, 0), Font = UiTheme.FontBody, ForeColor = UiTheme.TextSecondary, Margin = new Padding(0, 0, 0, 6) };
-            var autoUpdate = new FlatToggle { RowWidth = 700, Text = LocalizationManager.T("About.UpdateAuto"), Checked = AppSettings.Load().UpdateCheckEnabled, BackColor = UiTheme.Background, Margin = new Padding(0, 2, 0, 6) };
+            var autoUpdate = new FlatToggle { RowWidth = 700, Text = LocalizationManager.T("About.UpdateAuto"), Checked = AppSettings.Load().UpdateCheckEnabled, BackColor = UiTheme.PageBackground, Margin = new Padding(0, 2, 0, 6) };
             autoUpdate.CheckedChanged += (_, _) => { var a = AppSettings.Load(); a.UpdateCheckEnabled = autoUpdate.Checked; a.Save(); };
             panel.Controls.Add(autoUpdate);
 
@@ -3438,7 +3439,7 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                 Text = title,
                 StartPosition = FormStartPosition.CenterParent,
                 Size = new Size(720, 640),
-                BackColor = UiTheme.Background,
+                BackColor = UiTheme.PageBackground,
                 ForeColor = UiTheme.TextPrimary,
                 FormBorderStyle = FormBorderStyle.FixedDialog,
                 MaximizeBox = false,
@@ -3452,10 +3453,10 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
 
             var box = new RichTextBox
             {
-                Dock = DockStyle.Fill, ReadOnly = true, BorderStyle = BorderStyle.None, BackColor = UiTheme.Background,
+                Dock = DockStyle.Fill, ReadOnly = true, BorderStyle = BorderStyle.None, BackColor = UiTheme.PageBackground,
                 ForeColor = UiTheme.TextPrimary, Font = new Font("Segoe UI", 10f), DetectUrls = false, Text = text.Replace("\r\n", "\n")
             };
-            var footer = new Panel { Dock = DockStyle.Bottom, Height = 56, BackColor = UiTheme.Background };
+            var footer = new Panel { Dock = DockStyle.Bottom, Height = 56, BackColor = UiTheme.PageBackground };
             var ok = new HoverButton { Text = "OK", Width = 110, Height = 34, FlatStyle = FlatStyle.Flat, BackColor = UiTheme.AccentCyan, ForeColor = Color.White, Cursor = Cursors.Hand, DialogResult = DialogResult.OK, Location = new Point(590, 10) };
             ok.FlatAppearance.BorderSize = 0;
             footer.Controls.Add(ok);
@@ -3478,14 +3479,14 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                 Text = LocalizationManager.T("About.LicenseButton"),
                 StartPosition = FormStartPosition.CenterParent,
                 Size = new Size(640, 600),
-                BackColor = UiTheme.Background,
+                BackColor = UiTheme.PageBackground,
                 ForeColor = UiTheme.TextPrimary,
                 FormBorderStyle = FormBorderStyle.FixedDialog,
                 MaximizeBox = false,
                 MinimizeBox = false
             };
             dialog.HandleCreated += (_, _) => { int d = UiTheme.Background.GetBrightness() < 0.5f ? 1 : 0; try { DwmSetWindowAttribute(dialog.Handle, DWMWA_USE_IMMERSIVE_DARK_MODE, ref d, sizeof(int)); } catch (DllNotFoundException) { } };
-            dialog.HandleCreated += (_, _) => GlassBlur.ApplyWindowDropShadow(dialog.Handle);
+            dialog.HandleCreated += (_, _) => { GlassBlur.ApplyWindowDropShadow(dialog.Handle); GlassManager.Attach(dialog); };
 
             var header = new Panel { Dock = DockStyle.Top, Height = 64, BackColor = UiTheme.Surface, Padding = new Padding(20, 0, 20, 0) };
             // ΔΙΟΡΘΩΣΗ "το εικονίδιο επικαλύπτει το MIT": το "⚖" (U+2696) δεν υπάρχει αξιόπιστα στη
@@ -3506,7 +3507,7 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                 Dock = DockStyle.Fill,
                 ReadOnly = true,
                 BorderStyle = BorderStyle.None,
-                BackColor = UiTheme.Background,
+                BackColor = UiTheme.PageBackground,
                 ForeColor = UiTheme.TextPrimary,
                 Margin = new Padding(20),
                 DetectUrls = false
@@ -3514,7 +3515,7 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
             rtb.HandleCreated += (_, _) => GlassBlur.ApplyScrollbarTheme(rtb, UiTheme.Background.GetBrightness() < 0.5f);
             PopulateLicenseRichText(rtb, text);
 
-            var footer = new Panel { Dock = DockStyle.Bottom, Height = 60, BackColor = UiTheme.Background, Padding = new Padding(20, 0, 20, 14) };
+            var footer = new Panel { Dock = DockStyle.Bottom, Height = 60, BackColor = UiTheme.PageBackground, Padding = new Padding(20, 0, 20, 14) };
             var closeBtn = new HoverButton { Text = "OK", Width = 110, Height = 34, FlatStyle = FlatStyle.Flat, BackColor = UiTheme.AccentCyan, ForeColor = Color.White, Cursor = Cursors.Hand, DialogResult = DialogResult.OK, Anchor = AnchorStyles.Right | AnchorStyles.Bottom };
             closeBtn.FlatAppearance.BorderSize = 0;
             closeBtn.Location = new Point(footer.ClientSize.Width - closeBtn.Width - 20, 12);
@@ -3590,17 +3591,17 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                 Text = LocalizationManager.T("VersionHistory.Title"),
                 StartPosition = FormStartPosition.CenterParent,
                 Size = new Size(720, 680),
-                BackColor = UiTheme.Background,
+                BackColor = UiTheme.PageBackground,
                 ForeColor = UiTheme.TextPrimary,
                 FormBorderStyle = FormBorderStyle.FixedDialog,
                 MaximizeBox = false,
                 MinimizeBox = false
             };
             dialog.HandleCreated += (_, _) => { int d = UiTheme.Background.GetBrightness() < 0.5f ? 1 : 0; try { DwmSetWindowAttribute(dialog.Handle, DWMWA_USE_IMMERSIVE_DARK_MODE, ref d, sizeof(int)); } catch { } };
-            dialog.HandleCreated += (_, _) => GlassBlur.ApplyWindowDropShadow(dialog.Handle);
+            dialog.HandleCreated += (_, _) => { GlassBlur.ApplyWindowDropShadow(dialog.Handle); GlassManager.Attach(dialog); };
 
             const int contentWidth = 630;
-            var list = new FlowLayoutPanel { Dock = DockStyle.Fill, FlowDirection = FlowDirection.TopDown, WrapContents = false, AutoScroll = true, Padding = new Padding(22, 18, 22, 18), BackColor = UiTheme.Background };
+            var list = new FlowLayoutPanel { Dock = DockStyle.Fill, FlowDirection = FlowDirection.TopDown, WrapContents = false, AutoScroll = true, Padding = new Padding(22, 18, 22, 18), BackColor = UiTheme.PageBackground };
             GlassBlur.ApplyScrollbarTheme(list, UiTheme.Background.GetBrightness() < 0.5f);
             list.Controls.Add(new Label { Text = LocalizationManager.T("VersionHistory.Title"), Font = new Font("Segoe UI", 16f, FontStyle.Bold), ForeColor = UiTheme.TextPrimary, AutoSize = true, Margin = new Padding(0, 0, 0, 2) });
             list.Controls.Add(new Label { Text = LocalizationManager.T("VersionHistory.Subtitle"), Font = UiTheme.FontBody, ForeColor = UiTheme.TextSecondary, MaximumSize = new Size(contentWidth, 0), AutoSize = true, Margin = new Padding(0, 0, 0, 14) });
@@ -3738,7 +3739,7 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                 FlowDirection = FlowDirection.TopDown,
                 WrapContents = false,
                 Padding = new Padding(4),
-                BackColor = UiTheme.Background
+                BackColor = UiTheme.PageBackground
             };
             // Ζητήθηκε ρητά "να μην είναι το scrollbar λευκό στο dark mode".
             GlassBlur.ApplyScrollbarTheme(panel, UiTheme.Background.GetBrightness() < 0.5f);
@@ -3893,6 +3894,8 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
             // Το μέγεθος της κάρτας αλλάζει καθώς ο καλών προσθέτει γραμμές ΜΕΤΑ την επιστροφή αυτής
             // της μεθόδου — η στρογγυλεμένη περιοχή πρέπει να ξανα-υπολογίζεται σε κάθε αλλαγή μεγέθους.
             card.Resize += (_, _) => UiTheme.ApplyRoundedRegion(card, 12);
+            // glass: a bright rim and a soft highlight on the edge of the card (strength from the Glass settings)
+            card.Paint += (_, e) => { var st = GlassManager.State; if (!st.Active || card.Width < 8 || card.Height < 8) return; using var rim = new Pen(Color.FromArgb((int)(Math.Clamp(st.Rim, 0, 1) * 150), 255, 255, 255)); e.Graphics.DrawRectangle(rim, 0, 0, card.Width - 1, card.Height - 1); };
             parent.Controls.Add(card);
             return inner;
         }
@@ -3956,7 +3959,7 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                 using var accent = new SolidBrush(UiTheme.AccentCyan);
                 using var descBrush = new SolidBrush(UiTheme.TextSecondary);
                 using var keyText = new SolidBrush(UiTheme.TextPrimary);
-                using var keyFill = new SolidBrush(UiTheme.Background);
+                using var keyFill = new SolidBrush(UiTheme.PageBackground);
                 using var keyBorder = new Pen(UiTheme.Border, 1f);
                 using var plusBrush = new SolidBrush(UiTheme.TextMuted);
                 using var sepPen = new Pen(Color.FromArgb(40, UiTheme.TextMuted), 1f);
@@ -4457,7 +4460,7 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
             public SettingsView()
             {
                 DoubleBuffered = true;
-                BackColor = UiTheme.Background;
+                BackColor = UiTheme.PageBackground;
                 AutoScroll = true;
                 GlassBlur.ApplyScrollbarTheme(this, UiTheme.Background.GetBrightness() < 0.5f);
                 // 2.6.0: the page is built from the shared layout components (Opsis.UI.SettingsPage / SettingsCard / AdvancedSection): one column of cards, a Reset per card,
@@ -4466,7 +4469,7 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                 AutoScroll = false;
                 var page = new SettingsPage { Dock = DockStyle.Fill };
                 GlassBlur.ApplyScrollbarTheme(page, UiTheme.Background.GetBrightness() < 0.5f);
-                var top = new Panel { Dock = DockStyle.Top, Height = 78, BackColor = UiTheme.Background };
+                var top = new Panel { Dock = DockStyle.Top, Height = 78, BackColor = UiTheme.PageBackground };
                 top.Controls.Add(new Label { Text = LocalizationManager.T("Settings.Intro"), Dock = DockStyle.Fill, Font = UiTheme.FontBody, ForeColor = UiTheme.TextSecondary, Padding = new Padding(8, 0, 8, 0), AutoEllipsis = true });
                 var search = new SettingsSearchBox { Dock = DockStyle.Bottom, Page = page, Font = UiTheme.FontBody, BackColor = UiTheme.Surface, ForeColor = UiTheme.TextPrimary };
                 top.Controls.Add(search);
@@ -4784,7 +4787,7 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                     Badge = restart ? OpsisStrings.T("ui.restartNeeded") : "",
                     RowWidth = 700,
                     Checked = initial,
-                    BackColor = UiTheme.Background,
+                    BackColor = UiTheme.PageBackground,
                     Margin = new Padding(0, 2, 0, 2)
                 };
                 box.CheckedChanged += (_, _) =>

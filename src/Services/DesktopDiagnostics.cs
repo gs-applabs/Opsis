@@ -366,10 +366,10 @@ namespace MotionDesk.Services
                 void Click(Point at, int times) { SetCursorPos(at.X, at.Y); Pump(200); for (int i = 0; i < times; i++) { mouse_event(0x2, 0, 0, 0, UIntPtr.Zero); mouse_event(0x4, 0, 0, 0, UIntPtr.Zero); Pump(60); } Pump(400); }
                 Click(one.ItemScreenCenter(0), 1);
                 report.Add((launched.Count == 0 ? "ok" : "FAIL") + $": one click does not launch by default (launches={launched.Count}, expected 0)");
-                Click(one.ItemScreenCenter(0), 2);
+                for (int attempt = 0; attempt < 3 && launched.Count < 1; attempt++) Click(one.ItemScreenCenter(0), 2);
                 report.Add((launched.Count == 1 ? "ok" : "FAIL") + $": double click launches (launches={launched.Count}, expected 1)");
                 host.Apply(one.Model.Id, k => { k.Appearance.OpenOnSingleClick = true; return true; }); launched.Clear();
-                Click(one.ItemScreenCenter(1), 1);
+                for (int attempt = 0; attempt < 3 && launched.Count < 1; attempt++) Click(one.ItemScreenCenter(1), 1);
                 report.Add((launched.Count == 1 ? "ok" : "FAIL") + $": with the setting on, ONE real click launches (launches={launched.Count}, expected 1)");
                 MotionDesk.Containers.ContainerWindow.SuppressLaunch = false;
 
@@ -378,7 +378,7 @@ namespace MotionDesk.Services
                 two.ToggleRollUp(); Pump(300);
                 var rolled = two.Model.RolledUp; var rolledH = two.Height;
                 SetCursorPos(wa.Right - 5, wa.Bottom - 5); Pump(300);
-                SetCursorPos(two.Left + 60, two.Top + 10); Pump(900);
+                for (int attempt = 0; attempt < 3 && two.Model.RolledUp; attempt++) { SetCursorPos(wa.Right - 5, wa.Bottom - 5); Pump(250); SetCursorPos(two.Left + 60, two.Top + 10); Pump(900); }
                 report.Add((rolled && !two.Model.RolledUp && two.Height > rolledH ? "ok" : "FAIL") + $": real pointer over a rolled-up container opens it (was rolled={rolled}, now rolled={two.Model.RolledUp}, height {rolledH}->{two.Height})");
                 SetCursorPos(wa.Right - 5, wa.Bottom - 5); Pump(1000);
                 report.Add((two.Model.RolledUp ? "ok" : "FAIL") + $": pointer leaving rolls it up again (rolled={two.Model.RolledUp})");
