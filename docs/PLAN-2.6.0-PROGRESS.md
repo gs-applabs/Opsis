@@ -132,3 +132,7 @@ esource-logger.ps1` για λίγη ώρα.
 | 30 | Explorer restart → μαύρη οθόνη (§22-5) | ◐ υπάρχει ExplorerRestartWatcher (+tests) από 2.4.x· ⛔ επιβεβαίωση σε πραγματικό restart |
 | 31 | Μέτρηση RAM/CPU baseline, soak logger | ⛔ τρέχει ο χρήστης (tools/resource-logger.ps1) |
 
+
+## Weather wallpaper (simple weather, 2026-11-13)
+Done: fbm clouds (cumulus / stratus / cirrus, self-shadowed, facing the sun), textured moon, sun bloom and rays, bird silhouettes, five ridged mountain ranges with atmospheric perspective, snow caps, wind-swayed conifers, slow parallax, Milky Way, rainbow. Already existing and kept: layered rain with splashes and ripples, snow of several sizes with wind, water with waves and reflections, lightning, fog. NOT done: rain motion blur and wet-surface sheen, snow accumulation on the ground, foam on waves, Fresnel reflection model, deciduous foliage, per-tier layer budgets (only a simple low-density cut of the texture / trees), frame-time measurements, screenshots of every hour of the day.
+

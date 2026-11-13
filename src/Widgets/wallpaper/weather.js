@@ -309,28 +309,31 @@ function buildStars() {
 }
 
 function buildHills() {
+    // ridged fbm ridges: five ranges from far (pale, low) to near (dark, jagged, wooded); the middle of the picture stays open for the sun and the moon
     hills = [];
     const specs = [
-        { depth: -0.35, amp: 0.2, base: -0.005, freq: [0.8, 2.1, 4.7], seed: 3 },
-        { depth: 0.0, amp: 0.18, base: 0.0,  freq: [1.1, 2.7, 6.1], seed: 5 },
-        { depth: 0.5, amp: 0.125, base: 0.01, freq: [1.7, 3.9, 8.3], seed: 11 },
-        { depth: 1.0, amp: 0.07, base: 0.018, freq: [2.3, 5.3, 11.7], seed: 23 },
+        { depth: -0.6, amp: 0.34, base: -0.004, freq: 1.3, seed: 3, snow: 0.55, trees: false },
+        { depth: -0.2, amp: 0.3, base: 0.0,   freq: 1.8, seed: 5, snow: 0.62, trees: false },
+        { depth: 0.2,  amp: 0.22, base: 0.006, freq: 2.6, seed: 11, snow: 0.7, trees: false },
+        { depth: 0.6,  amp: 0.14,  base: 0.012, freq: 3.7, seed: 23, snow: 2, trees: true },
+        { depth: 1.0,  amp: 0.09, base: 0.02, freq: 5.5, seed: 41, snow: 2, trees: true },
     ];
-    const samples = 160;
-    for (const s of specs) {
-        const rnd = mulberry32(s.seed * 97);
-        const ph = s.freq.map(() => rnd() * TAU);
+    const samples = 260;
+    for (const sp of specs) {
+        const tab = noiseTable(sp.seed * 131);
         const pts = [];
         for (let i = 0; i <= samples; i++) {
             const x = i / samples;
-            let h = 0;
-            for (let k = 0; k < s.freq.length; k++) h += Math.sin(x * s.freq[k] * TAU * 0.5 + ph[k]) / (k + 1.2);
-            h = (h + 1.4) / 2.8;                                // ~0..1
-            // taper the middle so the sun/moon has an open horizon, keep silhouettes at the sides
-            const edge = Math.pow(Math.abs(x - 0.5) * 2, 1.4);
-            pts.push(s.base + s.amp * h * (0.3 + 0.7 * edge));
+            let r = 0, a = 0.55, f = 1, n = 0;
+            for (let o = 0; o < 5; o++) { const v = 1 - Math.abs(2 * vnoise(tab, x * sp.freq * f + 7.3, 11.1 + o * 3.7) - 1); r += a * v * v; n += a; a *= 0.5; f *= 2.1; }
+            r /= n;
+            const edge = Math.pow(Math.abs(x - 0.5) * 2, 1.35);
+            pts.push(sp.base + sp.amp * (0.12 + 0.88 * r) * (0.28 + 0.72 * edge));
         }
-        hills.push({ ...s, pts });
+        const rnd = mulberry32(sp.seed * 7);
+        const trees = [];
+        if (sp.trees) for (let i = 0; i < 70; i++) { const idx = Math.floor(rnd() * samples); trees.push({ idx, h: 0.012 + rnd() * 0.02 * (0.5 + sp.depth * 0.5), ph: rnd() * TAU, w: 0.55 + rnd() * 0.35 }); }
+        hills.push({ ...sp, pts, trees });
     }
 }
 
@@ -603,6 +606,46 @@ function drawCloudsLayer(sky, dt) {
     }
 }
 
+// ---- Milky Way: a soft band of unresolved stars with dust lanes, visible on clear moonless-ish nights; one pre-rendered texture, drawn with a slow drift ----
+let milkyCv = null;
+function buildMilkyWay() {
+    const w = 1024, h = 512, c = makeCanvas(w, h), g = c.getContext('2d'), img = g.createImageData(w, h), px = img.data, t1 = noiseTable(5150), t2 = noiseTable(8181);
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+        const u = x / w, v = y / h, band = (v - 0.5) + 0.12 * Math.sin(u * 5.2) + 0.05 * (fbm(t1, u * 3, 1.3, 3) - 0.5);
+        const prof = Math.exp(-Math.pow(band / 0.09, 2)), core = Math.exp(-Math.pow((u - 0.42) / 0.22, 2));
+        const cloud = fbm(t1, u * 9, v * 9, 5), dust = smooth((fbm(t2, u * 14, v * 22, 4) - 0.52) / 0.18);
+        let d = prof * (0.35 + 0.75 * cloud) * (1 - 0.8 * dust * prof) * (0.55 + 0.7 * core);
+        const sparkle = vnoise(t2, u * 220, v * 110) > 0.93 ? 0.6 : 0;
+        d = clamp(d + sparkle * prof * 0.5, 0, 1);
+        const o = (y * w + x) * 4, warm = core * 0.5;
+        px[o] = 190 + 50 * warm; px[o + 1] = 205 + 20 * warm; px[o + 2] = 235 - 30 * warm; px[o + 3] = 255 * d * 0.85;
+    }
+    g.putImageData(img, 0, 0); milkyCv = c;
+}
+function drawMilkyWay(sky) {
+    const vis = clamp(1 - sky.amb * 4, 0, 1) * (1 - S.cloud * 1.1) * (1 - S.fog) * (1 - S.rain) * (1 - 0.6 * (moonBright || 0));
+    if (vis < 0.03 || lastDensity < 0.35) return;
+    if (!milkyCv) buildMilkyWay();
+    const g = skyCtx; g.save(); g.globalCompositeOperation = 'lighter'; g.globalAlpha = 0.4 * vis;
+    g.translate(W * 0.5, HORIZON * 0.45); g.rotate(-0.55 + Math.sin(animTime * 0.004) * 0.01);
+    const sw = Math.max(W, HORIZON) * 1.5; g.drawImage(milkyCv, -sw / 2, -sw * 0.25, sw, sw * 0.5);
+    g.restore();
+}
+let moonBright = 0;
+
+// ---- rainbow: when the sun shines through light rain, opposite the sun ----
+function drawRainbow(sky, sun) {
+    if (!sun || sun.e < 0.04 || sun.e > 0.6) return;
+    const f = smooth((S.rain - 0.04) / 0.1) * smooth((0.62 - S.rain) / 0.2) * (1 - S.storm) * clamp(sky.amb * 1.4, 0, 1) * (1 - S.cloud * 0.5) * (S.snow > 0.1 ? 0 : 1);
+    if (f < 0.03) return;
+    const g = skyCtx, R = Math.min(W, H) * 0.62, cx = W - sun.x, cy = HORIZON + R * (0.25 + sun.e * 0.7), lw = R * 0.014;
+    const bands = [[255, 60, 60], [255, 150, 40], [255, 230, 70], [80, 210, 100], [70, 150, 255], [90, 80, 220], [160, 80, 200]];
+    g.save(); g.globalCompositeOperation = 'lighter'; g.lineWidth = lw;
+    for (let i = 0; i < bands.length; i++) { g.strokeStyle = rgba(bands[i], 0.2 * f); g.beginPath(); g.arc(cx, cy, R + i * lw, Math.PI * 1.08, Math.PI * 1.92); g.stroke(); }
+    g.strokeStyle = rgba([255, 255, 255], 0.05 * f); g.lineWidth = lw * 8; g.beginPath(); g.arc(cx, cy, R + lw * 3, Math.PI * 1.08, Math.PI * 1.92); g.stroke();
+    g.restore();
+}
+
 function hazeColor(hor) { return mix(hor, [190, 196, 206], 0.4); }
 
 function drawHillsLayer(sky, graded) {
@@ -611,17 +654,71 @@ function drawHillsLayer(sky, graded) {
     const amb = clamp(sky.amb, 0, 1);
     const shade = scaleCol([22, 32, 46], 0.28 + 0.72 * amb);
     const haze = hazeColor(graded.hor);
+    const lowTier = lastDensity < 0.35;
     for (const h of hills) {
-        let col = mix(graded.hor, shade, 0.22 + 0.62 * h.depth * h.depth + 0.12 * h.depth);
-        col = mix(col, haze, clamp(S.fog * (0.9 - 0.35 * h.depth), 0, 0.9));
+        // atmospheric perspective: far ranges are pale and blue (air between), near ranges dark and saturated
+        const air = clamp(0.5 - h.depth * 0.5, 0, 1);
+        let col = mix(graded.hor, shade, 0.2 + 0.62 * Math.max(0, h.depth + 0.2) * Math.max(0, h.depth + 0.2) + 0.16 * h.depth);
+        col = mix(col, haze, clamp(air * 0.55 + S.fog * (0.9 - 0.35 * h.depth), 0, 0.9));
         col = mix(col, [212, 222, 238].map(v => v * (0.3 + 0.7 * amb)), clamp(S.snowCover * 0.75, 0, 0.8));
         if (flash > 0) col = mix(col, [200, 210, 235], clamp(flash * 0.5, 0, 0.6));
-        g.fillStyle = rgba(col, 1);
-        g.beginPath();
-        g.moveTo(0, HORIZON + 2);
         const n = h.pts.length - 1;
-        for (let i = 0; i <= n; i++) g.lineTo((i / n) * W, HORIZON - h.pts[i] * H);
-        g.lineTo(W, HORIZON + 2); g.closePath(); g.fill();
+        // slow parallax drift: the nearer the range, the more it moves (a few pixels, driven by time and wind)
+        const dx = Math.sin(animTime * 0.05 + h.seed) * (2 + h.depth * 5) * K + S.windX * 0.01 * h.depth;
+        g.save(); g.translate(dx, 0);
+        const key = W + 'x' + H + 'x' + HORIZON;
+        if (h.pathKey !== key) {                                          // the outline is rebuilt only when the size changes (no per-frame allocation)
+            h.path = new Path2D(); h.path.moveTo(-20, HORIZON + 2);
+            for (let i = 0; i <= n; i++) h.path.lineTo((i / n) * W, HORIZON - h.pts[i] * H);
+            h.path.lineTo(W + 20, HORIZON + 2); h.path.closePath(); h.pathKey = key;
+        }
+        const path = h.path;
+        // body: lighter at the ridge, deeper (and hazier) toward the foot
+        const top = HORIZON - h.amp * H, lg = g.createLinearGradient(0, top, 0, HORIZON);
+        lg.addColorStop(0, rgba(mix(col, [255, 245, 230], 0.1 * amb), 1)); lg.addColorStop(1, rgba(mix(col, haze, 0.35 + 0.3 * air), 1));
+        g.fillStyle = lg; g.fill(path);
+        if (!lowTier) {
+            g.save(); g.clip(path);
+            // rock / forest texture: dark gullies running down from the ridge
+            g.strokeStyle = rgba(mix(col, [8, 12, 18], 0.6), 0.16 + 0.1 * h.depth); g.lineWidth = Math.max(1, (0.6 + h.depth * 0.8) * K);
+            g.beginPath();
+            for (let i = 4; i < n - 4; i += 5 + (h.seed % 3)) {
+                const x = (i / n) * W, y = HORIZON - h.pts[i] * H, len = (h.pts[i] * H) * (0.35 + 0.25 * ((i * 7 + h.seed) % 5) / 5);
+                g.moveTo(x, y); g.lineTo(x + (((i * 13) % 7) - 3) * 1.6 * K, y + len);
+            }
+            g.stroke();
+            // snow caps on the tall peaks (and lower when it is snowing)
+            const limit = h.snow - S.snowCover * 0.5;
+            if (limit < 1.2) {
+                g.fillStyle = rgba(mix([236, 240, 250], col, 0.1), 0.9 * (0.35 + 0.65 * amb));
+                g.beginPath(); let open = false;
+                for (let i = 0; i <= n; i++) {
+                    const v = h.pts[i] / h.amp, x = (i / n) * W, y = HORIZON - h.pts[i] * H;
+                    if (v > limit) { if (!open) { g.moveTo(x, y + 3 * K); open = true; } g.lineTo(x, y); }
+                    else if (open) { g.lineTo(x, y + (4 + (v - limit) * -30) * K); g.closePath(); open = false; }
+                }
+                if (open) g.closePath();
+                g.fill();
+            }
+            g.restore();
+            // rim light along the ridge, on the side of the light
+            g.lineWidth = Math.max(1, 1.1 * K); g.strokeStyle = rgba(mix(col, [255, 240, 215], 0.7), 0.28 * amb * (1 - S.cloud * 0.6));
+            g.beginPath();
+            for (let i = 0; i <= n; i++) { const x = (i / n) * W, y = HORIZON - h.pts[i] * H; if (i) g.lineTo(x, y); else g.moveTo(x, y); }
+            g.stroke();
+        }
+        // trees on the near ranges: conifer silhouettes swaying with the wind
+        if (h.trees.length && !lowTier) {
+            const sway = (0.4 + S.wind * 0.05) * K, tc = mix(col, [10, 22, 16], 0.55);
+            g.fillStyle = rgba(tc, 0.95); g.beginPath();
+            for (const t of h.trees) {
+                const x = (t.idx / n) * W, y = HORIZON - h.pts[t.idx] * H + 2, th = t.h * H, tw = th * t.w * 0.5, sw = Math.sin(animTime * (1.1 + S.wind * 0.04) + t.ph) * sway;
+                g.moveTo(x - tw, y); g.lineTo(x + sw * 0.5, y - th * 0.55 + sw * 0.3); g.lineTo(x + tw, y);
+                g.moveTo(x - tw * 0.75, y - th * 0.35); g.lineTo(x + sw, y - th); g.lineTo(x + tw * 0.75, y - th * 0.35);
+            }
+            g.fill();
+        }
+        g.restore();
     }
     drawLandmarkOnHorizon(sky, graded, shade, haze);
 }
@@ -1222,8 +1319,11 @@ function draw(target, dt, profile) {
     // ---- sky canvas
     const graded = drawSkyLayer(sky, t, sr, ss);
     drawStarsLayer(sky, 1 - S.cloud * 0.8 - S.fog * 0.5);
+    drawMilkyWay(sky);
     const moon = drawMoonLayer(t, sr, ss, 1);
+    moonBright = moon && moon.alpha > 0.05 ? clamp(moon.alpha, 0, 1) * (1 - Math.abs(moonPhase() - 0.5) * 2 > 0.3 ? 1 : 0.4) : 0;
     const sun = drawSunLayer(sky, t, sr, ss);
+    drawRainbow(sky, sun);
     // the brighter visible body drives the light path on the water
     celest = null;
     if (sun && sun.vis > 0.05 && sun.e > 0.0) celest = { x: sun.x, y: sun.y, r: sun.r, power: clamp(sun.vis * (0.55 + 0.45 * sky.glow), 0, 1), col: mix([255, 255, 255], [255, 170, 110], clamp(1 - sun.e * 2.2, 0, 1)) };
