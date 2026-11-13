@@ -129,7 +129,7 @@ namespace MotionDesk.Services
                     if (c == null) break;
                     done.Add(Sig(c, controls));
                     // switches that change Windows itself (system transparency, fast start-up, start with Windows) or talk to other programs are listed but not flipped
-                    if (c.Text.Contains("(Windows)") || c.Text.Contains("with Windows", StringComparison.OrdinalIgnoreCase) || c.Text.Contains("Discord", StringComparison.OrdinalIgnoreCase)) { skipped.Add($"[{key}] '{c.Text}'"); continue; }
+                    if (c.Text.Contains("(Windows)") || c.Text.Contains("with Windows", StringComparison.OrdinalIgnoreCase) || c.Text.Contains("Discord", StringComparison.OrdinalIgnoreCase) || c.Text.Contains("OpenStreetMap", StringComparison.OrdinalIgnoreCase)) { skipped.Add($"[{key}] '{c.Text}'"); continue; }
                     var t = System.Diagnostics.Stopwatch.StartNew();
                     Mark($"  [{key}] {c.GetType().Name} '{c.Text}'");
                     try
