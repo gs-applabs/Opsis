@@ -607,6 +607,7 @@
   "DCM.QuickShow": "إظهار كل DeskContainers",
   "DCM.Snapshots": "لقطات التخطيط",
   "DCM.SaveSnapshot": "حفظ التخطيط الحالي",
+  "DCM.NewPortal": "بوابة جديدة (عرض مجلد)",
   "DCM.Reload": "إعادة تحميل كل DeskContainers",
   "DCM.Backup": "نسخ احتياطي الآن",
   "DCM.EngineCard": "محرك DeskContainers",

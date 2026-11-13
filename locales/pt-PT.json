@@ -607,6 +607,7 @@
   "DCM.QuickShow": "Mostrar todos os DeskContainers",
   "DCM.Snapshots": "Instantâneos do layout",
   "DCM.SaveSnapshot": "Guardar o layout atual",
+  "DCM.NewPortal": "Novo portal (vista de pasta)",
   "DCM.Reload": "Recarregar todos os DeskContainers",
   "DCM.Backup": "Fazer cópia agora",
   "DCM.EngineCard": "Motor DeskContainers",

@@ -529,6 +529,8 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
         {
             string T(string key) => LocalizationManager.T(key);
             menu.DropDownItems.Add(T("DCM.NewContainer"), null, (s, e) => host.NewContainerAtCursor());
+            menu.DropDownItems.Add(T("DCX.NewNote"), null, (s, e) => host.NewContainerAtCursor("Note"));
+            menu.DropDownItems.Add(T("DCM.NewPortal"), null, (s, e) => host.NewContainerAtCursor("Portal"));
             menu.DropDownItems.Add(new ToolStripSeparator());
             var list = host.Containers();
             var focus = new ToolStripMenuItem(T("DCM.FocusContainer")) { Enabled = list.Any(c => !c.Hidden) };

@@ -607,6 +607,7 @@
   "DCM.QuickShow": "Tüm DeskContainers’ı göster",
   "DCM.Snapshots": "Düzen anlık görüntüleri",
   "DCM.SaveSnapshot": "Geçerli düzeni kaydet",
+  "DCM.NewPortal": "Yeni portal (klasör görünümü)",
   "DCM.Reload": "Tüm DeskContainers’ı yeniden yükle",
   "DCM.Backup": "Şimdi yedekle",
   "DCM.EngineCard": "DeskContainers altyapısı",

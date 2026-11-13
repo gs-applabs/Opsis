@@ -10,6 +10,9 @@ drop: added=1 (expected 1 or 0 if file missing, duplicate skipped) items 14->15 
 keyboard: selected=6 after Right,Right,Down (expected >= 2)
 accessibility: name='Tools container' role=List children=15 (items=15) child0='winhlp32' action='Open'
 high contrast: title bar pixel=Color [A=255, R=0, G=120, B=212] equals system Highlight=True
-icons: background extraction finished in 24 ms (UI thread kept pumping)
+tabs: add / switch / remove keep every icon: True (items 15)
+portal: lists the folder live: 8 entries, stored items in the data: 0, drop refused: True
+note: shows its text, no icons: True
+icons: background extraction finished in 0 ms (UI thread kept pumping)
 remove: reference removed 15->14; file on disk still there=True
 reorder: first item changed=True count=14

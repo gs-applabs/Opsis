@@ -714,6 +714,7 @@
   "DCM.QuickShow": "Εμφάνιση όλων των DeskContainers",
   "DCM.Snapshots": "Στιγμιότυπα διάταξης",
   "DCM.SaveSnapshot": "Αποθήκευση τρέχουσας διάταξης",
+  "DCM.NewPortal": "Νέο portal (προβολή φακέλου)",
   "DCM.Reload": "Επαναφόρτωση όλων των DeskContainers",
   "DCM.Backup": "Αντίγραφο ασφαλείας τώρα",
   "DCM.EngineCard": "Μηχανή DeskContainers",

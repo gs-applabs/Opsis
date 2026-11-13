@@ -607,6 +607,7 @@
   "DCM.QuickShow": "すべての DeskContainers を表示",
   "DCM.Snapshots": "レイアウトのスナップショット",
   "DCM.SaveSnapshot": "現在のレイアウトを保存",
+  "DCM.NewPortal": "新しいポータル（フォルダー表示）",
   "DCM.Reload": "すべての DeskContainers を再読み込み",
   "DCM.Backup": "今すぐバックアップ",
   "DCM.EngineCard": "DeskContainers エンジン",

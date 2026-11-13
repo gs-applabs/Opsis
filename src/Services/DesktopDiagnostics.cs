@@ -223,6 +223,22 @@ namespace MotionDesk.Services
                     var px = hcBmp.GetPixel(win.Width / 4, 8); var hl = SystemColors.Highlight;
                     report.Add($"high contrast: title bar pixel={px} equals system Highlight={px.R == hl.R && px.G == hl.G && px.B == hl.B && px.A == 255}");
                 }
+                // tabs: enabling tabs moves the icons into the first tab, a new tab is empty, removing a tab moves its icons to the neighbour; nothing is lost
+                int allBefore = win.Items.Count;
+                win.AddTab("Second"); bool tabsOk = model.Tabs.Count == 2 && win.Items.Count == 0 && model.Tabs[0].Items.Count == allBefore;
+                win.SelectTab(0); tabsOk &= win.Items.Count == allBefore;
+                win.RemoveTab(1); tabsOk &= model.Tabs.Count == 1 && win.Items.Count == allBefore;
+                win.RemoveTab(0); tabsOk &= !model.TabsEnabled && model.Items.Count == allBefore;
+                report.Add($"tabs: add / switch / remove keep every icon: {tabsOk} (items {allBefore})");
+                // portal: a live listing of a folder (never stored in the data); note: text only
+                var portalModel = new Opsis.Containers.Container { Title = "Portal", Kind = Opsis.Containers.ContainerKind.Portal, Source = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "System32", "drivers", "etc") };
+                using (var pw = new MotionDesk.Containers.ContainerWindow(portalModel) { Bounds = new Rectangle(760, 200, 300, 220) })
+                {
+                    pw.Show(); Pump(600); pw.RefreshPortal();
+                    report.Add($"portal: lists the folder live: {pw.Items.Count} entries, stored items in the data: {portalModel.Items.Count}, drop refused: {pw.AcceptDrop(new[] { Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "notepad.exe") }, new Point(50, 80)) == 0}");
+                }
+                var noteModel = new Opsis.Containers.Container { Title = "Note", Kind = Opsis.Containers.ContainerKind.Note, Source = "hello" };
+                using (var nw = new MotionDesk.Containers.ContainerWindow(noteModel) { Bounds = new Rectangle(1080, 200, 240, 160) }) { nw.Show(); Pump(300); report.Add($"note: shows its text, no icons: {nw.Items.Count == 0}"); }
                 var swIcons = Stopwatch.StartNew(); win.WaitIcons(5000);
                 report.Add($"icons: background extraction finished in {swIcons.ElapsedMilliseconds} ms (UI thread kept pumping)");
                 int cnt = model.Items.Count; win.RemoveItem(0);

@@ -72,10 +72,10 @@ namespace MotionDesk.Containers
         private static IReadOnlyList<MonitorInfo> Monitors() => Screen.AllScreens.Select(s => new MonitorInfo(s.DeviceName, s.Bounds, s.Primary)).ToList();
 
         // ---- commands used by the tray menu and the global hotkeys (UI thread) ----
-        public string NewContainerAtCursor()
+        public string NewContainerAtCursor(string kind = "Data", string? title = null)
         {
             var p = Cursor.Position;
-            var r = _service.Handle("create", new System.Text.Json.Nodes.JsonObject { ["title"] = "New container", ["x"] = p.X, ["y"] = p.Y, ["width"] = 320, ["height"] = 240 });
+            var r = _service.Handle("create", new System.Text.Json.Nodes.JsonObject { ["title"] = title ?? (kind == "Note" ? "Note" : kind == "Portal" ? "Portal" : "New container"), ["kind"] = kind, ["x"] = p.X, ["y"] = p.Y, ["width"] = 320, ["height"] = 240 });
             Sync();
             return r?["id"]?.ToString() ?? "";
         }
@@ -108,7 +108,7 @@ namespace MotionDesk.Containers
             if (_syncing) return; _syncing = true;
             try
             {
-                var doc = _service.Snapshot(); var want = doc.Containers.Where(c => !c.Hidden && c.Kind == ContainerKind.Data).ToDictionary(c => c.Id);
+                var doc = _service.Snapshot(); var want = doc.Containers.Where(c => !c.Hidden).ToDictionary(c => c.Id);
                 foreach (var id in _windows.Keys.Where(k => !want.ContainsKey(k)).ToList()) { _windows[id].Close(); _windows[id].Dispose(); _windows.Remove(id); _dirty.Remove(id); }
                 var mons = Monitors();
                 foreach (var (id, model) in want)
