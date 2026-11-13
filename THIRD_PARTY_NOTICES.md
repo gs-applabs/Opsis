@@ -41,6 +41,7 @@ and the process exits together with Opsis. Data of earlier builds is migrated au
 - Microsoft.Web.WebView2 (Microsoft Edge WebView2 SDK) - used to render web and video wallpapers.
 - .NET / Windows Forms runtime - MIT, (c) .NET Foundation and contributors.
 - Opsis.UI (shared controls of the Opsis family) - MIT, same author.
+- Place names for Greece come from GeoNames (geonames.org), data under CC BY 4.0, shipped as a compact offline table (src/Widgets/Data, built by tools/build-gazetteer.py). Optional online place names (only when you allow it and press "Use my location") come from OpenStreetMap Nominatim: (c) OpenStreetMap contributors, ODbL, under the Nominatim usage policy (at most 1 request per second, identifying User-Agent, cached).
 - Weather data comes at run time, without an API key, from free providers: the US National Weather Service (api.weather.gov, US only, open data), Open-Meteo (open-meteo.com, data CC BY 4.0, non-commercial use) and MET Norway (api.met.no, data CC BY 4.0) with wttr.in (github.com/chubin/wttr.in) as the last fallback. Only coordinates rounded to about 1 km, or the city name you type, are sent. Details: docs/WEATHER-PROVIDERS.md.
 
 ## Disclaimer
