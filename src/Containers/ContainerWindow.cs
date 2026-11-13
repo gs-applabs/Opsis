@@ -127,6 +127,23 @@ namespace MotionDesk.Containers
                 using var pen = new Pen(Color.FromArgb(70, 255, 255, 255)); g.DrawPath(pen, path);
             }
 
+            // ---- tint of the frame and the glossy highlight (per container, schema 2)
+            if (!hc)
+            {
+                var ap = model.Appearance;
+                if (!string.IsNullOrWhiteSpace(ap.FrameColor) && !ap.FrameColor.Equals("Auto", StringComparison.OrdinalIgnoreCase))
+                {
+                    using var tp0 = MotionDesk.UI.UiTheme.RoundedPath(new Rectangle(0, 0, client.Width - 1, client.Height - 1), radius);
+                    using var tb0 = new SolidBrush(Color.FromArgb(Math.Clamp(ap.TintOpacity, 0, 100) * 255 / 100, ParseColor(ap.FrameColor, Color.Transparent))); g.FillPath(tb0, tp0);
+                }
+                if (ap.Glossy)
+                {
+                    var gr = new Rectangle(0, 0, Math.Max(2, client.Width - 1), Math.Max(2, Math.Min(client.Height - 1, m.TitleBarHeight + (client.Height - m.TitleBarHeight) / 3)));
+                    using var gp = MotionDesk.UI.UiTheme.RoundedPath(gr, radius);
+                    using var gb = new LinearGradientBrush(gr, Color.FromArgb(95, 255, 255, 255), Color.FromArgb(0, 255, 255, 255), 90f); g.FillPath(gb, gp);
+                }
+            }
+
             // ---- title bar: its OWN colour / opacity / height / font
             var barRect = new Rectangle(1, 1, client.Width - 2, m.TitleBarHeight);
             var barColor = hc ? SystemColors.Highlight : ParseColor(tb.Color, Color.FromArgb(255, accent.R / 3, accent.G / 3, accent.B / 3));
@@ -154,7 +171,7 @@ namespace MotionDesk.Containers
             var (first, last) = ContainerLayout.VisibleRange(client, items.Count, m, scroll);
             var view = ContainerLayout.Viewport(client, m);
             g.SetClip(view);
-            using var labelFont = new Font("Segoe UI", Math.Max(1f, 9f * scale), FontStyle.Regular, GraphicsUnit.Point);
+            using var labelFont = new Font(string.IsNullOrWhiteSpace(model.Appearance.ItemFontFamily) ? "Segoe UI" : model.Appearance.ItemFontFamily, Math.Max(1f, (model.Appearance.ItemFontSize > 0 ? model.Appearance.ItemFontSize : 9f) * scale), FontStyle.Regular, GraphicsUnit.Point);
             using var labelFmt = new StringFormat { Alignment = StringAlignment.Center, Trimming = StringTrimming.EllipsisWord, FormatFlags = StringFormatFlags.LineLimit };
             using var labelBrush = new SolidBrush(hc ? SystemColors.WindowText : Color.FromArgb(240, 255, 255, 255));
             using var shadowBrush = new SolidBrush(Color.FromArgb(model.Appearance.TextShadow && !hc ? 150 : 0, 0, 0, 0));
@@ -239,6 +256,10 @@ namespace MotionDesk.Containers
         private Point _dragStart; private Rectangle _boundsAtDragStart; private enum Drag { None, Move, Resize } private Drag _drag;
         private readonly Func<IEnumerable<Rectangle>> _others;
 
+        // a drag that started in a container: lets another container tell "my own item came back" from "an item of that container" and lets the source remove the item when it was MOVED
+        private sealed class ItemDrag { public ContainerWindow Source = null!; public string Path = ""; public bool Moved; }
+        private static ItemDrag? _itemDrag;
+
         public Container Model { get; }
         public bool GlassOn => MotionDesk.Services.GlassService.Enabled;
         public event Action<Container>? Changed;
@@ -265,6 +286,7 @@ namespace MotionDesk.Containers
             _pane = new GlassPaneBinder(this, 14, () => GlassOn);
             _icons.Loaded += Dirty;
             _portalTimer.Tick += (_, _) => { _portalTimer.Stop(); RefreshPortal(); };
+            _hoverTimer.Tick += (_, _) => HoverTick();
             Load += (_, _) => RefreshPortal();
         }
 
@@ -402,7 +424,17 @@ namespace MotionDesk.Containers
             if (_dragItem >= 0 && (e.Button & MouseButtons.Left) != 0 && !Model.Locked && (Math.Abs(e.X - _pressAt.X) > SystemInformation.DragSize.Width || Math.Abs(e.Y - _pressAt.Y) > SystemInformation.DragSize.Height))
             {
                 var idx = _dragItem; _dragItem = -1;
-                if (idx < Items.Count) { var dobj = new DataObject(); dobj.SetData(InternalFormat, idx); dobj.SetData(DataFormats.FileDrop, new[] { Items[idx].Path }); DoDragDrop(dobj, DragDropEffects.Link | DragDropEffects.Copy); }
+                if (idx < Items.Count)
+                {
+                    var dobj = new DataObject(); dobj.SetData(InternalFormat, idx); dobj.SetData(DataFormats.FileDrop, new[] { Items[idx].Path });
+                    _itemDrag = new ItemDrag { Source = this, Path = Items[idx].Path };
+                    try { DoDragDrop(dobj, DragDropEffects.Link | DragDropEffects.Copy); }     // never Move: outside Opsis a move would take the real file
+                    finally
+                    {
+                        var dr = _itemDrag; _itemDrag = null;
+                        if (dr != null && dr.Moved && Model.Kind == ContainerKind.Data && !Model.Locked) { var at = Items.FindIndex(x => x.Path == dr.Path); if (at >= 0) RemoveItem(at); }       // dropped into another container as a MOVE: the reference leaves this one
+                    }
+                }
                 return;
             }
             if (_drag == Drag.None)
@@ -419,9 +451,43 @@ namespace MotionDesk.Containers
             if (wanted != Bounds) { Bounds = wanted; _surface.Present(Handle, Location); Dirty(); }
         }
 
-        protected override void OnMouseUp(MouseEventArgs e) { base.OnMouseUp(e); _dragItem = -1; if (_drag != Drag.None) { _drag = Drag.None; Model.Geometry = LegacyImporter.Normalize(Left, Top, Width, Height, System.Windows.Forms.Screen.AllScreens.Select(s => new MonitorInfo(s.DeviceName, s.Bounds, s.Primary)).ToList()); Changed?.Invoke(Model); } }
+        protected override void OnMouseUp(MouseEventArgs e)
+        {
+            base.OnMouseUp(e);
+            if (e.Button == MouseButtons.Left && _dragItem >= 0 && Model.Appearance.OpenOnSingleClick && e.Y >= Metrics.TitleBarHeight && ContainerLayout.HitTest(e.Location, Client, Items.Count, Metrics, _scroll) == _dragItem) { var open = _dragItem; _dragItem = -1; OpenItem(open); return; }
+            AfterMouseUp(e);
+        }
+        private void AfterMouseUp(MouseEventArgs e) { _dragItem = -1; if (_drag != Drag.None) { _drag = Drag.None; Model.Geometry = LegacyImporter.Normalize(Left, Top, Width, Height, System.Windows.Forms.Screen.AllScreens.Select(s => new MonitorInfo(s.DeviceName, s.Bounds, s.Primary)).ToList()); Changed?.Invoke(Model); } }
 
-        protected override void OnMouseLeave(EventArgs e) { base.OnMouseLeave(e); if (_hover != -1) { _hover = -1; Dirty(); } }
+        protected override void OnMouseLeave(EventArgs e) { base.OnMouseLeave(e); if (_hover != -1) { _hover = -1; Dirty(); } HoverLeft(); }
+        protected override void OnMouseEnter(EventArgs e) { base.OnMouseEnter(e); HoverEntered(); }
+
+        // ---- hover roll-up: a rolled-up container (setting per container) opens while the pointer is on it and rolls up again shortly after the pointer left
+        private readonly System.Windows.Forms.Timer _hoverTimer = new();
+        private bool _hoverOpened;
+        private void HoverEntered()
+        {
+            if (!Model.Appearance.HoverRollUp) return;
+            _hoverTimer.Stop(); _hoverTimer.Interval = Math.Max(50, Model.Appearance.HoverDelayMs);
+            if (Model.RolledUp && !_hoverOpened) { _hoverTimer.Tag = "open"; _hoverTimer.Start(); }
+        }
+        private void HoverLeft()
+        {
+            if (!Model.Appearance.HoverRollUp) return;
+            _hoverTimer.Stop(); _hoverTimer.Interval = Math.Max(50, Model.Appearance.HoverDelayMs);
+            if (_hoverOpened) { _hoverTimer.Tag = "close"; _hoverTimer.Start(); }
+        }
+        private void HoverTick()
+        {
+            _hoverTimer.Stop();
+            if ((string?)_hoverTimer.Tag == "open") { if (Model.RolledUp && Bounds.Contains(Cursor.Position)) { Bounds = ContainerBehavior.Unroll(Bounds, Math.Max(Model.UnrolledHeight, 120), WorkArea); Model.RolledUp = false; _hoverOpened = true; Dirty(); } }
+            else if (_hoverOpened && !Bounds.Contains(Cursor.Position) && _drag == Drag.None)
+            {
+                _hoverOpened = false; var (b, h) = ContainerBehavior.RollUp(Bounds, Metrics.TitleBarHeight); Model.UnrolledHeight = h; Model.RolledUp = true; Bounds = b; Dirty();
+            }
+        }
+        /// <summary>For tests: runs the hover roll-up decision at once (the timer is not waited for).</summary>
+        public void HoverStep(bool pointerInside) { _hoverTimer.Tag = pointerInside ? "open" : "close"; if (pointerInside) { if (Model.RolledUp) { Bounds = ContainerBehavior.Unroll(Bounds, Math.Max(Model.UnrolledHeight, 120), WorkArea); Model.RolledUp = false; _hoverOpened = true; Dirty(); } } else if (_hoverOpened) { _hoverOpened = false; var (b, h) = ContainerBehavior.RollUp(Bounds, Metrics.TitleBarHeight); Model.UnrolledHeight = h; Model.RolledUp = true; Bounds = b; Dirty(); } }
 
         protected override void OnMouseWheel(MouseEventArgs e) { base.OnMouseWheel(e); ScrollBy(-e.Delta / 120 * (int)(Metrics.CellHeight * 0.6)); }
 
@@ -470,9 +536,11 @@ namespace MotionDesk.Containers
             return false;
         }
 
+        /// <summary>Raised with the path of every item that is launched; when <see cref="SuppressLaunch"/> is set (tests) the item is only reported, not started.</summary>
+        public event Action<string>? ItemLaunched; public static bool SuppressLaunch;
         public void OpenItem(int index)
         {
-            try { var it = Items[index]; System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(it.Path) { UseShellExecute = true, Arguments = it.Arguments ?? "" }); }
+            try { var it = Items[index]; ItemLaunched?.Invoke(it.Path); if (SuppressLaunch) return; System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(it.Path) { UseShellExecute = true, Arguments = it.Arguments ?? "" }); }
             catch (Exception ex) { System.Diagnostics.Debug.WriteLine("container open: " + ex.Message); }
         }
 
@@ -581,23 +649,34 @@ namespace MotionDesk.Containers
             Items.Clear(); Items.AddRange(list); _selected = -1; Dirty(); Changed?.Invoke(Model);
         }
 
-        protected override void OnDragEnter(DragEventArgs e) { base.OnDragEnter(e); e.Effect = e.Data != null && (e.Data.GetDataPresent(DataFormats.FileDrop) || e.Data.GetDataPresent(InternalFormat)) ? DragDropEffects.Link : DragDropEffects.None; }
+        /// <summary>Last drag events seen by any container (diagnostics for the real-input test).</summary>
+        public static readonly List<string> DragLog = new();
+        protected override void OnDragEnter(DragEventArgs e) { base.OnDragEnter(e); if (DragLog.Count < 400) DragLog.Add("enter allowed=" + e.AllowedEffect + " formats=" + string.Join(",", e.Data?.GetFormats() ?? Array.Empty<string>())); e.Effect = e.Data != null && (e.Data.GetDataPresent(DataFormats.FileDrop) || e.Data.GetDataPresent(InternalFormat)) ? DragDropEffects.Link : DragDropEffects.None; }
         protected override void OnDragOver(DragEventArgs e) { base.OnDragOver(e); e.Effect = e.Data != null && (e.Data.GetDataPresent(DataFormats.FileDrop) || e.Data.GetDataPresent(InternalFormat)) ? DragDropEffects.Link : DragDropEffects.None; }
         protected override void OnDragDrop(DragEventArgs e)
         {
             base.OnDragDrop(e);
             if (e.Data == null) return;
             var pt = PointToClient(new Point(e.X, e.Y));
-            if (e.Data.GetData(InternalFormat) is int from) MoveItem(from, pt);
-            else if (e.Data.GetData(DataFormats.FileDrop) is string[] files) AcceptDrop(files, pt);
+            var drag = _itemDrag;
+            if (drag != null && ReferenceEquals(drag.Source, this) && e.Data.GetData(InternalFormat) is int from) MoveItem(from, pt);           // reorder inside the same container
+            else if (e.Data.GetData(DataFormats.FileDrop) is string[] files)
+            {
+                var added = AcceptDrop(files, pt);
+                // from another container: Move (default) takes the reference out of the source, Ctrl keeps it there (Copy); the setting can make Copy the default
+                if (drag != null && added > 0) drag.Moved = (MotionDesk.Services.AppSettings.Load().ContainerDragCopies ? (e.KeyState & 8) != 0 : (e.KeyState & 8) == 0);
+            }
         }
+
+        /// <summary>Screen position of the centre of an item's cell (used by the real-input tests).</summary>
+        public Point ItemScreenCenter(int i) { var r = ContainerLayout.CellRect(i, Client, Metrics, _scroll); return PointToScreen(new Point(r.X + r.Width / 2, r.Y + r.Height / 2)); }
 
         /// <summary>Scroll by wheel notches (positive = down).</summary>
         public void ScrollBy(int pixels) { _scroll = ContainerLayout.ClampScroll(_scroll + pixels, Client, Items.Count, Metrics); Dirty(); }
 
         protected override void Dispose(bool disposing)
         {
-            if (disposing) { _watch?.Dispose(); _portalTimer.Dispose(); _repaint.Stop(); _repaint.Dispose(); _pane?.Dispose(); _surface.Dispose(); _icons.Dispose(); }
+            if (disposing) { _hoverTimer.Dispose(); _watch?.Dispose(); _portalTimer.Dispose(); _repaint.Stop(); _repaint.Dispose(); _pane?.Dispose(); _surface.Dispose(); _icons.Dispose(); }
             base.Dispose(disposing);
         }
     }

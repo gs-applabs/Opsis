@@ -147,6 +147,7 @@ public sealed class ContainersService : IContainersApi
     }
 
     public ContainersDocument Snapshot() { lock (gate) return store.Load(); }
+    public string StorePath => store.Path;
 
     private string SnapshotDir => System.IO.Path.Combine(System.IO.Path.GetDirectoryName(System.IO.Path.GetFullPath(store.Path)) ?? ".", "container-snapshots");
 

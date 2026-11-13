@@ -149,6 +149,10 @@ namespace MotionDesk.Services
         public bool UseNativeContainers { get; set; } = true;
         /// <summary>Dropping a desktop icon into a container hides the desktop original (as the old engine did). The originals are ALWAYS given back on exit, at the next start and by --restore-desktop-icons.</summary>
         public bool HideOriginalsOnDrop { get; set; } = true;
+        /// <summary>Dragging an icon from one container into another: false = Move (Ctrl copies), true = Copy (Ctrl moves).</summary>
+        public bool ContainerDragCopies { get; set; }
+        /// <summary>After a rubber-band selection of two or more desktop icons, offer to make a container from them.</summary>
+        public bool OfferContainerFromSelection { get; set; } = true;
         /// <summary>Music overlay (plan 2.1.6): a glass card with the cover / title / artist of whatever any player is playing. Off by default.</summary>
         public bool MusicOverlayEnabled { get; set; }
         /// <summary>Opt-in: "New DeskContainer" / "Next animated wallpaper" in the desktop right-click menu (per-user registry verbs, see DesktopMenu).</summary>

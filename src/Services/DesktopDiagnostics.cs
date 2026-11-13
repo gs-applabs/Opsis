@@ -298,6 +298,130 @@ namespace MotionDesk.Services
             return report.Any(l => l.StartsWith("EXCEPTION") || l.StartsWith("FAIL")) ? 1 : 0;
         }
 
+        /// <summary>
+        /// REAL drag and drop: the mouse is driven with real input events (cursor moves + button down/up), a stand-in "Explorer" window starts a genuine OLE drag with a file, and the
+        /// containers receive it through their OLE drop target (no direct method calls). Checks drop in, reorder inside, and drag from one container to another. Only a temp file made here
+        /// is dragged; stray copies of it are removed from the desktop folder afterwards.
+        /// </summary>
+        public static int TestContainerDragDrop(string folder)
+        {
+            Directory.CreateDirectory(folder);
+            var report = new System.Collections.Generic.List<string>();
+            void Pump(int ms) { var end = DateTime.UtcNow.AddMilliseconds(ms); while (DateTime.UtcNow < end) { Application.DoEvents(); System.Threading.Thread.Sleep(10); } }
+            var file = Path.Combine(folder, "dnd-test.json"); if (File.Exists(file)) File.Delete(file);
+            var f1 = Path.Combine(folder, "opsis-dnd-a-" + Environment.ProcessId + ".txt"); var f2 = Path.Combine(folder, "opsis-dnd-b-" + Environment.ProcessId + ".txt");
+            File.WriteAllText(f1, "a"); File.WriteAllText(f2, "b");
+            var oldPos = Cursor.Position; string[] deskCleanup = Array.Empty<string>();
+            try
+            {
+                using var host = new MotionDesk.Containers.ContainerHost(new Opsis.Containers.ContainersStore(file), null);
+                var wa = Screen.PrimaryScreen!.WorkingArea;
+                host.Service.Handle("create", new System.Text.Json.Nodes.JsonObject { ["title"] = "DnD one", ["x"] = wa.Left + 120, ["y"] = wa.Top + 120, ["width"] = 420, ["height"] = 300 });
+                host.Service.Handle("create", new System.Text.Json.Nodes.JsonObject { ["title"] = "DnD two", ["x"] = wa.Left + 120, ["y"] = wa.Top + 470, ["width"] = 420, ["height"] = 260 }); host.Sync(); Pump(700);
+                MotionDesk.Containers.ContainerHost.KeepOnTopForTests = true; host.ReseatZOrder();
+                var ws = host.Windows.OrderBy(x => x.Top).ToList(); var one = ws[0]; var two = ws[1];
+                report.Add($"windows={ws.Count} (expected 2)");
+                using var src = new Form { FormBorderStyle = FormBorderStyle.None, StartPosition = FormStartPosition.Manual, TopMost = true, ShowInTaskbar = false, BackColor = Color.SteelBlue, Bounds = new Rectangle(wa.Left + 620, wa.Top + 130, 120, 120) };
+                string? dragFile = null; bool started = false;
+                src.MouseDown += (_, e) => report.Add("  (stand-in got mouse down)");
+                src.MouseMove += (_, e) => { if (e.Button == MouseButtons.Left && !started && dragFile != null) { started = true; var d = new DataObject(); d.SetData(DataFormats.FileDrop, new[] { dragFile }); var eff = src.DoDragDrop(d, DragDropEffects.Copy | DragDropEffects.Move | DragDropEffects.Link); report.Add("  (stand-in drag finished, effect=" + eff + ")"); } };
+                src.Show(); Pump(300);
+
+                void RealDrag(Point from, Point to)
+                {
+                    bool done = false;
+                    var th = new System.Threading.Thread(() =>
+                    {
+                        SetCursorPos(from.X, from.Y); System.Threading.Thread.Sleep(250);
+                        mouse_event(0x2, 0, 0, 0, UIntPtr.Zero); System.Threading.Thread.Sleep(120);
+                        SetCursorPos(from.X + 12, from.Y + 12); System.Threading.Thread.Sleep(120);
+                        for (int i = 1; i <= 20; i++) { SetCursorPos(from.X + 12 + (to.X - from.X - 12) * i / 20, from.Y + 12 + (to.Y - from.Y - 12) * i / 20); System.Threading.Thread.Sleep(30); }
+                        System.Threading.Thread.Sleep(250); mouse_event(0x4, 0, 0, 0, UIntPtr.Zero); System.Threading.Thread.Sleep(250); done = true;
+                    }) { IsBackground = true };
+                    th.Start(); var end = DateTime.UtcNow.AddSeconds(15); while (!done && DateTime.UtcNow < end) { Application.DoEvents(); System.Threading.Thread.Sleep(5); }
+                    Pump(500);
+                }
+                void DragUntil(Func<Point> from, Func<Point> to, Func<bool> ok) { for (int attempt = 0; attempt < 3 && !ok(); attempt++) RealDrag(from(), to()); }
+                var srcMid = new Point(src.Left + 60, src.Top + 60);
+
+                dragFile = f1; DragUntil(() => srcMid, () => one.PointToScreen(new Point(80, 90)), () => { started = false; return one.Items.Count >= 1; });
+                report.Add((one.Items.Count == 1 ? "ok" : "FAIL") + $": real drag from a stand-in Explorer window into container 1 -> items={one.Items.Count} (expected 1)");
+                dragFile = f2; DragUntil(() => srcMid, () => one.PointToScreen(new Point(300, 150)), () => { started = false; return one.Items.Count >= 2; });
+                report.Add((one.Items.Count == 2 ? "ok" : "FAIL") + $": second file -> items={one.Items.Count} (expected 2)");
+
+                // reorder inside: press on item 0 and release in the empty space after the last item
+                var first = one.Items.Count > 0 ? one.Items[0].Path : "";
+                DragUntil(() => one.ItemScreenCenter(0), () => one.PointToScreen(new Point(one.Width - 40, 90)), () => one.Items.Count == 2 && one.Items[1].Path == first);
+                report.Add((one.Items.Count == 2 && one.Items[1].Path == first ? "ok" : "FAIL") + $": real drag inside the container reorders -> last={Path.GetFileName(one.Items.LastOrDefault()?.Path)} (expected {Path.GetFileName(first)})");
+
+                // from container 1 to container 2: MOVE by default (the reference leaves container 1)
+                DragUntil(() => one.ItemScreenCenter(0), () => two.PointToScreen(new Point(100, 100)), () => two.Items.Count == 1);
+                report.Add((two.Items.Count == 1 && one.Items.Count == 1 ? "ok" : "FAIL") + $": real drag container 1 -> container 2 is a MOVE -> two={two.Items.Count} (expected 1), one={one.Items.Count} (expected 1)");
+                // and back: 2 -> 1
+                DragUntil(() => two.ItemScreenCenter(0), () => one.PointToScreen(new Point(300, 200)), () => two.Items.Count == 0 && one.Items.Count == 2);
+                report.Add((two.Items.Count == 0 && one.Items.Count == 2 ? "ok" : "FAIL") + $": real drag container 2 -> container 1 -> two={two.Items.Count} (expected 0), one={one.Items.Count} (expected 2)");
+
+                // single / double click launch with real mouse clicks
+                MotionDesk.Containers.ContainerWindow.SuppressLaunch = true; var launched = new System.Collections.Generic.List<string>(); one.ItemLaunched += launched.Add;
+                void Click(Point at, int times) { SetCursorPos(at.X, at.Y); Pump(200); for (int i = 0; i < times; i++) { mouse_event(0x2, 0, 0, 0, UIntPtr.Zero); mouse_event(0x4, 0, 0, 0, UIntPtr.Zero); Pump(60); } Pump(400); }
+                Click(one.ItemScreenCenter(0), 1);
+                report.Add((launched.Count == 0 ? "ok" : "FAIL") + $": one click does not launch by default (launches={launched.Count}, expected 0)");
+                Click(one.ItemScreenCenter(0), 2);
+                report.Add((launched.Count == 1 ? "ok" : "FAIL") + $": double click launches (launches={launched.Count}, expected 1)");
+                host.Apply(one.Model.Id, k => { k.Appearance.OpenOnSingleClick = true; return true; }); launched.Clear();
+                Click(one.ItemScreenCenter(1), 1);
+                report.Add((launched.Count == 1 ? "ok" : "FAIL") + $": with the setting on, ONE real click launches (launches={launched.Count}, expected 1)");
+                MotionDesk.Containers.ContainerWindow.SuppressLaunch = false;
+
+                // hover roll-up with the real pointer
+                host.Apply(two.Model.Id, k => { k.Appearance.HoverRollUp = true; k.Appearance.HoverDelayMs = 100; return true; });
+                two.ToggleRollUp(); Pump(300);
+                var rolled = two.Model.RolledUp; var rolledH = two.Height;
+                SetCursorPos(wa.Right - 5, wa.Bottom - 5); Pump(300);
+                SetCursorPos(two.Left + 60, two.Top + 10); Pump(900);
+                report.Add((rolled && !two.Model.RolledUp && two.Height > rolledH ? "ok" : "FAIL") + $": real pointer over a rolled-up container opens it (was rolled={rolled}, now rolled={two.Model.RolledUp}, height {rolledH}->{two.Height})");
+                SetCursorPos(wa.Right - 5, wa.Bottom - 5); Pump(1000);
+                report.Add((two.Model.RolledUp ? "ok" : "FAIL") + $": pointer leaving rolls it up again (rolled={two.Model.RolledUp})");
+
+                // REAL desktop as the source: a temp file and a temp folder are created ON the desktop, their real icons are dragged with the real mouse into a container
+                two.ToggleRollUp(); host.Apply(two.Model.Id, k => { k.Appearance.HoverRollUp = false; return true; }); Pump(300);
+                one.Bounds = new Rectangle(wa.Right - 460, wa.Top + 60, 420, 300); two.Bounds = new Rectangle(wa.Right - 460, wa.Top + 400, 420, 300); Pump(400);   // away from the icon grid
+                var desk = Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory);
+                var deskFile = Path.Combine(desk, "opsis-dnd-desk-" + Environment.ProcessId + ".txt"); var deskDir = Path.Combine(desk, "opsis-dnd-folder-" + Environment.ProcessId);
+                File.WriteAllText(deskFile, "x"); Directory.CreateDirectory(deskDir); deskCleanup = new[] { deskFile, deskDir };
+                Pump(2500);
+                // the icons are only reachable when no window covers them: show the desktop (like Win+D) for the test and bring everything back afterwards
+                dynamic? shell = null; try { shell = Activator.CreateInstance(Type.GetTypeFromProgID("Shell.Application")!); shell!.MinimizeAll(); Pump(1500); } catch (Exception) { shell = null; }
+                MotionDesk.Containers.ContainerWindow.DragLog.Clear();
+                foreach (var path in deskCleanup)
+                {
+                    var name = Path.GetFileName(path); var before = two.Items.Count;
+                    var at = MotionDesk.Widgets.DesktopIconVisibilityEngine.DesktopIconCenter(path);
+                    if (at == null) { report.Add("SKIP: the desktop icon of " + name + " was not found (desktop view not reachable)"); continue; }
+                    var under = MotionDesk.Widgets.DesktopIconVisibilityEngine.IsDesktopListAt(at.Value); report.Add("  desktop list under the icon: " + under);
+                    if (one.Bounds.Contains(at.Value) || two.Bounds.Contains(at.Value) || src.Bounds.Contains(at.Value)) { report.Add("SKIP: the desktop icon of " + name + " lies under a test window"); continue; }
+                    report.Add("  icon " + name + " at " + at.Value + "; container two " + two.Bounds);
+                    DragUntil(() => at.Value, () => two.PointToScreen(new Point(100, 100)), () => two.Items.Any(i => i.Path.Equals(path, StringComparison.OrdinalIgnoreCase)));
+                    report.Add("  selected desktop icons after the drag: " + string.Join(" | ", MotionDesk.Widgets.DesktopIconVisibilityEngine.SelectedDesktopPaths().Select(Path.GetFileName)) + "; pos now " + (MotionDesk.Widgets.DesktopIconVisibilityEngine.DesktopIconCenter(path)?.ToString() ?? "hidden/none") + "; selected one is at " + string.Join(" ", MotionDesk.Widgets.DesktopIconVisibilityEngine.SelectedDesktopPaths().Select(q => MotionDesk.Widgets.DesktopIconVisibilityEngine.DesktopIconCenter(q)?.ToString())) + "; cursor " + Cursor.Position);
+                    report.Add((two.Items.Any(i => i.Path.Equals(path, StringComparison.OrdinalIgnoreCase)) ? "ok" : "FAIL") + $": REAL desktop icon ({(Directory.Exists(path) ? "folder" : "file")}) dragged into a container -> items {before}->{two.Items.Count}");
+                }
+                foreach (var l in MotionDesk.Containers.ContainerWindow.DragLog) report.Add("  drag log: " + l);
+                try { shell?.UndoMinimizeALL(); } catch (Exception) { }
+                MotionDesk.Widgets.DesktopIconVisibilityEngine.RestoreOriginals(); Pump(300);
+            }
+            catch (Exception ex) { report.Add("EXCEPTION: " + ex); }
+            finally
+            {
+                SetCursorPos(oldPos.X, oldPos.Y);
+                try { var desk = Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory); foreach (var n in new[] { Path.GetFileName(f1), Path.GetFileName(f2), Path.GetFileNameWithoutExtension(f1) + ".lnk", Path.GetFileNameWithoutExtension(f2) + ".lnk", Path.GetFileNameWithoutExtension(f1) + " - Shortcut.lnk", Path.GetFileNameWithoutExtension(f2) + " - Shortcut.lnk" }) { var p = Path.Combine(desk, n); if (File.Exists(p)) { File.Delete(p); report.Add("cleaned a stray drop from the desktop: " + n); } } } catch (Exception) { }
+                try { MotionDesk.Widgets.DesktopIconVisibilityEngine.RestoreOriginals(); } catch (Exception) { }
+                foreach (var d in deskCleanup) try { if (Directory.Exists(d)) Directory.Delete(d, true); else if (File.Exists(d)) File.Delete(d); } catch (Exception) { }
+                MotionDesk.Containers.ContainerHost.KeepOnTopForTests = false; GlassService.Shutdown();
+            }
+            File.WriteAllLines(Path.Combine(folder, "container-dnd.txt"), report);
+            return report.Any(l => l.StartsWith("EXCEPTION") || l.StartsWith("FAIL")) ? 1 : 0;
+        }
+
         /// <summary>Renders the music overlay card for a made-up track onto a dark stand-in (no desktop content) and checks the placement rule.</summary>
         public static int TestMusicOverlay(string folder)
         {

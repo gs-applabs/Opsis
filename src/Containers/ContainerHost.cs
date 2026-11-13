@@ -44,7 +44,32 @@ namespace MotionDesk.Containers
             MotionDesk.UI.ThemeManager.Changed += OnLookChanged; MotionDesk.UI.ThemeManager.Repainted += OnLookChanged;
             MotionDesk.Services.HardwareProfileService.ProfileChanged += OnTierChanged; MotionDesk.Services.LocalizationManager.Changed += OnLookChanged;
             Current = this;
+            try { Backup(false); } catch (Exception) { }
+            try { _selection = new DesktopSelectionWatcher(this); } catch (Exception) { }
             Sync();
+        }
+
+        /// <summary>Daily backup of the containers file (at most one per day, the newest 7 are kept); <paramref name="force"/> makes one more now ("Back up now" in the tray).</summary>
+        public string? Backup(bool force)
+        {
+            var src = _service.StorePath; if (!File.Exists(src)) return null;
+            var dir = Path.Combine(Path.GetDirectoryName(Path.GetFullPath(src)) ?? ".", "container-backups"); Directory.CreateDirectory(dir);
+            var name = Path.Combine(dir, "containers-" + DateTime.Now.ToString(force ? "yyyyMMdd-HHmmss" : "yyyyMMdd") + ".json");
+            if (!force && File.Exists(name)) return null;
+            Flush(); File.Copy(src, name, true);
+            foreach (var old in Directory.GetFiles(dir, "containers-*.json").OrderByDescending(f => f).Skip(7)) try { File.Delete(old); } catch (Exception) { }
+            return name;
+        }
+
+        private DesktopSelectionWatcher? _selection;
+        /// <summary>Rubber-band to container: makes a container at <paramref name="at"/> from desktop items (the originals are hidden like after a drop, always restorable).</summary>
+        public string CreateFromDesktopSelection(IReadOnlyList<string> paths, Point at)
+        {
+            var id = NewContainerAtCursor("Data", null);
+            var items = paths.Select(p => new ContainerItem { Path = p, DisplayName = Path.GetFileNameWithoutExtension(p), IsFolder = Directory.Exists(p) }).ToList();
+            Apply(id, c => { c.Items.AddRange(items); c.Geometry.X = at.X; c.Geometry.Y = at.Y; return true; });
+            if (MotionDesk.Services.AppSettings.Load().HideOriginalsOnDrop) MotionDesk.Widgets.DesktopIconVisibilityEngine.HideOriginals(paths);
+            return id;
         }
 
         private readonly System.Windows.Forms.Timer _look = new() { Interval = 150 };
@@ -76,7 +101,7 @@ namespace MotionDesk.Containers
                     case "toggle-all":
                     {
                         var hidden = false;
-                        _h._service.Update(doc => { hidden = doc.Containers.Any(c => !c.Hidden); foreach (var c in doc.Containers) c.Hidden = hidden; return doc.Containers.Count > 0; });
+                        _h._service.Update(doc => { hidden = doc.Containers.Any(c => !c.Hidden && !c.ExcludeFromQuickHide); foreach (var c in doc.Containers.Where(x => !x.ExcludeFromQuickHide)) c.Hidden = hidden; return doc.Containers.Count > 0; });
                         _h._ui.BeginInvoke(_h.Sync);
                         return new System.Text.Json.Nodes.JsonObject { ["hidden"] = hidden };
                     }
@@ -107,7 +132,7 @@ namespace MotionDesk.Containers
         /// <summary>Quick-hide / quick-show of the desktop gesture: every container follows the desktop icons.</summary>
         public void SetAllHidden(bool hidden)
         {
-            _service.Update(doc => { var any = false; foreach (var c in doc.Containers) if (c.Hidden != hidden) { c.Hidden = hidden; any = true; } return any; });
+            _service.Update(doc => { var any = false; foreach (var c in doc.Containers) if (!c.ExcludeFromQuickHide && c.Hidden != hidden) { c.Hidden = hidden; any = true; } return any; });
             Sync();
         }
 
@@ -123,6 +148,13 @@ namespace MotionDesk.Containers
         private int _snapIndex = -1;
 
         public void SetHidden(string id, bool hidden) { _service.Handle(hidden ? "hide" : "show", new System.Text.Json.Nodes.JsonObject { ["id"] = id }); Sync(); }
+        private int _focusIndex = -1;
+        /// <summary>Focus-container hotkey: gives the keyboard focus to the next visible container (Tab-like cycling), so the arrows / Enter work in it.</summary>
+        public void FocusNext()
+        {
+            var ids = _windows.Where(p => p.Value.Visible).OrderBy(p => p.Value.Top).ThenBy(p => p.Value.Left).Select(p => p.Key).ToList(); if (ids.Count == 0) return;
+            _focusIndex = (_focusIndex + 1) % ids.Count; Focus(ids[_focusIndex]);
+        }
         public void Focus(string id) { if (_windows.TryGetValue(id, out var w)) w.FocusForKeyboard(); }
         public string SaveSnapshot(string name) { Flush(); var r = _service.Handle("snapshot-save", new System.Text.Json.Nodes.JsonObject { ["name"] = name }); return r?["saved"]?.ToString() ?? ""; }
         public void LoadSnapshot(string name) { Flush(); _service.Handle("snapshot-load", new System.Text.Json.Nodes.JsonObject { ["name"] = name }); Sync(); }
@@ -165,8 +197,11 @@ namespace MotionDesk.Containers
         }
 
         /// <summary>Puts every container window back directly above the desktop (cheap: a no-op while they already are).</summary>
+        /// <summary>Tests that drive the real mouse make the windows topmost (a normal window of the user could otherwise cover them) and stop the periodic re-seating.</summary>
+        public static bool KeepOnTopForTests;
         public void ReseatZOrder()
         {
+            if (KeepOnTopForTests) { foreach (var w in _windows.Values) if (w.IsHandleCreated && !w.TopMost) w.TopMost = true; return; }
             foreach (var w in _windows.Values) if (w.IsHandleCreated && w.Visible) DesktopZOrder.Place(w.Handle);
         }
 
@@ -208,7 +243,7 @@ namespace MotionDesk.Containers
             if (ReferenceEquals(Current, this)) Current = null;
             Microsoft.Win32.SystemEvents.DisplaySettingsChanged -= OnDisplayChanged;
             MotionDesk.UI.ThemeManager.Changed -= OnLookChanged; MotionDesk.UI.ThemeManager.Repainted -= OnLookChanged;
-            MotionDesk.Services.HardwareProfileService.ProfileChanged -= OnTierChanged; MotionDesk.Services.LocalizationManager.Changed -= OnLookChanged; _look.Dispose();
+            MotionDesk.Services.HardwareProfileService.ProfileChanged -= OnTierChanged; MotionDesk.Services.LocalizationManager.Changed -= OnLookChanged; _look.Dispose(); _selection?.Dispose();
             try { MotionDesk.Widgets.DesktopIconVisibilityEngine.RestoreOriginals(); } catch (Exception) { }          // every exit gives the hidden originals back
             Flush(); _save.Dispose(); _rules.Dispose(); _z.Dispose(); _pipe?.Dispose();
             foreach (var w in _windows.Values) { w.Close(); w.Dispose(); }

@@ -199,6 +199,7 @@ namespace MotionDesk.Widgets
                     _hotkeys.RegisterCtrlAltShift(Keys.H, () => host.ToggleAll());
                     _hotkeys.RegisterCtrlAltShift(Keys.N, () => host.NewContainerAtCursor());
                     _hotkeys.RegisterCtrl(Keys.Oemtilde, () => host.ShowSpotSearch());                              // Spot Search (Ctrl+`), as in the old engine
+                    _hotkeys.RegisterCtrlAltShift(Keys.F, () => host.FocusNext());                                    // focus-container hotkey
                     _hotkeys.RegisterCtrlAltShift(Keys.OemCloseBrackets, () => host.CycleSnapshot(1));            // next / previous layout snapshot = profile hotkeys
                     _hotkeys.RegisterCtrlAltShift(Keys.OemOpenBrackets, () => host.CycleSnapshot(-1));
                 }
@@ -535,6 +536,7 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
         private void FillNativeContainersMenu(ToolStripMenuItem menu, MotionDesk.Containers.ContainerHost host)
         {
             string T(string key) => LocalizationManager.T(key);
+            menu.DropDownItems.Add(T("DCM.BackupNow"), null, (s, e) => { try { host.Backup(true); } catch (Exception) { } });
             menu.DropDownItems.Add(T("DCM.NewContainer"), null, (s, e) => host.NewContainerAtCursor());
             menu.DropDownItems.Add(T("DCX.NewNote"), null, (s, e) => host.NewContainerAtCursor("Note"));
             menu.DropDownItems.Add(T("DCM.NewPortal"), null, (s, e) => host.NewContainerAtCursor("Portal"));

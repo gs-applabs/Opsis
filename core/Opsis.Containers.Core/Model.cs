@@ -62,6 +62,14 @@ public sealed class ContainerAppearance
     public bool GrayscaleIcons { get; set; }
     public bool TextShadow { get; set; } = true;
     public string? LaunchEffect { get; set; }
+    // schema 2 (2.6.0): look and behaviour per container
+    public bool Glossy { get; set; }                 // a soft highlight over the top of the frame and the title bar
+    public int TintOpacity { get; set; } = 35;       // 0-100, strength of FrameColor (the tint) over the glass
+    public string? ItemFontFamily { get; set; }      // label font of the icons (null = Segoe UI)
+    public float ItemFontSize { get; set; } = 9f;
+    public bool OpenOnSingleClick { get; set; }      // false = double click launches (as the desktop does)
+    public bool HoverRollUp { get; set; }            // a rolled-up container opens while the pointer is over it and rolls up again after it leaves
+    public int HoverDelayMs { get; set; } = 400;
 }
 
 public sealed class Container
@@ -73,6 +81,8 @@ public sealed class Container
     public bool Locked { get; set; }
     public bool Hidden { get; set; }
     public bool RolledUp { get; set; }
+    /// <summary>Quick-hide / quick-show of all containers leaves this one alone (schema 2).</summary>
+    public bool ExcludeFromQuickHide { get; set; }
     public int UnrolledHeight { get; set; }
     public bool TabsEnabled { get; set; }
     public int CurrentTab { get; set; }
@@ -99,7 +109,7 @@ public sealed class ContainersDocument
 /// <summary>JSON file with <c>schemaVersion</c>, step migrations, atomic write (temp + replace), one .bak of the last good file, damaged file moved to .corrupt.</summary>
 public sealed class ContainersStore
 {
-    public const int CurrentVersion = 1;
+    public const int CurrentVersion = 2;   // 2 = glossy / tint strength / label font / click mode / hover roll-up / exclude from quick-hide (all have defaults, so a version-1 file loads unchanged and is rewritten as 2)
     public static readonly JsonSerializerOptions Json = new() { WriteIndented = true, PropertyNameCaseInsensitive = true, PropertyNamingPolicy = JsonNamingPolicy.CamelCase, DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull };
     private readonly object gate = new();
     private readonly SortedDictionary<int, Action<JsonObject>> migrations = new();

@@ -187,6 +187,47 @@ namespace MotionDesk.Widgets
             try { work(hp, list, SendMessage(list, LVM_GETITEMCOUNT, IntPtr.Zero, IntPtr.Zero).ToInt32()); } finally { CloseHandle(hp); }
         }
 
+        [DllImport("user32.dll")] private static extern bool ClientToScreen(IntPtr hWnd, ref Point p);
+        /// <summary>Screen position of the middle of the desktop icon of <paramref name="path"/> (for tests that use the real mouse), or null when it is not on the desktop right now.</summary>
+        public static Point? DesktopIconCenter(string path)
+        {
+            Point? found = null; var want = IconNames(path).ToHashSet(StringComparer.OrdinalIgnoreCase);
+            try
+            {
+                WithDesktopList((hp, list, count) =>
+                {
+                    for (int i = 0; i < count; i++)
+                    {
+                        if (!want.Contains(GetItemTextRemote(hp, list, i))) continue;
+                        var pos = GetItemPositionRemote(hp, list, i); var p = new Point(pos.X + 38, pos.Y + 32);
+                        if (ClientToScreen(list, ref p)) found = p; return;
+                    }
+                });
+            }
+            catch (Exception) { }
+            return found;
+        }
+
+        /// <summary>True when the point is over the desktop icon list (not over another window).</summary>
+        public static bool IsDesktopListAt(Point screenPos) { try { var l = FindDesktopListView(); return l != IntPtr.Zero && WindowFromPoint(screenPos) == l; } catch (Exception) { return false; } }
+
+        /// <summary>Full paths of the desktop icons that are selected right now (rubber-band or Ctrl+click), matched by name in the user and the public desktop folders.</summary>
+        public static List<string> SelectedDesktopPaths()
+        {
+            var names = new List<string>();
+            try { WithDesktopList((hp, list, count) => { for (int i = 0; i < count; i++) if ((SendMessage(list, 0x102C, (IntPtr)i, (IntPtr)2).ToInt32() & 2) != 0) names.Add(GetItemTextRemote(hp, list, i)); }); } catch (Exception) { }
+            var dirs = new[] { Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory), Environment.GetFolderPath(Environment.SpecialFolder.CommonDesktopDirectory) };
+            var result = new List<string>();
+            foreach (var n in names)
+            {
+                foreach (var d in dirs)
+                {
+                    try { var hit = Directory.EnumerateFileSystemEntries(d).FirstOrDefault(f => string.Equals(Path.GetFileName(f), n, StringComparison.OrdinalIgnoreCase) || string.Equals(Path.GetFileNameWithoutExtension(f), n, StringComparison.OrdinalIgnoreCase)); if (hit != null) { result.Add(hit); break; } } catch (Exception) { }
+                }
+            }
+            return result;
+        }
+
         /// <summary>Hides the desktop icons of the given files (only files that really are on the desktop). Returns how many were hidden.</summary>
         public static int HideOriginals(IEnumerable<string> paths)
         {

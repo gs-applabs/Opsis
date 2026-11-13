@@ -342,7 +342,7 @@ Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: 
 Filename: "{cmd}"; Parameters: "/C winget install --id Gyan.FFmpeg -e --silent --accept-package-agreements --accept-source-agreements & exit 0"; StatusMsg: "{cm:InstallingFfmpeg}"; Flags: runhidden; Tasks: installffmpeg
 
 ; 2. Εκκίνηση της εφαρμογής μετά το τέλος της εγκατάστασης
-Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"; Flags: nowait postinstall skipifsilent
+Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"; Flags: nowait postinstall skipifsilent runasoriginaluser
 
 ; 3. Self-update: the updater starts this setup with /RESTARTOPSIS=1 and Opsis opens again when the update finished. (This replaces a hidden PowerShell helper that waited for the setup.)
 Filename: "{app}\{#MyAppExeName}"; Flags: nowait runasoriginaluser; Check: RestartOpsisRequested

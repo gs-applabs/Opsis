@@ -47,7 +47,12 @@ namespace MotionDesk.UI
             var host = MotionDesk.Containers.ContainerHost.Current;
             if (host == null) { AddText(engine, Lx("Τα containers δεν τρέχουν αυτή τη στιγμή (απενεργοποιημένα ή ασφαλής λειτουργία).", "Containers are not running right now (disabled or safe mode).")); return; }
             engine.Controls.Add(SettingsView.Checkbox(Lx("Απόκρυψη του αρχικού εικονιδίου της επιφάνειας όταν το ρίχνεις σε container", "Hide the desktop icon when you drop it into a container"), AppSettings.Load().HideOriginalsOnDrop, v => { var a = AppSettings.Load(); a.HideOriginalsOnDrop = v; a.Save(); if (!v) MotionDesk.Widgets.DesktopIconVisibilityEngine.RestoreOriginals(); }, Lx("Τα εικονίδια επιστρέφουν πάντα όταν κλείσει το Opsis, στην επόμενη εκκίνηση και με «Επαναφορά εικονιδίων».", "Icons always come back when Opsis exits, at the next start and with Restore desktop icons.")));
-            AddText(engine, Lx("Συντομεύσεις: Ctrl+Alt+Shift+N νέο container, Ctrl+Alt+Shift+H απόκρυψη/εμφάνιση όλων.", "Shortcuts: Ctrl+Alt+Shift+N new container, Ctrl+Alt+Shift+H hide / show all."));
+            engine.Controls.Add(SettingsView.Checkbox(LocalizationManager.T("DCM.DragCopies"), AppSettings.Load().ContainerDragCopies, v => { var a = AppSettings.Load(); a.ContainerDragCopies = v; a.Save(); }));
+            engine.Controls.Add(SettingsView.Checkbox(LocalizationManager.T("DCM.OfferSelection"), AppSettings.Load().OfferContainerFromSelection, v => { var a = AppSettings.Load(); a.OfferContainerFromSelection = v; a.Save(); }));
+            var backupBtn = new HoverButton { Text = LocalizationManager.T("DCM.BackupNow"), Width = 260, Height = 32, FlatStyle = FlatStyle.Flat, ForeColor = UiTheme.TextPrimary, BackColor = UiTheme.SurfaceHover, Cursor = Cursors.Hand, Margin = new Padding(0, 4, 0, 4) };
+            backupBtn.FlatAppearance.BorderSize = 0; backupBtn.Click += (_, _) => { try { host.Backup(true); } catch (Exception) { } };
+            engine.Controls.Add(backupBtn);
+            AddText(engine, Lx("Συντομεύσεις: Ctrl+Alt+Shift+N νέο container, Ctrl+Alt+Shift+H απόκρυψη/εμφάνιση όλων, Ctrl+Alt+Shift+F εστίαση στο επόμενο container.", "Shortcuts: Ctrl+Alt+Shift+N new container, Ctrl+Alt+Shift+H hide / show all, Ctrl+Alt+Shift+F focus the next container."));
 
             AddIconButtonGrid(panel,
                 ("Container", LocalizationManager.T("DeskZones.NewContainerBtn"), (_, _) => { host.NewContainerAtCursor(); ShowDeskContainers(); }),
@@ -66,18 +71,9 @@ namespace MotionDesk.UI
                 {
                     foreach (Control old in holder.Controls.Cast<Control>().ToList()) { holder.Controls.Remove(old); old.Dispose(); }
                     var c = host.Containers().ElementAtOrDefault(sel); if (c == null) return;
-                    string id = c.Id; var tb = c.TitleBar;
-                    void Style(string key, object value) { host.Flush(); host.Service.Handle("set-title-style", new System.Text.Json.Nodes.JsonObject { ["id"] = id, [key] = System.Text.Json.Nodes.JsonValue.Create(value) }); host.Sync(); }
-                    var colorRow = new FlowLayoutPanel { AutoSize = true, WrapContents = false, Margin = new Padding(0, 2, 0, 6) };
-                    colorRow.Controls.Add(new Label { Text = Lx("Χρώμα τίτλου (#RRGGBB ή Auto):", "Title bar colour (#RRGGBB or Auto):"), AutoSize = true, ForeColor = UiTheme.TextSecondary, Font = UiTheme.FontBody, Padding = new Padding(0, 6, 10, 0) });
-                    var colorBox = new TextBox { Width = 110, Text = tb.Color };
-                    colorBox.Leave += (_, _) => { var t = colorBox.Text.Trim(); if (t.Equals("Auto", StringComparison.OrdinalIgnoreCase) || System.Text.RegularExpressions.Regex.IsMatch(t, "^#[0-9a-fA-F]{6}$")) Style("color", t); else colorBox.Text = tb.Color; };
-                    colorRow.Controls.Add(colorBox); holder.Controls.Add(colorRow);
-                    holder.Controls.Add(SettingsView.NumericRow(Lx("Διαφάνεια τίτλου", "Title bar opacity"), tb.Opacity, 0, 100, v => Style("opacity", v), 0, "%"));
-                    holder.Controls.Add(SettingsView.NumericRow(Lx("Ύψος τίτλου", "Title bar height"), tb.Height, 16, 96, v => Style("height", v), 0, "px"));
-                    holder.Controls.Add(SettingsView.NumericRow(Lx("Μέγεθος γραμματοσειράς τίτλου", "Title font size"), (int)tb.FontSize, 6, 36, v => Style("fontSize", (float)v), 0, "pt"));
-                    holder.Controls.Add(SettingsView.Checkbox(Lx("Κλείδωμα (δεν μετακινείται/αλλάζει μέγεθος)", "Locked (cannot move or resize)"), c.Locked,
-                        v => host.Apply(id, x => { x.Locked = v; return true; })));
+                    string id = c.Id;
+                    // the SAME panel as in the container's own right-click settings: palette, fonts, sizes, tint, glossy, click mode, hover roll-up, exclusion from quick-hide
+                    holder.Controls.Add(new MotionDesk.Containers.ContainerSettingsPanel(host, c, dark: true));
                     holder.Controls.Add(SettingsView.Checkbox(Lx("Κρυμμένο", "Hidden"), c.Hidden, v => host.SetHidden(id, v)));
                     var del = new HoverButton { Text = LocalizationManager.T("DCX.DeleteContainer"), Width = 230, Height = 32, FlatStyle = FlatStyle.Flat, ForeColor = UiTheme.TextPrimary, BackColor = UiTheme.SurfaceHover, Cursor = Cursors.Hand, Margin = new Padding(0, 6, 0, 0) };
                     del.FlatAppearance.BorderSize = 0;
