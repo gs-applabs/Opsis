@@ -62,6 +62,8 @@ namespace MotionDesk.Services
             while (DateTime.UtcNow < end) { Application.DoEvents(); System.Threading.Thread.Sleep(10); }
         }
 
+        private static MotionDesk.Containers.ContainerHost? auditHost;
+
         public static int Run(string folder)
         {
             Directory.CreateDirectory(folder);
@@ -75,6 +77,14 @@ namespace MotionDesk.Services
 
             // the "where are you? (weather location)" question is asked once on the first visit of the Wallpaper page by design: answer it beforehand so it does not count as a freeze
             try { var ws = MotionDesk.Widgets.WallpaperSettings.Load(); ws.WeatherLocationPrompted = true; ws.Save(); } catch (Exception) { }
+            // the DeskContainers page needs a running native host: start one with a HIDDEN sample container (no window appears) so the audit exercises the real controls
+            try
+            {
+                var store = new Opsis.Containers.ContainersStore(Path.Combine(AppPaths.AppDataFolder, "containers-native.json"));
+                var doc = new Opsis.Containers.ContainersDocument(); doc.Containers.Add(new Opsis.Containers.Container { Title = "Audit", Hidden = true });
+                store.Save(doc); auditHost = new MotionDesk.Containers.ContainerHost(store);
+            }
+            catch (Exception ex) { problems.Add("could not start the native host for the audit: " + ex.Message); }
             string progress = Path.Combine(folder, "progress.txt"); string current = "start";
             void Mark(string s) { current = s; try { File.AppendAllText(progress, DateTime.UtcNow.ToString("HH:mm:ss.fff") + " " + s + nl); } catch (Exception) { } }
             StartDialogGuard(problems, () => current);
@@ -150,7 +160,7 @@ namespace MotionDesk.Services
                             clicked++;
                         }
                     }
-                    catch (Exception ex) { problems.Add($"[{key}] control '{c.Name}' '{c.Text}' threw {ex.GetType().Name}: {ex.Message}"); }
+                    catch (Exception ex) { problems.Add($"[{key}] control '{c.Name}' '{c.Text}' threw {ex.GetType().Name}: {ex.Message} @ {string.Join(" <- ", (ex.StackTrace ?? "").Split('\n').Take(3).Select(l => l.Trim()))} [{c.GetType().Name} #{clicked}]"); }
                     slowest = Math.Max(slowest, t.ElapsedMilliseconds);
                     if (t.ElapsedMilliseconds > 3000) problems.Add($"[{key}] a control took {t.ElapsedMilliseconds} ms (UI freeze)");
                 }

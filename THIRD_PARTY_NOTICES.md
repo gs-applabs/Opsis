@@ -47,3 +47,11 @@ and the process exits together with Opsis. Data of earlier builds is migrated au
 ## Disclaimer
 
 The software is provided "as is" (see LICENSE). It injects a window behind the desktop icons and customises system icons and cursors: use it at your own risk.
+
+## Landmark photos (weather wallpaper)
+Cut-outs of Wikimedia Commons photographs, each checked on its own (public domain, CC0 or CC BY only): Parthenon east side by Jebulon (CC0); The Taj Mahal, Agra by Mustang Joe (CC0); Eiffel Tower (1182085785) and Big Ben (9331129418) by salomon10 from Germany, licensed CC BY 2.0 (https://creativecommons.org/licenses/by/2.0/), changes: sky removed, cropped, scaled, converted to WebP. Full manifest: docs/LANDMARK-IMAGES.md and docs/LANDMARK-IMAGES.json.
+
+Additional landmark photos: Lighthouse of Patras (public domain), Rio-Antirrio Bridge (public domain, see docs/LANDMARK-IMAGES.md), Bourtzi Nafplio (CC0).
+
+Aerial scene of the Acropolis and Athens: The Acropolis of Athens from Mount Lycabettus on March 14, 2020, by George E. Koronaios (CC0), cropped, widened and faded (see docs/LANDMARK-IMAGES.md).
+

@@ -155,6 +155,7 @@ namespace MotionDesk.Widgets
                 elVAlign = settings.ElementsVAlign is "Top" or "Bottom" ? settings.ElementsVAlign : "Center",
                 elAccent = settings.ElementsAccent,
                 elCard = settings.ElementsCard,
+                elAuto = settings.ElementsAutoColor,
                 pageLocal = ApiActive,
                 rotateFirstMs = firstMs,
                 imageUri = effectiveMode == "Image" ? MediaSource.ImageUri(settings.ImagePath) : "",
@@ -177,6 +178,8 @@ namespace MotionDesk.Widgets
                 weatherSim = settings.WeatherSimulation,
                 timeSim = settings.TimeSimulation,
                 weatherGlass = settings.WeatherGlass,
+                weatherLandmarks = settings.WeatherLandmarks,
+                weatherLandmarkId = settings.WeatherLandmarkId,
                 weatherLat = settings.WeatherLat,
                 weatherLon = settings.WeatherLon,
                 rotateMinutes = settings.RotateEveryMinutes,
@@ -368,6 +371,7 @@ namespace MotionDesk.Widgets
         public string ElementsClockTheme { get; set; } = "Classic";   // Classic | Minimal | Neon | Mono | Retro (same names as the desktop clock widget)
         public string ElementsBarColor { get; set; } = "";            // "" = same as the accent colour
         public bool ElementsCard { get; set; } = true;          // frosted card behind every element
+        public bool ElementsAutoColor { get; set; } = true;     // without a card: the text turns dark / light with the colour of the wallpaper behind it
         public string ElementsSide { get; set; } = "Left";      // Left | Right: the elements are stacked in a column on that edge of the screen
         public string ElementsVAlign { get; set; } = "Center";  // Top | Center | Bottom
         public Dictionary<string, string> PageProperties { get; set; } = new();   // "<page>|<key>" -> value, see WallpaperManifest
@@ -404,6 +408,8 @@ namespace MotionDesk.Widgets
         // "Auto" = live wind. Otherwise Calm|LightBreeze|FreshBreeze|Strong|Gale (Beaufort 1/3/5/7/9) — drives waves and cloud speed
         public string WindSimulation { get; set; } = "Auto";
         public bool WeatherGlass { get; set; } = true;   // raindrops on a window pane while it rains
+        public string WeatherLandmarkId { get; set; } = "Auto";   // Auto (nearest to the weather location) | Off | a landmark id, independent of the location
+        public bool WeatherLandmarks { get; set; } = true;   // the best-known landmark of the weather location on the horizon (landmarks.js)
 
         // Clock / date / temperature overlay of the Weather mode. Position is the CENTRE of the block, in % of the screen
         // (default: horizontally centred, in the upper third so it sits in the sky and not on the horizon/desktop icons).
@@ -1622,6 +1628,24 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Count);
         {
             var settings = WallpaperSettings.Load();
             settings.WeatherGlass = enabled;
+            settings.Save();
+            _ = RefreshAllAsync();
+        }
+
+        /// <summary>The user's own choice of the landmark on the horizon: "Auto" (by location), "Off" or the id of any landmark, wherever the computer is.</summary>
+        public void SetWeatherLandmark(string id)
+        {
+            if (!LandmarkCatalog.IsValid(id)) id = LandmarkCatalog.Auto;
+            var settings = WallpaperSettings.Load();
+            settings.WeatherLandmarkId = id; settings.WeatherLandmarks = id != LandmarkCatalog.Off;
+            settings.Save();
+            _ = RefreshAllAsync();
+        }
+
+        public void SetWeatherLandmarks(bool enabled)
+        {
+            var settings = WallpaperSettings.Load();
+            settings.WeatherLandmarks = enabled;
             settings.Save();
             _ = RefreshAllAsync();
         }

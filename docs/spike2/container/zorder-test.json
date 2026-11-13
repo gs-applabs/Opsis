@@ -1,0 +1,46 @@
+{
+  "schemaVersion": 1,
+  "profile": "Default",
+  "containers": [
+    {
+      "id": "9bc10ca6dcaf42f1983637ca8d91a9a6",
+      "title": "Z",
+      "kind": 0,
+      "geometry": {
+        "monitor": "\\\\.\\DISPLAY1",
+        "nx": 0.1171875,
+        "ny": 0.20833333333333334,
+        "nw": 0.1171875,
+        "nh": 0.1388888888888889,
+        "x": 300,
+        "y": 300,
+        "width": 300,
+        "height": 200
+      },
+      "locked": false,
+      "hidden": false,
+      "rolledUp": false,
+      "unrolledHeight": 0,
+      "tabsEnabled": false,
+      "currentTab": 0,
+      "tabs": [],
+      "items": [],
+      "appearance": {
+        "borderThickness": 1,
+        "iconSize": 0,
+        "iconSpacing": 0,
+        "grayscaleIcons": false,
+        "textShadow": true
+      },
+      "titleBar": {
+        "color": "Auto",
+        "opacity": 90,
+        "height": 28,
+        "fontSize": 10,
+        "bold": true
+      }
+    }
+  ],
+  "hiddenOriginals": [],
+  "rules": []
+}

@@ -1,4 +1,4 @@
-# PLAN 2.6.0 - progress (branch `2.6.0-beta`, local only, never pushed)
+﻿# PLAN 2.6.0 - progress (branch `2.6.0-beta`, local only, never pushed)
 
 Updated 2026-11-10. Rule of this file: if a session is cut off, the next one starts from "Where I stopped".
 
@@ -64,8 +64,36 @@ Installed family apps from `suite/apps.json` (other than Opsis) are pinned to th
 ## Test kit for UseNativeContainers
 Portable build outside the repo + `docs/TRY-NATIVE-CONTAINERS.md` (Greek). Rescue: `Opsis.exe --restore-desktop-icons`. Verified: hide 162/166 icons, kill, rescue = identical positions.
 
+## Native containers: work after the first slices (this turn)
+- **Tray + hotkeys:** native tray menu (new container, focus, hidden, layout snapshots, hide/show all) and global hotkeys Ctrl+Alt+Shift+H (hide/show all) and Ctrl+Alt+Shift+N (new container at the cursor); neither is a Windows default.
+- **Z-order:** containers are no longer TopMost: they sit directly above the desktop (Progman/WorkerW) and below normal windows, re-seated every second (`DesktopZOrder`, 4 pure tests). Checked in the REAL z-order chain on this machine with `--test-container-zorder` (container below a normal window, above the desktop, and put back after `SendToBack`). Win+D and a real Explorer restart were NOT run (they would disturb your live session): the logic survives them (desktop windows missing -> retry on the next second), ⛔ needs your test.
+- **Upgrade from 2.4.x:** first start of the native core imports the 2.4.x data read-only (Default -> live layout, other profiles -> snapshots); never overwrites an existing native file (2 tests).
+- **Glass cost (3 containers x 24 icons, `--test-container-budget`, Intel UHD 630 machine):** background moving 8 s: 2.3 % of all cores, private memory 44 MB (16 MB before), 128 captures / 383 renders; background static: 0.7 % CPU, 42 MB. Growth GDI +25, USER +30, handles +238 for 3 windows + 3 glass panes (to be compared with the logger baseline of 2.4.6.1, ⛔ user). Idle 0.7 % is above the "near zero" goal: next step is to stop the static-watch capture when nothing can change (needs a policy change in Opsis.Glass).
+- **Fork switch-off:** `docs/CONTAINERS_EQUIVALENCE.md` lists what the fork does and what the native core still lacks (tabs/portals/notes, hiding desktop originals, Spot Search and profile hotkeys, settings page). The fork is NOT removed yet; the table states the conditions.
+
+## 2.4.6.2 worktree: real plugins
+`--test-plugins-load` (needs OPSIS_E2E=1 + OPSIS_APPDATA) loads the REAL plugin builds from an isolated data folder: Opsis Appearance 1.7.5 and Opsis News Crawler 0.23.0 (both built from the local repos) were approved by the test mode, loaded by the 2.4.6.2 host, each added ONE side-menu page (News Crawler, Εμφάνιση Windows) and ONE tray group (no duplicates), and plugins.log has no load errors. NOT covered: Chronikologio (its repo is not on this machine), Kombos/GearWin, the Crawler 'Ροή ιστορίας' page contents, real UI clicks inside the plugin pages, the 2.6.0-beta host with the same plugins.
+
+## Fork switch-off and upgrade (2026-11-12)
+Removed: `containers/` (WPF fork), `ContainersEngine`, `ContainersBridge`, the BuildContainers/CopyContainersToPublish targets, the installer's engine entries. Native settings page, tray menu, quick-hide, desktop-menu verbs and the native host now are the only path; `UseNativeContainers` defaults to true. Installer 2.6.0 beta compiles (8.3 MB, no fork); an upgrade from a 2.4.6.2 install was run with an ISOLATED test installer (other AppId, no admin, own folder): exe became 2.6.0, `containers\` deleted, uninstall entry "2.6.0 beta", uninstall clean, real Opsis untouched (checked). ⛔ Still needs the user: a real upgrade of the installed 2.4.6.1 on the machine and the manual steps above.
+
+## Real upgrade of the installed Opsis (2026-11-12, approved by the user)
+Installed 2.4.6.2 -> 2.6.0 beta with `OpsisSetup-2.6.0-beta.exe` (UAC, /SILENT). Found and fixed on the way: (1) the installer aborts when Opsis is running (AppMutex) - close it first; (2) settings.json written by earlier betas had `UseNativeContainers=false` -> settings schema 2 migration switches it on once (2 tests). After the second install: the installed Opsis started, imported the legacy data (1 container, empty, as in the old data) into `containers-native.json`; the old `%AppData%\Opsis\containers` folder is untouched; backup of the data folder was taken before.
+
 ## Where I stopped
-7/8 part 1 committed (keyboard, accessibility tree, High Contrast). Next: 5/9 rest (hotkey -> FocusForKeyboard / show-hide, tray entries, perf-governor + safe-mode hooks, options.json import), then z-order / Win+D (phase 6 part B, needs the user), then the fork switch-off (remove `containers/`, csproj excludes, installer, legacy files) - that last step only after the user has tried `UseNativeContainers`.
+THE CORE IS FINISHED (2026-11-13): tabs / portals / notes, Spot Search, profile hotkeys, hide-originals with mandatory restore, settings page, tray, fork removed, upgrade importer, equivalence table final (no open rows), docs/RELEASE-2.6.0-CHECKLIST.md with the Greek steps for the user. Not started on purpose (usage limit, core first): the final release steps (name 2.6.0 without beta, list R with CI, VM upgrade, compatibility packages, contract 1.0.0.0, release assets). Frozen features: music overlay, lockscreen, desktop right-click, weather beyond what is merged.
+
+## ΒΗΜΑΤΑ ΓΙΑ ΤΟΝ ΧΡΗΣΤΗ (χειροκίνητη δοκιμή των νέων DeskContainers) — απλά ελληνικά
+Πλήρης οδηγός: `docs/TRY-NATIVE-CONTAINERS.md`. Συνοπτικά:
+1. Κλείσε το εγκατεστημένο Opsis. Άνοιξε τον φάκελο `Opsis-2.6.0-beta-portable` και κάνε διπλό κλικ στο `Start-Opsis-TEST.bat`.
+2. **Win+D:** άνοιξε 2-3 παράθυρα και πάτα Win+D. Το container πρέπει να φαίνεται πάνω από την επιφάνεια. Πάτα Win+D ξανά: τα παράθυρα γυρίζουν και το container μένει κάτω από αυτά.
+3. **Επανεκκίνηση Explorer:** Task Manager → «Windows Explorer» → Επανεκκίνηση. Σε 1-2 δευτερόλεπτα το container πρέπει να είναι ξανά στη θέση του.
+4. **Δύο οθόνες / DPI:** σύρε το container στη δεύτερη οθόνη, κλείσε και ξανάνοιξε το δοκιμαστικό· πρέπει να ξαναβρεθεί εκεί με σωστό μέγεθος και καθαρά γράμματα. Δοκίμασε και 150 % / 200 % κλίμακα.
+5. **Κλείδωμα (Win+L):** κλείδωσε, ξεκλείδωσε· το γυαλί δεν πρέπει να είναι παγωμένο.
+6. **Drag & drop:** σύρε ένα αρχείο από την Εξερεύνηση μέσα στο container, μετά ξανά το ίδιο (δεν πρέπει να διπλασιάζεται).
+7. Αν κάτι πάει στραβά: διπλό κλικ στο `Rescue-Desktop.bat`.
+8. Πες μου τι είδες. Για μέτρηση πόρων τρέξε και το `tools
+esource-logger.ps1` για λίγη ώρα.
 
 ## ΖΗΤΗΘΗΚΕ → ΚΑΤΑΣΤΑΣΗ (λίστα από OPSIS_UNIFIED_MASTER_PLAN, INTAKE, CHANGELOG «Υπόλοιπο», TASKS §22-A) — ενημερώνεται ανά ενότητα
 Σειρά εργασίας: φθηνά/εύκολα πρώτα. ✓ έγινε · ◐ μερικό · ☐ μένει · ⛔ χρειάζεται χρήστη/απόφαση/τρίτο repo.
@@ -92,9 +120,9 @@ Portable build outside the repo + `docs/TRY-NATIVE-CONTAINERS.md` (Greek). Rescu
 | 18 | Lockscreen GIF (LockscreenGif — έλεγχος άδειας) + «ταίριασμα» χωρίς καιρό/ώρα | ⛔ δεν ξεκίνησε: πρώτα έλεγχος άδειας/τεχνικής του LockscreenGif και σχεδιασμός (η οθόνη κλειδώματος των Windows δεν δέχεται κινούμενο περιεχόμενο εύκολα) |
 | 19 | Αφαίρεση φάσματος ήχου από στοιχεία wallpaper | ✓ (στοιχείο, κατάλογος, ετικέτα, JS, polling 80 ms αφαιρέθηκαν· το widget Audio Visualizer μένει) |
 | 20 | Music overlay (GSMTC, clean-room, χωρίς γραμματοσειρές Rainbow) | ◐ έτοιμο: `NowPlayingService` (event-driven GSMTC, εξώφυλλο ≤160 px), `MusicOverlayWindow` (layered, click-through, glass pane αν GPU glass), 9 θέσεις, ρύθμιση Appearance→Advanced (ζωντανή, 14 γλώσσες), `--test-music-overlay`. ☐ visualizations Media Suite (άλλη εφαρμογή), ⛔ δοκιμή με πραγματικό player στην επιφάνεια |
-| 21 | Wallpapers landmarks + ποιότητα (2.1.5/2.1.5β) | ◐ Ribbons φθηνότερο (GPU −35 %)· landmarks/3D ☐ (άδειες μοντέλων) |
+| 21 | Wallpapers landmarks + ποιότητα (2.1.5/2.1.5β) | ◐ ΝΕΟ: `landmarks.js` — 23 ξεκάθαρα σιλουέτες-αξιοθέατα (Παρθενώνας, Λευκός Πύργος, Eiffel, Big Ben, Άγαλμα Ελευθερίας, Κολοσσαίο, Πίζα, Sagrada Família, Βραδεμβούργο, Αγία Σοφία, Πυραμίδες, Burj, Taj Mahal, Tokyo Tower, Όπερα Σίδνεϊ, Golden Gate, Χριστός Ρίο, Matterhorn, Fuji, CN Tower, Petronas, Belém, Κερύνεια) ζωγραφισμένες από μένα (χωρίς μοντέλα/άδειες), επιλέγονται από το ΣΥΝΔΕΔΕΜΕΝΟ με τη θέση καιρού (lat/lon, δηλ. και τη «θέση συσκευής») το πλησιέστερο ≤250 km, στον ορίζοντα του Weather wallpaper με χρώμα λόφων (ομίχλη/χιόνι/νύχτα), διακόπτης στη σελίδα Wallpaper (14 γλώσσες), 2 tests, φύλλο προεπισκόπησης ελέγχθηκε οπτικά. ☐ έλεγχος στο ζωντανό wallpaper. Παλιότερο: Ribbons φθηνότερο (GPU −35 %)· landmarks/3D ☐ (άδειες μοντέλων) |
 | 22 | Δεξί κλικ επιφάνειας: Νέο DeskContainer / Αλλαγή wallpaper (0Β.3) | ◐ Επίσημη τεκμηρίωση (Microsoft Learn «Creating Shortcut Menu Handlers», «Add a File Explorer context menu command to a packaged desktop app»): στατικά verbs στο `DesktopBackground\Shell` = κλασικό μενού («Εμφάνιση περισσότερων επιλογών»/Shift+δεξί κλικ)· το νέο πάνω-επίπεδο μενού Win11 θέλει `IExplorerCommand` + sparse package με identity + υπογραφή → ΔΕΝ έγινε. Έγινε: opt-in HKCU verbs (`DesktopMenu`, χωρίς elevation) που στέλνουν whitelisted εντολή (new-container / next-video) στη ζωντανή εγκατάσταση μέσω pipe ανά χρήστη, ρύθμιση Appearance→Advanced (14 γλώσσες), 2 tests. Εναλλακτική πρόσβαση: tray/DeskStrip. ⛔ δοκιμή στο πραγματικό desktop (Win11 build 26200.9818+/παλιότερο), απόφαση για sparse package/υπογραφή |
-| 23 | Ακριβής καιρός: πάροχος + opt-in τοποθεσία (0Β.5) | ◐ υλοποιήθηκε (2.6.0-app): `WeatherHub` με NWS/Open-Meteo/MET Norway, βλ. `docs/WEATHER-PROVIDERS.md` |
+| 23 | Ακριβής καιρός: πάροχος + opt-in τοποθεσία (0Β.5) | ✓ ΜΠΗΚΕ ΚΑΙ ΣΤΟ 2.6.0-beta (patch του opsis-app: NWS/Open-Meteo/MET Norway με fallback, πηγή+ώρα παρατήρησης, προαιρετική στρογγυλοποιημένη τοποθεσία συσκευής + διαγραφή, ήλιος/σελήνη από lat/lon, 52 tests· 273 tests συνολικά) · παλιότερο: `docs/WEATHER_PROVIDERS.md`: συγκριτικός πίνακας (Open-Meteo επιβεβαιωμένοι όροι, MET Norway, NWS) + σχεδιασμός privacy· ⛔ απόφαση χρήστη (α: μόνο Open-Meteo / β: + MET Norway/NWS) πριν κώδικα |
 | 24 | Perf §9.1: DeskStrip SyncItems lookups/εκτός UI thread | ✓ dictionaries + απαρίθμηση παραθύρων σε worker (⛔ δοκιμή στο ζωντανό dock) |
 | 25 | Perf §9.1: FeatureOverride cache | ✓ 2.4.6.1 |
 | 26 | Perf §9.2: FlatToggle font | ✓ Opsis.UI 0.3.1 · FlatTabs rects cache + FlatComboBox popup dispose ✓ (Opsis.UI 0.4.0) · custom painting (slider) ☐ μετά από προφίλ |
@@ -103,3 +131,4 @@ Portable build outside the repo + `docs/TRY-NATIVE-CONTAINERS.md` (Greek). Rescu
 | 29 | Opsis ξεκινά ΠΡΩΤΟ στην εκκίνηση Windows (§22-1) | ☐ scheduled task με καθυστέρηση |
 | 30 | Explorer restart → μαύρη οθόνη (§22-5) | ◐ υπάρχει ExplorerRestartWatcher (+tests) από 2.4.x· ⛔ επιβεβαίωση σε πραγματικό restart |
 | 31 | Μέτρηση RAM/CPU baseline, soak logger | ⛔ τρέχει ο χρήστης (tools/resource-logger.ps1) |
+

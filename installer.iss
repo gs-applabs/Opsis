@@ -324,9 +324,10 @@ Source: "bin\Release\net10.0-windows10.0.19041.0\win-x64\publish\*"; DestDir: "{
 Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
 Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon
 
-[UninstallRun]
-Filename: "{app}\containers\OpsisContainers.exe"; Parameters: "--unhide-desktop"; Flags: runhidden skipifdoesntexist; RunOnceId: "UnhideDesktopIcons"
-Filename: "{sys}\taskkill.exe"; Parameters: "/F /IM OpsisContainers.exe"; Flags: runhidden; RunOnceId: "StopOpsisContainers"
+[InstallDelete]
+; 2.6.0: the WPF DeskContainers fork (containers\OpsisContainers.exe) is gone; the native core is part of Opsis.exe. An upgrade removes the old engine files
+; (PrepareToInstall first puts back any desktop icon the old engine had hidden). The user's DATA (%AppData%\Opsis\containers) is never touched: the new core imports it read-only.
+Type: filesandordirs; Name: "{app}\containers"
 
 [Registry]
 ; Αυτόματη εκκίνηση μέσω Registry (αν επιλεχθεί στο wizard)
@@ -341,7 +342,7 @@ Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: 
 Filename: "{cmd}"; Parameters: "/C winget install --id Gyan.FFmpeg -e --silent --accept-package-agreements --accept-source-agreements & exit 0"; StatusMsg: "{cm:InstallingFfmpeg}"; Flags: runhidden; Tasks: installffmpeg
 
 ; 2. Εκκίνηση της εφαρμογής μετά το τέλος της εγκατάστασης
-Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"; Flags: nowait postinstall skipifsilent
+Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"; Flags: nowait postinstall skipifsilent runasoriginaluser
 
 ; 3. Self-update: the updater starts this setup with /RESTARTOPSIS=1 and Opsis opens again when the update finished. (This replaces a hidden PowerShell helper that waited for the setup.)
 Filename: "{app}\{#MyAppExeName}"; Flags: nowait runasoriginaluser; Check: RestartOpsisRequested
@@ -540,11 +541,16 @@ begin
     Log('Older appearance uninstaller finished with code ' + IntToStr(ResultCode));
 end;
 
-// The DeskContainers engine (containers\OpsisContainers.exe) keeps its files locked while it runs: stop it before files are replaced.
+// Upgrade from 2.4.x: the old DeskContainers engine (containers\OpsisContainers.exe) is removed by [InstallDelete]. Before that it puts back every desktop icon it had
+// hidden (--unhide-desktop) and is stopped, because it keeps its files locked while it runs.
 function PrepareToInstall(var NeedsRestart: Boolean): String;
 var
   ResultCode: Integer;
+  OldEngine: String;
 begin
+  OldEngine := ExpandConstant('{app}\containers\OpsisContainers.exe');
+  if FileExists(OldEngine) then
+    Exec(OldEngine, '--unhide-desktop', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
   Exec(ExpandConstant('{sys}\taskkill.exe'), '/F /IM OpsisContainers.exe', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
   RemovePerUserInstall;
   RemoveOldAppearance;

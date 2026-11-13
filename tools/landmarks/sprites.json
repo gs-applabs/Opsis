@@ -1,0 +1,9 @@
+[
+ ["parthenon", "File:Parthenon east side Acropolis Athens, Greece.jpg", [0.075, 0.0, 1.0, 1.0], [0.12, 0.38], 0.0, 760],
+ ["taj", "File:The Taj Mahal, Agra, India (54338829301).jpg", [0.0, 0.0, 0.94, 0.66], [0.10, 0.34], 0.0, 900],
+ ["eiffel", "File:Eiffel Tower (1182085785).jpg", [0.12, 0.0, 0.66, 0.60], [0.10, 0.34], 0.18, 380],
+ ["bigben", "File:Big Ben (9331129418).jpg", [0.1, 0.0, 0.4, 0.58], [0.10, 0.34], 0.2, 320],
+ ["patras", "File:Leuchtturm Patras 2.jpg", [0.22, 0.0, 0.78, 0.98], [0.02, 0.10], 0.0, 420],
+ ["rioantirrio", "File:Rio-Antirrio Bridge.jpg", [0.36, 0.2, 1.0, 0.8], [0.10, 0.34], 0.12, 520],
+ ["nafplio", "File:The Castle of Bourtzi on 30 March 2019.jpg", [0.12, 0.28, 0.88, 0.5], [0.06, 0.22], 0.0, 760]
+]

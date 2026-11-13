@@ -30,6 +30,7 @@ html,body{margin:0;padding:0;width:100vw;height:100vh;overflow:hidden;background
 <iframe id="mediaFrame" allow="autoplay; encrypted-media" referrerpolicy="strict-origin-when-cross-origin"></iframe>
 <div id="wxInfo"><div id="wxTime"></div><div id="wxDate"></div><div id="wxTemp"></div><div id="wxWind"></div><div id="wxCity"></div></div>
 <div id="pulse"></div>
+<script src="landmarks.js"></script>
 <script src="weather.js"></script>
 <script src="elements.js"></script>
 <script>
@@ -848,7 +849,7 @@ async function doRefresh() {
 
     if (window.WeatherWallpaper) {
         const wx = cfg.mode === 'Weather';   // οι προσομοιώσεις (καιρός/ώρα/άνεμος) ισχύουν μόνο στο Weather mode — τα υπόλοιπα modes δείχνουν την πραγματική ώρα/θερμοκρασία
-        WeatherWallpaper.setConfig({ weatherSim: wx ? (cfg.weatherSim || 'Auto') : 'Auto', timeSim: wx ? (cfg.timeSim || 'Auto') : 'Auto', windSim: wx ? (cfg.windSim || 'Auto') : 'Auto', glass: cfg.weatherGlass !== false, lat: cfg.weatherLat, lon: cfg.weatherLon });
+        WeatherWallpaper.setConfig({ weatherSim: wx ? (cfg.weatherSim || 'Auto') : 'Auto', timeSim: wx ? (cfg.timeSim || 'Auto') : 'Auto', windSim: wx ? (cfg.windSim || 'Auto') : 'Auto', glass: cfg.weatherGlass !== false, landmarks: cfg.weatherLandmarks !== false, landmarkId: cfg.weatherLandmarkId || 'Auto', lat: cfg.weatherLat, lon: cfg.weatherLon });
     }
     clearTimeout(rotationTimer); clearInterval(rotationTimer);
     rotationTimer = null;

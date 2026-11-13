@@ -145,8 +145,14 @@ namespace MotionDesk.Services
 
         /// <summary>2.6.0: draw the DeskStrip glass with the GPU glass layer (Opsis.Glass): real transparency, live refraction of what is behind. Off until tested on real machines.</summary>
         public bool UseGpuGlass { get; set; }
-        /// <summary>EXPERIMENTAL (2.6.0 beta): run the new native container windows (own data file containers-native.json, pipe opsis-containers-v1-*) instead of the WPF fork. Only a settings.json flag until the switch-off phase; turn the fork engine off first or both show.</summary>
-        public bool UseNativeContainers { get; set; }
+        /// <summary>2.6.0: the native DeskContainers core (own data file containers-native.json, pipe opsis-containers-v1-*). The WPF fork was removed; on first start the 2.4.x data is imported read-only.</summary>
+        public bool UseNativeContainers { get; set; } = true;
+        /// <summary>Dropping a desktop icon into a container hides the desktop original (as the old engine did). The originals are ALWAYS given back on exit, at the next start and by --restore-desktop-icons.</summary>
+        public bool HideOriginalsOnDrop { get; set; } = true;
+        /// <summary>Dragging an icon from one container into another: false = Move (Ctrl copies), true = Copy (Ctrl moves).</summary>
+        public bool ContainerDragCopies { get; set; }
+        /// <summary>After a rubber-band selection of two or more desktop icons, offer to make a container from them.</summary>
+        public bool OfferContainerFromSelection { get; set; } = true;
         /// <summary>Music overlay (plan 2.1.6): a glass card with the cover / title / artist of whatever any player is playing. Off by default.</summary>
         public bool MusicOverlayEnabled { get; set; }
         /// <summary>Opt-in: "New DeskContainer" / "Next animated wallpaper" in the desktop right-click menu (per-user registry verbs, see DesktopMenu).</summary>
@@ -161,8 +167,11 @@ namespace MotionDesk.Services
         // 2.6.0: the shared settings file of the Opsis family (Opsis.UI.SettingsStore): "schemaVersion" in the file, step migrations (none yet: version 1 is the
         // first numbered shape), atomic write with a .bak of the last good file, and a damaged file is moved to .corrupt instead of being silently ignored.
         // The store is cheap to create, so it follows AppPaths.AppDataFolder (tests / OPSIS_APPDATA) on every call.
-        public const int SchemaVersion = 1;
-        private static SettingsStore<AppSettings> Store() => new(ConfigPath, SchemaVersion);
+        public const int SchemaVersion = 2;
+        private static SettingsStore<AppSettings> Store() => NewStore(ConfigPath);
+
+        /// <summary>Version 2 (2.6.0): the native DeskContainers core is the default. Earlier betas wrote UseNativeContainers=false into the file, which would keep the new core OFF after an upgrade: the step turns it on once.</summary>
+        internal static SettingsStore<AppSettings> NewStore(string path) => new SettingsStore<AppSettings>(path, SchemaVersion).AddMigration(1, o => o["UseNativeContainers"] = true);
 
         public static AppSettings Load() => Store().Load();
 

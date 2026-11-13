@@ -3,8 +3,10 @@ using System.Drawing;
 namespace Opsis.Containers;
 
 /// <summary>The measurements of one container view (everything in device pixels; the host multiplies DIPs by its DPI scale before asking).</summary>
-public sealed record ContainerMetrics(int TitleBarHeight, int IconSize, int Spacing, int Margin, int LabelHeight)
+public sealed record ContainerMetrics(int TitleBarHeight, int IconSize, int Spacing, int Margin, int LabelHeight, int TopInset = 0)
 {
+    /// <summary>Where the content starts: below the title bar and, when the container has tabs, below the tab strip.</summary>
+    public int Top => TitleBarHeight + TopInset;
     public static ContainerMetrics Default(float scale = 1f, int titleBarDips = 28, int iconDips = 48) =>
         new((int)Math.Round(titleBarDips * scale), (int)Math.Round(iconDips * scale), (int)Math.Round(8 * scale), (int)Math.Round(10 * scale), (int)Math.Round(34 * scale));
 
@@ -34,7 +36,7 @@ public static class ContainerLayout
     }
 
     /// <summary>The area below the title bar that shows the items.</summary>
-    public static Rectangle Viewport(Size client, ContainerMetrics m) => new(0, m.TitleBarHeight, client.Width, Math.Max(0, client.Height - m.TitleBarHeight));
+    public static Rectangle Viewport(Size client, ContainerMetrics m) => new(0, m.Top, client.Width, Math.Max(0, client.Height - m.Top));
 
     public static int MaxScroll(Size client, int itemCount, ContainerMetrics m) => Math.Max(0, ContentHeight(client.Width, itemCount, m) - Viewport(client, m).Height);
 
@@ -48,7 +50,7 @@ public static class ContainerLayout
         var totalW = cols * m.CellWidth + (cols - 1) * m.Spacing;
         var left = m.Margin + Math.Max(0, (client.Width - 2 * m.Margin - totalW) / 2);      // the grid is centred when there is spare width
         var x = left + col * (m.CellWidth + m.Spacing);
-        var y = m.TitleBarHeight + m.Margin + row * (m.CellHeight + m.Spacing) - scroll;
+        var y = m.Top + m.Margin + row * (m.CellHeight + m.Spacing) - scroll;
         return new Rectangle(x, y, m.CellWidth, m.CellHeight);
     }
 
@@ -69,7 +71,7 @@ public static class ContainerLayout
     /// <summary>The item under a client point, or -1 (title bar, gaps, empty space).</summary>
     public static int HitTest(Point p, Size client, int itemCount, ContainerMetrics m, int scroll)
     {
-        if (p.Y < m.TitleBarHeight || itemCount == 0) return -1;
+        if (p.Y < m.Top || itemCount == 0) return -1;
         var (first, last) = VisibleRange(client, itemCount, m, scroll);
         for (var i = first; i <= last; i++)
             if (CellRect(i, client, m, scroll).Contains(p)) return i;

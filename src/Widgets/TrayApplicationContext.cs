@@ -28,8 +28,12 @@ namespace MotionDesk.Widgets
         public static event Action? ExitRequested;
         public static void RequestExit() => ExitRequested?.Invoke();
 
+        /// <summary>Lets any window ("Settings…" in its own right-click menu) open a page of the main window.</summary>
+        public static Action<string>? OpenPage;
+
         public TrayApplicationContext()
         {
+            OpenPage = p => { try { ShowMainWindow(p); } catch (Exception) { } };
             // Safe mode (v2.0 handoff, Φάση 1 §S): αν ενεργό, παραλείπονται plugins/wallpaper/
             // "Last Session" παρακάτω — μόνο το βασικό UI. Ο μετρητής crash μηδενίζεται μετά από
             // 30s επιτυχούς λειτουργίας (one-shot timer πιο κάτω), όχι αμέσως, ώστε ένα crash λίγο
@@ -79,7 +83,7 @@ namespace MotionDesk.Widgets
             contextMenu.Items.Add(wallpaperMenu);
 
             // ---- DeskContainers (items and state come from the engine through the bridge)
-            if (ContainersEngine.IsAvailable) contextMenu.Items.Add(BuildContainersTrayMenu());
+            if (AppSettings.Load().UseNativeContainers) contextMenu.Items.Add(BuildContainersTrayMenu());
 
             // ---- Desktop tools
             var desktopMenu = new ToolStripMenuItem(LocalizationManager.T("Tray.GroupDesktop"));
@@ -172,7 +176,6 @@ namespace MotionDesk.Widgets
             AppActivity.Start();
             MotionDesk.Services.DiscordPresence.Instance.Apply();
             BackdropContrast.EnsureStarted();
-            if (!safeMode && ContainersEngine.Enabled) ContainersEngine.Start();
             if (!safeMode && AppSettings.Load().DesktopMenuEnabled)
             {
                 try { _controlPipe = new Opsis.Containers.PipeServer(DesktopMenu.PipeName, new DesktopMenu.Api()); _controlPipe.Start(); DesktopMenu.Apply(true); }
@@ -181,10 +184,27 @@ namespace MotionDesk.Widgets
             if (!safeMode) { try { MusicOverlay.Apply(); } catch (Exception ex) { RotatingLogger.Write("music overlay failed to start: " + ex.Message); } }
             if (!safeMode && AppSettings.Load().UseNativeContainers)
             {
-                try { _nativeContainers = new MotionDesk.Containers.ContainerHost(new Opsis.Containers.ContainersStore(Path.Combine(AppPaths.AppDataFolder, "containers-native.json")), Opsis.Containers.PipeProtocol.DefaultName); }
+                try
+                {
+                    var nativeStore = new Opsis.Containers.ContainersStore(Path.Combine(AppPaths.AppDataFolder, "containers-native.json"));
+                    try
+                    {
+                        var mons = Screen.AllScreens.Select(sc => new Opsis.Containers.MonitorInfo(sc.DeviceName, sc.Bounds, sc.Primary)).ToList();
+                        var note = MotionDesk.Containers.NativeMigration.ImportIfNeeded(nativeStore, Path.Combine(AppPaths.AppDataFolder, "containers"), mons);
+                        if (note != null) RotatingLogger.Write(note);
+                    }
+                    catch (Exception ex) { RotatingLogger.Write("native containers: legacy import failed: " + ex.Message); }
+                    var host = _nativeContainers = new MotionDesk.Containers.ContainerHost(nativeStore, Opsis.Containers.PipeProtocol.DefaultName);
+                    // global hotkeys of the native containers: Ctrl+Alt+Shift+H = hide / show all, Ctrl+Alt+Shift+N = new container at the cursor (neither is a Windows default)
+                    _hotkeys.RegisterCtrlAltShift(Keys.H, () => host.ToggleAll());
+                    _hotkeys.RegisterCtrlAltShift(Keys.N, () => host.NewContainerAtCursor());
+                    _hotkeys.RegisterCtrl(Keys.Oemtilde, () => host.ShowSpotSearch());                              // Spot Search (Ctrl+`), as in the old engine
+                    _hotkeys.RegisterCtrlAltShift(Keys.F, () => host.FocusNext());                                    // focus-container hotkey
+                    _hotkeys.RegisterCtrlAltShift(Keys.OemCloseBrackets, () => host.CycleSnapshot(1));            // next / previous layout snapshot = profile hotkeys
+                    _hotkeys.RegisterCtrlAltShift(Keys.OemOpenBrackets, () => host.CycleSnapshot(-1));
+                }
                 catch (Exception ex) { RotatingLogger.Write("native containers failed to start: " + ex.Message); }
             }
-            ContainersEngine.SettingsRequested += () => ShowMainWindow("DeskZones");
 
             // Restore lightweight persistent preferences before showing the manager.
             var appSettings = AppSettings.Load();
@@ -512,6 +532,37 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
         // αποθηκεύεται η συνεδρία και να σταματούν σωστά τα plugins/hotkeys πριν το Application.Exit().
         // DeskContainers group of the tray menu. The engine publishes its state (profiles, switches, hidden containers) in bridge\state.json;
         // the submenu is rebuilt every time it opens, and every entry sends a command to the engine through the bridge.
+        // The tray menu of the NEW native DeskContainers (UseNativeContainers): same group, entries talk to the in-process host instead of the WPF engine.
+        private void FillNativeContainersMenu(ToolStripMenuItem menu, MotionDesk.Containers.ContainerHost host)
+        {
+            string T(string key) => LocalizationManager.T(key);
+            menu.DropDownItems.Add(T("DCM.BackupNow"), null, (s, e) => { try { host.Backup(true); } catch (Exception) { } });
+            menu.DropDownItems.Add(T("DCM.NewContainer"), null, (s, e) => host.NewContainerAtCursor());
+            menu.DropDownItems.Add(T("DCX.NewNote"), null, (s, e) => host.NewContainerAtCursor("Note"));
+            menu.DropDownItems.Add(T("DCM.NewPortal"), null, (s, e) => host.NewContainerAtCursor("Portal"));
+            menu.DropDownItems.Add(new ToolStripSeparator());
+            var list = host.Containers();
+            var focus = new ToolStripMenuItem(T("DCM.FocusContainer")) { Enabled = list.Any(c => !c.Hidden) };
+            var hidden = new ToolStripMenuItem(T("DCM.HiddenContainers")) { Enabled = list.Any(c => c.Hidden) };
+            foreach (var c in list)
+            {
+                string id = c.Id; string title = string.IsNullOrWhiteSpace(c.Title) ? id[..Math.Min(6, id.Length)] : c.Title;
+                if (c.Hidden) hidden.DropDownItems.Add(title, null, (s, e) => host.SetHidden(id, false));
+                else focus.DropDownItems.Add(title, null, (s, e) => host.Focus(id));
+            }
+            menu.DropDownItems.Add(focus); menu.DropDownItems.Add(hidden);
+            var snaps = new ToolStripMenuItem(T("DCM.Snapshots"));
+            snaps.DropDownItems.Add(T("DCM.SaveSnapshot"), null, (s, e) => host.SaveSnapshot("Layout " + DateTime.Now.ToString("yyyy-MM-dd HH.mm")));
+            var names = host.SnapshotNames();
+            if (names.Count > 0) snaps.DropDownItems.Add(new ToolStripSeparator());
+            foreach (var n in names) { string name = n; snaps.DropDownItems.Add(name, null, (s, e) => host.LoadSnapshot(name)); }
+            menu.DropDownItems.Add(snaps);
+            menu.DropDownItems.Add(new ToolStripSeparator());
+            menu.DropDownItems.Add(T("DCM.QuickHide") + " / " + T("DCM.QuickShow"), null, (s, e) => host.ToggleAll());
+            menu.DropDownItems.Add(T("DCM.RestoreIcons"), null, (s, e) => { DesktopIconVisibilityEngine.Instance.RestoreIfHidden(); });
+            menu.DropDownItems.Add(T("DCM.OpenSettingsPage"), null, (s, e) => ShowMainWindow("DeskZones"));
+        }
+
         private ToolStripMenuItem BuildContainersTrayMenu()
         {
             string T(string key) => LocalizationManager.T(key);
@@ -520,57 +571,8 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
             {
                 foreach (ToolStripItem old in menu.DropDownItems) old.Dispose();
                 menu.DropDownItems.Clear();
-                void Add(ToolStripItemCollection to, string key, string cmd) => to.Add(T(key), null, (s, e) => ContainersBridge.Command(cmd));
-                if (!ContainersEngine.IsRunning)
-                {
-                    menu.DropDownItems.Add(T("DCM.StartEngine"), null, (s, e) => ContainersEngine.Start());
-                    menu.DropDownItems.Add(T("DCM.OpenSettingsPage"), null, (s, e) => ShowMainWindow("DeskZones"));
-                    return;
-                }
-                var state = ContainersBridge.ReadState();
-                Add(menu.DropDownItems, "DCM.NewContainer", "new-fence");
-                Add(menu.DropDownItems, "DCM.NewNote", "new-note");
-                menu.DropDownItems.Add(new ToolStripSeparator());
-
-                var profiles = new ToolStripMenuItem(T("DCM.Profiles"));
-                foreach (var name in state.Profiles)
-                {
-                    string n = name;
-                    var it = new ToolStripMenuItem(n) { Checked = string.Equals(n, state.Profile, StringComparison.OrdinalIgnoreCase) };
-                    it.Click += (s, e) => ContainersBridge.Command("profile:" + n);
-                    profiles.DropDownItems.Add(it);
-                }
-                if (profiles.DropDownItems.Count > 0) profiles.DropDownItems.Add(new ToolStripSeparator());
-                Add(profiles.DropDownItems, "DCM.ManageProfiles", "manage-profiles");
-                Add(profiles.DropDownItems, "DCM.ManageAutomation", "manage-automation");
-                var auto = new ToolStripMenuItem(T("DCM.ProfileAutomation")) { Checked = state.Automation };
-                auto.Click += (s, e) => ContainersBridge.Command("toggle-automation");
-                profiles.DropDownItems.Add(auto);
-                menu.DropDownItems.Add(profiles);
-
-                var smart = new ToolStripMenuItem(T("DCM.Smart"));
-                var org = new ToolStripMenuItem(T("DCM.AutoOrganize")) { Checked = state.AutoOrganize };
-                org.Click += (s, e) => ContainersBridge.Command("toggle-autoorganize");
-                smart.DropDownItems.Add(org);
-                Add(smart.DropDownItems, "DCM.SmartRules", "smart-rules");
-                Add(smart.DropDownItems, "DCM.OrganizeNow", "organize-now");
-                menu.DropDownItems.Add(smart);
-
-                var hidden = new ToolStripMenuItem(T("DCM.HiddenContainers")) { Enabled = state.Hidden.Length > 0 };
-                foreach (var title in state.Hidden)
-                {
-                    string t = title;
-                    hidden.DropDownItems.Add(t, null, (s, e) => ContainersBridge.Command("show-hidden:" + t));
-                }
-                menu.DropDownItems.Add(hidden);
-                Add(menu.DropDownItems, "DCM.FocusContainer", "focus-fence");
-                menu.DropDownItems.Add(new ToolStripSeparator());
-                Add(menu.DropDownItems, "DCM.QuickHide", "quick-hide");
-                Add(menu.DropDownItems, "DCM.QuickShow", "quick-show");
-                Add(menu.DropDownItems, "DCM.Reload", "reload-all");
-                Add(menu.DropDownItems, "DCM.Backup", "backup");
-                menu.DropDownItems.Add(new ToolStripSeparator());
-                menu.DropDownItems.Add(T("DCM.OpenSettingsPage"), null, (s, e) => ShowMainWindow("DeskZones"));
+                if (MotionDesk.Containers.ContainerHost.Current is { } native) FillNativeContainersMenu(menu, native);
+                else menu.DropDownItems.Add(T("DCM.OpenSettingsPage"), null, (s, e) => ShowMainWindow("DeskContainers"));
             }
             menu.DropDownOpening += (s, e) => Fill();
             Fill();

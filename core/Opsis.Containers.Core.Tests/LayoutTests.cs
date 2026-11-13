@@ -92,4 +92,14 @@ public sealed class LayoutTests
         Assert.Equal(10, ContainerLayout.DropIndex(new Point(5, 5000), Client, 10, M, 0));
         Assert.Equal(0, ContainerLayout.DropIndex(new Point(5, 5), Client, 0, M, 0));
     }
+
+    [Fact]
+    public void TheTabStripPushesTheContentDown()
+    {
+        var plain = ContainerMetrics.Default(1f, 28, 48); var tabs = plain with { TopInset = 26 };
+        var client = new System.Drawing.Size(400, 300);
+        Assert.Equal(plain.TitleBarHeight + 26, tabs.Top);
+        Assert.Equal(ContainerLayout.CellRect(0, client, plain, 0).Y + 26, ContainerLayout.CellRect(0, client, tabs, 0).Y);
+        Assert.Equal(-1, ContainerLayout.HitTest(new System.Drawing.Point(30, plain.TitleBarHeight + 10), client, 5, tabs, 0));      // inside the tab strip: no icon
+    }
 }

@@ -1,0 +1,100 @@
+[
+    {
+        "file":  "parthenon.webp",
+        "commonsTitle":  "Parthenon east side Acropolis Athens, Greece.jpg",
+        "commonsUrl":  "https://commons.wikimedia.org/wiki/File:Parthenon_east_side_Acropolis_Athens,_Greece.jpg",
+        "author":  "Jebulon",
+        "license":  "CC0",
+        "licenseUrl":  "http://creativecommons.org/publicdomain/zero/1.0/deed.en",
+        "attributionRequired":  false,
+        "changes":  "Sky removed (colour keying), cropped, scaled to 760 px wide, converted to WebP.",
+        "checkedOn":  "2026-11-12",
+        "monumentRights":  "Monument: 5th century BC (public domain). Photo: CC0."
+    },
+    {
+        "file":  "taj.webp",
+        "commonsTitle":  "The Taj Mahal, Agra, India (54338829301).jpg",
+        "commonsUrl":  "https://commons.wikimedia.org/wiki/File:The_Taj_Mahal,_Agra,_India_(54338829301).jpg",
+        "author":  "Mustang Joe",
+        "license":  "CC0",
+        "licenseUrl":  "http://creativecommons.org/publicdomain/zero/1.0/deed.en",
+        "attributionRequired":  false,
+        "changes":  "Sky removed (colour keying), cropped, scaled to 900 px wide, converted to WebP.",
+        "checkedOn":  "2026-11-12",
+        "monumentRights":  "Monument: 17th century (public domain). Photo: CC0."
+    },
+    {
+        "file":  "eiffel.webp",
+        "commonsTitle":  "Eiffel Tower (1182085785).jpg",
+        "commonsUrl":  "https://commons.wikimedia.org/wiki/File:Eiffel_Tower_(1182085785).jpg",
+        "author":  "salomon10 from Germany",
+        "license":  "CC BY 2.0",
+        "licenseUrl":  "https://creativecommons.org/licenses/by/2.0",
+        "attributionRequired":  true,
+        "changes":  "Sky removed (colour keying), cropped, scaled to 380 px wide, converted to WebP.",
+        "checkedOn":  "2026-11-12",
+        "monumentRights":  "Monument: G. Eiffel d. 1923 (public domain). DAYTIME photo only: the evening light show of the tower is protected by copyright and is not used. Photo: CC BY 2.0, attribution required."
+    },
+    {
+        "file":  "bigben.webp",
+        "commonsTitle":  "Big Ben (9331129418).jpg",
+        "commonsUrl":  "https://commons.wikimedia.org/wiki/File:Big_Ben_(9331129418).jpg",
+        "author":  "salomon10 from Germany",
+        "license":  "CC BY 2.0",
+        "licenseUrl":  "https://creativecommons.org/licenses/by/2.0",
+        "attributionRequired":  true,
+        "changes":  "Sky removed (colour keying), cropped, scaled to 320 px wide, converted to WebP.",
+        "checkedOn":  "2026-11-12",
+        "monumentRights":  "Monument: Elizabeth Tower, architect C. Barry d. 1860 (public domain; UK law allows photographs of buildings). Photo: CC BY 2.0, attribution required."
+    },
+    {
+        "file":  "patras.webp",
+        "commonsTitle":  "Leuchtturm Patras 2.jpg",
+        "commonsUrl":  "https://commons.wikimedia.org/wiki/File:Leuchtturm_Patras_2.jpg",
+        "author":  "--Xocolatl (talk) 13:17, 9 October 2010 (UTC)",
+        "license":  "Public domain",
+        "licenseUrl":  "",
+        "attributionRequired":  false,
+        "changes":  "Sky removed (colour keying), cropped, scaled to 420 px wide, converted to WebP.",
+        "checkedOn":  "2026-11-12",
+        "monumentRights":  "Monument: lighthouse of Patras, 19th century (public domain). Photo: marked public domain by its author."
+    },
+    {
+        "file":  "rioantirrio.webp",
+        "commonsTitle":  "Rio-Antirrio Bridge.jpg",
+        "commonsUrl":  "https://commons.wikimedia.org/wiki/File:Rio-Antirrio_Bridge.jpg",
+        "author":  "Erik Drost",
+        "license":  "Public domain",
+        "licenseUrl":  "",
+        "attributionRequired":  false,
+        "changes":  "Sky removed (colour keying), cropped, scaled to 520 px wide, converted to WebP.",
+        "checkedOn":  "2026-11-12",
+        "monumentRights":  "FLAG FOR REVIEW: modern structure (2004). The photo is marked public domain by its author; the bridge is a recent work, shown here under the Greek freedom-of-panorama rule for works permanently in public places (Law 2121/1993, art. 26). Remove the file and its list entry if the owner prefers."
+    },
+    {
+        "file":  "nafplio.webp",
+        "commonsTitle":  "The Castle of Bourtzi on 30 March 2019.jpg",
+        "commonsUrl":  "https://commons.wikimedia.org/wiki/File:The_Castle_of_Bourtzi_on_30_March_2019.jpg",
+        "author":  "George E. Koronaios",
+        "license":  "CC0",
+        "licenseUrl":  "http://creativecommons.org/publicdomain/zero/1.0/deed.en",
+        "attributionRequired":  false,
+        "changes":  "Sky removed (colour keying), cropped, scaled to 760 px wide, converted to WebP.",
+        "checkedOn":  "2026-11-12",
+        "monumentRights":  "Monument: Bourtzi, Venetian fortress 1473 (public domain). Photo: CC0."
+    },
+    {
+        "file":  "acropolis.webp",
+        "lights":  "acropolis-lights.webp",
+        "commonsTitle":  "The Acropolis of Athens from Mount Lycabettus on March 14, 2020.jpg",
+        "commonsUrl":  "https://commons.wikimedia.org/wiki/File:The_Acropolis_of_Athens_from_Mount_Lycabettus_on_March_14,_2020.jpg",
+        "author":  "George E. Koronaios",
+        "license":  "CC0",
+        "licenseUrl":  "http://creativecommons.org/publicdomain/zero/1.0/deed.en",
+        "attributionRequired":  false,
+        "changes":  "Cropped, widened with blurred mirrored edges, top faded to transparency, scaled to 2400 px wide, converted to WebP; the lights image is generated from the photo.",
+        "checkedOn":  "2026-11-12",
+        "monumentRights":  "Aerial view of the Acropolis of Athens (monuments of the 5th century BC, public domain; Greek law allows photographs of works in public places). Photo: CC0.",
+        "kind":  "scene (aerial photograph, replaces sprite and landscape)"
+    }
+]

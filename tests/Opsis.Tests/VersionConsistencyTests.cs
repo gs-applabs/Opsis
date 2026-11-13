@@ -5,7 +5,7 @@ using Xunit;
 
 namespace Opsis.Tests;
 
-// One version everywhere: csproj, the bundled containers project, the installer, README badge, CHANGELOG, the version history and the running assembly.
+// One version everywhere: csproj, the installer, README badge, CHANGELOG, the version history and the running assembly.
 public sealed class VersionConsistencyTests
 {
     private static string Root()
@@ -24,10 +24,9 @@ public sealed class VersionConsistencyTests
         var pre = Regex.Match(Csproj("MotionDeskStudio.csproj", "InformationalVersion"), @"^[0-9.]+(?:-([A-Za-z0-9.]+))?$").Groups[1].Value;
         var label = pre.Length > 0 ? v + " " + pre : v;
 
-        Assert.Equal(v, Csproj("containers/OpsisContainers.csproj", "Version"));
+        Assert.False(Directory.Exists(Path.Combine(Root(), "containers")), "the WPF fork was removed in 2.6.0");
         Assert.StartsWith(v, Csproj("MotionDeskStudio.csproj", "AssemblyVersion"));
         Assert.StartsWith(v, Csproj("MotionDeskStudio.csproj", "FileVersion"));
-        Assert.StartsWith(v, Csproj("containers/OpsisContainers.csproj", "FileVersion"));
 
         var iss = Read("installer.iss");
         Assert.Contains($"#define MyAppVersion \"{v}\"", iss);

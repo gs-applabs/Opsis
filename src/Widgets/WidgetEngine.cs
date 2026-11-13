@@ -486,6 +486,8 @@ namespace MotionDesk.Widgets
             // ΟΧΙ "using": το ContextMenuStrip.Show() δεν μπλοκάρει, οπότε ένα "using" εδώ θα το
             // Dispose-άρει αμέσως μετά το Show() -> flash-and-vanish πριν προλάβει κλικ ο χρήστης.
             var menu = new ContextMenuStrip();
+            menu.Items.Add(LocalizationManager.T("DCM.WidgetSettings"), null, (_, _) => TrayApplicationContext.OpenPage?.Invoke("Widgets"));
+            menu.Items.Add(new ToolStripSeparator());
 
             if (string.Equals(WidgetId, "clock", StringComparison.OrdinalIgnoreCase))
             {
