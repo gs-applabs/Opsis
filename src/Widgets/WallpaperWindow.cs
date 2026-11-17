@@ -1554,12 +1554,16 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Count);
         }
 
         // ---- "Weather" mode settings (each change refreshes the running wallpaper)
+        /// <summary>Raised after the ONE shared weather place changed (the weather widget follows it).</summary>
+        public static event Action? WeatherLocationChanged;
+
         public void SetWeatherLocation(string city, double lat, double lon, string source = "", string detail = "")
         {
             var settings = WallpaperSettings.Load();
             settings.WeatherCity = city; settings.WeatherLat = lat; settings.WeatherLon = lon;
             settings.WeatherPlaceSource = source; settings.WeatherPlaceDetail = detail;
             settings.Save();
+            try { WeatherLocationChanged?.Invoke(); } catch (Exception) { }
             _ = RefreshAllAsync();
         }
 

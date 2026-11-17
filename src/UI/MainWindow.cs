@@ -3242,6 +3242,12 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
             panel.Controls.Add(BuildTopicCard("Nav.Personalization", "Personalization.Intro"));
             panel.Controls.Add(BuildTopicCard("Nav.Automation", "Automation.Intro"));
 
+            // the Opsis family: only the apps of the shared catalogue (suite/apps.json), with their state
+            AddSection(panel, LocalizationManager.T("Tray.Family"));
+            foreach (var app in FamilyApp.Load().Where(a => a.Id != "opsis"))
+                AddText(panel, $"{app.Name}  {(app.InstalledPath != null ? "✓" : "")}\n{app.Tagline}");
+            AddButtonGrid(panel, (LocalizationManager.T("Tray.Family"), (_, _) => FamilyWindows.ShowFamily()));
+
             AddSection(panel, LocalizationManager.T("About.SectionCapabilities"));
             AddText(panel, LocalizationManager.T("About.CapabilitiesList"));
             AddText(panel, string.Format(LocalizationManager.T("About.RuntimeLine"), WidgetHostEngine.Instance.GetActiveWidgets().Count));
