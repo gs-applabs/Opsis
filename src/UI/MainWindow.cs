@@ -3230,9 +3230,7 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
             var version = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version;
             AddText(panel, string.Format(LocalizationManager.T("About.VersionLine"), AppVersion.Label));
             AddText(panel, LocalizationManager.T("About.Body"));
-            // the Opsis family and what this version brings (the full history is behind the button further down)
-            AddSection(panel, Lx("Η οικογένεια Opsis", "The Opsis family"));
-            AddText(panel, Lx("Opsis (αυτή η εφαρμογή) · Opsis News Crawler · GearWin · Kombos · Opsis Media Suite. Οι εφαρμογές της οικογένειας μοιράζονται την ίδια εμφάνιση (Opsis.UI) και τον ίδιο μηχανισμό ενημέρωσης.", "Opsis (this app) · Opsis News Crawler · GearWin · Kombos · Opsis Media Suite. The family shares one look (Opsis.UI) and one update mechanism."));
+            // what this version brings (the family section is further down, from the shared catalogue; the full history is behind the button)
             var notes260 = LocalizationManager.T("VersionNotes.2.6.0");
             if (!string.IsNullOrWhiteSpace(notes260) && !notes260.StartsWith("VersionNotes.")) { AddSection(panel, Lx("Τι φέρνει η 2.6.0", "What 2.6.0 brings")); AddText(panel, notes260); }
 
@@ -4794,7 +4792,7 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                     "Midnight", "Forest", "Dawn", "High contrast" };
                 int idx = Array.IndexOf(modes, current); if (idx < 0) idx = 0;
                 combo.SetItems(labels, labels[idx]);
-                combo.SelectedIndexChanged += (_, _) => ThemeManager.SetMode(modes[Math.Max(0, combo.SelectedIndex)]);
+                combo.SelectedIndexChanged += (_, _) => { var m = modes[Math.Max(0, combo.SelectedIndex)]; ThemeManager.SetMode(m); GlassHost.NoteMode(m); };
                 row.Controls.Add(combo);
                 return row;
             }

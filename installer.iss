@@ -334,9 +334,6 @@ Type: filesandordirs; Name: "{app}\containers"
 Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: string; ValueName: "{#MyAppName}"; ValueData: """{app}\{#MyAppExeName}"""; Tasks: autostart; Flags: uninsdeletevalue
 
 [Run]
-; Early start (2.6.0): a scheduled task "at log on" of the current user, normal rights, no delay. A Run-key entry starts only after Explorer's startup delay, so DeskStrip / containers /
-; widgets appeared late. The Run entry stays as a fallback; the app's single-instance mutex makes a second start harmless.
-Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -Command ""$a=New-ScheduledTaskAction -Execute '{app}\{#MyAppExeName}'; $t=New-ScheduledTaskTrigger -AtLogOn -User $env:USERNAME; $p=New-ScheduledTaskPrincipal -UserId $env:USERNAME -LogonType Interactive -RunLevel Limited; $s=New-ScheduledTaskSettingsSet -ExecutionTimeLimit 0 -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable; Register-ScheduledTask -TaskName 'Opsis Autostart' -Action $a -Trigger $t -Principal $p -Settings $s -Force"""; Flags: runhidden; Tasks: autostart
 ; 1. Προαιρετική εγκατάσταση FFmpeg μέσω winget (μόνο αν ο χρήστης επέλεξε το tickbox παραπάνω).
 ; "& exit 0" αποτρέπει το Inno Setup από το να δείξει σφάλμα αν το winget γυρίσει μη-μηδενικό
 ; exit code (π.χ. "no applicable update found" όταν είναι ήδη εγκατεστημένο).
@@ -567,4 +564,6 @@ begin
 end;
 
 [UninstallRun]
+; the early-start task is created by Opsis itself (Settings, StartupTask: "Opsis\Start with the desktop"); it is removed here, together with the name an earlier beta installer used
+Filename: "{sys}\schtasks.exe"; Parameters: "/Delete /TN ""Opsis\Start with the desktop"" /F"; Flags: runhidden; RunOnceId: "RemoveOpsisEarlyStartTask"
 Filename: "{sys}\schtasks.exe"; Parameters: "/Delete /TN ""Opsis Autostart"" /F"; Flags: runhidden; RunOnceId: "RemoveOpsisAutostartTask"

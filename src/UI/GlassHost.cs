@@ -27,6 +27,16 @@ namespace MotionDesk.UI
         };
 
         /// <summary>The Theme page stores the chosen base theme in the Glass settings, but Opsis' palette comes from ThemeManager: when the choice CHANGES, ThemeManager follows (live, saved). Returns true when it switched.</summary>
+        /// <summary>The Settings page has its own theme list (Follow / Light / Dark / named). A choice made there is mirrored into the Glass base theme, so the Theme page shows the same choice and nothing is re-applied later.</summary>
+        internal static void NoteMode(string mode)
+        {
+            var key = mode switch { "Light" => "light", "Dark" => "dark", "Midnight" => "midnight", "Forest" => "forest", "Dawn" => "dawn", "Contrast" => "contrast", _ => null };
+            if (key == null) return;                                       // "Follow" has no base-theme key
+            _lastBase = key;
+            var a = MotionDesk.Services.AppSettings.Load();
+            if (!string.Equals(a.Glass.BaseTheme, key, StringComparison.OrdinalIgnoreCase)) { a.Glass.BaseTheme = key; a.Save(); }
+        }
+
         private static bool SyncBaseTheme()
         {
             var b = GlassManager.Settings.BaseTheme;
