@@ -39,4 +39,30 @@ public sealed class AppearanceMigrationTests : IDisposable
         Assert.Equal(before, Directory.GetFiles(_dir, "*", SearchOption.AllDirectories).Select(f => (f, File.ReadAllText(f))).ToList());
         Assert.Contains("not migrated", AppearanceMigration.Describe(r));
     }
+
+    [Fact]
+    public void ABackupIsMadeFirstAndTheOriginalsStayUntouched()
+    {
+        File.WriteAllText(Path.Combine(_dir, "appearance.json"), "{}");
+        File.WriteAllText(Path.Combine(_dir, "appearance-original.json"), "[]");
+        Directory.CreateDirectory(Path.Combine(_dir, "themes", "My")); File.WriteAllText(Path.Combine(_dir, "themes", "My", "theme.json"), "{\"a\":1}");
+        string? dest = AppearanceMigration.Backup(_dir, new DateTime(2026, 11, 17, 10, 0, 0));
+        Assert.NotNull(dest);
+        Assert.EndsWith("20261117-100000", dest);
+        Assert.Equal("{}", File.ReadAllText(Path.Combine(dest!, "appearance.json")));
+        Assert.Equal("{\"a\":1}", File.ReadAllText(Path.Combine(dest!, "themes", "My", "theme.json")));
+        Assert.Equal("{}", File.ReadAllText(Path.Combine(_dir, "appearance.json")));   // original unchanged
+        Assert.Null(AppearanceMigration.Backup(Path.Combine(_dir, "nothing-here")));
+    }
+
+    [Fact]
+    public void AnOlderPluginFolderIsFoundAndNeverTouched()
+    {
+        string root = Path.Combine(_dir, "plugins"); string old = Path.Combine(root, "Old"); string other = Path.Combine(root, "Other");
+        Directory.CreateDirectory(old); Directory.CreateDirectory(other);
+        File.WriteAllBytes(Path.Combine(old, "OpsisAppearancePlugin.dll"), new byte[] { 1 });
+        var found = AppearanceMigration.FindOldPluginFolders(new[] { root, Path.Combine(_dir, "missing") });
+        Assert.Equal(new[] { old }, found);
+        Assert.True(File.Exists(Path.Combine(old, "OpsisAppearancePlugin.dll")));
+    }
 }

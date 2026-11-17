@@ -340,7 +340,8 @@ namespace MotionDesk.UI
             Bt(sr1, "Win.ImportCheck", () =>
             {
                 var report = AppearanceMigration.Scan(AppPaths.AppDataFolder);
-                MessageBox.Show(this, report.AnythingFound ? AppearanceMigration.Describe(report) : T("Win.ImportNothing"), T("Win.ImportCheck"));
+                string? saved = report.AnythingFound ? AppearanceMigration.Backup(AppPaths.AppDataFolder) : null;
+                MessageBox.Show(this, report.AnythingFound ? AppearanceMigration.Describe(report) + (saved == null ? "" : Environment.NewLine + Environment.NewLine + string.Format(T("Win.ImportBackup"), saved)) : T("Win.ImportNothing"), T("Win.ImportCheck"));
             }, 300);
 
             if (_winAppearanceScroll > 0) { int keep = _winAppearanceScroll; _winAppearanceScroll = 0; BeginInvoke(new Action(() => { try { panel.VerticalScroll.Value = Math.Min(keep, panel.VerticalScroll.Maximum); panel.PerformLayout(); } catch (Exception) { } })); }

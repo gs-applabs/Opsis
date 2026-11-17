@@ -5,7 +5,7 @@ using System.Text.Json;
 namespace MotionDesk.Services
 {
     /// <summary>
-    /// Which look the pages of the plugins and the standalone family apps use by default: Opsis' own, the Opsis Appearance one or the Opsis News Crawler one.
+    /// Which look the pages of the plugins and the standalone family apps use by default: Opsis' own or the Opsis News Crawler one.
     /// The choice is kept in the settings and published as %AppData%\Opsis\plugin-ui.json ({"style":"Opsis|Appearance|Crawler","version":n}), which the plugins and
     /// the standalone apps read (and watch) to follow it.
     /// </summary>
