@@ -58,6 +58,8 @@ let cloudSprites = [], clouds = [], hills = [], stars = [], flakeSprite = null, 
 let rain = { far: [], mid: [], near: [] }, ripples = [], splashes = [], glass = [], bolt = null;
 let nextBoltIn = 4, flash = 0, shoot = null, nextShootIn = 8;
 let lastDensity = -1;
+// quality budget per performance profile (the density already follows the profile): 2 = full (High), 1 = medium (default / balanced), 0 = simple (Low Power / Battery): fewer clouds, no Milky Way, foam, trees or rock texture
+function tierLevel() { return lastDensity >= 0.95 ? 2 : lastDensity >= 0.5 ? 1 : 0; }
 
 function makeCanvas(w, h) {
     const c = document.createElement('canvas');
@@ -570,7 +572,7 @@ function drawCloudsLayer(sky, dt) {
     g.setTransform(1, 0, 0, 1, 0, 0);
     g.globalCompositeOperation = 'source-over';
     g.clearRect(0, 0, cw, ch);
-    const count = Math.min(clouds.length, Math.round(2 + 16 * cover + 8 * S.rain + 4 * S.storm));
+    const count = Math.min(clouds.length, Math.round((2 + 16 * cover + 8 * S.rain + 4 * S.storm) * [0.4, 0.75, 1][tierLevel()]));
     // clouds travel with the wind: ~3 px/s in calm air up to >100 px/s in a gale (per layer parallax: low clouds move faster)
     const base = (3 + S.wind * 1.5) * K;
     const dir = S.dir < 0 ? -1 : 1;
@@ -624,7 +626,7 @@ function buildMilkyWay() {
 }
 function drawMilkyWay(sky) {
     const vis = clamp(1 - sky.amb * 4, 0, 1) * (1 - S.cloud * 1.1) * (1 - S.fog) * (1 - S.rain) * (1 - 0.6 * (moonBright || 0));
-    if (vis < 0.03 || lastDensity < 0.35) return;
+    if (vis < 0.03 || tierLevel() < 1) return;
     if (!milkyCv) buildMilkyWay();
     const g = skyCtx; g.save(); g.globalCompositeOperation = 'lighter'; g.globalAlpha = 0.4 * vis;
     g.translate(W * 0.5, HORIZON * 0.45); g.rotate(-0.55 + Math.sin(animTime * 0.004) * 0.01);
@@ -654,7 +656,7 @@ function drawHillsLayer(sky, graded) {
     const amb = clamp(sky.amb, 0, 1);
     const shade = scaleCol([22, 32, 46], 0.28 + 0.72 * amb);
     const haze = hazeColor(graded.hor);
-    const lowTier = lastDensity < 0.35;
+    const lowTier = tierLevel() < 1, richTier = tierLevel() >= 2;
     for (const h of hills) {
         // atmospheric perspective: far ranges are pale and blue (air between), near ranges dark and saturated
         const air = clamp(0.5 - h.depth * 0.5, 0, 1);
@@ -680,6 +682,7 @@ function drawHillsLayer(sky, graded) {
         if (!lowTier) {
             g.save(); g.clip(path);
             // rock / forest texture: dark gullies running down from the ridge
+            if (richTier) {
             g.strokeStyle = rgba(mix(col, [8, 12, 18], 0.6), 0.16 + 0.1 * h.depth); g.lineWidth = Math.max(1, (0.6 + h.depth * 0.8) * K);
             g.beginPath();
             for (let i = 4; i < n - 4; i += 5 + (h.seed % 3)) {
@@ -687,6 +690,7 @@ function drawHillsLayer(sky, graded) {
                 g.moveTo(x, y); g.lineTo(x + (((i * 13) % 7) - 3) * 1.6 * K, y + len);
             }
             g.stroke();
+            }
             // snow caps on the tall peaks (and lower when it is snowing)
             const limit = h.snow - S.snowCover * 0.5;
             if (limit < 1.2) {
@@ -712,7 +716,7 @@ function drawHillsLayer(sky, graded) {
             const sway = (0.4 + S.wind * 0.05) * K, tc = mix(col, [10, 22, 16], 0.55);
             g.fillStyle = rgba(tc, 0.95); g.beginPath();
             for (const t of h.trees) {
-                if (t.broad) continue;
+                if (t.broad || (!richTier && (t.idx & 1))) continue;
                 const x = (t.idx / n) * W, y = HORIZON - h.pts[t.idx] * H + 2, th = t.h * H, tw = th * t.w * 0.5, sw = Math.sin(animTime * (1.1 + S.wind * 0.04) + t.ph) * sway;
                 g.moveTo(x - tw, y); g.lineTo(x + sw * 0.5, y - th * 0.55 + sw * 0.3); g.lineTo(x + tw, y);
                 g.moveTo(x - tw * 0.75, y - th * 0.35); g.lineTo(x + sw, y - th); g.lineTo(x + tw * 0.75, y - th * 0.35);
@@ -722,7 +726,7 @@ function drawHillsLayer(sky, graded) {
             const leaf = mix(mix(col, [40, 92, 48], 0.5 * (1 - S.snowCover)), [225, 232, 242], clamp(S.snowCover * 0.8, 0, 0.8));
             g.fillStyle = rgba(mix(leaf, [8, 14, 10], 0.25), 0.95); g.beginPath();
             for (const t of h.trees) {
-                if (!t.broad) continue;
+                if (!t.broad || (!richTier && (t.idx & 1))) continue;
                 const x = (t.idx / n) * W, y = HORIZON - h.pts[t.idx] * H + 2, th = t.h * H, sw = Math.sin(animTime * (0.9 + S.wind * 0.05) + t.ph) * sway * 1.4, r = th * 0.34;
                 g.rect(x - r * 0.12, y - th * 0.5, r * 0.24, th * 0.5);
                 g.moveTo(x + sw + r, y - th * 0.72); g.arc(x + sw, y - th * 0.72, r, 0, TAU);
@@ -1138,7 +1142,7 @@ function drawFresnel(ctx2, graded) {
 let foam = null;
 function drawFoam(ctx2, amb) {
     const power = clamp((S.wind - 12) / 40 + S.rain * 0.35 + S.storm * 0.4, 0, 1);
-    if (power < 0.05 || S.snowCover > 0.5 || lastDensity < 0.35) return;
+    if (power < 0.05 || S.snowCover > 0.5 || tierLevel() < 1) return;
     if (!foam) { const r = mulberry32(31); foam = Array.from({ length: 90 }, () => ({ x: r(), z: Math.pow(r(), 1.6), w: 0.5 + r(), ph: r() * TAU, sp: 0.4 + r() * 1.2 })); }
     const col = mix([150, 165, 190], [250, 252, 255], clamp(amb + 0.15, 0, 1));
     const span = H - HORIZON;

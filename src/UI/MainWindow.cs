@@ -2563,7 +2563,18 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
             GlassBlur.ApplyScrollbarTheme(page, UiTheme.Background.GetBrightness() < 0.5f);
             page.SettingsChanged += (_, _) => { var a = AppSettings.Load(); a.Glass = page.Settings; a.Save(); };
             _pageTitle.Text = OpsisStrings.T("ui.theme.title");
-            Flicker.BatchRedraw(_content, () => SetPageCore(page));
+            // "Follow Windows": the shared page has no such entry, so it sits in a strip above it. On = the theme follows the Windows light / dark setting live; off = the base theme chosen below.
+            var holder = new Panel { Dock = DockStyle.Fill, BackColor = UiTheme.PageBackground };
+            var follow = new FlatCheckBox { Text = Lx("Ακολούθηση του θέματος των Windows", "Follow the Windows theme"), AutoSize = true, Checked = settings.ThemeMode == "Follow", BackColor = UiTheme.PageBackground, Location = new Point(28, 12) };
+            var strip = new Panel { Dock = DockStyle.Top, Height = 46, BackColor = UiTheme.PageBackground };
+            strip.Controls.Add(follow);
+            follow.CheckedChanged += (_, _) =>
+            {
+                if (follow.Checked) ThemeManager.SetMode("Follow");
+                else ThemeManager.SetMode(GlassHost.ModeForBase(AppSettings.Load().Glass.BaseTheme) ?? "Dark");
+            };
+            holder.Controls.Add(page); holder.Controls.Add(strip);
+            Flicker.BatchRedraw(_content, () => SetPageCore(holder));
         }
 
         private void ShowCommandPalette()

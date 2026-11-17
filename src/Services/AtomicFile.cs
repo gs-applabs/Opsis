@@ -17,7 +17,12 @@ internal static class AtomicFile
         string tmp = path + ".tmp";
         File.WriteAllText(tmp, contents, new UTF8Encoding(false));
         KeepBackup(path);
-        File.Move(tmp, path, overwrite: true);
+        // a short lock on the target (antivirus, indexer, another reader holding it open) must not fail the save: a few quick retries
+        for (int attempt = 0; ; attempt++)
+        {
+            try { File.Move(tmp, path, overwrite: true); return; }
+            catch (Exception ex) when ((ex is UnauthorizedAccessException || ex is IOException) && attempt < 6) { System.Threading.Thread.Sleep(25 * (attempt + 1)); }
+        }
     }
 
     // Keeps the previous GOOD file as "<name>.bak" (refreshed at most every 10 minutes so frequent saves do not rewrite it constantly,

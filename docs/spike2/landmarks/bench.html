@@ -1,0 +1,28 @@
+<!doctype html><meta charset="utf-8"><base href="../../../src/Widgets/wallpaper/"><body style="margin:0;background:#000;overflow:hidden"><canvas id="c" width="1280" height="720"></canvas>
+<script src="landmarks.js"></script><script src="weather.js"></script>
+<script>
+// Cost of one frame of the weather wallpaper per quality profile (ms, mean of 90 frames after 30 warm-up frames) and JS heap, drawn onto the canvas so the screenshot harness can show it.
+const cv = document.getElementById('c'), g = cv.getContext('2d');
+const cases = [['High','Day','Clear'],['High','Day','Rain'],['High','Night','Clear'],['High','Day','Thunderstorm'],['Balanced','Day','Rain'],['Low Power','Day','Rain'],['Battery','Day','Rain'],['High','Day','Snow'],['Low Power','Day','Snow']];
+const lines = []; let ci = 0;
+function runCase() {
+  if (ci >= cases.length) { finish(); return; }
+  const [prof, time, wx] = cases[ci++];
+  WeatherWallpaper.setConfig({ timeSim: time, weatherSim: wx, windSim: 'Auto', glass: false, landmarks: false, landmarkId: 'Off', lat: 37.98, lon: 23.73 });
+  WeatherWallpaper.resize(1280, 720, 1);
+  const p = { id: prof }; let n = 0, t0 = 0;
+  (function step() {
+    if (n === 30) t0 = performance.now();
+    WeatherWallpaper.draw(g, 0.033, p);
+    if (++n < 120) setTimeout(step, 0); else {
+      const ms = (performance.now() - t0) / 90, heap = performance.memory ? Math.round(performance.memory.usedJSHeapSize / 1048576) : -1;
+      lines.push(prof.padEnd(10) + time.padEnd(6) + wx.padEnd(14) + ms.toFixed(2) + ' ms/frame   heap ' + heap + ' MB'); runCase();
+    }
+  })();
+}
+function finish() {
+  g.setTransform(1, 0, 0, 1, 0, 0); g.fillStyle = '#000'; g.fillRect(0, 0, 1280, 720); g.fillStyle = '#9f9'; g.font = '22px Consolas, monospace';
+  lines.forEach((l, i) => g.fillText(l, 30, 60 + i * 34)); document.title = 'done';
+}
+runCase();
+</script>
