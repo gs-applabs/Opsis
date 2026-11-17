@@ -1,0 +1,28 @@
+From c2e5e25353233712242c0bb964b150590aa273c1 Mon Sep 17 00:00:00 2001
+From: giorstergiopoulos-design
+ <giorstergiopoulos-design@users.noreply.github.com>
+Date: Fri, 13 Nov 2026 09:48:57 +0200
+Subject: [PATCH 4/4] Number rows clamp a stored value to their range
+ (DeskContainers page error)
+
+Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
+---
+ src/UI/MainWindow.cs | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/UI/MainWindow.cs b/src/UI/MainWindow.cs
+index b30d3b1..a5be67a 100644
+--- a/src/UI/MainWindow.cs
++++ b/src/UI/MainWindow.cs
+@@ -4732,7 +4732,7 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
+             {
+                 var row = new FlowLayoutPanel { AutoSize = true, WrapContents = false, Margin = new Padding(marginLeft, 2, 0, 4) };
+                 row.Controls.Add(new Label { Text = label + ":", AutoSize = true, ForeColor = UiTheme.TextSecondary, Font = UiTheme.FontBody, Padding = new Padding(0, 6, 8, 0) });
+-                var numeric = new NumericUpDown { Minimum = min, Maximum = max, Value = value, Width = 80 };
++                var numeric = new NumericUpDown { Minimum = min, Maximum = max, Value = Math.Clamp(value, min, max), Width = 80 };
+                 numeric.ValueChanged += (_, _) => ApplySetting(label, () => onChange((int)numeric.Value));
+                 row.Controls.Add(numeric);
+                 row.Controls.Add(new Label { Text = unit, AutoSize = true, ForeColor = UiTheme.TextMuted, Font = UiTheme.FontBody, Padding = new Padding(8, 6, 0, 0) });
+-- 
+2.56.0.windows.4
+

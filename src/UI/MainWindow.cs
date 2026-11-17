@@ -125,7 +125,7 @@ namespace MotionDesk.UI
             WidgetSnapEngine.EnableGridSnap = appSettings.GridSnap;
             WidgetSnapEngine.SnapThreshold = Math.Clamp(appSettings.SnapThreshold, 5, 50);
             WidgetSnapEngine.GridSize = Math.Clamp(appSettings.GridSize, 5, 100);
-            Text = "Opsis";
+            Text = "Opsis " + Services.AppVersion.Label;
             Icon = LoadApplicationIcon();
             StartPosition = FormStartPosition.CenterScreen;
             // Μεγαλύτερο προεπιλεγμένο μέγεθος — ζητήθηκε ρητά ώστε να χωράει άνετα η νέα σελίδα
@@ -1718,7 +1718,7 @@ namespace MotionDesk.UI
 
             // location
             string cityShown = string.IsNullOrWhiteSpace(settings.WeatherCity) ? LocalizationManager.T("Wallpaper.WeatherLocationDefault") : settings.WeatherCity;
-            var locLabel = new Label { Text = string.Format(LocalizationManager.T("Wallpaper.WeatherLocationCurrent"), cityShown), AutoSize = true, Font = UiTheme.FontBody, ForeColor = UiTheme.TextSecondary, Margin = new Padding(0, 0, 0, 4) };
+            var locLabel = new Label { Text = string.Format(LocalizationManager.T("Wallpaper.WeatherLocationCurrent"), cityShown) + PlaceSourceLine(settings.WeatherPlaceDetail, settings.WeatherPlaceSource), AutoSize = true, Font = UiTheme.FontBody, ForeColor = UiTheme.TextSecondary, Margin = new Padding(0, 0, 0, 4) };
             host.Controls.Add(locLabel);
             var locRow = new FlowLayoutPanel { AutoSize = true, WrapContents = false, Margin = new Padding(0, 0, 0, 10) };
             var cityBox = new TextBox { Width = 240, Text = settings.WeatherCity, BackColor = UiTheme.Surface, ForeColor = UiTheme.TextPrimary, BorderStyle = BorderStyle.FixedSingle, Font = UiTheme.FontBody, Margin = new Padding(0, 5, 10, 0) };
@@ -1743,7 +1743,7 @@ namespace MotionDesk.UI
 
             void ApplyMatch(WeatherService.GeocodeMatch m)
             {
-                WallpaperHostEngine.Instance.SetWeatherLocation(m.Name, m.Lat, m.Lon);
+                WallpaperHostEngine.Instance.SetWeatherLocation(m.Name, m.Lat, m.Lon, "Open-Meteo (CC BY 4.0)", string.IsNullOrEmpty(m.Country) ? m.Name : $"{m.Name}, {m.Country}");
                 locLabel.Text = string.Format(LocalizationManager.T("Wallpaper.WeatherLocationCurrent"), m.Name);
                 cityBox.Text = m.Name;
                 ClearChoices();
@@ -1795,6 +1795,14 @@ namespace MotionDesk.UI
             host.Controls.Add(locRow);
 
             // Opt-in device location (explicit click + confirmation; rounded to ~1 km; only the rounded point is stored) and a way to delete it again.
+            var reverseToggle = new FlatToggle { RowWidth = 700, Text = LocalizationManager.T("Wallpaper.WeatherReverseOn"), Checked = settings.WeatherReverseGeocode, BackColor = UiTheme.Surface, Margin = new Padding(0, 2, 0, 2) };
+            reverseToggle.CheckedChanged += (_, _) =>
+            {
+                if (reverseToggle.Checked && MessageBox.Show(this, LocalizationManager.T("Wallpaper.WeatherReverseConsent"), LocalizationManager.T("Wallpaper.WeatherReverseOn"), MessageBoxButtons.YesNo, MessageBoxIcon.Question, MessageBoxDefaultButton.Button2) != DialogResult.Yes)
+                { reverseToggle.Checked = false; return; }
+                WallpaperHostEngine.Instance.SetWeatherReverseGeocode(reverseToggle.Checked);
+            };
+            host.Controls.Add(reverseToggle);
             var privacyRow = new FlowLayoutPanel { AutoSize = true, WrapContents = true, MaximumSize = new Size(700, 0), Margin = new Padding(0, 0, 0, 10) };
             var myLocBtn = NewHoverButton(LocalizationManager.T("Wallpaper.WeatherUseMyLocation"), () => { });
             myLocBtn.Width = 220;
@@ -1806,9 +1814,12 @@ namespace MotionDesk.UI
                 {
                     var here = await DeviceLocation.GetApproximateAsync();
                     if (here == null) { locLabel.Text = LocalizationManager.T("Wallpaper.WeatherLocationDenied"); return; }
-                    string name = LocalizationManager.T("Wallpaper.WeatherMyLocation");
-                    WallpaperHostEngine.Instance.SetWeatherLocation(name, here.Value.Lat, here.Value.Lon);
-                    locLabel.Text = string.Format(LocalizationManager.T("Wallpaper.WeatherLocationCurrent"), name);
+                    // the name: the offline table of Greece first; the online lookup only if the person allowed it (one request, only now)
+                    bool greek = LocalizationManager.CurrentLanguage == "el";
+                    var placed = await PlaceNaming.ResolveAsync(here.Value.Lat, here.Value.Lon, greek, WallpaperSettings.Load().WeatherReverseGeocode, LocalizationManager.T("Wallpaper.WeatherMyLocation"));
+                    string name = placed.Name;
+                    WallpaperHostEngine.Instance.SetWeatherLocation(name, here.Value.Lat, here.Value.Lon, placed.Source, placed.Detail);
+                    locLabel.Text = string.Format(LocalizationManager.T("Wallpaper.WeatherLocationCurrent"), name) + PlaceSourceLine(placed.Detail, placed.Source);
                     cityBox.Text = "";
                     _ = RefreshLiveWeatherLabelAsync(liveLabel, here.Value.Lat, here.Value.Lon);
                 }
@@ -1934,6 +1945,10 @@ namespace MotionDesk.UI
             }
             catch (Exception) { return ""; }
         }
+
+        // "(Ampelokipoi . Athens . Attica) source: GeoNames": exactly which name was used and where it came from
+        private static string PlaceSourceLine(string? detail, string? source) =>
+            string.IsNullOrWhiteSpace(source) ? "" : Environment.NewLine + string.Format(LocalizationManager.T("Wallpaper.WeatherPlaceLine"), string.IsNullOrWhiteSpace(detail) ? "-" : detail, source);
 
         private static string CodeToSimId(int code) => code switch
         {
@@ -2320,6 +2335,12 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
             var lockScreenCard = AddCardSection(panel, LocalizationManager.T("Personalization.SectionLockScreen"));
             AddText(lockScreenCard, LocalizationManager.T("Personalization.LockScreenIntro"));
             AddText(lockScreenCard, string.Format(LocalizationManager.T("Personalization.LockScreenEditionNote"), LockScreenEngine.GetWindowsEdition()));
+            // Animated GIF lock screen: an unofficial, system-level trick done by a separate MIT tool. Opsis only explains it and opens the project page.
+            AddText(lockScreenCard, LocalizationManager.T("Personalization.LockGifInfo"));
+            AddButtonGrid(lockScreenCard, (LocalizationManager.T("Personalization.LockGifOpen"), (_, _) =>
+            {
+                try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("https://github.com/Leapward-Koex/LockscreenGif") { UseShellExecute = true }); } catch (Exception) { }
+            }));
 
             AddButtonGrid(lockScreenCard,
             (LocalizationManager.T("Personalization.SetLockScreenImage"), async (_, _) =>
@@ -3236,6 +3257,12 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
             panel.Controls.Add(BuildTopicCard("Nav.Wallpaper", "Wallpaper.Intro"));
             panel.Controls.Add(BuildTopicCard("Nav.Personalization", "Personalization.Intro"));
             panel.Controls.Add(BuildTopicCard("Nav.Automation", "Automation.Intro"));
+
+            // the Opsis family: only the apps of the shared catalogue (suite/apps.json), with their state
+            AddSection(panel, LocalizationManager.T("Tray.Family"));
+            foreach (var app in FamilyApp.Load().Where(a => a.Id != "opsis"))
+                AddText(panel, $"{app.Name}  {(app.InstalledPath != null ? "✓" : "")}\n{app.Tagline}");
+            AddButtonGrid(panel, (LocalizationManager.T("Tray.Family"), (_, _) => FamilyWindows.ShowFamily()));
 
             AddSection(panel, LocalizationManager.T("About.SectionCapabilities"));
             AddText(panel, LocalizationManager.T("About.CapabilitiesList"));
@@ -4576,6 +4603,7 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                     AnimationsSettingChanged?.Invoke();
                 });
                 startup.AddControl(Checkbox(LocalizationManager.T("Settings.StartWithWindows"), StartupManager.IsStartupEnabled(), StartupManager.SetStartup, LocalizationManager.T("Settings.StartWithWindowsDesc")));
+                startup.AddControl(Checkbox(LocalizationManager.T("Settings.StartEarly"), StartupTask.IsEnabled(), v => System.Threading.Tasks.Task.Run(() => StartupTask.Set(v)), LocalizationManager.T("Settings.StartEarlyDesc")));
                 startup.AddControl(Checkbox(LocalizationManager.T("Settings.RestoreLastSession"), AppSettings.Load().RestoreLastSession,
                     v => { var a = AppSettings.Load(); a.RestoreLastSession = v; a.Save(); }));
                 startup.AddControl(Checkbox(LocalizationManager.T("Settings.EnableAnimations"), AppSettings.Load().EnableAnimations,

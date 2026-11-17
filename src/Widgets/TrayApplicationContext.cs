@@ -53,6 +53,17 @@ namespace MotionDesk.Widgets
             // Plugins from user-writable folders run code inside Opsis: ask once, show the content hash, remember the approval (plugin-trust.json).
             // (the approval question is NOT asked while starting: see PluginHost.ConsiderFolder / ResolvePending)
             if (!safeMode) { PluginHost.Instance.StartAll(); SchedulePluginApproval(); try { MotionDesk.Appearance.AppearanceService.Instance.Start(); } catch (Exception) { } }
+            // Start-up before the other start-up apps: switched on ONCE after the first run when Start with Windows is on (Settings can turn it off; never repeated)
+            try
+            {
+                var early = AppSettings.Load();
+                if (!early.StartEarlyInitialized)
+                {
+                    early.StartEarlyInitialized = true; early.Save();
+                    if (StartupManager.IsStartupEnabled()) System.Threading.Tasks.Task.Run(() => StartupTask.Set(true));
+                }
+            }
+            catch (Exception) { }
 
             // Δημιουργία Context Menu για το Tray Icon — ομαδοποιημένο σε: παράθυρο, DeskZones,
             // wallpaper, γρήγορα προφίλ, γρήγορες ρυθμίσεις, έξοδος.

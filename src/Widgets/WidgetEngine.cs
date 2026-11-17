@@ -1121,7 +1121,10 @@ namespace MotionDesk.Widgets
 
         private void InitializeNativeWeather()
         {
-            var panel = CreateNativePanel(LocationName != null ? string.Format(LocalizationManager.T("WidgetText.WeatherTitleFormat"), LocationName) : LocalizationManager.T("WidgetText.WeatherDefaultTitle"), out var values);
+            // ONE weather place for the whole app: the same one as the animated wallpaper (Wallpaper > Information); a place set on this widget before is adopted once.
+            AdoptWidgetPlaceOnce();
+            string SharedName() => WallpaperSettings.Load() is { } w && !string.IsNullOrWhiteSpace(w.WeatherCity) ? string.Format(LocalizationManager.T("WidgetText.WeatherTitleFormat"), w.WeatherCity) : LocalizationManager.T("WidgetText.WeatherDefaultTitle");
+            var panel = CreateNativePanel(SharedName(), out var values);
             values.TextAlign = ContentAlignment.MiddleCenter;
             values.Font = new Font("Segoe UI", 9.5f);
             values.Height = 44;
@@ -1141,18 +1144,20 @@ namespace MotionDesk.Widgets
                 bool ok = true;
                 try
                 {
-                    double lat = Latitude ?? 37.9838;
-                    double lon = Longitude ?? 23.7275;
-                    // GetNormalizedWeatherAsync δοκιμάζει πρώτα Open-Meteo και, αν αποτύχει, πέφτει
-                    // αυτόματα σε δεύτερο δωρεάν πάροχο (wttr.in, χωρίς API key) αντί να δείχνει
-                    // μόνιμα "Weather unavailable" όταν ο πρώτος πάροχος έχει πρόβλημα.
-                    var result = await WeatherService.GetNormalizedWeatherAsync(lat, lon);
-                    if (result != null)
+                    var shared = WallpaperSettings.Load();
+                    double lat = shared.WeatherLat, lon = shared.WeatherLon;
+                    if (_titleLabelRef != null) _titleLabelRef.Text = SharedName();
+                    // the same providers, fallback and 10-minute cache as the wallpaper (NWS / Open-Meteo / MET Norway)
+                    using var doc = System.Text.Json.JsonDocument.Parse(await WeatherService.GetWallpaperWeatherJsonAsync(lat, lon));
+                    var r = doc.RootElement;
+                    if (r.TryGetProperty("ok", out var okEl) && okEl.GetBoolean())
                     {
-                        icon.Condition = result.Condition;
-                        int beaufort = WeatherService.ToBeaufort(result.WindKmh);
-                        string humidityText = result.HumidityPercent.HasValue ? $"{result.HumidityPercent:0}%" : "—";
-                        values.Text = string.Format(LocalizationManager.T("WidgetText.WeatherLineFormat"), result.TemperatureC, result.WindKmh, beaufort, humidityText);
+                        icon.Condition = WeatherService.ClassifyWeatherCode(r.GetProperty("code").GetInt32());
+                        double wind = r.GetProperty("wind").GetDouble();
+                        int beaufort = WeatherService.ToBeaufort(wind);
+                        double hum = r.TryGetProperty("humidity", out var hEl) ? hEl.GetDouble() : -1;
+                        string humidityText = hum >= 0 ? $"{hum:0}%" : "—";
+                        values.Text = string.Format(LocalizationManager.T("WidgetText.WeatherLineFormat"), r.GetProperty("temp").GetDouble(), wind, beaufort, humidityText);
                     }
                     else { values.Text = LocalizationManager.T("WidgetText.WeatherUnavailable"); ok = false; }
                 }
@@ -1165,19 +1170,30 @@ namespace MotionDesk.Widgets
             {
                 var result = await WeatherService.GeocodeAsync(cityName);
                 if (result.HasValue)
-                {
-                    Latitude = result.Value.Lat;
-                    Longitude = result.Value.Lon;
-                    LocationName = result.Value.Name;
-                    SaveWidgetState();
-                    if (_titleLabelRef != null) _titleLabelRef.Text = string.Format(LocalizationManager.T("WidgetText.WeatherTitleFormat"), LocationName);
-                    Update();
-                }
+                    WallpaperHostEngine.Instance.SetWeatherLocation(result.Value.Name, result.Value.Lat, result.Value.Lon, "Open-Meteo (CC BY 4.0)", result.Value.Name);   // the shared place: wallpaper and widget follow it
             });
+            // the place changed anywhere (wallpaper settings, this widget): refresh now
+            Action onPlace = () => { if (!IsDisposed) BeginInvoke(new Action(Update)); };
+            WallpaperHostEngine.WeatherLocationChanged += onPlace;
+            FormClosed += (_, _) => WallpaperHostEngine.WeatherLocationChanged -= onPlace;
             Update();
             _nativeMonitorTimer = new System.Windows.Forms.Timer { Interval = 900000 };
             _nativeMonitorTimer.Tick += (_, _) => { if (!AppActivity.IsFullscreenAppActive) Update(); };
             _nativeMonitorTimer.Start();
+        }
+
+        // A place typed on this widget before 2.6.0 becomes the shared place once, when no shared place has been chosen yet.
+        private void AdoptWidgetPlaceOnce()
+        {
+            try
+            {
+                if (LocationName == null || Latitude == null || Longitude == null) return;
+                var w = WallpaperSettings.Load();
+                if (string.IsNullOrWhiteSpace(w.WeatherCity)) WallpaperHostEngine.Instance.SetWeatherLocation(LocationName, Latitude.Value, Longitude.Value, "Open-Meteo (CC BY 4.0)", LocationName);
+                LocationName = null; Latitude = null; Longitude = null;   // no second copy of the place
+                SaveWidgetState();
+            }
+            catch (Exception) { }
         }
 
         private void InitializeNativeSystemMonitor()

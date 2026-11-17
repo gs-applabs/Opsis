@@ -88,6 +88,8 @@ namespace MotionDesk.Services
         // wallpaper ώστε η οθόνη κλειδώματος να μένει ταιριαστή (βλ. LockScreenEngine, WallpaperHostEngine).
         public bool LockScreenFollowsWallpaper { get; set; } = false;
         public string? LockScreenSnapshotPath { get; set; }
+        /// <summary>2.6.0: the "start before other start-up apps" task was offered once (it is created once after the first run when Start with Windows is on; the person can switch it off in Settings).</summary>
+        public bool StartEarlyInitialized { get; set; }
 
         // Ανεξάρτητο θέμα για widgets/DeskContainers από αυτό της ίδιας της εφαρμογής — ζητήθηκε
         // ρητά "αν η εφαρμογή είναι σε φωτεινό θέμα, τα widgets/containers να μπορούν είτε να

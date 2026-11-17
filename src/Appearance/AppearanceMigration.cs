@@ -38,6 +38,45 @@ public static class AppearanceMigration
         catch (Exception) { return false; }
     }
 
+    /// <summary>
+    /// A safety copy of the old settings BEFORE anything reads them for the report: appearance.json, appearance-original.json and the themes folder go to
+    /// appearance\migration-backup\yyyyMMdd-HHmmss. The originals are never changed or deleted. Returns the folder, or null when there was nothing to copy.
+    /// </summary>
+    public static string? Backup(string dataDir, DateTime? now = null)
+    {
+        try
+        {
+            var sources = new[] { "appearance.json", "appearance-original.json" }.Select(f => Path.Combine(dataDir, f)).Where(File.Exists).ToList();
+            string themes = Path.Combine(dataDir, "themes");
+            if (sources.Count == 0 && !Directory.Exists(themes)) return null;
+            string dest = Path.Combine(dataDir, "appearance", "migration-backup", (now ?? DateTime.Now).ToString("yyyyMMdd-HHmmss"));
+            Directory.CreateDirectory(dest);
+            foreach (var f in sources) File.Copy(f, Path.Combine(dest, Path.GetFileName(f)), overwrite: false);
+            if (Directory.Exists(themes))
+                foreach (var file in Directory.EnumerateFiles(themes, "*", SearchOption.AllDirectories))
+                {
+                    string rel = Path.GetRelativePath(dataDir, file);
+                    string target = Path.Combine(dest, rel);
+                    Directory.CreateDirectory(Path.GetDirectoryName(target)!);
+                    File.Copy(file, target, overwrite: false);
+                }
+            return dest;
+        }
+        catch (Exception) { return null; }
+    }
+
+    /// <summary>The folder names (under the plugin roots) of an older separate appearance plugin: Opsis ignores them and never deletes them.</summary>
+    public static IReadOnlyList<string> FindOldPluginFolders(IEnumerable<string> pluginRoots)
+    {
+        var found = new List<string>();
+        foreach (var root in pluginRoots)
+        {
+            try { if (Directory.Exists(root)) found.AddRange(Directory.EnumerateDirectories(root).Where(d => File.Exists(Path.Combine(d, "OpsisAppearancePlugin.dll")))); }
+            catch (Exception) { }
+        }
+        return found;
+    }
+
     /// <summary>One plain line per item for the log or a message box.</summary>
     public static string Describe(Report r) =>
         string.Join(Environment.NewLine, r.Items.Select(i => $"{(i.Present ? (i.Usable ? "OK" : "UNREADABLE") : "none")}  {i.What} - {i.Note}")

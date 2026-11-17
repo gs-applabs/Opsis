@@ -391,6 +391,10 @@ namespace MotionDesk.Widgets
 
         // "Weather" mode: the scene follows the real time of day + live weather of this location (default: Athens, like the weather widget).
         public string WeatherCity { get; set; } = string.Empty;
+        // Where the place name came from and the full hierarchy (shown in the settings); the online lookup is OPT-IN and runs only when "Use my location" is pressed.
+        public string WeatherPlaceSource { get; set; } = string.Empty;
+        public string WeatherPlaceDetail { get; set; } = string.Empty;
+        public bool WeatherReverseGeocode { get; set; } = false;
         public double WeatherLat { get; set; } = 37.9838;
         public double WeatherLon { get; set; } = 23.7275;
         // Ζητήθηκε ρητά: αν ο χρήστης δεν έχει ορίσει ποτέ πόλη, ο καιρός δείχνει σιωπηλά τον
@@ -1550,12 +1554,24 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Count);
         }
 
         // ---- "Weather" mode settings (each change refreshes the running wallpaper)
-        public void SetWeatherLocation(string city, double lat, double lon)
+        /// <summary>Raised after the ONE shared weather place changed (the weather widget follows it).</summary>
+        public static event Action? WeatherLocationChanged;
+
+        public void SetWeatherLocation(string city, double lat, double lon, string source = "", string detail = "")
         {
             var settings = WallpaperSettings.Load();
             settings.WeatherCity = city; settings.WeatherLat = lat; settings.WeatherLon = lon;
+            settings.WeatherPlaceSource = source; settings.WeatherPlaceDetail = detail;
             settings.Save();
+            try { WeatherLocationChanged?.Invoke(); } catch (Exception) { }
             _ = RefreshAllAsync();
+        }
+
+        public void SetWeatherReverseGeocode(bool on)
+        {
+            var settings = WallpaperSettings.Load();
+            settings.WeatherReverseGeocode = on;
+            settings.Save();
         }
 
         public void MarkWeatherLocationPrompted()
