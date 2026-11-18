@@ -1019,7 +1019,7 @@ namespace MotionDesk.UI
             // cleanup άμεσο και στο σωστό thread.
             // a page that is rebuilt while it is shown (mode change, add/remove of items, language...) keeps the scroll position instead of jumping to the top
             int keepY = -1;
-            foreach (Control old in _content.Controls) if (old is ScrollableControl sc) keepY = -sc.AutoScrollPosition.Y;
+            foreach (Control old in _content.Controls) if ((old is CardHost ch ? ch.Page as ScrollableControl : old as ScrollableControl) is { } sc) keepY = -sc.AutoScrollPosition.Y;
             bool samePage = _lastPageKey == _currentPageKey && keepY > 0;
             _lastPageKey = _currentPageKey;
             foreach (Control old in _content.Controls) old.Dispose();
@@ -1027,7 +1027,7 @@ namespace MotionDesk.UI
             control.Dock = DockStyle.Fill;
             _content.Controls.Add(control);
             _content.ResumeLayout();
-            if (samePage && control is ScrollableControl target)
+            if (samePage && (control is CardHost ch2 ? ch2.Page as ScrollableControl : control as ScrollableControl) is { } target)
                 BeginInvoke(new Action(() => { if (!target.IsDisposed) target.AutoScrollPosition = new Point(0, keepY); }));
         }
 
@@ -1163,7 +1163,12 @@ namespace MotionDesk.UI
             // Μετακινήθηκε εδώ από τις γενικές Ρυθμίσεις (ζητήθηκε ρητά "διάσπαρτες ρυθμίσεις που
             // μπορούν να μπουν στις αντίστοιχες καρτέλες") - το θέμα widgets/containers και το
             // προεπιλεγμένο μέγεθος νέων widgets αφορούν ΑΠΟΚΛΕΙΣΤΙΚΑ αυτή τη σελίδα.
-            AddSection(panel, LocalizationManager.T("Settings.SectionWidgetsContainers"));
+            AddSection(panel, LocalizationManager.T("Settings.SectionWidgetsContainers"), () =>
+            {
+                var d = new AppSettings(); var a = AppSettings.Load();
+                a.WidgetsThemeMode = d.WidgetsThemeMode; a.WidgetsTintColor = d.WidgetsTintColor; a.WidgetsTintPercent = d.WidgetsTintPercent; a.WidgetsAutoContrast = d.WidgetsAutoContrast;
+                a.WidgetDefaultWidth = d.WidgetDefaultWidth; a.WidgetDefaultHeight = d.WidgetDefaultHeight; a.Save(); ThemeManager.NotifyChanged();
+            });
             panel.Controls.Add(SettingsView.Checkbox(LocalizationManager.T("Settings.ShowSystemMonitorWidget"),
                 AppSettings.Load().ShowSystemMonitor || WidgetHostEngine.Instance.GetActiveWidgets().Any(w => w.WidgetId == "sysmon"),
                 v =>
@@ -1172,6 +1177,7 @@ namespace MotionDesk.UI
                     else WidgetHostEngine.Instance.GetActiveWidgets().FirstOrDefault(w => w.WidgetId == "sysmon")?.Close();
                     var a = AppSettings.Load(); a.ShowSystemMonitor = v; a.Save();
                 }));
+            panel.Controls.Add(AdvancedStart());
             panel.Controls.Add(SettingsView.BuildWidgetsThemeRow());
             panel.Controls.Add(BuildWidgetsTransparencyRows());
             var sizeRow = new FlowLayoutPanel { AutoSize = true, WrapContents = false, Margin = new Padding(0, 2, 0, 10) };
@@ -1237,7 +1243,7 @@ namespace MotionDesk.UI
             widgetsRefreshTimer.Start();
             panel.Disposed += (_, _) => widgetsRefreshTimer.Dispose();
 
-            SetPage("Page.Widgets.Title", panel);
+            SetPage("Page.Widgets.Title", Cardify(panel, LocalizationManager.T("Widgets.SectionDesktopWidgets")));
         }
 
         private void ShowDeskZones()
@@ -1280,7 +1286,7 @@ namespace MotionDesk.UI
             }
 
             // Applications that are never snapped (one process name per line, e.g. vlc, obs64)
-            AddSection(panel, LocalizationManager.T("DeskZones.SectionExcludedApps"));
+            AddSection(panel, LocalizationManager.T("DeskZones.SectionExcludedApps"), () => { var a = AppSettings.Load(); a.ZoneExcludedApps = new AppSettings().ZoneExcludedApps; a.Save(); });
             AddText(panel, LocalizationManager.T("DeskZones.ExcludedAppsHint"));
             var excludedBox = new TextBox
             {
@@ -1297,7 +1303,7 @@ namespace MotionDesk.UI
             };
             panel.Controls.Add(excludedBox);
 
-            SetPage("Page.DeskZones.Title", panel);
+            SetPage("Page.DeskZones.Title", Cardify(panel, LocalizationManager.T("DeskZones.SectionLayouts")));
         }
 
         private void ShowWallpaper()
@@ -1503,7 +1509,11 @@ namespace MotionDesk.UI
             // system-wide, μόνο η αναπαραγωγή του Opsis. Προεπιλογή ΚΛΕΙΣΤΟ (AudioEnabled
             // false): το wallpaper ήταν πάντα σιωπηλό πριν, δεν αλλάζει συμπεριφορά χωρίς ρητή
             // ενεργοποίηση από τον χρήστη.
-            AddSection(panel, LocalizationManager.T("Wallpaper.SectionAudio"));
+            AddSection(panel, LocalizationManager.T("Wallpaper.SectionAudio"), () =>
+            {
+                var d = new WallpaperSettings(); var a = AppSettings.Load(); a.AutoMuteWhenOtherAudio = new AppSettings().AutoMuteWhenOtherAudio; a.Save();
+                WallpaperHostEngine.Instance.SetAudioSettings(d.AudioEnabled, d.AudioVolume, d.AudioBassGain, d.AudioMidGain, d.AudioTrebleGain);
+            });
             var audioEnabledCheck = new FlatToggle { RowWidth = 700, Text = LocalizationManager.T("Wallpaper.AudioEnabled"), Checked = settings.AudioEnabled, BackColor = UiTheme.PageBackground, Margin = new Padding(0, 4, 0, 8) };
             panel.Controls.Add(audioEnabledCheck);
             panel.Controls.Add(SettingsView.Checkbox(LocalizationManager.T("Wallpaper.AutoMuteOtherAudio"), AppSettings.Load().AutoMuteWhenOtherAudio,
@@ -1532,6 +1542,7 @@ namespace MotionDesk.UI
 
             audioEnabledCheck.CheckedChanged += (_, _) => ApplyAudioSettings();
             panel.Controls.Add(AudioRow(LocalizationManager.T("Wallpaper.AudioVolume"), volumeTrack, "%"));
+            panel.Controls.Add(AdvancedStart());
             panel.Controls.Add(AudioRow(LocalizationManager.T("Wallpaper.AudioBass"), bassTrack, "dB"));
             panel.Controls.Add(AudioRow(LocalizationManager.T("Wallpaper.AudioMid"), midTrack, "dB"));
             panel.Controls.Add(AudioRow(LocalizationManager.T("Wallpaper.AudioTreble"), trebleTrack, "dB"));
@@ -1588,7 +1599,11 @@ namespace MotionDesk.UI
 
             if (settings.Mode is "Waves" or "Particles")
             {
-            AddSection(panel, LocalizationManager.T("Wallpaper.SectionThemeColors"));
+            AddSection(panel, LocalizationManager.T("Wallpaper.SectionThemeColors"), () =>
+            {
+                var d = new WallpaperSettings();
+                WallpaperHostEngine.Instance.SetThemeMode(d.ThemeMode); WallpaperHostEngine.Instance.SetWaveStyle(d.WaveStyle);
+            });
             var themeCombo = new FlatComboBox { Width = 200, Margin = new Padding(0, 0, 0, 8) };
             themeCombo.SetItems(new[] { "Follow", "Light", "Dark" }, settings.ThemeMode);
             panel.Controls.Add(themeCombo);
@@ -1616,7 +1631,10 @@ namespace MotionDesk.UI
             paletteCombo.SelectedIndexChanged += (_, _) => { if (paletteCombo.SelectedItem is { } p) WallpaperHostEngine.Instance.SetPalette(p); };
             panel.Controls.Add(paletteCombo);
 
-            AddSection(panel, LocalizationManager.T("Wallpaper.SectionWaveTuning"));
+            AddSection(panel, LocalizationManager.T("Wallpaper.SectionWaveTuning"), () =>
+            {
+                var d = new WallpaperSettings(); WallpaperHostEngine.Instance.SetWaveTuning(d.WaveSpeed, d.GlowIntensity, d.LineThickness);
+            });
             panel.Controls.Add(BuildWaveSlider(LocalizationManager.T("Wallpaper.Speed"), (int)(settings.WaveSpeed * 10), 3, 20,
                 v => WallpaperHostEngine.Instance.SetWaveTuning(v / 10.0, WallpaperSettings.Load().GlowIntensity, WallpaperSettings.Load().LineThickness)));
             panel.Controls.Add(BuildWaveSlider(LocalizationManager.T("Wallpaper.GlowIntensity"), (int)(settings.GlowIntensity * 10), 0, 20,
@@ -1628,7 +1646,13 @@ namespace MotionDesk.UI
             BuildInfoOverlaySection(panel, settings);
             BuildWallpaperScheduleSection(panel, settings);
 
-            AddSection(panel, LocalizationManager.T("Wallpaper.SectionPerformance"));
+            AddSection(panel, LocalizationManager.T("Wallpaper.SectionPerformance"), () =>
+            {
+                WallpaperHostEngine.Instance.SetPerformanceMode(new WallpaperSettings().PerformanceMode);
+                var d = new AppSettings(); var a = AppSettings.Load();
+                a.AutoPerformanceMode = d.AutoPerformanceMode; a.PauseOnLock = d.PauseOnLock; a.PauseOnRemoteSession = d.PauseOnRemoteSession; a.PauseOnBatterySaver = d.PauseOnBatterySaver;
+                a.WallpaperHeavyPause = d.WallpaperHeavyPause; a.StartWallpaperWithWindows = d.StartWallpaperWithWindows; a.Save();
+            });
             Dictionary<string, HoverButton>? perfButtons = null;
             perfButtons = AddToggleButtonGrid(panel,
                 ("High", (_, _) => { WallpaperHostEngine.Instance.SetPerformanceMode("High"); RefreshStatus(); MarkActive(perfButtons!, "High"); }),
@@ -1643,6 +1667,7 @@ namespace MotionDesk.UI
                 v => { var a = AppSettings.Load(); a.AutoPerformanceMode = v; a.Save(); }));
             panel.Controls.Add(SettingsView.Checkbox(LocalizationManager.T("Settings.PauseOnLock"), AppSettings.Load().PauseOnLock,
                 v => { var a = AppSettings.Load(); a.PauseOnLock = v; a.Save(); }));
+            panel.Controls.Add(AdvancedStart());
             panel.Controls.Add(SettingsView.Checkbox(LocalizationManager.T("Settings.PauseOnRemote"), AppSettings.Load().PauseOnRemoteSession,
                 v => { var a = AppSettings.Load(); a.PauseOnRemoteSession = v; a.Save(); }));
             panel.Controls.Add(SettingsView.Checkbox(LocalizationManager.T("Settings.PauseOnBatterySaver"), AppSettings.Load().PauseOnBatterySaver,
@@ -1656,7 +1681,7 @@ namespace MotionDesk.UI
                 v => { var a = AppSettings.Load(); a.StartWallpaperWithWindows = v; a.Save(); }));
             panel.Controls.Add(SettingsView.BuildWmvOutputRow());
 
-            SetPage("Page.Wallpaper.Title", panel);
+            SetPage("Page.Wallpaper.Title", Cardify(panel, LocalizationManager.T("Wallpaper.StatusLabel")));
         }
 
         // ---- "Weather" wallpaper mode: location, live status, simulated weather/time, window-glass effect
@@ -2209,6 +2234,7 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
             iconCard.Controls.Add(BuildIconSlotRow("Personalization.RecycleBinFull", IconAtlasEngine.GetRecycleBinFullIcon, IconAtlasEngine.SetRecycleBinFullIcon));
             // Επέκταση κάλυψης (ζητήθηκε ρητά v1.5.0) — τα υπόλοιπα τυπικά εικονίδια επιφάνειας
             // εργασίας που υποστηρίζουν επίσημα custom icon μέσω registry.
+            iconCard.Controls.Add(AdvancedStart());
             iconCard.Controls.Add(BuildIconSlotRow("Personalization.NetworkIcon", IconAtlasEngine.GetNetworkIcon, IconAtlasEngine.SetNetworkIcon));
             iconCard.Controls.Add(BuildIconSlotRow("Personalization.ControlPanelIcon", IconAtlasEngine.GetControlPanelIcon, IconAtlasEngine.SetControlPanelIcon));
             iconCard.Controls.Add(BuildIconSlotRow("Personalization.UsersFilesIcon", IconAtlasEngine.GetUsersFilesIcon, IconAtlasEngine.SetUsersFilesIcon));
@@ -2254,7 +2280,7 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
             }));
 
             // ---------- DeskCursors ----------
-            var cursorCard = AddCardSection(panel, LocalizationManager.T("Personalization.SectionDeskCursors"));
+            var cursorCard = AddCardSection(panel, LocalizationManager.T("Personalization.SectionDeskCursors"), reset: DeskCursorsEngine.ResetAllToWindowsDefault);
             AddText(cursorCard, LocalizationManager.T("Personalization.DeskCursorsIntro"));
 
             foreach (var (registryName, labelKey) in DeskCursorsEngine.Roles)
@@ -2285,7 +2311,7 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                 (LocalizationManager.T("Personalization.ResetCursors"), (_, _) => { DeskCursorsEngine.ResetAllToWindowsDefault(); if (_pageBuilders.TryGetValue("Personalization", out var rebuild)) rebuild(); }));
 
             // ---------- DeskSounds ----------
-            var soundsCard = AddCardSection(panel, LocalizationManager.T("Personalization.SectionDeskSounds"));
+            var soundsCard = AddCardSection(panel, LocalizationManager.T("Personalization.SectionDeskSounds"), reset: () => { foreach (var (ev, _) in DeskSoundsEngine.Events) DeskSoundsEngine.SetSound(ev, null); });
             AddText(soundsCard, LocalizationManager.T("Personalization.DeskSoundsIntro"));
 
             foreach (var (eventLabel, labelKey) in DeskSoundsEngine.Events)
@@ -2333,6 +2359,7 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
             AddText(lockScreenCard, LocalizationManager.T("Personalization.LockScreenIntro"));
             AddText(lockScreenCard, string.Format(LocalizationManager.T("Personalization.LockScreenEditionNote"), LockScreenEngine.GetWindowsEdition()));
             // Animated GIF lock screen (opt-in, backed up, restorable): see MainWindow.LockscreenGif.cs. The project page of LockscreenGif (MIT, the idea and parts of the code) stays as a credit link.
+            lockScreenCard.Controls.Add(AdvancedStart());
             BuildAnimatedLockScreen(lockScreenCard);
             AddButtonGrid(lockScreenCard, (LocalizationManager.T("Personalization.LockGifOpen"), (_, _) =>
             {
@@ -2408,7 +2435,7 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                 else _statusLabel.Text = LocalizationManager.T("Personalization.LockScreenFailed");
             }));
 
-            SetPage("Page.Personalization.Title", panel);
+            SetPage("Page.Personalization.Title", Cardify(panel, LocalizationManager.T("Page.Personalization.Title")));
         }
 
         private void ShowSettings()
@@ -2977,7 +3004,7 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
             noteCard.Height = noteStack.PreferredSize.Height + noteCard.Padding.Vertical;
             panel.Controls.Add(noteCard);
 
-            AddSection(panel, LocalizationManager.T("AudioEnhancement.SectionPresets"));
+            AddSection(panel, LocalizationManager.T("AudioEnhancement.SectionPresets"), () => { var a = AppSettings.Load(); a.AudioEnhancementPreset = new AppSettings().AudioEnhancementPreset; a.Save(); });
             var settings = AppSettings.Load();
             Dictionary<string, HoverButton>? presetButtons = null;
             var presetItems = AudioSpectrumService.Presets.Select(p =>
@@ -3002,6 +3029,7 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
             var equalizer = new EqualizerControl { Width = 700, Height = 200, Style = "WMP", Margin = new Padding(0, 0, 0, 8) };
             panel.Controls.Add(equalizer);
 
+            panel.Controls.Add(AdvancedStart());
             var styleRow = new FlowLayoutPanel { AutoSize = true, WrapContents = false, Margin = new Padding(0, 0, 0, 10) };
             var wmpBtn = new HoverButton { Text = "WMP Legacy", Width = 130, Height = 30, FlatStyle = FlatStyle.Flat, ForeColor = UiTheme.TextPrimary, BackColor = UiTheme.SurfaceHover, Cursor = Cursors.Hand, Margin = new Padding(0, 0, 8, 0) };
             var winampBtn = new HoverButton { Text = "Winamp", Width = 130, Height = 30, FlatStyle = FlatStyle.Flat, ForeColor = UiTheme.TextPrimary, BackColor = UiTheme.Surface, Cursor = Cursors.Hand };
@@ -3028,7 +3056,7 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                 if (ReferenceEquals(_enhancementSpectrum, spectrum)) _enhancementSpectrum = null;
             };
 
-            SetPage("AudioEnhancement.Title", panel);
+            SetPage("AudioEnhancement.Title", Cardify(panel, LocalizationManager.T("AudioEnhancement.Title")));
         }
 
 
@@ -3829,11 +3857,12 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                 Text = UiTheme.UpperNoAccents(text),
                 Font = new Font("Segoe UI", 9.5f, FontStyle.Bold),
                 ForeColor = UiTheme.AccentCyan,
-                Margin = new Padding(0, 14, 0, 6)
+                Margin = new Padding(0, 14, 0, 6),
+                Tag = new SectionMark(text, reset)
             };
             if (reset == null) { parent.Controls.Add(title); return; }
             // card title with a "Reset" button on the right: puts the settings of this section back to their defaults (after a confirmation)
-            var row = new Panel { Width = 700, Height = 40, Margin = new Padding(0, 6, 0, 2), BackColor = Color.Transparent };
+            var row = new Panel { Width = 700, Height = 40, Margin = new Padding(0, 6, 0, 2), BackColor = Color.Transparent, Tag = new SectionMark(text, reset) };
             title.Margin = new Padding(0); title.Location = new Point(0, 12);
             var btn = new FlatButton { Text = OpsisStrings.T("ui.reset"), Width = 96, Height = 28, Location = new Point(700 - 96, 6) };
             btn.Click += (_, _) =>
@@ -3883,7 +3912,7 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
             }
         }
 
-        private static FlowLayoutPanel AddCardSection(Control parent, string title, int width = 760)
+        private static FlowLayoutPanel AddCardSection(Control parent, string title, int width = 760, Action? reset = null)
         {
             var inner = new FixedWidthFlowPanel { FixedWidth = width - 36, FlowDirection = FlowDirection.TopDown, WrapContents = false, AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, Width = width - 36 };
             inner.Controls.Add(new Label
@@ -3902,7 +3931,8 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                 AutoSizeMode = AutoSizeMode.GrowAndShrink,
                 BackColor = UiTheme.Surface,
                 Padding = new Padding(18, 14, 18, 16),
-                Margin = new Padding(0, 0, 0, 16)
+                Margin = new Padding(0, 0, 0, 16),
+                Tag = new SectionMark(title, reset)
             };
             card.Controls.Add(inner);
             // Το μέγεθος της κάρτας αλλάζει καθώς ο καλών προσθέτει γραμμές ΜΕΤΑ την επιστροφή αυτής
