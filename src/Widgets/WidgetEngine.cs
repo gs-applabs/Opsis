@@ -298,6 +298,8 @@ namespace MotionDesk.Widgets
                 if (e.Data?.GetData(DataFormats.FileDrop) is not string[] files) return;
                 foreach (var f in files)
                 {
+                    // Same rule as dock/application wallpaper/palette: no scripts (.ps1/.vbs/.hta/.js...), UNC/URL or missing paths.
+                    if (SafeLaunch.Reject(f) is { } why) { AttachLog.Write("widget drop refused: " + why + " (" + f + ")"); continue; }
                     try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(f) { UseShellExecute = true }); }
                     catch { }
                 }
