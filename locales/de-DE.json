@@ -1039,5 +1039,9 @@
   "LockGif.RebootNow": "Jetzt neu starten",
   "LockGif.RebootLater": "Später",
   "DesktopMenu.NewContainer": "Neuer DeskContainer",
-  "DesktopMenu.ChangeWallpaper": "Hintergrund wechseln"
+  "DesktopMenu.ChangeWallpaper": "Hintergrund wechseln",
+  "DCM.Rename": "Container umbenennen...",
+  "DCM.Hide": "Container ausblenden",
+  "DCM.Cancel": "Abbrechen",
+  "DCX.PageHint": "Einstellungen, Umbenennen und Löschen eines Containers findest du in dessen eigenem Menü (Rechtsklick auf den Container)."
 }

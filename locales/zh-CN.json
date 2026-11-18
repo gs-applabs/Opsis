@@ -1039,5 +1039,9 @@
   "LockGif.RebootNow": "立即重启",
   "LockGif.RebootLater": "稍后",
   "DesktopMenu.NewContainer": "新建 DeskContainer",
-  "DesktopMenu.ChangeWallpaper": "更换壁纸"
+  "DesktopMenu.ChangeWallpaper": "更换壁纸",
+  "DCM.Rename": "重命名容器...",
+  "DCM.Hide": "隐藏容器",
+  "DCM.Cancel": "取消",
+  "DCX.PageHint": "每个容器的设置、重命名和删除都在它自己的菜单中（右键单击容器）。"
 }

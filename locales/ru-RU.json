@@ -1039,5 +1039,9 @@
   "LockGif.RebootNow": "Перезагрузить сейчас",
   "LockGif.RebootLater": "Позже",
   "DesktopMenu.NewContainer": "Новый DeskContainer",
-  "DesktopMenu.ChangeWallpaper": "Сменить обои"
+  "DesktopMenu.ChangeWallpaper": "Сменить обои",
+  "DCM.Rename": "Переименовать контейнер...",
+  "DCM.Hide": "Скрыть контейнер",
+  "DCM.Cancel": "Отмена",
+  "DCX.PageHint": "Настройки, переименование и удаление контейнера находятся в его собственном меню (правый клик по контейнеру)."
 }

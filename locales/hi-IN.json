@@ -1039,5 +1039,9 @@
   "LockGif.RebootNow": "अभी पुनः आरंभ करें",
   "LockGif.RebootLater": "बाद में",
   "DesktopMenu.NewContainer": "नया DeskContainer",
-  "DesktopMenu.ChangeWallpaper": "वॉलपेपर बदलें"
+  "DesktopMenu.ChangeWallpaper": "वॉलपेपर बदलें",
+  "DCM.Rename": "कंटेनर का नाम बदलें...",
+  "DCM.Hide": "कंटेनर छिपाएँ",
+  "DCM.Cancel": "रद्द करें",
+  "DCX.PageHint": "हर कंटेनर की सेटिंग, नाम बदलना और हटाना उसके अपने मेनू में है (कंटेनर पर राइट-क्लिक करें)।"
 }

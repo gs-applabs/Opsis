@@ -1039,5 +1039,9 @@
   "LockGif.RebootNow": "지금 다시 시작",
   "LockGif.RebootLater": "나중에",
   "DesktopMenu.NewContainer": "새 DeskContainer",
-  "DesktopMenu.ChangeWallpaper": "배경 화면 변경"
+  "DesktopMenu.ChangeWallpaper": "배경 화면 변경",
+  "DCM.Rename": "컨테이너 이름 바꾸기...",
+  "DCM.Hide": "컨테이너 숨기기",
+  "DCM.Cancel": "취소",
+  "DCX.PageHint": "컨테이너의 설정, 이름 바꾸기, 삭제는 해당 컨테이너의 메뉴(오른쪽 클릭)에 있습니다."
 }

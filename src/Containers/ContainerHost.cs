@@ -147,6 +147,36 @@ namespace MotionDesk.Containers
         }
         private int _snapIndex = -1;
 
+        /// <summary>Stores a new title (rules in <see cref="ContainerNaming"/>); the window title bar follows at once. False when the edit was rejected.</summary>
+        public bool Rename(string id, string? typed)
+        {
+            Flush(); var changed = false;
+            _service.Update(doc => changed = ContainerRename.Apply(doc, id, typed));
+            if (changed) Sync();
+            return changed;
+        }
+
+        /// <summary>Inline rename: Enter saves, Esc cancels, an empty name is rejected (nothing changes).</summary>
+        public void RenameWithDialog(string id)
+        {
+            var c = Containers().FirstOrDefault(x => x.Id == id); if (c == null) return;
+            using var f = new Form { Text = MotionDesk.Services.LocalizationManager.T("DCM.Rename").TrimEnd('.', '…'), StartPosition = FormStartPosition.CenterScreen, ClientSize = new Size(380, 112), FormBorderStyle = FormBorderStyle.FixedDialog, MaximizeBox = false, MinimizeBox = false, ShowInTaskbar = false, TopMost = true };
+            var box = new TextBox { Location = new Point(14, 14), Width = 352, Text = c.Title, MaxLength = ContainerNaming.MaxLength };
+            var ok = new Button { Text = "OK", DialogResult = DialogResult.OK, Location = new Point(286, 66), Size = new Size(80, 30) };
+            var cancel = new Button { Text = MotionDesk.Services.LocalizationManager.T("DCM.Cancel"), DialogResult = DialogResult.Cancel, Location = new Point(196, 66), Size = new Size(80, 30) };
+            f.Controls.AddRange(new Control[] { box, ok, cancel }); f.AcceptButton = ok; f.CancelButton = cancel; box.SelectAll();
+            if (f.ShowDialog() == DialogResult.OK) Rename(id, box.Text);
+        }
+
+        public void DeleteWithConfirm(string id)
+        {
+            var c = Containers().FirstOrDefault(x => x.Id == id); if (c == null) return;
+            var name = string.IsNullOrWhiteSpace(c.Title) ? c.Id : c.Title;
+            if (MessageBox.Show(string.Format(MotionDesk.Services.LocalizationManager.T("DCX.DeleteConfirm"), name), MotionDesk.Services.LocalizationManager.T("DCX.DeleteTitle"), MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes) return;
+            Flush(); _service.Handle("delete", new System.Text.Json.Nodes.JsonObject { ["id"] = id }); Sync();
+            try { MotionDesk.Widgets.DesktopIconVisibilityEngine.RestoreOriginals(); } catch (Exception) { }
+        }
+
         public void SetHidden(string id, bool hidden) { _service.Handle(hidden ? "hide" : "show", new System.Text.Json.Nodes.JsonObject { ["id"] = id }); Sync(); }
         private int _focusIndex = -1;
         /// <summary>Focus-container hotkey: gives the keyboard focus to the next visible container (Tab-like cycling), so the arrows / Enter work in it.</summary>
@@ -180,6 +210,7 @@ namespace MotionDesk.Containers
                     var w = new ContainerWindow(model, () => _windows.Where(p => p.Key != id).Select(p => p.Value.Bounds)) { Bounds = Place(model, mons) };
                     w.Changed += c => { _dirty[c.Id] = c; if (!_save.Enabled) _save.Start(); };
                     w.SettingsRequested += cid => ContainerSettingsForm.Open(this, cid);
+                    w.RenameRequested += RenameWithDialog; w.HideRequested += cid => SetHidden(cid, true); w.DeleteRequested += DeleteWithConfirm;
                     w.ItemsAdded += paths => { if (MotionDesk.Services.AppSettings.Load().HideOriginalsOnDrop) MotionDesk.Widgets.DesktopIconVisibilityEngine.HideOriginals(paths); };
                     w.ItemRemoved += p => MotionDesk.Widgets.DesktopIconVisibilityEngine.RestoreOriginals(p);
                     _windows[id] = w; w.Show(); DesktopZOrder.Place(w.Handle);

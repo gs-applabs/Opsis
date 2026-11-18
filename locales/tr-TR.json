@@ -1039,5 +1039,9 @@
   "LockGif.RebootNow": "Şimdi yeniden başlat",
   "LockGif.RebootLater": "Daha sonra",
   "DesktopMenu.NewContainer": "Yeni DeskContainer",
-  "DesktopMenu.ChangeWallpaper": "Duvar kağıdını değiştir"
+  "DesktopMenu.ChangeWallpaper": "Duvar kağıdını değiştir",
+  "DCM.Rename": "Kapsayıcıyı yeniden adlandır...",
+  "DCM.Hide": "Kapsayıcıyı gizle",
+  "DCM.Cancel": "İptal",
+  "DCX.PageHint": "Kapsayıcının ayarları, yeniden adlandırma ve silme işlemleri kendi menüsündedir (kapsayıcıya sağ tıklayın)."
 }

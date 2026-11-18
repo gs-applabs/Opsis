@@ -1062,5 +1062,9 @@
   "LockGif.RebootNow": "Restart now",
   "LockGif.RebootLater": "Later",
   "DesktopMenu.NewContainer": "New DeskContainer",
-  "DesktopMenu.ChangeWallpaper": "Change wallpaper"
+  "DesktopMenu.ChangeWallpaper": "Change wallpaper",
+  "DCM.Rename": "Rename container...",
+  "DCM.Hide": "Hide container",
+  "DCM.Cancel": "Cancel",
+  "DCX.PageHint": "Settings, rename and delete of a container are in its own menu (right-click the container)."
 }

@@ -1062,5 +1062,9 @@
   "LockGif.RebootNow": "Επανεκκίνηση τώρα",
   "LockGif.RebootLater": "Αργότερα",
   "DesktopMenu.NewContainer": "Νέο DeskContainer",
-  "DesktopMenu.ChangeWallpaper": "Αλλαγή wallpaper"
+  "DesktopMenu.ChangeWallpaper": "Αλλαγή wallpaper",
+  "DCM.Rename": "Μετονομασία container...",
+  "DCM.Hide": "Απόκρυψη container",
+  "DCM.Cancel": "Άκυρο",
+  "DCX.PageHint": "Οι ρυθμίσεις, η μετονομασία και η διαγραφή κάθε container βρίσκονται στο δικό του μενού (δεξί κλικ πάνω του)."
 }

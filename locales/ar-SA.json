@@ -1039,5 +1039,9 @@
   "LockGif.RebootNow": "إعادة التشغيل الآن",
   "LockGif.RebootLater": "لاحقًا",
   "DesktopMenu.NewContainer": "DeskContainer جديد",
-  "DesktopMenu.ChangeWallpaper": "تغيير الخلفية"
+  "DesktopMenu.ChangeWallpaper": "تغيير الخلفية",
+  "DCM.Rename": "إعادة تسمية الحاوية...",
+  "DCM.Hide": "إخفاء الحاوية",
+  "DCM.Cancel": "إلغاء",
+  "DCX.PageHint": "إعدادات كل حاوية وإعادة تسميتها وحذفها في قائمتها الخاصة (انقر بالزر الأيمن على الحاوية)."
 }

@@ -1039,5 +1039,9 @@
   "LockGif.RebootNow": "今すぐ再起動",
   "LockGif.RebootLater": "後で",
   "DesktopMenu.NewContainer": "新しい DeskContainer",
-  "DesktopMenu.ChangeWallpaper": "壁紙を変更"
+  "DesktopMenu.ChangeWallpaper": "壁紙を変更",
+  "DCM.Rename": "コンテナの名前を変更...",
+  "DCM.Hide": "コンテナを非表示",
+  "DCM.Cancel": "キャンセル",
+  "DCX.PageHint": "各コンテナの設定・名前変更・削除は、そのコンテナ自身のメニュー（右クリック）にあります。"
 }

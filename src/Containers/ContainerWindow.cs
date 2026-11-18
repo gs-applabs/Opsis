@@ -264,13 +264,16 @@ namespace MotionDesk.Containers
         public bool GlassOn => MotionDesk.Services.GlassService.Enabled;
         public event Action<Container>? Changed;
         /// <summary>The user asked for this container's own settings (title bar right-click menu).</summary>
-        public event Action<string>? SettingsRequested;
+        public event Action<string>? SettingsRequested, RenameRequested, HideRequested, DeleteRequested;
 
         /// <summary>Live settings: takes the look (title bar, appearance, title, lock) from the stored container, so a change made anywhere shows at once without recreating the window.</summary>
+        private string _styleKey = "";
         public void ApplyStyle(Container stored)
         {
+            // nothing painted from the stored data changed (every Apply of ANY container re-syncs all windows): do not repaint, that was a source of flicker
+            var key = ContainerStyleKey.Of(stored); var same = key == _styleKey; _styleKey = key;
             Model.Title = stored.Title; Model.Locked = stored.Locked; Model.TitleBar = stored.TitleBar; Model.Appearance = stored.Appearance;
-            if (IsHandleCreated) { Dirty(); Invalidate(); }
+            if (IsHandleCreated && !same) { Dirty(); Invalidate(); }
         }
         /// <summary>The global look (theme, glass, tint, performance tier) changed: repaint with the current settings.</summary>
         public void Restyle() { if (IsHandleCreated) { Dirty(); Invalidate(); } }
@@ -279,7 +282,7 @@ namespace MotionDesk.Containers
 
         public ContainerWindow(Container model, Func<IEnumerable<Rectangle>>? others = null)
         {
-            Model = model; _others = others ?? (() => Array.Empty<Rectangle>());
+            Model = model; _styleKey = ContainerStyleKey.Of(model); _others = others ?? (() => Array.Empty<Rectangle>());
             FormBorderStyle = FormBorderStyle.None; ShowInTaskbar = false; StartPosition = FormStartPosition.Manual; AllowDrop = true;
             SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.UserPaint | ControlStyles.Opaque, true);
             _repaint.Tick += (_, _) => { if (_dirty) Repaint(); else _repaint.Stop(); };
@@ -532,6 +535,7 @@ namespace MotionDesk.Containers
             }
             if (key == Keys.Enter && _selected >= 0 && _selected < Items.Count) { OpenItem(_selected); return true; }
             if (key == Keys.Delete && _selected >= 0 && !Model.Locked) { RemoveItem(_selected); return true; }
+            if (key == Keys.F2) { RenameRequested?.Invoke(Model.Id); return true; }
             if (key == Keys.Apps || key == (Keys.F10 | Keys.Shift)) { ShowMenu(_selected >= 0 ? ContainerLayout.CellRect(_selected, Client, Metrics, _scroll).Location : new Point(Metrics.Margin, Metrics.TitleBarHeight)); return true; }
             return false;
         }
@@ -612,6 +616,9 @@ namespace MotionDesk.Containers
             }
             else { Add("Edit note...", EditNote); menu.Items.Add(new ToolStripSeparator()); }
             Add(MotionDesk.Services.LocalizationManager.T("DCM.ContainerSettings"), () => SettingsRequested?.Invoke(Model.Id));
+            Add(MotionDesk.Services.LocalizationManager.T("DCM.Rename"), () => RenameRequested?.Invoke(Model.Id));
+            Add(MotionDesk.Services.LocalizationManager.T("DCM.Hide"), () => HideRequested?.Invoke(Model.Id));
+            Add(MotionDesk.Services.LocalizationManager.T("DCX.DeleteContainer"), () => DeleteRequested?.Invoke(Model.Id), !Model.Locked);
             Add(Model.Locked ? "Unlock container" : "Lock container" , () => { Model.Locked = !Model.Locked; Dirty(); Changed?.Invoke(Model); });
             Add(Model.RolledUp ? "Unroll" : "Roll up", ToggleRollUp);
             menu.Closed += (_, _) => BeginInvoke(() => menu.Dispose());
