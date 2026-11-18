@@ -101,7 +101,7 @@ namespace MotionDesk.Services
         // Κοινός, τοπικοποιημένος διάλογος "λείπει το FFmpeg" για όλα τα σημεία εισαγωγής .wmv.
         public static void PromptInstallFfmpeg(int wmvCount)
         {
-            var choice = MessageBox.Show(
+            var choice = Opsis.UI.ThemedMessageBox.Show(
                 string.Format(LocalizationManager.T("Dialog.FfmpegMissingFormat"), wmvCount),
                 LocalizationManager.T("Dialog.FfmpegTitle"), MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
             if (choice == DialogResult.Yes) OpenFfmpegDownloadPage();

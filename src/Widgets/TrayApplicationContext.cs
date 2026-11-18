@@ -340,11 +340,11 @@ namespace MotionDesk.Widgets
             // a hidden top-most owner so the box is never lost behind other windows (it used to appear behind the desktop at login and was never answered)
             using var owner = new Form { TopMost = true, ShowInTaskbar = false, FormBorderStyle = FormBorderStyle.None, Opacity = 0, Size = new System.Drawing.Size(1, 1), StartPosition = FormStartPosition.CenterScreen };
             owner.Show();
-            PluginHost.Instance.ResolvePending(req => MessageBox.Show(owner,
+            PluginHost.Instance.ResolvePending(req => Opsis.UI.ThemedMessageBox.Show(owner,
                 req.IsUpdate
                     ? string.Format(LocalizationManager.T("Plugin.TrustUpdateBody"), req.Name, req.Folder, req.Sha256.Substring(0, 16), (req.PreviousSha256 ?? "").PadRight(16).Substring(0, 16).Trim())
                     : string.Format(LocalizationManager.T("Plugin.TrustBody"), req.Name, req.Folder, req.Sha256.Substring(0, 16)),
-                LocalizationManager.T(req.IsUpdate ? "Plugin.TrustUpdateTitle" : "Plugin.TrustTitle"), MessageBoxButtons.YesNo, MessageBoxIcon.Warning, MessageBoxDefaultButton.Button2) == DialogResult.Yes);
+                LocalizationManager.T(req.IsUpdate ? "Plugin.TrustUpdateTitle" : "Plugin.TrustTitle"), MessageBoxButtons.YesNo, MessageBoxIcon.Warning) == DialogResult.Yes);
             UpdatePluginApprovalItem();
         }
 
@@ -383,7 +383,7 @@ namespace MotionDesk.Widgets
             if (LockScreenEngine.MatchesExpected(settings.LockScreenSnapshotPath)) return;
             if (!File.Exists(settings.LockScreenSnapshotPath)) return;
 
-            var choice = MessageBox.Show(
+            var choice = Opsis.UI.ThemedMessageBox.Show(
                 LocalizationManager.T("Dialog.LockScreenDriftedBody"),
                 LocalizationManager.T("Dialog.LockScreenDriftedTitle"), MessageBoxButtons.YesNo, MessageBoxIcon.Question);
             if (choice != DialogResult.Yes)

@@ -45,7 +45,7 @@ namespace MotionDesk.UI
                     var reset = sec.Reset; var title = sec.Title;
                     card.ResetRequested += (_, _) =>
                     {
-                        if (MessageBox.Show(FindForm(), LocalizationManager.T("Settings.ResetConfirm"), title, MessageBoxButtons.YesNo, MessageBoxIcon.Question, MessageBoxDefaultButton.Button2) != DialogResult.Yes) return;
+                        if (Opsis.UI.ThemedMessageBox.Show(FindForm(), LocalizationManager.T("Settings.ResetConfirm"), title, MessageBoxButtons.YesNo, MessageBoxIcon.Question, destructive: true) != DialogResult.Yes) return;
                         reset();
                         if (_pageBuilders.TryGetValue(key, out var rebuild)) rebuild();
                     };

@@ -30,7 +30,7 @@ namespace MotionDesk.UI
                 var adv = new AdvancedSection(); adv.AddControl(inner); card.Controls.Add(adv);
                 return inner;
             }
-            void Fail(Exception ex) => MessageBox.Show(this, ex.Message, T("Nav.Personalization"), MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            void Fail(Exception ex) => Opsis.UI.ThemedMessageBox.Show(this, ex.Message, T("Nav.Personalization"), MessageBoxButtons.OK, MessageBoxIcon.Warning);
             // every change: the user's original values are saved first (once), then the change is made; a failure is shown, never thrown
             void Do(Action change, bool rebuild = false) { try { svc.Backup(); change(); } catch (Exception ex) { Fail(ex); } if (rebuild) Rebuild(); }
 
@@ -75,7 +75,7 @@ namespace MotionDesk.UI
                 var r = Row(card);
                 Bt(r, "Win.ResetSection", () =>
                 {
-                    if (MessageBox.Show(this, T("Settings.ResetConfirm"), T("Win.ResetSection"), MessageBoxButtons.YesNo, MessageBoxIcon.Question, MessageBoxDefaultButton.Button2) != DialogResult.Yes) return;
+                    if (Opsis.UI.ThemedMessageBox.Show(this, T("Settings.ResetConfirm"), T("Win.ResetSection"), MessageBoxButtons.YesNo, MessageBoxIcon.Question, destructive: true) != DialogResult.Yes) return;
                     svc.ResetCategory(category); Rebuild();
                 }, 260);
             }
@@ -125,7 +125,7 @@ namespace MotionDesk.UI
             Bt(accRow, "Win.FromWallpaper", () =>
             {
                 int? c = null; try { c = svc.Engine.WallpaperAccent(); } catch (Exception) { }
-                if (c == null) { MessageBox.Show(this, T("Win.NoWallpaperColor"), T("Nav.Personalization")); return; }
+                if (c == null) { Opsis.UI.ThemedMessageBox.Show(this, T("Win.NoWallpaperColor"), T("Nav.Personalization"), MessageBoxButtons.OK, MessageBoxIcon.None); return; }
                 Do(() => svc.Engine.Apply(new Look { AccentRgb = c }));
             }, 190);
             ResetButton(theme, 0);
@@ -205,12 +205,12 @@ namespace MotionDesk.UI
             Cb(cr, "Win.Combine", Opts("Win.Combine.Always", "Win.Combine.Full", "Win.Combine.Never"), Math.Clamp(cur.TaskbarCombine ?? 0, 0, 2), i => Do(() => svc.Engine.Apply(new Look { TaskbarCombine = i })), 220);
             Bt(cr, "Win.RestartExplorer", () =>
             {
-                if (MessageBox.Show(this, T("Win.RestartExplorerAsk"), T("Win.RestartExplorer"), MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes) return;
+                if (Opsis.UI.ThemedMessageBox.Show(this, T("Win.RestartExplorerAsk"), T("Win.RestartExplorer"), MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes) return;
                 // off the UI thread (it waits for the new shell); Windows normally restarts it, if not Opsis starts it from %WINDIR%
                 System.Threading.Tasks.Task.Run(ExplorerRestarter.RestartReal).ContinueWith(t =>
                 {
                     if (t.IsCompletedSuccessfully && t.Result) return;
-                    try { BeginInvoke(new Action(() => MessageBox.Show(this, T("Win.RestartExplorerFail"), T("Win.RestartExplorer"), MessageBoxButtons.OK, MessageBoxIcon.Warning))); } catch (Exception) { }
+                    try { BeginInvoke(new Action(() => Opsis.UI.ThemedMessageBox.Show(this, T("Win.RestartExplorerFail"), T("Win.RestartExplorer"), MessageBoxButtons.OK, MessageBoxIcon.Warning))); } catch (Exception) { }
                 });
             }, 190);
 
@@ -238,7 +238,7 @@ namespace MotionDesk.UI
             Bt(slr, "Win.SlideFolder", () => { if (PickFolder()) Rebuild(); }, 150);
             Nu(slr, "Win.SlideEvery", 1, 1440, sl.IntervalMinutes, v => { sl.IntervalMinutes = v; svc.SaveSettings(); });
             Cb(slr, "Win.SlideStyle", Opts("Win.Fit.Fill", "Win.Fit.Fit", "Win.Fit.Stretch", "Win.Fit.Tile", "Win.Fit.Center", "Win.Fit.Span"), (int)sl.Style, i => { sl.Style = (WallpaperStyle)i; svc.SaveSettings(); }, 130);
-            Bt(slr, "Win.SlideNext", () => { svc.Backup(); if (!svc.SlideshowTick(DateTime.UtcNow, force: true)) MessageBox.Show(this, T("Win.SlideNone"), T("Win.SecSlide")); }, 150);
+            Bt(slr, "Win.SlideNext", () => { svc.Backup(); if (!svc.SlideshowTick(DateTime.UtcNow, force: true)) Opsis.UI.ThemedMessageBox.Show(this, T("Win.SlideNone"), T("Win.SecSlide"), MessageBoxButtons.OK, MessageBoxIcon.None); }, 150);
             AddText(slide, string.IsNullOrWhiteSpace(sl.Folder) ? T("Win.SlideNone") : $"{sl.Folder}  ·  {WallpaperSlideshow.Images(sl.Folder).Count}");
             ResetButton(slide, 4);
 
@@ -254,7 +254,7 @@ namespace MotionDesk.UI
             Bt(tr1, "Win.ThemeApply", () =>
             {
                 var t = Sel(); if (t == null) return;
-                try { var r = svc.ApplyTheme(t); if (r.Errors.Count > 0) MessageBox.Show(this, string.Join(Environment.NewLine, r.Errors), T("Win.SecThemes"), MessageBoxButtons.OK, MessageBoxIcon.Warning); }
+                try { var r = svc.ApplyTheme(t); if (r.Errors.Count > 0) Opsis.UI.ThemedMessageBox.Show(this, string.Join(Environment.NewLine, r.Errors), T("Win.SecThemes"), MessageBoxButtons.OK, MessageBoxIcon.Warning); }
                 catch (Exception e) { Fail(e); }
                 Rebuild();
             }, 130);
@@ -262,14 +262,14 @@ namespace MotionDesk.UI
             {
                 string? name = PromptForText(T("Win.ThemeName"), T("Win.ThemeNameDefault"));
                 if (string.IsNullOrWhiteSpace(name)) return;
-                bool withWall = MessageBox.Show(this, T("Win.ThemeWallpaperAsk"), T("Win.SecThemes"), MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes;
+                bool withWall = Opsis.UI.ThemedMessageBox.Show(this, T("Win.ThemeWallpaperAsk"), T("Win.SecThemes"), MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes;
                 try { svc.Backup(); var (t, wall) = svc.Applier.CaptureCurrent(name.Trim(), s.Effects, withWall); svc.Themes.Save(t, wall); } catch (Exception e) { Fail(e); }
                 Rebuild();
             }, 240);
             Bt(tr1, "Win.ThemeDelete", () =>
             {
                 var t = Sel(); if (t == null || t.BuiltIn) return;
-                if (MessageBox.Show(this, string.Format(T("Win.ThemeDeleteAsk"), t.Name), T("Win.SecThemes"), MessageBoxButtons.YesNo, MessageBoxIcon.Question, MessageBoxDefaultButton.Button2) != DialogResult.Yes) return;
+                if (Opsis.UI.ThemedMessageBox.Show(this, string.Format(T("Win.ThemeDeleteAsk"), t.Name), T("Win.SecThemes"), MessageBoxButtons.YesNo, MessageBoxIcon.Question, destructive: true) != DialogResult.Yes) return;
                 try { svc.Themes.Delete(t.Name); } catch (Exception e) { Fail(e); }
                 Rebuild();
             }, 110);
@@ -278,7 +278,7 @@ namespace MotionDesk.UI
             {
                 using var dlg = new OpenFileDialog { Filter = "Opsis theme (*.opsistheme)|*.opsistheme|Zip (*.zip)|*.zip", Title = T("Win.ThemeImport") };
                 if (dlg.ShowDialog(this) != DialogResult.OK) return;
-                try { svc.Themes.Import(dlg.FileName); } catch (Exception e) { MessageBox.Show(this, T("Win.ThemeInvalid") + " " + e.Message, T("Win.SecThemes"), MessageBoxButtons.OK, MessageBoxIcon.Warning); }
+                try { svc.Themes.Import(dlg.FileName); } catch (Exception e) { Opsis.UI.ThemedMessageBox.Show(this, T("Win.ThemeInvalid") + " " + e.Message, T("Win.SecThemes"), MessageBoxButtons.OK, MessageBoxIcon.Warning); }
                 Rebuild();
             }, 220);
             Bt(tr2, "Win.ThemeExport", () =>
@@ -303,7 +303,7 @@ namespace MotionDesk.UI
                 {
                     int i = wc.SelectedIndex; if (i < 0 || i >= winThemes.Count) return;
                     var safety = ThemeSafety.Check(winThemes[i].Path);
-                    if (safety.NeedsWarning && MessageBox.Show(this, ThemeSafety.Explain(safety, LocalizationManager.CurrentLanguage == "el"), T("Win.WinThemes"), MessageBoxButtons.YesNo, MessageBoxIcon.Warning, MessageBoxDefaultButton.Button2) != DialogResult.Yes) return;
+                    if (safety.NeedsWarning && Opsis.UI.ThemedMessageBox.Show(this, ThemeSafety.Explain(safety, LocalizationManager.CurrentLanguage == "el"), T("Win.WinThemes"), MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes) return;
                     try { ThemePackageEngine.ApplyTheme(winThemes[i].Path); _statusLabel.Text = T("Personalization.ThemeAppliedStatus"); } catch (Exception e) { Fail(e); }
                 }, 130);
             }
@@ -330,13 +330,13 @@ namespace MotionDesk.UI
             Bt(sr1, "Win.RestorePointNow", () =>
             {
                 var r = svc.CreateRestorePointNow();
-                MessageBox.Show(this, r.Message, T("Win.SecSafety"), MessageBoxButtons.OK, r.Status == RestorePointStatus.Created ? MessageBoxIcon.Information : MessageBoxIcon.Warning);
+                Opsis.UI.ThemedMessageBox.Show(this, r.Message, T("Win.SecSafety"), MessageBoxButtons.OK, r.Status == RestorePointStatus.Created ? MessageBoxIcon.Information : MessageBoxIcon.Warning);
             }, 250);
             Bt(sr1, "Win.OpenBackups", () => { try { Directory.CreateDirectory(svc.Vault.Root); System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(svc.Vault.Root) { UseShellExecute = true }); } catch (Exception) { } }, 200);
             var sr2 = Row(safe);
             var restore = Bt(sr2, "Win.RestoreOriginal", () =>
             {
-                if (!svc.Store.HasBackup) { MessageBox.Show(this, T("Win.NothingToRestore"), T("Win.SecSafety")); return; }
+                if (!svc.Store.HasBackup) { Opsis.UI.ThemedMessageBox.Show(this, T("Win.NothingToRestore"), T("Win.SecSafety"), MessageBoxButtons.OK, MessageBoxIcon.None); return; }
                 try { svc.RestoreOriginal(); } catch (Exception e) { Fail(e); }
                 Rebuild();
             }, 280);
@@ -345,7 +345,7 @@ namespace MotionDesk.UI
             {
                 var report = AppearanceMigration.Scan(AppPaths.AppDataFolder);
                 string? saved = report.AnythingFound ? AppearanceMigration.Backup(AppPaths.AppDataFolder) : null;
-                MessageBox.Show(this, report.AnythingFound ? AppearanceMigration.Describe(report) + (saved == null ? "" : Environment.NewLine + Environment.NewLine + string.Format(T("Win.ImportBackup"), saved)) : T("Win.ImportNothing"), T("Win.ImportCheck"));
+                Opsis.UI.ThemedMessageBox.Show(this, report.AnythingFound ? AppearanceMigration.Describe(report) + (saved == null ? "" : Environment.NewLine + Environment.NewLine + string.Format(T("Win.ImportBackup"), saved)) : T("Win.ImportNothing"), T("Win.ImportCheck"), MessageBoxButtons.OK, MessageBoxIcon.None);
             }, 300);
 
             if (_winAppearanceScroll > 0) { int keep = _winAppearanceScroll; _winAppearanceScroll = 0; BeginInvoke(new Action(() => { try { panel.VerticalScroll.Value = Math.Min(keep, panel.VerticalScroll.Maximum); panel.PerformLayout(); } catch (Exception) { } })); }

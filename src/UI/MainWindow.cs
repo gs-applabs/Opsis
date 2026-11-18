@@ -1844,7 +1844,7 @@ namespace MotionDesk.UI
             var reverseToggle = new FlatToggle { RowWidth = 700, Text = LocalizationManager.T("Wallpaper.WeatherReverseOn"), Checked = settings.WeatherReverseGeocode, BackColor = UiTheme.Surface, Margin = new Padding(0, 2, 0, 2) };
             reverseToggle.CheckedChanged += (_, _) =>
             {
-                if (reverseToggle.Checked && MessageBox.Show(this, LocalizationManager.T("Wallpaper.WeatherReverseConsent"), LocalizationManager.T("Wallpaper.WeatherReverseOn"), MessageBoxButtons.YesNo, MessageBoxIcon.Question, MessageBoxDefaultButton.Button2) != DialogResult.Yes)
+                if (reverseToggle.Checked && Opsis.UI.ThemedMessageBox.Show(this, LocalizationManager.T("Wallpaper.WeatherReverseConsent"), LocalizationManager.T("Wallpaper.WeatherReverseOn"), MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
                 { reverseToggle.Checked = false; return; }
                 WallpaperHostEngine.Instance.SetWeatherReverseGeocode(reverseToggle.Checked);
             };
@@ -1854,7 +1854,7 @@ namespace MotionDesk.UI
             myLocBtn.Width = 220;
             myLocBtn.Click += async (_, _) =>
             {
-                if (MessageBox.Show(this, LocalizationManager.T("Wallpaper.WeatherLocationConsent"), LocalizationManager.T("Wallpaper.WeatherUseMyLocation"), MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes) return;
+                if (Opsis.UI.ThemedMessageBox.Show(this, LocalizationManager.T("Wallpaper.WeatherLocationConsent"), LocalizationManager.T("Wallpaper.WeatherUseMyLocation"), MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes) return;
                 myLocBtn.Enabled = false;
                 try
                 {
@@ -1893,7 +1893,7 @@ namespace MotionDesk.UI
                 BeginInvoke(new Action(() =>
                 {
                     WallpaperHostEngine.Instance.MarkWeatherLocationPrompted();
-                    var result = MessageBox.Show(this,
+                    var result = Opsis.UI.ThemedMessageBox.Show(this,
                         LocalizationManager.T("Wallpaper.WeatherLocationPromptBody"),
                         LocalizationManager.T("Wallpaper.WeatherLocationPromptTitle"),
                         MessageBoxButtons.YesNo, MessageBoxIcon.Question);
@@ -2143,7 +2143,7 @@ namespace MotionDesk.UI
 
             if (anySevenZipMissing)
             {
-var choice = MessageBox.Show(
+var choice = Opsis.UI.ThemedMessageBox.Show(
                     LocalizationManager.T("Dialog.SevenZipMissing"),
                     LocalizationManager.T("Dialog.SevenZipTitle"), MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
                 if (choice == DialogResult.Yes) ArchivePlaylistService.OpenSevenZipDownloadPage();
@@ -2168,7 +2168,7 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                         if (mp4 != null) finalPaths.Add(mp4);
                     }
                     if (finalPaths.Count == 0)
-                        MessageBox.Show(LocalizationManager.T("Dialog.ConvertFailed"), LocalizationManager.T("Dialog.ConvertFailedTitle"), MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        Opsis.UI.ThemedMessageBox.Show(LocalizationManager.T("Dialog.ConvertFailed"), LocalizationManager.T("Dialog.ConvertFailedTitle"), MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
             }
 
@@ -2286,7 +2286,7 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                 }
                 else
                 {
-                    MessageBox.Show(this, LocalizationManager.T("Personalization.IconPackNotFound"), LocalizationManager.T("Personalization.IconPackTitle"), MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    Opsis.UI.ThemedMessageBox.Show(this, LocalizationManager.T("Personalization.IconPackNotFound"), LocalizationManager.T("Personalization.IconPackTitle"), MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
                 ShowPersonalization();
             }),
@@ -2804,9 +2804,9 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
             // ΔΙΟΡΘΩΣΗ "όλα τα πλαίσια εδώ να είναι ίδιου μήκους": το SparklineCard είχε Width=500
             // ενώ τα CPU/Μνήμη/GPU (AddMeter) και η κάρτα Ενέργειας (AddCard) είναι όλα 760 -
             // ίδιο πλάτος με τα υπόλοιπα, συνεπές με όλη τη σελίδα.
-            var net = new SparklineCard(LocalizationManager.T("Performance.NetworkLabel"), 2, 1024) { Width = 760, Height = 110, Margin = new Padding(0, 0, 0, 10) };
+            var net = new SparklineCard(LocalizationManager.T("Performance.NetworkLabel"), 2, 1024) { Width = 780, Height = 130, Margin = new Padding(-10, -10, 0, 0) };
             panel.Controls.Add(net);
-            var procs = new SparklineCard(LocalizationManager.T("Performance.ProcessesLabel"), 1, 400) { Width = 760, Height = 110, Margin = new Padding(0, 0, 0, 10) };
+            var procs = new SparklineCard(LocalizationManager.T("Performance.ProcessesLabel"), 1, 400) { Width = 780, Height = 130, Margin = new Padding(-10, -10, 0, 0) };
             panel.Controls.Add(procs);
             var powerCard = AddCard(panel, LocalizationManager.T("Performance.PowerLabel"), "");
 
@@ -3320,7 +3320,7 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                     // διεργασία), αλλιώς προγραμματίζεται καθαρή διαγραφή στην επόμενη εκκίνηση.
                     var uninstallBtn = NewHoverButton(LocalizationManager.T("About.PluginUninstall"), () =>
                     {
-                        var choice = MessageBox.Show(
+                        var choice = Opsis.UI.ThemedMessageBox.Show(
                             string.Format(LocalizationManager.T("About.PluginUninstallConfirmBody"), captured.Name),
                             LocalizationManager.T("About.PluginUninstallConfirmTitle"), MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
                         if (choice != DialogResult.Yes) return;
@@ -3379,7 +3379,7 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                     try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(u.PageUrl) { UseShellExecute = true }); } catch (Exception) { }
                     return;
                 }
-                if (MessageBox.Show(this, string.Format(LocalizationManager.T("About.UpdateConfirm"), u.Version.ToString(3)),
+                if (Opsis.UI.ThemedMessageBox.Show(this, string.Format(LocalizationManager.T("About.UpdateConfirm"), u.Version.ToString(3)),
                         LocalizationManager.T("About.UpdateConfirmTitle"), MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes) return;
 
                 installingUpdate = true;
@@ -3904,7 +3904,7 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
             btn.Click += (_, _) =>
             {
                 var owner = btn.FindForm();
-                if (MessageBox.Show(owner, LocalizationManager.T("Settings.ResetConfirm"), text, MessageBoxButtons.YesNo, MessageBoxIcon.Question, MessageBoxDefaultButton.Button2) != DialogResult.Yes) return;
+                if (Opsis.UI.ThemedMessageBox.Show(owner, LocalizationManager.T("Settings.ResetConfirm"), text, MessageBoxButtons.YesNo, MessageBoxIcon.Question, destructive: true) != DialogResult.Yes) return;
                 reset();
                 (owner as MainWindow)?.NavigateTo("Settings");
             };
@@ -3980,10 +3980,10 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
 
         private static StatCard AddCard(Control parent, string title, string value, Action? onClick = null)
         {
-            var card = new StatCard(title, value) { Width = 760, Height = 80, Margin = new Padding(0, 0, 0, 10) };
+            var card = new StatCard(title, value) { Width = 780, Height = 100, Margin = new Padding(-10, -10, 0, 0) };
             if (onClick != null)
             {
-                card.Cursor = Cursors.Hand;
+                card.Clickable = true;
                 card.MouseUp += (_, e) => { if (e.Button == MouseButtons.Left) onClick(); };
             }
             parent.Controls.Add(card);
@@ -3992,7 +3992,7 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
 
         private static MeterCard AddMeter(Control parent, string title, double initial)
         {
-            var card = new MeterCard(title, initial) { Width = 760, Height = 90, Margin = new Padding(0, 0, 0, 10) };
+            var card = new MeterCard(title, initial) { Width = 780, Height = 110, Margin = new Padding(-10, -10, 0, 0) };
             parent.Controls.Add(card);
             return card;
         }
@@ -4080,7 +4080,7 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
             }
         }
 
-        private sealed class StatCard : Panel
+        private sealed class StatCard : Opsis.UI.HoverCard
         {
             private readonly string _title;
             private string _value;
@@ -4104,7 +4104,7 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                 g.SmoothingMode = SmoothingMode.AntiAlias;
                 g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
 
-                g.Clear(UiTheme.Surface); // Clear, not an antialiased FillRectangle: that leaves a faint line on the edge pixels
+                base.OnPaint(e); var cardBody = BodyBounds; cardBody.Offset(0, LiftOffset); g.SetClip(cardBody); g.TranslateTransform(cardBody.X, cardBody.Y); int Width = cardBody.Width, Height = cardBody.Height; // Opsis.UI HoverCard draws surface, border and the hover lift; the content is drawn inside its body
 
                 using (var accent = new SolidBrush(UiTheme.AccentCyan))
                     g.FillRectangle(accent, 0, 0, 3, Height);
@@ -4123,7 +4123,7 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
         // Πραγματικό sparkline chart (area fill + γραμμή + τελευταίο σημείο τονισμένο) αντί για
         // απλό κείμενο — ζητήθηκε ρητά "όμορφα γραφήματα" για Network/Processes/Power. Στηρίζεται
         // αυτόματα στη μεγαλύτερη τιμή του ιστορικού (min floor) ώστε να μη χρειάζεται fixed cap.
-        private sealed class SparklineCard : Panel
+        private sealed class SparklineCard : Opsis.UI.HoverCard
         {
             private readonly string _title;
             private readonly double _minScaleFloor;
@@ -4160,7 +4160,7 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
             {
                 var g = e.Graphics;
                 g.SmoothingMode = SmoothingMode.AntiAlias;
-                g.Clear(UiTheme.Surface); // Clear, not an antialiased FillRectangle: that leaves a faint line on the edge pixels
+                base.OnPaint(e); var cardBody = BodyBounds; cardBody.Offset(0, LiftOffset); g.SetClip(cardBody); g.TranslateTransform(cardBody.X, cardBody.Y); int Width = cardBody.Width, Height = cardBody.Height; // Opsis.UI HoverCard draws surface, border and the hover lift; the content is drawn inside its body
                 using (var accent = new SolidBrush(UiTheme.AccentCyan))
                     g.FillRectangle(accent, 0, 0, 3, Height);
 
@@ -4219,7 +4219,7 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
             }
         }
 
-        private sealed class MeterCard : Panel
+        private sealed class MeterCard : Opsis.UI.HoverCard
         {
             private readonly string _title;
             private double _percent;
@@ -4253,7 +4253,7 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                 g.SmoothingMode = SmoothingMode.AntiAlias;
                 g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
 
-                g.Clear(UiTheme.Surface); // Clear, not an antialiased FillRectangle: that leaves a faint line on the edge pixels
+                base.OnPaint(e); var cardBody = BodyBounds; cardBody.Offset(0, LiftOffset); g.SetClip(cardBody); g.TranslateTransform(cardBody.X, cardBody.Y); int Width = cardBody.Width, Height = cardBody.Height; // Opsis.UI HoverCard draws surface, border and the hover lift; the content is drawn inside its body
                 using (var accent = new SolidBrush(UiTheme.AccentCyan))
                     g.FillRectangle(accent, 0, 0, 3, Height);
 
@@ -4562,7 +4562,7 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                         c.ResetRequested += (_, _) =>
                         {
                             var owner = FindForm();
-                            if (MessageBox.Show(owner, LocalizationManager.T("Settings.ResetConfirm"), title, MessageBoxButtons.YesNo, MessageBoxIcon.Question, MessageBoxDefaultButton.Button2) != DialogResult.Yes) return;
+                            if (Opsis.UI.ThemedMessageBox.Show(owner, LocalizationManager.T("Settings.ResetConfirm"), title, MessageBoxButtons.YesNo, MessageBoxIcon.Question, destructive: true) != DialogResult.Yes) return;
                             reset();
                             (owner as MainWindow)?.NavigateTo("Settings");
                         };
@@ -4654,7 +4654,7 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                 startup.AddControl(Checkbox(LocalizationManager.T("Settings.RestoreLastSession"), AppSettings.Load().RestoreLastSession,
                     v => { var a = AppSettings.Load(); a.RestoreLastSession = v; a.Save(); }));
                 startup.AddControl(Checkbox(LocalizationManager.T("Settings.EnableAnimations"), AppSettings.Load().EnableAnimations,
-                    v => { var a = AppSettings.Load(); a.EnableAnimations = v; a.Save(); AnimationsSettingChanged?.Invoke(); }));
+                    v => { var a = AppSettings.Load(); a.EnableAnimations = v; a.Save(); Opsis.UI.OpsisMotion.UserReduced = !v; AnimationsSettingChanged?.Invoke(); }));
                 startup.AddControl(Checkbox(LocalizationManager.T("Settings.MinimizeToTray"), AppSettings.Load().MinimizeToTray,
                     v => { var a = AppSettings.Load(); a.MinimizeToTray = v; a.Save(); }));
 
@@ -4679,7 +4679,7 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                     v =>
                     {
                         if (!WindowsSystemSettings.TrySetFastStartupEnabled(v))
-                            MessageBox.Show(this, LocalizationManager.T("Settings.FastStartupAdminRequired"), LocalizationManager.T("Page.Settings.Title"), MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                            Opsis.UI.ThemedMessageBox.Show(this, LocalizationManager.T("Settings.FastStartupAdminRequired"), LocalizationManager.T("Page.Settings.Title"), MessageBoxButtons.OK, MessageBoxIcon.Warning);
                     }));
 
                 // Ζητήθηκε ρητά: ο installer εγκαθιστά ήδη το WebView2 Runtime/.NET 10 Runtime μία
@@ -4729,7 +4729,7 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                         installBtn.Text = LocalizationManager.T(nowInstalled ? "Settings.DependencyReinstall" : "Settings.DependencyInstall");
                         installBtn.Enabled = true;
                         if (!success && !nowInstalled)
-                            MessageBox.Show(string.Format(LocalizationManager.T("Settings.DependencyInstallFailedFormat"), dep.Name, output), "Opsis", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                            Opsis.UI.ThemedMessageBox.Show(string.Format(LocalizationManager.T("Settings.DependencyInstallFailedFormat"), dep.Name, output), "Opsis", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                     };
                     row.Controls.Add(installBtn);
                 }

@@ -172,7 +172,7 @@ namespace MotionDesk.Containers
         {
             var c = Containers().FirstOrDefault(x => x.Id == id); if (c == null) return;
             var name = string.IsNullOrWhiteSpace(c.Title) ? c.Id : c.Title;
-            if (MessageBox.Show(string.Format(MotionDesk.Services.LocalizationManager.T("DCX.DeleteConfirm"), name), MotionDesk.Services.LocalizationManager.T("DCX.DeleteTitle"), MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes) return;
+            if (Opsis.UI.ThemedMessageBox.Show(null, string.Format(MotionDesk.Services.LocalizationManager.T("DCX.DeleteConfirm"), name), MotionDesk.Services.LocalizationManager.T("DCX.DeleteTitle"), MessageBoxButtons.YesNo, MessageBoxIcon.Warning, destructive: true) != DialogResult.Yes) return;
             Flush(); _service.Handle("delete", new System.Text.Json.Nodes.JsonObject { ["id"] = id }); Sync();
             try { MotionDesk.Widgets.DesktopIconVisibilityEngine.RestoreOriginals(); } catch (Exception) { }
         }

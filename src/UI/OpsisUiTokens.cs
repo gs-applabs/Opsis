@@ -22,6 +22,7 @@ namespace MotionDesk.UI
             if (_installed) return;
             _installed = true;
             Opsis.UI.OpsisTheme.Use(new OpsisUiTokens());
+            try { Opsis.UI.OpsisMotion.UserReduced = !MotionDesk.Services.AppSettings.Load().EnableAnimations; } catch { }
             ThemeManager.Changed += () => Opsis.UI.OpsisTheme.NotifyChanged();
             ThemeManager.Repainted += () => Opsis.UI.OpsisTheme.NotifyChanged();
             // the common words (ui.*) follow the app's language, and Opsis' own translation of a key (if it has one) wins over the shared one

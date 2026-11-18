@@ -125,17 +125,17 @@ namespace MotionDesk.UI
                     WallpaperHostEngine.Instance.Enable(); WallpaperHostEngine.Instance.RefreshAll();
                     ShowWallpaper();
                 }
-                catch (Exception ex) { MessageBox.Show(this, ex.Message, "Opsis", MessageBoxButtons.OK, MessageBoxIcon.Warning); }
+                catch (Exception ex) { Opsis.UI.ThemedMessageBox.Show(this, ex.Message, "Opsis", MessageBoxButtons.OK, MessageBoxIcon.Warning); }
             };
             var export = MediaButton(L("Export package…", "Εξαγωγή πακέτου…"));
             export.Click += (_, _) =>
             {
                 string? index = MediaSource.LocalPagePath(WallpaperSettings.Load().PageSource);
-                if (index == null) { MessageBox.Show(this, L("Choose a local .html wallpaper first.", "Διάλεξε πρώτα ένα τοπικό wallpaper .html."), "Opsis"); return; }
+                if (index == null) { Opsis.UI.ThemedMessageBox.Show(this, L("Choose a local .html wallpaper first.", "Διάλεξε πρώτα ένα τοπικό wallpaper .html."), "Opsis", MessageBoxButtons.OK, MessageBoxIcon.None); return; }
                 using var dlg = new SaveFileDialog { Filter = "Wallpaper package (*.zip)|*.zip", FileName = Path.GetFileName(Path.GetDirectoryName(index)) + ".zip" };
                 if (dlg.ShowDialog(this) != DialogResult.OK) return;
                 try { WallpaperPackages.Export(index, dlg.FileName); }
-                catch (Exception ex) { MessageBox.Show(this, ex.Message, "Opsis", MessageBoxButtons.OK, MessageBoxIcon.Warning); }
+                catch (Exception ex) { Opsis.UI.ThemedMessageBox.Show(this, ex.Message, "Opsis", MessageBoxButtons.OK, MessageBoxIcon.Warning); }
             };
             row.Controls.Add(import); row.Controls.Add(export);
 

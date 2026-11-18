@@ -189,7 +189,7 @@ namespace MotionDesk.UI
             {
                 if (consent.Checked)
                 {
-                    var answer = MessageBox.Show(this, LG("ConfirmBody"), LG("ConfirmTitle"), MessageBoxButtons.YesNo, MessageBoxIcon.Warning, MessageBoxDefaultButton.Button2);
+                    var answer = Opsis.UI.ThemedMessageBox.Show(this, LG("ConfirmBody"), LG("ConfirmTitle"), MessageBoxButtons.YesNo, MessageBoxIcon.Warning, destructive: true);
                     if (answer != DialogResult.Yes) { consent.Checked = false; return; }
                 }
                 var a = AppSettings.Load(); a.LockscreenGifConsent = consent.Checked; a.Save();

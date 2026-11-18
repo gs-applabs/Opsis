@@ -39,7 +39,7 @@ namespace MotionDesk.UI
         {
             if (_installingPluginUpdates || _pluginUpdates.Count == 0) return;
             var names = string.Join(", ", _pluginUpdates.Select(u => u.Plugin.Name + " " + u.Latest.ToString(3)));
-            if (MessageBox.Show(this, string.Format(LocalizationManager.T("About.PluginUpdateConfirm"), names),
+            if (Opsis.UI.ThemedMessageBox.Show(this, string.Format(LocalizationManager.T("About.PluginUpdateConfirm"), names),
                     LocalizationManager.T("About.PluginUpdateConfirmTitle"), MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes) return;
             _installingPluginUpdates = true;
             progress.Value = 0; progress.Visible = true;
