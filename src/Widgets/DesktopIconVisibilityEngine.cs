@@ -317,7 +317,7 @@ namespace MotionDesk.Widgets
             if (File.Exists(OriginalsStatePath)) RestoreOriginals();            // originals hidden by a container that never got to give them back (crash, kill, upgrade)
         }
 
-        /// <summary>Rescue / test helpers (2.6.0 beta). DumpPositions is read-only: one line "name TAB x TAB y" per desktop icon.</summary>
+        /// <summary>Rescue / test helpers (2.6.0). DumpPositions is read-only: one line "name TAB x TAB y" per desktop icon.</summary>
         public static List<string> DumpPositions()
         {
             var lines = new List<string>();

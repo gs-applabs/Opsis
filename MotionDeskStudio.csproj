@@ -26,8 +26,8 @@
     <Version>2.6.0</Version>
     <AssemblyVersion>2.6.0.0</AssemblyVersion>
     <FileVersion>2.6.0.0</FileVersion>
-    <!-- shown as "2.6.0 beta" everywhere (AppVersion.Label); the commit hash is never appended -->
-    <InformationalVersion>2.6.0-beta</InformationalVersion>
+    <!-- shown as "2.6.0" everywhere (a pre-release suffix such as -rc.1 would be shown after the number) (AppVersion.Label); the commit hash is never appended -->
+    <InformationalVersion>2.6.0</InformationalVersion>
     <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
     <Product>Opsis - Desktop Customization</Product>
     <!-- Ζητήθηκε ρητά "η εφαρμογή να μην περνά ως false positive". Πραγματική, εγγυημένη λύση

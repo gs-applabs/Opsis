@@ -39,7 +39,7 @@ public sealed class VersionConsistencyTests
         var asm = typeof(AppVersion).Assembly;
         Assert.Equal(v, AppVersion.Short);
         Assert.Equal(label, AppVersion.Label);
-        Assert.Equal(label, AppVersion.Describe(asm.GetName().Version!, "2.6.0-beta+abcdef1"));
+        Assert.Equal(label, AppVersion.Describe(asm.GetName().Version!, "2.6.0+abcdef1"));
         var fvi = FileVersionInfo.GetVersionInfo(asm.Location);
         Assert.StartsWith(v, fvi.FileVersion);
         Assert.DoesNotContain("+", fvi.ProductVersion);       // no commit hash in the product version

@@ -4,7 +4,7 @@
 #endif
 #define MyAppName "Opsis - Desktop Customization"
 #define MyAppVersion "2.6.0"
-#define MyAppLabel "2.6.0 beta"
+#define MyAppLabel "2.6.0"
 #define MyAppPublisher "gs-applabs"
 #define MyAppURL "https://github.com/gs-applabs/Opsis"
 #define MyAppExeName "Opsis.exe"
@@ -38,7 +38,7 @@ VersionInfoCopyright=Copyright (c) 2026 {#MyAppPublisher}
 DefaultDirName={autopf}\{#MyAppName}
 DefaultGroupName={#MyAppName}
 OutputDir=Output
-OutputBaseFilename=OpsisSetup-2.6.0-beta
+OutputBaseFilename=OpsisSetup-2.6.0
 Compression=lzma2/ultra64
 SolidCompression=yes
 WizardStyle=modern dynamic
