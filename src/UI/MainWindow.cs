@@ -3294,6 +3294,10 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                 }
             }
 
+            // plugins that were found but not loaded because they need a newer Opsis (contract 1.0.0.0): say it plainly
+            foreach (var skipped in Services.PluginHost.Instance.Skipped)
+                AddText(panel, string.Format(LocalizationManager.T("About.PluginNeedsUpdate"), skipped.Name, skipped.Message));
+
             // ---- updates: self-update βάσει GearWin (ζητήθηκε ρητά· ήδη portαρισμένο/ζωντανά
             // δοκιμασμένο στο OpsisNewsCrawler) — κατεβάζει+εγκαθιστά ΜΟΝΟ μετά από κλικ του χρήστη
             // ΚΑΙ επιβεβαίωση, μόνο από τα releases αυτού του repo, επαληθευμένο με SHA-256.
@@ -3381,6 +3385,9 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                 var missing = DependencyManagerService.All.Where(d => !d.IsInstalled()).Select(d => d.Name).ToList();
                 if (missing.Count > 0 && !updateStatus.IsDisposed)
                     updateStatus.Text += "\n" + string.Format(LocalizationManager.T("About.UpdateDependenciesMissing"), string.Join(", ", missing));
+
+                // Opsis 2.6.0: the same button checks the plugins too (the only place that updates plugins)
+                await CheckPluginUpdatesAsync(updateStatus, updateProgress, updateRow);
             });
             updateRow.Controls.Add(checkNow);
             updateRow.Controls.Add(installBtn);

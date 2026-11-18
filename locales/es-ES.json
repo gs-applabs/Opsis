@@ -1037,5 +1037,15 @@
   "LockGif.RebootTitle": "¿Reiniciar Windows?",
   "LockGif.RebootBody": "Se cambió la función de Windows. Puede hacer falta reiniciar para que la pantalla de bloqueo se anime. Guarda tu trabajo y luego bloquea Windows para comprobar.",
   "LockGif.RebootNow": "Reiniciar ahora",
-  "LockGif.RebootLater": "Más tarde"
+  "LockGif.RebootLater": "Más tarde",
+  "About.PluginUpdateUpToDate": "Los plugins están actualizados.",
+  "About.PluginUpdateNewer": "Plugin {0}: nueva versión {1} disponible (instalada: {2}).",
+  "About.PluginUpdateInstall": "Actualizar plugins ({0})",
+  "About.PluginUpdateConfirmTitle": "Actualizar plugins",
+  "About.PluginUpdateConfirm": "¿Descargar y verificar (SHA-256) estas actualizaciones de plugins?\n\n{0}\n\nSe aplican la próxima vez que se inicie Opsis y se te pedirá una vez que apruebes el nuevo contenido.",
+  "About.PluginUpdateStaged": "Actualizaciones de plugins descargadas y verificadas. Se aplican la próxima vez que se inicie Opsis; se te pedirá una vez que apruebes el nuevo contenido.",
+  "About.PluginUpdateFailed": "Error al actualizar el plugin: {0}",
+  "About.PluginNeedsUpdate": "El plugin «{0}» no se cargó: {1}",
+  "Plugin.TrustUpdateTitle": "Plugin actualizado",
+  "Plugin.TrustUpdateBody": "El plugin «{0}», que aprobaste antes, ha cambiado (una actualización).\n\nCarpeta: {1}\nNueva huella del contenido (SHA-256): {2}… (antes: {3}…)\n\nContinúa solo si lo instalaste o actualizaste tú, por ejemplo con el botón de actualización de Opsis. ¿Cargar la nueva versión?"
 }

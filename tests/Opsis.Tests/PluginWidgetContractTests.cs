@@ -100,10 +100,10 @@ public sealed class PluginWidgetContractTests
     }
 
     [Fact]
-    public void TheContractAssemblyKeepsItsVersionAndHasTheNewTypes()
+    public void TheContractAssemblyIsVersion1000AndHasTheNewTypes()
     {
         var asm = typeof(IOpsisNewsCrawlerPlugin).Assembly;
-        Assert.Equal(new Version(0, 8, 0, 0), asm.GetName().Version);
+        Assert.Equal(new Version(1, 0, 0, 0), asm.GetName().Version);
         var names = asm.GetExportedTypes().Select(t => t.Name).ToHashSet();
         foreach (var n in new[] { "IOpsisNewsCrawlerPlugin", "PluginNavigationItem", "IPluginProfileAware", "IPluginWidgetProvider", "PluginWidget", "PluginFeed", "PluginFeedItem", "PluginFeeds" })
             Assert.Contains(n, names);

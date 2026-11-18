@@ -1037,5 +1037,15 @@
   "LockGif.RebootTitle": "Windows neu starten?",
   "LockGif.RebootBody": "Die Windows-Funktion wurde geändert. Ein Neustart kann nötig sein, bevor der Sperrbildschirm animiert wird. Speichern Sie zuerst Ihre Arbeit und sperren Sie danach Windows zur Kontrolle.",
   "LockGif.RebootNow": "Jetzt neu starten",
-  "LockGif.RebootLater": "Später"
+  "LockGif.RebootLater": "Später",
+  "About.PluginUpdateUpToDate": "Die Plugins sind aktuell.",
+  "About.PluginUpdateNewer": "Plugin {0}: neue Version {1} verfügbar (installiert: {2}).",
+  "About.PluginUpdateInstall": "Plugins aktualisieren ({0})",
+  "About.PluginUpdateConfirmTitle": "Plugins aktualisieren",
+  "About.PluginUpdateConfirm": "Diese Plugin-Updates herunterladen und prüfen (SHA-256)?\n\n{0}\n\nSie werden beim nächsten Start von Opsis angewendet, und Sie werden einmal gebeten, den neuen Inhalt zu genehmigen.",
+  "About.PluginUpdateStaged": "Plugin-Updates heruntergeladen und geprüft. Sie werden beim nächsten Start von Opsis angewendet; Sie werden einmal gebeten, den neuen Inhalt zu genehmigen.",
+  "About.PluginUpdateFailed": "Plugin-Update fehlgeschlagen: {0}",
+  "About.PluginNeedsUpdate": "Das Plugin „{0}“ wurde nicht geladen: {1}",
+  "Plugin.TrustUpdateTitle": "Plugin aktualisiert",
+  "Plugin.TrustUpdateBody": "Das Plugin „{0}“, das Sie zuvor genehmigt haben, hat sich geändert (ein Update).\n\nOrdner: {1}\nNeuer Inhalts-Fingerabdruck (SHA-256): {2}… (vorher: {3}…)\n\nFahren Sie nur fort, wenn Sie es selbst installiert oder aktualisiert haben, z. B. mit der Update-Schaltfläche von Opsis. Neue Version laden?"
 }

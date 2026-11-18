@@ -114,8 +114,8 @@ esource-logger.ps1` για λίγη ώρα.
 | 12 | Βίντεο: RAM 16 βίντεο ~3 GB → ~850 MB | ◐ ανάλυση κώδικα: το wallpaper έχει ΜΟΝΟ 2 στοιχεία `<video>` (A/B crossfade) και μικρά thumbnails στη λίστα — δεν φαίνεται preload όλων· πιθανή αιτία η αποκωδικοποίηση 4K/WebView2. ⛔ μέτρηση με 16 πραγματικά βίντεο (tools/resource-logger.ps1) πριν διόρθωση |
 | 13 | «Προεπιλεγμένη εμφάνιση plugins» → διαγραφή (2.1.1) | ✓ (η σειρά αφαιρέθηκε από τις ρυθμίσεις· τα plugins ακολουθούν πάντα το θέμα Opsis) |
 | 14 | Distinctive εικονίδιο καρτέλας plugin (γενικός μηχανισμός) | ✓ `PluginIconChooser`: γνωστά θέματα → δικό τους εικονίδιο, κάθε άλλο plugin → πλακίδιο με το δικό του γράμμα (⛔ οπτικός έλεγχος) |
-| 15 | Ενημερώσεις plugins μόνο από το κουμπί του Opsis | ☐ |
-| 16 | Κοινές ρυθμίσεις Opsis↔plugins μόνο στο Opsis | ☐ φάση P |
+| 15 | Ενημερώσεις plugins μόνο από το κουμπί του Opsis | ✓ `PluginUpdateService` + κουμπί «Έλεγχος τώρα» στο About (πολλαπλά tests με ψεύτικο HTTP)· ⛔ δεν δοκιμάστηκε με πραγματικό GitHub release / πραγματικό Windows UI |
+| 16 | Κοινές ρυθμίσεις Opsis↔plugins μόνο στο Opsis | ◐ `IPluginHostSettingsAware` (γλώσσα, θέμα, hardware tier, UI scale, «ενημερώσεις από Opsis»)· ό,τι μένει: βλ. docs/PHASE-P-STATUS.md |
 | 17 | Theme packs: duplicate με Appearance; Εξατομίκευση Plus | ☐ χρειάζεται το plugin Appearance για σύγκριση |
 | 18 | Lockscreen GIF (LockscreenGif — έλεγχος άδειας) + «ταίριασμα» χωρίς καιρό/ώρα | ⛔ δεν ξεκίνησε: πρώτα έλεγχος άδειας/τεχνικής του LockscreenGif και σχεδιασμός (η οθόνη κλειδώματος των Windows δεν δέχεται κινούμενο περιεχόμενο εύκολα) |
 | 19 | Αφαίρεση φάσματος ήχου από στοιχεία wallpaper | ✓ (στοιχείο, κατάλογος, ετικέτα, JS, polling 80 ms αφαιρέθηκαν· το widget Audio Visualizer μένει) |

@@ -1037,5 +1037,15 @@
   "LockGif.RebootTitle": "إعادة تشغيل Windows؟",
   "LockGif.RebootBody": "تم تغيير ميزة Windows. قد تلزم إعادة التشغيل قبل أن تتحرك شاشة القفل. احفظ عملك أولًا ثم اقفل Windows للتحقق.",
   "LockGif.RebootNow": "إعادة التشغيل الآن",
-  "LockGif.RebootLater": "لاحقًا"
+  "LockGif.RebootLater": "لاحقًا",
+  "About.PluginUpdateUpToDate": "الإضافات محدّثة.",
+  "About.PluginUpdateNewer": "الإضافة {0}: يتوفر إصدار جديد {1} (المثبّت: {2}).",
+  "About.PluginUpdateInstall": "تحديث الإضافات ({0})",
+  "About.PluginUpdateConfirmTitle": "تحديث الإضافات",
+  "About.PluginUpdateConfirm": "هل تريد تنزيل تحديثات الإضافات هذه والتحقق منها (SHA-256)؟\n\n{0}\n\nتُطبَّق عند التشغيل التالي لـ Opsis وسيُطلب منك مرة واحدة الموافقة على المحتوى الجديد.",
+  "About.PluginUpdateStaged": "تم تنزيل تحديثات الإضافات والتحقق منها. تُطبَّق عند التشغيل التالي لـ Opsis؛ وسيُطلب منك مرة واحدة الموافقة على المحتوى الجديد.",
+  "About.PluginUpdateFailed": "فشل تحديث الإضافة: {0}",
+  "About.PluginNeedsUpdate": "لم يتم تحميل الإضافة «{0}»: {1}",
+  "Plugin.TrustUpdateTitle": "تم تحديث الإضافة",
+  "Plugin.TrustUpdateBody": "الإضافة «{0}» التي وافقت عليها سابقًا تغيّرت (تحديث).\n\nالمجلد: {1}\nبصمة المحتوى الجديد (SHA-256): {2}… (قبل: {3}…)\n\nتابع فقط إذا كنت قد ثبّتها أو حدّثتها بنفسك، مثلًا بزر التحديث في Opsis. هل تريد تحميل الإصدار الجديد؟"
 }

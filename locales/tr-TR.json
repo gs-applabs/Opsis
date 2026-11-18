@@ -1037,5 +1037,15 @@
   "LockGif.RebootTitle": "Windows yeniden başlatılsın mı?",
   "LockGif.RebootBody": "Windows özelliği değiştirildi. Kilit ekranının hareket etmesi için yeniden başlatma gerekebilir. Önce işinizi kaydedin, sonra denetlemek için Windows'u kilitleyin.",
   "LockGif.RebootNow": "Şimdi yeniden başlat",
-  "LockGif.RebootLater": "Daha sonra"
+  "LockGif.RebootLater": "Daha sonra",
+  "About.PluginUpdateUpToDate": "Eklentiler güncel.",
+  "About.PluginUpdateNewer": "Eklenti {0}: yeni sürüm {1} var (yüklü: {2}).",
+  "About.PluginUpdateInstall": "Eklentileri güncelle ({0})",
+  "About.PluginUpdateConfirmTitle": "Eklentileri güncelle",
+  "About.PluginUpdateConfirm": "Bu eklenti güncellemeleri indirilip doğrulansın mı (SHA-256)?\n\n{0}\n\nOpsis bir sonraki açılışta uygulanır ve yeni içeriği onaylamanız bir kez istenir.",
+  "About.PluginUpdateStaged": "Eklenti güncellemeleri indirildi ve doğrulandı. Opsis bir sonraki açılışta uygulanır; yeni içeriği onaylamanız bir kez istenir.",
+  "About.PluginUpdateFailed": "Eklenti güncellemesi başarısız: {0}",
+  "About.PluginNeedsUpdate": "«{0}» eklentisi yüklenmedi: {1}",
+  "Plugin.TrustUpdateTitle": "Eklenti güncellendi",
+  "Plugin.TrustUpdateBody": "Daha önce onayladığınız «{0}» eklentisi değişti (bir güncelleme).\n\nKlasör: {1}\nYeni içerik parmak izi (SHA-256): {2}… (önceki: {3}…)\n\nYalnızca kendiniz yüklediyseniz veya güncellediyseniz, örneğin Opsis'in güncelleme düğmesiyle, devam edin. Yeni sürüm yüklensin mi?"
 }

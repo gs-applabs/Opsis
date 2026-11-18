@@ -1060,5 +1060,15 @@
   "LockGif.RebootTitle": "Restart Windows?",
   "LockGif.RebootBody": "The Windows feature was changed. A restart may be needed before the lock screen animates. Save your work first, then lock Windows afterwards to check.",
   "LockGif.RebootNow": "Restart now",
-  "LockGif.RebootLater": "Later"
+  "LockGif.RebootLater": "Later",
+  "About.PluginUpdateUpToDate": "Plugins are up to date.",
+  "About.PluginUpdateNewer": "Plugin {0}: new version {1} available (installed: {2}).",
+  "About.PluginUpdateInstall": "Update plugins ({0})",
+  "About.PluginUpdateConfirmTitle": "Update plugins",
+  "About.PluginUpdateConfirm": "Download and verify (SHA-256) these plugin updates?\n\n{0}\n\nThey are applied the next time Opsis starts, and you will be asked once to approve the new content.",
+  "About.PluginUpdateStaged": "Plugin updates downloaded and verified. They are applied the next time Opsis starts; you will be asked once to approve the new content.",
+  "About.PluginUpdateFailed": "Plugin update failed: {0}",
+  "About.PluginNeedsUpdate": "The plugin \"{0}\" was not loaded: {1}",
+  "Plugin.TrustUpdateTitle": "Plugin updated",
+  "Plugin.TrustUpdateBody": "The plugin \"{0}\" that you approved before has changed (an update).\n\nFolder: {1}\nNew content fingerprint (SHA-256): {2}… (before: {3}…)\n\nContinue only if you installed or updated it yourself, for example with the update button of Opsis. Load the new version?"
 }

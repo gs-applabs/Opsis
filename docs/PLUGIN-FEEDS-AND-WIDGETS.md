@@ -1,6 +1,6 @@
 # Plugin widgets and feeds (contract additions 2026-11, Opsis 2.4.3)
 
-Optional additions to `OpsisNewsCrawler.Plugin.Abstractions` (assembly version stays **0.8.0.0**; a plugin that does not use them is unaffected).
+Optional additions to `OpsisNewsCrawler.Plugin.Abstractions` (assembly version was 0.8.0.0 until Opsis 2.4.6 and is **1.0.0.0** from Opsis 2.6.0 - see docs/PHASE-P-STATUS.md; a plugin that does not use them is unaffected).
 
 | Type | Purpose |
 |---|---|
