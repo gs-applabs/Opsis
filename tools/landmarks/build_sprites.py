@@ -53,17 +53,17 @@ for sid, title, crop, thr, fade, *rest in SPRITES:
     d = api({'action': 'query', 'format': 'json', 'titles': title, 'prop': 'imageinfo', 'iiprop': 'url|extmetadata', 'iiurlwidth': 2000, 'iiextmetadatafilter': 'LicenseShortName|Artist|LicenseUrl'})
     ii = list(d['query']['pages'].values())[0]['imageinfo'][0]
     lic = ii['extmetadata']['LicenseShortName']['value']; artist = re.sub('<[^>]+>', '', ii['extmetadata'].get('Artist', {}).get('value', 'unknown')).strip()
-    if not re.match(r'(?i)(public domain|cc0|cc by [0-9.]+$|pd)', lic): raise SystemExit('licence not allowed for ' + sid + ': ' + lic)
+    if not re.match(r'(?i)(public domain|cc0|cc by(-sa)? [0-9.]+$|pd)', lic): raise SystemExit('licence not allowed for ' + sid + ': ' + lic)
     img = Image.open(io.BytesIO(fetch(ii['thumburl'])))
     width = rest[0] if rest else 700
     cutout(img, crop, thr, fade, width).save(os.path.join(outdir, sid + '.webp'), 'WEBP', quality=82, alpha_quality=92, method=6)
     credits.append({'file': sid + '.webp', 'commonsTitle': title[5:], 'commonsUrl': ii['descriptionurl'], 'author': artist, 'license': lic,
-                    'licenseUrl': ii['extmetadata'].get('LicenseUrl', {}).get('value', ''), 'attributionRequired': lic.upper().startswith('CC BY'),
+                    'licenseUrl': ii['extmetadata'].get('LicenseUrl', {}).get('value', ''), 'attributionRequired': lic.upper().startswith('CC BY'), 'shareAlike': lic.upper().startswith('CC BY-SA'),
                     'changes': 'Sky removed (colour keying), cropped, scaled to %d px wide, converted to WebP.' % width,
                     'checkedOn': datetime.date.today().isoformat()})
     print(sid, lic); time.sleep(4)
 with open(os.path.join(outdir, 'ATTRIBUTION.md'), 'w', encoding='utf-8') as f:
-    f.write('# Landmark photos\n\nThe landmark sprites of the weather wallpaper are cut-outs of photographs from Wikimedia Commons. Only public domain, CC0 and CC BY material is used (no share-alike, no non-commercial, no unknown licences). Every photo was checked individually against the Commons licence data on the date below. Changes: the sky was removed, the picture was cropped and scaled, and converted to WebP.\n\n| Sprite | Photo | Author | Licence | Source | Checked |\n|---|---|---|---|---|---|\n')
+    f.write('# Landmark photos\n\nThe landmark sprites of the weather wallpaper are cut-outs of photographs from Wikimedia Commons. Only public domain, CC0, CC BY and CC BY-SA material is used (no non-commercial, no no-derivatives, no unknown licences). CC BY-SA cut-outs are derivatives and carry the same licence. Every photo was checked individually against the Commons licence data on the date below. Changes: the sky was removed, the picture was cropped and scaled, and converted to WebP.\n\n| Sprite | Photo | Author | Licence | Source | Checked |\n|---|---|---|---|---|---|\n')
     for c in credits: f.write(f"| {c['file']} | {c['commonsTitle']} | {c['author']} | {c['license']} | {c['commonsUrl']} | {c['checkedOn']} |\n")
 json.dump(credits, open(os.path.join(outdir, 'manifest.json'), 'w', encoding='utf-8'), indent=1, ensure_ascii=False)
 

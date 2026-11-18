@@ -23,10 +23,10 @@ D = [
  ('amfissa', 'Amfissa', 'Άμφισσα', 'CentralGreece', 'Castle of Amfissa (Salona)', 'Κάστρο Άμφισσας (Σάλωνα)', 38.5300, 22.3790, 'stone', 'land', 'rock', 'fort({ hh: 0.38, x: 0.6, towers: [[-0.6, 0.2, 0.3], [0.6, 0.2, 0.3]], keepAt: [0, 0.24, 0.34] })'),
  ('livadeia', 'Livadeia', 'Λιβαδειά', 'CentralGreece', 'Castle of Livadeia', 'Κάστρο Λιβαδειάς', 38.4350, 22.8780, 'stone', 'land', 'rock', 'fort({ hh: 0.2, x: 0.7, towers: [[-0.7, 0.22, 0.5], [0.7, 0.18, 0.3]], gate: null })'),
  ('agrinio', 'Agrinio', 'Αγρίνιο', 'WesternGreece', 'Agios Konstantinos church, Agrinio', 'Ι.Ν. Αγίου Κωνσταντίνου, Αγρίνιο', 38.6210, 21.4070, 'white', 'land', 'grass', 'church({ bell: 0.35, domeR: 0.18 })'),
- ('patras', 'Patras', 'Πάτρα', 'WesternGreece', 'Lighthouse of Patras', 'Φάρος της Πάτρας', 38.2467, 21.7295, 'stone', 'sea', None, None),
- ('rioantirrio', 'Patras (Rio)', 'Πάτρα (Ρίο)', 'WesternGreece', 'Rio-Antirrio Bridge', 'Γέφυρα Ρίου-Αντιρρίου', 38.3200, 21.7740, 'white', 'sea', None, None),
+ ('patras', 'Patras', 'Πάτρα', 'WesternGreece', 'Lighthouse of Patras', 'Φάρος της Πάτρας', 38.2467, 21.7295, 'stone', 'sea', None, 'lighthouse({ w: 0.15, tw: 0.1, h: 0.7, base: 0.08, baseW: 0.8 })'),
+ ('rioantirrio', 'Patras (Rio)', 'Πάτρα (Ρίο)', 'WesternGreece', 'Rio-Antirrio Bridge', 'Γέφυρα Ρίου-Αντιρρίου', 38.3200, 21.7740, 'white', 'sea', None, 'euripus()'),
  ('pyrgos', 'Pyrgos', 'Πύργος', 'WesternGreece', 'Temple of Zeus, Olympia (Ilia)', 'Ναός του Δία, Ολυμπία (Ηλεία)', 37.6750, 21.4410, 'marble', 'land', 'grass', 'ruinsTemple([0.62, 0.62, 0.45, 0.62, 0.3, 0.62, 0.55, 0.2])'),
- ('nafplio', 'Nafplio', 'Ναύπλιο', 'Peloponnese', 'Bourtzi, Nafplio', 'Μπούρτζι, Ναύπλιο', 37.5640, 22.8000, 'stone', 'sea', None, None),
+ ('nafplio', 'Nafplio', 'Ναύπλιο', 'Peloponnese', 'Bourtzi, Nafplio', 'Μπούρτζι, Ναύπλιο', 37.5640, 22.8000, 'stone', 'sea', None, 'fort({ hh: 0, x: 0.55, wallTop: 0.3, towers: [[-0.55, 0.3, 0.4], [0.55, 0.3, 0.4], [0, 0.24, 0.3]], gate: null })'),
  ('tripoli', 'Tripoli', 'Τρίπολη', 'Peloponnese', 'Agios Vasileios church, Tripoli', 'Ι.Ν. Αγίου Βασιλείου, Τρίπολη', 37.5100, 22.3730, 'stone', 'land', 'grass', 'church({ bell: 0.4, domeR: 0.17, w: 0.45 })'),
  ('corinth', 'Corinth', 'Κόρινθος', 'Peloponnese', 'Acrocorinth', 'Ακροκόρινθος', 37.9060, 22.8780, 'stone', 'land', 'rock', 'fort({ hh: 0.55, x: 0.8, wallTop: 0.14, towers: [[-0.8, 0.16, 0.26], [0.8, 0.16, 0.26], [0, 0.14, 0.22]], gate: null })'),
  ('sparta', 'Sparta', 'Σπάρτη', 'Peloponnese', 'Statue of Leonidas, Sparta', 'Άγαλμα Λεωνίδα, Σπάρτη', 37.0740, 22.4300, 'marble', 'land', 'grass', 'statueLeonidas()'),
@@ -97,8 +97,20 @@ def main():
              "    const INFO = {\n" + "\n".join(info) + "\n    };\n"
              "    const REGIONS = [" + ", ".join("'%s'" % r for r in REG) + "];\n    // END GREEK\n\n")
     js = js.replace("    const LANDMARKS = [\n", block + "    const LANDMARKS = [\n", 1)
-    js = js.replace("        L('nafplio', 'Bourtzi, Nafplio', 37.5640, 22.8000, 'stone', []),\n    ];", "        L('nafplio', 'Bourtzi, Nafplio', 37.5640, 22.8000, 'stone', []),\n        ...GREEK,\n    ];", 1)
-    js = js.replace("        // photo-only landmarks (no vector fallback): place and name only\n", "        // photographic landmarks: place and name only (no drawing needed)\n")
+    # the early photo-only placeholders (empty parts) are replaced by real silhouettes from GREEK: every landmark keeps a vector fallback behind its photo
+    old3 = ("        // photo-only landmarks (no vector fallback): place and name only\n"
+            "        L('patras', 'Lighthouse of Patras', 38.2467, 21.7295, 'stone', []),\n"
+            "        L('rioantirrio', 'Rio-Antirrio Bridge', 38.3200, 21.7740, 'white', []),\n"
+            "        L('nafplio', 'Bourtzi, Nafplio', 37.5640, 22.8000, 'stone', []),\n    ];")
+    assert old3 in js, 'placeholder block not found'
+    js = js.replace(old3, "        ...GREEK,\n    ];", 1)
+    # photographs: every file listed in landmarks/manifest.json is a sprite; its silhouette (GREEK / parthenon above) stays as the fallback when the file cannot be loaded
+    man = json.load(io.open(os.path.join(ROOT, 'src', 'Widgets', 'wallpaper', 'landmarks', 'manifest.json'), encoding='utf-8'))
+    sprite_ids = ['parthenon'] + [m['file'][:-5] for m in man if m['file'][:-5] != 'parthenon']
+    js, n = re.subn(r"const SPRITE_IDS = \[[^\]]*\];[^\n]*", "const SPRITE_IDS = [" + ", ".join("'%s'" % s for s in sprite_ids) + "];     // photos (public domain / CC0 / CC BY / CC BY-SA, see landmarks/manifest.json); each keeps its own vector silhouette as a fallback", js, count=1)
+    assert n == 1
+    js = js.replace("s.img.onload = () => { s.ready = true; };", "s.img.onload = () => { s.ready = true; }; s.img.onerror = () => { s.failed = true; };", 1)
+    js = js.replace("        if (SPRITE_IDS.includes(id)) return drawSprite(g, id, cx, baseY, h, pal);\n", "        if (isSprite(id)) return drawSprite(g, id, cx, baseY, h, pal);\n", 1)
     # every landmark is offered now: photographs where an allowed licence was found, our own silhouettes for the rest
     js = js.replace("    // Photographic sprites (landmarks/<id>.webp, cut-outs of Wikimedia Commons photos with a clear sky, see landmarks/ATTRIBUTION.md). Only landmarks WITH a photo are offered: the hand-built\n    // vector shapes above look like drawings, so they stay as a fallback for the future (photoOnly = false) and are not shown by default.\n",
                     "    // Photographic sprites (landmarks/<id>.webp, cut-outs of Wikimedia Commons photos with a clear sky, see landmarks/ATTRIBUTION.md). Every other landmark is our own vector silhouette (drawProcedural).\n")
@@ -107,7 +119,7 @@ def main():
                     "    function byId(id) { const m = LANDMARKS.find(x => x.id === id); return m ? { id: m.id, name: m.name, km: 0 } : null; }\n"
                     "    // 'Random' choice: one landmark per day (stable while the wallpaper runs), from the whole list\n"
                     "    function randomLandmark(seed) { const d = new Date(), s = typeof seed === 'number' ? seed : d.getFullYear() * 400 + d.getMonth() * 31 + d.getDate(); const m = LANDMARKS[((s * 2654435761) >>> 0) % LANDMARKS.length]; return { id: m.id, name: m.name, km: 0 }; }\n"
-                    "    const isSprite = id => SPRITE_IDS.includes(id);\n"
+                    "    const isSprite = id => SPRITE_IDS.includes(id) && !(sprites[id] && sprites[id].failed);     // a photo that cannot be loaded falls back to the silhouette\n"
                     "    const infoOf = id => INFO[id] || null;")
     js = js.replace("function pickLandmark(lat, lon, maxKm = 250) {", "function pickLandmark(lat, lon, maxKm = 100000) {")
     js = js.replace("for (const m of LANDMARKS) { if (photoOnly && !SPRITE_IDS.includes(m.id)) continue; const d", "for (const m of LANDMARKS) { const d")

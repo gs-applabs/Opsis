@@ -5,5 +5,9 @@
  ["bigben", "File:Big Ben (9331129418).jpg", [0.1, 0.0, 0.4, 0.58], [0.10, 0.34], 0.2, 320],
  ["patras", "File:Leuchtturm Patras 2.jpg", [0.22, 0.0, 0.78, 0.98], [0.02, 0.10], 0.0, 420],
  ["rioantirrio", "File:Rio-Antirrio Bridge.jpg", [0.36, 0.2, 1.0, 0.8], [0.10, 0.34], 0.12, 520],
- ["nafplio", "File:The Castle of Bourtzi on 30 March 2019.jpg", [0.12, 0.28, 0.88, 0.5], [0.06, 0.22], 0.0, 760]
+ ["nafplio", "File:The Castle of Bourtzi on 30 March 2019.jpg", [0.12, 0.28, 0.88, 0.5], [0.06, 0.22], 0.0, 760],
+ ["chalkida", "File:Chalkida Bridge - Flickr - stefg74.jpg", [0.1, 0.0, 0.95, 0.64], [0.08, 0.30], 0.14, 760],
+ ["arta", "File:Bridge of Arta.jpg", [0.0, 0.0, 1.0, 0.7], [0.08, 0.30], 0.12, 760],
+ ["corinth", "File:The Third Line of Defense of the Acrocorinth on January 10, 2020.jpg", [0.0, 0.0, 0.62, 0.8], [0.08, 0.30], 0.1, 640],
+ ["chania", "File:Chania Lighthouse R01.jpg", [0.0, 0.0, 0.62, 0.86], [0.02, 0.10], 0.0, 520]
 ]

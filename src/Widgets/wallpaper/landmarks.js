@@ -115,7 +115,10 @@
         L('amfissa', 'Castle of Amfissa (Salona)', 38.53, 22.379, 'stone', fort({ hh: 0.38, x: 0.6, towers: [[-0.6, 0.2, 0.3], [0.6, 0.2, 0.3]], keepAt: [0, 0.24, 0.34] })),
         L('livadeia', 'Castle of Livadeia', 38.435, 22.878, 'stone', fort({ hh: 0.2, x: 0.7, towers: [[-0.7, 0.22, 0.5], [0.7, 0.18, 0.3]], gate: null })),
         L('agrinio', 'Agios Konstantinos church, Agrinio', 38.621, 21.407, 'white', church({ bell: 0.35, domeR: 0.18 })),
+        L('patras', 'Lighthouse of Patras', 38.2467, 21.7295, 'stone', lighthouse({ w: 0.15, tw: 0.1, h: 0.7, base: 0.08, baseW: 0.8 })),
+        L('rioantirrio', 'Rio-Antirrio Bridge', 38.32, 21.774, 'white', euripus()),
         L('pyrgos', 'Temple of Zeus, Olympia (Ilia)', 37.675, 21.441, 'marble', ruinsTemple([0.62, 0.62, 0.45, 0.62, 0.3, 0.62, 0.55, 0.2])),
+        L('nafplio', 'Bourtzi, Nafplio', 37.564, 22.8, 'stone', fort({ hh: 0, x: 0.55, wallTop: 0.3, towers: [[-0.55, 0.3, 0.4], [0.55, 0.3, 0.4], [0, 0.24, 0.3]], gate: null })),
         L('tripoli', 'Agios Vasileios church, Tripoli', 37.51, 22.373, 'stone', church({ bell: 0.4, domeR: 0.17, w: 0.45 })),
         L('corinth', 'Acrocorinth', 37.906, 22.878, 'stone', fort({ hh: 0.55, x: 0.8, wallTop: 0.14, towers: [[-0.8, 0.16, 0.26], [0.8, 0.16, 0.26], [0, 0.14, 0.22]], gate: null })),
         L('sparta', 'Statue of Leonidas, Sparta', 37.074, 22.43, 'marble', statueLeonidas()),
@@ -225,10 +228,6 @@
             M(rect(-0.34, 0, 0.34, 0.42)), M(rect(-0.3, 0.42, 0.3, 0.84)), M(rect(-0.34, 0.8, 0.34, 0.9)), P('l', rect(-0.34, 0.86, 0.34, 0.9)),
             ...[-0.3, -0.18, -0.06, 0.06, 0.18, 0.3].map(x => P('d', rect(x - 0.025, 0.9, x + 0.025, 0.96))), M(rect(-0.34, 0.9, 0.34, 0.92)), M([[-0.34, 0.92], [0.34, 0.92], [0.28, 0.99], [-0.28, 0.99]]),
             ...arcade(-0.28, 0.28, 0.06, 0.2, 3, 0.6), ...windows(-0.24, 0.5, 0.24, 0.78, 3, 2, 0.4, 0.5), P('d', arc(0, 0.04, 0.07, 0.1, 0, Math.PI))]),
-        // photographic landmarks: place and name only (no drawing needed)
-        L('patras', 'Lighthouse of Patras', 38.2467, 21.7295, 'stone', []),
-        L('rioantirrio', 'Rio-Antirrio Bridge', 38.3200, 21.7740, 'white', []),
-        L('nafplio', 'Bourtzi, Nafplio', 37.5640, 22.8000, 'stone', []),
         ...GREEK,
     ];
 
@@ -239,7 +238,7 @@
     }
 
     // Photographic sprites (landmarks/<id>.webp, cut-outs of Wikimedia Commons photos with a clear sky, see landmarks/ATTRIBUTION.md). Every other landmark is our own vector silhouette (drawProcedural).
-    const SPRITE_IDS = ['parthenon', 'patras', 'rioantirrio', 'nafplio'];     // Greek landmarks only (photos: public domain / CC0 / CC BY, see landmarks/manifest.json)
+    const SPRITE_IDS = ['parthenon', 'patras', 'rioantirrio', 'nafplio', 'chalkida', 'arta', 'corinth', 'chania'];     // photos (public domain / CC0 / CC BY / CC BY-SA, see landmarks/manifest.json); each keeps its own vector silhouette as a fallback
     // where each monument stands: on LAND (a rock / grass base under it, the ground below the horizon instead of the sea) or in the SEA (water below, as before). plinth = height of the base as a fraction of the monument.
     const SCENE = {
         parthenon: { scene: 'photo' },                                    // a real aerial photograph of the Acropolis and Athens replaces sprite + landscape (scenes/acropolis.webp)
@@ -300,14 +299,14 @@
     const sprites = {};                       // id -> { img, ready, tinted: { key, canvas } }
     function sprite(id) {
         let s = sprites[id];
-        if (!s) { s = sprites[id] = { img: new Image(), ready: false, tinted: { key: '', canvas: null } }; s.img.onload = () => { s.ready = true; }; s.img.src = 'landmarks/' + id + '.webp'; }
+        if (!s) { s = sprites[id] = { img: new Image(), ready: false, tinted: { key: '', canvas: null } }; s.img.onload = () => { s.ready = true; }; s.img.onerror = () => { s.failed = true; }; s.img.src = 'landmarks/' + id + '.webp'; }
         return s;
     }
 
     function byId(id) { const m = LANDMARKS.find(x => x.id === id); return m ? { id: m.id, name: m.name, km: 0 } : null; }
     // 'Random' choice: one landmark per day (stable while the wallpaper runs), from the whole list
     function randomLandmark(seed) { const d = new Date(), s = typeof seed === 'number' ? seed : d.getFullYear() * 400 + d.getMonth() * 31 + d.getDate(); const m = LANDMARKS[((s * 2654435761) >>> 0) % LANDMARKS.length]; return { id: m.id, name: m.name, km: 0 }; }
-    const isSprite = id => SPRITE_IDS.includes(id);
+    const isSprite = id => SPRITE_IDS.includes(id) && !(sprites[id] && sprites[id].failed);     // a photo that cannot be loaded falls back to the silhouette
     const infoOf = id => INFO[id] || null;
     function sceneOf(id) { return SCENE[id] || { scene: 'sea' }; }
     function photoScene(id) { return PHOTO_SCENES[id] || null; }
@@ -334,7 +333,7 @@
     // h = maximum height in px. Photographic sprites are tinted by the light of the scene (multiply by the ambient colour, warm floodlight at night, haze of the distance) in an
     // offscreen canvas that is rebuilt only when the quantised light changes (a few times per day), so a frame costs one drawImage.
     function drawLandmark(g, id, cx, baseY, h, pal) {
-        if (SPRITE_IDS.includes(id)) return drawSprite(g, id, cx, baseY, h, pal);
+        if (isSprite(id)) return drawSprite(g, id, cx, baseY, h, pal);
         return drawProcedural(g, id, cx, baseY, h, pal);
     }
 

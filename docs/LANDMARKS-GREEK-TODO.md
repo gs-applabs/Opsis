@@ -8,7 +8,7 @@ Selector (Wallpaper page): Automatic = the capital nearest to my location (weath
 |---|---|---|---|
 | Athens (Αθήνα) | Attica | Parthenon, Athens | photo (CC0), scene photograph |
 | Piraeus (Πειραιάς) | Attica | Municipal Theatre, Piraeus | own vector silhouette |
-| Chalkida (Χαλκίδα) | CentralGreece | Euripus Bridge, Chalkida | own vector silhouette |
+| Chalkida (Χαλκίδα) | CentralGreece | Euripus Bridge, Chalkida | photo cut-out (CC BY 2.0) + silhouette fallback |
 | Karpenisi (Καρπενήσι) | CentralGreece | Stone bridge, Karpenisi (Evrytania) | own vector silhouette |
 | Lamia (Λαμία) | CentralGreece | Castle of Lamia | own vector silhouette |
 | Amfissa (Άμφισσα) | CentralGreece | Castle of Amfissa (Salona) | own vector silhouette |
@@ -19,10 +19,10 @@ Selector (Wallpaper page): Automatic = the capital nearest to my location (weath
 | Pyrgos (Πύργος) | WesternGreece | Temple of Zeus, Olympia (Ilia) | own vector silhouette |
 | Nafplio (Ναύπλιο) | Peloponnese | Bourtzi, Nafplio | photo cut-out |
 | Tripoli (Τρίπολη) | Peloponnese | Agios Vasileios church, Tripoli | own vector silhouette |
-| Corinth (Κόρινθος) | Peloponnese | Acrocorinth | own vector silhouette |
+| Corinth (Κόρινθος) | Peloponnese | Acrocorinth | photo cut-out (CC BY-SA 4.0) + silhouette fallback |
 | Sparta (Σπάρτη) | Peloponnese | Statue of Leonidas, Sparta | own vector silhouette |
 | Kalamata (Καλαμάτα) | Peloponnese | Castle of Kalamata | own vector silhouette |
-| Arta (Άρτα) | Epirus | Bridge of Arta | own vector silhouette |
+| Arta (Άρτα) | Epirus | Bridge of Arta | photo cut-out (CC BY-SA 4.0) + silhouette fallback |
 | Igoumenitsa (Ηγουμενίτσα) | Epirus | Harbour lighthouse, Igoumenitsa | own vector silhouette |
 | Ioannina (Ιωάννινα) | Epirus | Aslan Pasha Mosque, Ioannina Castle | own vector silhouette |
 | Preveza (Πρέβεζα) | Epirus | Clock Tower, Preveza | own vector silhouette |
@@ -53,16 +53,16 @@ Selector (Wallpaper page): Automatic = the capital nearest to my location (weath
 | Heraklion (Ηράκλειο) | Crete | Koules Fortress, Heraklion | own vector silhouette |
 | Agios Nikolaos (Άγιος Νικόλαος) | Crete | Spinalonga Fortress (Lasithi) | own vector silhouette |
 | Rethymno (Ρέθυμνο) | Crete | Fortezza, Rethymno | own vector silhouette |
-| Chania (Χανιά) | Crete | Venetian Lighthouse, Chania | own vector silhouette |
+| Chania (Χανιά) | Crete | Venetian Lighthouse, Chania | photo cut-out (CC BY 3.0) + silhouette fallback |
 | Rhodes (Ρόδος) | SouthAegean | Palace of the Grand Master, Rhodes | own vector silhouette |
 | Ermoupoli (Ερμούπολη) | SouthAegean | Town Hall, Ermoupoli (Syros) | own vector silhouette |
 | Mytilene (Μυτιλήνη) | NorthAegean | Castle of Mytilene | own vector silhouette |
 | Samos (Σάμος) | NorthAegean | Heraion of Samos (the lone column) | own vector silhouette |
 | Chios (Χίος) | NorthAegean | Castle of Chios | own vector silhouette |
 
-Total: 53 entries = 4 photographs (Athens, Patras, Rio-Antirrio bridge, Nafplio; Rio-Antirrio is an extra of Patras) + 49 own silhouettes (52 capitals = 3 photographed: Athens, Patras, Nafplio + 49 silhouettes, incl. Thessaloniki's White Tower).
+Total: 53 entries (52 capitals + Rio-Antirrio, an extra of Patras). Photographs: 8 (Athens, Patras, Rio-Antirrio, Nafplio, Chalkida, Arta, Corinth, Chania) = 7 capitals with a photo + 45 capitals with the silhouette only. Since 2026-11-18 EVERY entry also has its own vector silhouette (the photo falls back to it if the file cannot be loaded). Photo/silhouette form is decided by `landmarks/manifest.json` (SPRITE_IDS is generated from it).
 
 ## Still open
-- Photographs for the silhouette capitals: none was added in this pass (a licence check plus a visual cut-out check per photo is needed; the earlier attempts for Koules, Chania lighthouse and the White Tower were rejected for quality). Add one at a time: find the Commons file, check its licence page, run `tools/landmarks/build_sprites.py`, add the id to `SPRITE_IDS`, the credit lines and the manifest; the silhouette stays as the fallback.
+- Photographs for the 45 silhouette-only capitals: 4 were added on 2026-11-18 (Chalkida, Arta, Corinth, Chania); candidates for many others were checked and rejected for cut-out quality (see docs/LANDMARK-IMAGES.md). The sky key only works on isolated monuments against a plain blue or grey sky. Add one at a time: find the Commons file, check its licence page, run `tools/landmarks/build_sprites.py`, add the id to `SPRITE_IDS`, the credit lines and the manifest; the silhouette stays as the fallback.
 - Landmark names are shown in Greek (Greek UI) or English (all other languages); the selector labels and region names are in all 14 languages.
 - Visual check on a real screen: NOT VERIFIED (contact sheet rendered headless in Edge only).

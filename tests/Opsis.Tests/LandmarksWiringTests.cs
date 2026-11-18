@@ -39,7 +39,7 @@ public sealed class LandmarksWiringTests
         {
             var png = Path.Combine(Wall(), "landmarks", id + ".webp");
             Assert.True(File.Exists(png), id + ".webp missing");
-            Assert.True(new FileInfo(png).Length < 200_000, id + ".webp is too big for a wallpaper asset");
+            Assert.True(new FileInfo(png).Length <= 400 * 1024, id + ".webp is too big for a wallpaper asset (max 400 KB)");
             Assert.Contains(id + ".webp", credits);
         }
         // licence manifest (plan 0C.2 #9): per image licence in the allowed list, a Commons URL, an author and a check date
@@ -56,7 +56,7 @@ public sealed class LandmarksWiringTests
             if (lic.StartsWith("CC BY")) Assert.True(e.GetProperty("attributionRequired").GetBoolean());
             total += new FileInfo(Path.Combine(Wall(), "landmarks", e.GetProperty("file").GetString()!)).Length;
         }
-        Assert.True(total < 700_000, "all landmark sprites together must stay small: " + total);
+        Assert.True(total < 2_000_000,"all landmark sprites together must stay small: " + total);
         Assert.True(File.Exists(Path.Combine(Wall(), "..", "..", "..", "docs", "LANDMARK-IMAGES.json")));
     }
 

@@ -42,5 +42,57 @@
     "attributionRequired": false,
     "changes": "Sky removed (colour keying), cropped, scaled to 760 px wide, converted to WebP.",
     "checkedOn": "2026-11-12"
+  },
+  {
+    "file": "chalkida.webp",
+    "commonsTitle": "Chalkida Bridge - Flickr - stefg74.jpg",
+    "commonsUrl": "https://commons.wikimedia.org/wiki/File:Chalkida_Bridge_-_Flickr_-_stefg74.jpg",
+    "author": "stefg74 from Larisa, Greece",
+    "license": "CC BY 2.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by/2.0/",
+    "attributionRequired": true,
+    "shareAlike": false,
+    "attribution": "Chalkida Bridge by stefg74 (Wikimedia Commons), CC BY 2.0",
+    "changes": "Sky removed (colour keying), cropped, bottom faded, scaled to 760 px wide, converted to WebP.",
+    "checkedOn": "2026-11-18"
+  },
+  {
+    "file": "arta.webp",
+    "commonsTitle": "Bridge of Arta.jpg",
+    "commonsUrl": "https://commons.wikimedia.org/wiki/File:Bridge_of_Arta.jpg",
+    "author": "CHE",
+    "license": "CC BY-SA 4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+    "attributionRequired": true,
+    "shareAlike": true,
+    "attribution": "Bridge of Arta by CHE (Wikimedia Commons), CC BY-SA 4.0; modified image also under CC BY-SA 4.0",
+    "changes": "Sky removed (colour keying), cropped, bottom faded, scaled to 760 px wide, converted to WebP.",
+    "checkedOn": "2026-11-18"
+  },
+  {
+    "file": "corinth.webp",
+    "commonsTitle": "The Third Line of Defense of the Acrocorinth on January 10, 2020.jpg",
+    "commonsUrl": "https://commons.wikimedia.org/wiki/File:The_Third_Line_of_Defense_of_the_Acrocorinth_on_January_10,_2020.jpg",
+    "author": "George E. Koronaios",
+    "license": "CC BY-SA 4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+    "attributionRequired": true,
+    "shareAlike": true,
+    "attribution": "The Third Line of Defense of the Acrocorinth by George E. Koronaios (Wikimedia Commons), CC BY-SA 4.0; modified image also under CC BY-SA 4.0",
+    "changes": "Sky removed (colour keying), cropped, bottom faded, scaled to 640 px wide, converted to WebP.",
+    "checkedOn": "2026-11-18"
+  },
+  {
+    "file": "chania.webp",
+    "commonsTitle": "Chania Lighthouse R01.jpg",
+    "commonsUrl": "https://commons.wikimedia.org/wiki/File:Chania_Lighthouse_R01.jpg",
+    "author": "Marc Ryckaert (MJJR)",
+    "license": "CC BY 3.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by/3.0/",
+    "attributionRequired": true,
+    "shareAlike": false,
+    "attribution": "Chania Lighthouse by Marc Ryckaert (MJJR) (Wikimedia Commons), CC BY 3.0",
+    "changes": "Sky removed (colour keying), cropped, scaled to 520 px wide, converted to WebP.",
+    "checkedOn": "2026-11-18"
   }
 ]
