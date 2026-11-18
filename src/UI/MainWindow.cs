@@ -2332,8 +2332,8 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
             var lockScreenCard = AddCardSection(panel, LocalizationManager.T("Personalization.SectionLockScreen"));
             AddText(lockScreenCard, LocalizationManager.T("Personalization.LockScreenIntro"));
             AddText(lockScreenCard, string.Format(LocalizationManager.T("Personalization.LockScreenEditionNote"), LockScreenEngine.GetWindowsEdition()));
-            // Animated GIF lock screen: an unofficial, system-level trick done by a separate MIT tool. Opsis only explains it and opens the project page.
-            AddText(lockScreenCard, LocalizationManager.T("Personalization.LockGifInfo"));
+            // Animated GIF lock screen (opt-in, backed up, restorable): see MainWindow.LockscreenGif.cs. The project page of LockscreenGif (MIT, the idea and parts of the code) stays as a credit link.
+            BuildAnimatedLockScreen(lockScreenCard);
             AddButtonGrid(lockScreenCard, (LocalizationManager.T("Personalization.LockGifOpen"), (_, _) =>
             {
                 try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("https://github.com/Leapward-Koex/LockscreenGif") { UseShellExecute = true }); } catch (Exception) { }

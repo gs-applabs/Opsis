@@ -1,4 +1,6 @@
 # PROJECT STATE
+## 2.6.0-beta (2026-11-18): Music visualizer wallpaper element (docs/VISUALIZER-FEATURES.md) and animated GIF lock screen (docs/LOCKSCREEN-GIF.md; core/Opsis.Lockscreen.Core, tools/OpsisLockHelper). Both unit tested only: real WebView2 rendering and the real lock screen are NOT VERIFIED.
+
 
 ## 2.3.0: Windows 11 style settings (switch rows, search, section Reset), sidebar height with 2 plugins. ## 2.2.6: wallpaper elements (all GPUs, clock themes, bar colour, centre). ## 2.2.5 (2026-10-29): see CHANGELOG 2.2.5 (GPU arrows, clock centring, container icon size, 71 translations). Items below describe 2.2.0 (still true).
 

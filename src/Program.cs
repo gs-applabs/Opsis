@@ -25,6 +25,14 @@ namespace MotionDesk
             // ΞΞ΄ΞΉΞΏ ΞµΞ»Ξ¬Ο‡ΞΉΟƒΟ„ΞΏ elevated helper branch, Ξ³ΞΉΞ± Ο„Ξ·Ξ½ Ξ±Ξ½Ο„Ξ―ΟƒΟ„ΟΞΏΟ†Ξ· ΞµΞ½Ξ­ΟΞ³ΞµΞΉΞ±: Ξ΄ΞΉΞ±Ξ³ΟΞ±Ο†Ξ® Ο„Ο‰Ξ½ Ο„ΞΉΞΌΟΞ½
             // ΟΟƒΟ„Ξµ Ο„Ξ± Windows Ξ½Ξ± ΞΎΞ±Ξ½Ξ±Ξ΄ΞµΞ―Ο‡Ξ½ΞΏΟ…Ξ½ Ο„Ξ·Ξ½ Ο€ΟΞΏΞµΟ€ΞΉΞ»ΞµΞ³ΞΌΞ­Ξ½Ξ·/Ξ΄ΞΉΞΊΞ® Ο„ΞΏΟ…Ο‚ ΞµΟ€ΞΉΞ»ΞµΞ³ΞΌΞ­Ξ½Ξ· ΞΏΞΈΟΞ½Ξ·
             // ΞΊΞ»ΞµΞΉΞ΄ΟΞΌΞ±Ο„ΞΏΟ‚ Ξ±Ξ½Ο„Ξ― Ξ±Ο…Ο„Ξ® Ο€ΞΏΟ… ΟΟΞΉΟƒΞµ Ο„ΞΏ Opsis (Ξ²Ξ». LockScreenEngine.TryResetLockScreenElevated).
+            // Animated lock screen (GIF): puts the ORIGINAL cache files, ACLs and Windows feature setting back from the helper's backup. No window; Opsis itself stays
+            // non-elevated: the separate OpsisLockHelper.exe asks for UAC. Exit codes: 0 done / nothing to restore, 1 failed, 3 UAC declined.
+            if (args.Length == 1 && args[0] == "--restore-lockscreen")
+            {
+                Environment.Exit(Services.LockscreenGifService.RestoreFromCommandLine());
+                return;
+            }
+
             if (args.Length == 1 && args[0] == "--reset-lockscreen")
             {
                 try { LockScreenEngine.ClearLockScreenRegistry(); } catch (Exception) { }

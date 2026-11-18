@@ -89,6 +89,20 @@ portuguese.KeepDataPromptText=Deseja eliminar também as definições, os perfis
 turkish.KeepDataPromptText={#MyAppName} uygulamasının ayarları, profilleri ve kayıtlı DeskZones/DeskContainers öğeleri de silinsin mi?
 arabic.KeepDataPromptText=هل تريد أيضًا حذف إعدادات {#MyAppName} وملفاته الشخصية وDeskZones/DeskContainers المحفوظة؟
 hindi.KeepDataPromptText=क्या आप {#MyAppName} की सेटिंग्स, प्रोफ़ाइल और सहेजे गए DeskZones/DeskContainers भी हटाना चाहते हैं?
+greek.RestoreLockscreenPrompt=Το Opsis έχει αλλάξει την οθόνη κλειδώματος των Windows (κινούμενο GIF). Να επανέλθει τώρα η αρχική οθόνη κλειδώματος, τα δικαιώματα και η ρύθμιση των Windows; (Θα ζητηθεί έγκριση διαχειριστή.)
+english.RestoreLockscreenPrompt=Opsis changed the Windows lock screen (animated GIF). Restore the original lock screen, permissions and Windows setting now? (Administrator approval will be requested.)
+german.RestoreLockscreenPrompt=Opsis hat den Windows-Sperrbildschirm geändert (animiertes GIF). Ursprünglichen Sperrbildschirm, Berechtigungen und Windows-Einstellung jetzt wiederherstellen? (Administratorbestätigung wird angefordert.)
+french.RestoreLockscreenPrompt=Opsis a modifié l'écran de verrouillage de Windows (GIF animé). Restaurer maintenant l'écran de verrouillage d'origine, les autorisations et le réglage Windows ? (Une approbation administrateur sera demandée.)
+spanish.RestoreLockscreenPrompt=Opsis cambió la pantalla de bloqueo de Windows (GIF animado). ¿Restaurar ahora la pantalla de bloqueo original, los permisos y el ajuste de Windows? (Se pedirá aprobación de administrador.)
+korean.RestoreLockscreenPrompt=Opsis가 Windows 잠금 화면(애니메이션 GIF)을 변경했습니다. 지금 원래 잠금 화면, 권한, Windows 설정을 복원하시겠습니까? (관리자 승인이 요청됩니다.)
+chinese.RestoreLockscreenPrompt=Opsis 更改了 Windows 锁屏（动画 GIF）。现在还原原始锁屏、权限和 Windows 设置吗？（将请求管理员授权。）
+italian.RestoreLockscreenPrompt=Opsis ha modificato la schermata di blocco di Windows (GIF animata). Ripristinare ora la schermata di blocco originale, i permessi e l'impostazione di Windows? (Verrà richiesta l'approvazione dell'amministratore.)
+russian.RestoreLockscreenPrompt=Opsis изменил экран блокировки Windows (анимированный GIF). Восстановить сейчас исходный экран блокировки, права и настройку Windows? (Будет запрошено подтверждение администратора.)
+japanese.RestoreLockscreenPrompt=Opsis は Windows のロック画面（アニメーション GIF）を変更しました。今すぐ元のロック画面、権限、Windows の設定に戻しますか？（管理者の承認が求められます。）
+portuguese.RestoreLockscreenPrompt=O Opsis alterou o ecrã de bloqueio do Windows (GIF animado). Repor agora o ecrã de bloqueio original, as permissões e a definição do Windows? (Será pedida aprovação de administrador.)
+turkish.RestoreLockscreenPrompt=Opsis, Windows kilit ekranını (animasyonlu GIF) değiştirdi. Özgün kilit ekranı, izinler ve Windows ayarı şimdi geri yüklensin mi? (Yönetici onayı istenecek.)
+arabic.RestoreLockscreenPrompt=غيّر Opsis شاشة قفل Windows (GIF متحرك). هل تريد استعادة شاشة القفل الأصلية والأذونات وإعداد Windows الآن؟ (ستُطلب موافقة المسؤول.)
+hindi.RestoreLockscreenPrompt=Opsis ने Windows लॉक स्क्रीन (एनिमेटेड GIF) बदली है। क्या अभी मूल लॉक स्क्रीन, अनुमतियाँ और Windows सेटिंग पुनर्स्थापित करें? (प्रशासक स्वीकृति माँगी जाएगी।)
 greek.AutostartTask=Αυτόματη εκκίνηση με την είσοδο στα Windows (System Tray)
 english.AutostartTask=Start automatically when signing in to Windows (System Tray)
 german.AutostartTask=Automatisch beim Anmelden bei Windows starten (Infobereich)
@@ -477,7 +491,15 @@ end;
 procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
 var
   AppDataPath, LegacyAppDataPath: String;
+  ResultCode: Integer;
 begin
+  // Animated lock screen: if Opsis changed the Windows lock screen, offer to put the originals back (files, ACLs, feature setting) BEFORE the files are removed.
+  if CurUninstallStep = usUninstall then
+  begin
+    if FileExists(ExpandConstant('{commonappdata}\Opsis\lockscreen\manifest.json')) and FileExists(ExpandConstant('{app}\OpsisLockHelper.exe')) then
+      if MsgBox(CustomMessage('RestoreLockscreenPrompt'), mbConfirmation, MB_YESNO) = IDYES then
+        Exec(ExpandConstant('{app}\OpsisLockHelper.exe'), 'restore', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+  end;
   if CurUninstallStep = usPostUninstall then
   begin
     AppDataPath := ExpandConstant('{userappdata}\Opsis');

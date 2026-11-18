@@ -46,7 +46,7 @@ public sealed class HygieneTests
         var files = new List<string> { Path.Combine(root, "README.md"), Path.Combine(root, "CLAUDE.md"), Path.Combine(root, "PROJECT_STATE.md"), Path.Combine(root, "installer.iss") };
         foreach (var dir in new[] { "docs", "tools", "installer" })
             if (Directory.Exists(Path.Combine(root, dir)))
-                files.AddRange(Directory.GetFiles(Path.Combine(root, dir), "*", SearchOption.AllDirectories).Where(f => f.EndsWith(".md") || f.EndsWith(".ps1") || f.EndsWith(".txt") || f.EndsWith(".iss")));
+                files.AddRange(Directory.GetFiles(Path.Combine(root, dir), "*", SearchOption.AllDirectories).Where(f => !f.Contains(Path.DirectorySeparatorChar + "obj" + Path.DirectorySeparatorChar) && !f.Contains(Path.DirectorySeparatorChar + "bin" + Path.DirectorySeparatorChar)).Where(f => f.EndsWith(".md") || f.EndsWith(".ps1") || f.EndsWith(".txt") || f.EndsWith(".iss")));
         // the security scan workflow and these tests list the patterns on purpose; the "C:\w\" fallback of other tests is a test-only path
         var hits = files.Where(File.Exists).SelectMany(Hits).Where(h => !h.StartsWith("containers-")).ToList();
         Assert.True(hits.Count == 0, string.Join("\n", hits));

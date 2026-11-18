@@ -13,6 +13,9 @@ namespace MotionDesk.Services
         public bool AutoPerformanceMode { get; set; } = true;
         // Pause conditions (AppActivity): the wallpaper and the widgets stop rendering while the session is locked, in a remote (RDP) session or in Battery Saver.
         public bool PauseOnLock { get; set; } = true;
+        // Animated lock screen (GIF): OFF until the user confirms the dialog that lists what will be changed (see LockscreenGifService); ffmpeg.exe is chosen by the user.
+        public bool LockscreenGifConsent { get; set; } = false;
+        public string FfmpegPath { get; set; } = "";
         public bool PauseOnRemoteSession { get; set; } = true;
         public bool PauseOnBatterySaver { get; set; } = true;
         // After a pause lasts 15 s the WebView2 process tree is suspended (0% CPU/GPU); resumed instantly when the pause ends.

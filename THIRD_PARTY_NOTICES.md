@@ -55,3 +55,34 @@ Additional landmark photos: Lighthouse of Patras (public domain), Rio-Antirrio B
 
 Aerial scene of the Acropolis and Athens: The Acropolis of Athens from Mount Lycabettus on March 14, 2020, by George E. Koronaios (CC0), cropped, widened and faded (see docs/LANDMARK-IMAGES.md).
 
+
+## LockscreenGif (animated lock screen)
+
+The animated lock screen feature (core/Opsis.Lockscreen.Core, tools/OpsisLockHelper, src/Services/LockscreenGifService.cs) is a re-implementation for Opsis that adapts ideas and parts of the code of LockscreenGif (https://github.com/Leapward-Koex/LockscreenGif): the lock-screen cache layout and path rules, the icacls/takeown approach, the picture-mode inference and the documented Windows feature ID (38943831). Not adapted and not included: its Gifski video pipeline (AGPL), its PostHog analytics, its UI. Opsis ships no FFmpeg or Gifski.
+
+> MIT License
+> 
+> Copyright (c) 2026 Leapward-Koex
+> 
+> Permission is hereby granted, free of charge, to any person obtaining a copy
+> of this software and associated documentation files (the "Software"), to deal
+> in the Software without restriction, including without limitation the rights
+> to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+> copies of the Software, and to permit persons to whom the Software is
+> furnished to do so, subject to the following conditions:
+> 
+> The above copyright notice and this permission notice shall be included in all
+> copies or substantial portions of the Software.
+> 
+> THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+> IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+> FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+> AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+> LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+> OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+> SOFTWARE.
+
+
+## Music visualizer (wallpaper element)
+
+The feature list of the Music visualizer element (settings such as rainbow / custom gradient, rounded rays, treble boost, clock and date, shadow) was inspired by the public settings list of the Lively wallpaper "Rainbow Music Visualizer" by Aprotonix, which has no licence. No code, font, image or animation of it was used; the implementation is original (see docs/VISUALIZER-FEATURES.md).

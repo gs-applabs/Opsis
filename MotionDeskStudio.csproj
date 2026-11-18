@@ -88,7 +88,25 @@
   <ItemGroup>
     <ProjectReference Include="glass\Opsis.Glass\Opsis.Glass.csproj" />
     <ProjectReference Include="core\Opsis.Containers.Core\Opsis.Containers.Core.csproj" />
+    <ProjectReference Include="core\Opsis.Lockscreen.Core\Opsis.Lockscreen.Core.csproj" />
+    <!-- the minimal elevated helper of the animated lock screen: built with Opsis and shipped next to Opsis.exe (Opsis itself never runs elevated) -->
+    <ProjectReference Include="tools\OpsisLockHelper\OpsisLockHelper.csproj" ReferenceOutputAssembly="false" OutputItemType="LockHelperMain" />
   </ItemGroup>
+  <Target Name="IncludeLockHelper" AfterTargets="ResolveProjectReferences" Condition="'$(_IsPublishing)' != 'true'">
+    <PropertyGroup>
+      <_LockHelperDir>@(LockHelperMain->'%(RootDir)%(Directory)')</_LockHelperDir>
+    </PropertyGroup>
+    <ItemGroup>
+      <_LockHelperFile Include="$(_LockHelperDir)OpsisLockHelper.*" Exclude="$(_LockHelperDir)OpsisLockHelper.pdb" />
+      <None Include="@(_LockHelperFile)" Link="%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    </ItemGroup>
+  </Target>
+  <!-- dotnet publish: the referenced helper project already contributes its apphost, deps and runtimeconfig; its managed dll must be added by hand -->
+  <Target Name="PublishLockHelperDll" AfterTargets="ComputeResolvedFilesToPublishList" Condition="'$(_IsPublishing)' == 'true'">
+    <ItemGroup>
+      <ResolvedFileToPublish Include="@(LockHelperMain)" RelativePath="OpsisLockHelper.dll" CopyToPublishDirectory="PreserveNewest" />
+    </ItemGroup>
+  </Target>
 
   <ItemGroup>
     <PackageReference Include="LibreHardwareMonitorLib" Version="0.9.4" />
