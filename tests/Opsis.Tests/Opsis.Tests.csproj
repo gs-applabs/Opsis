@@ -17,6 +17,7 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="../../MotionDeskStudio.csproj" />
+    <ProjectReference Include="../../core/Opsis.Lockscreen.Core/Opsis.Lockscreen.Core.csproj" />
     <!-- the plugin contract, for the plugin tests (the host shares this very assembly with every plugin) -->
     <Reference Include="Opsis.UI">
       <HintPath>../../libs/Opsis.UI.dll</HintPath>

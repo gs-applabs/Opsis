@@ -61,6 +61,8 @@
     <!-- glass\: Opsis.Glass (GPU glass layer) and its tests are their own projects -->
     <Compile Remove="glass\**" />
     <Compile Remove="core\**" /><EmbeddedResource Remove="core\**" /><None Remove="core\**" />
+    <!-- tools\: the elevated lock-screen helper (OpsisLockHelper) is its own project, built by the AfterBuild target below -->
+    <Compile Remove="tools\**" /><EmbeddedResource Remove="tools\**" /><None Remove="tools\**" />
     <EmbeddedResource Remove="glass\**" />
     <None Remove="glass\**" />
     <EmbeddedResource Remove="spikes\**" />
