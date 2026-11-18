@@ -60,5 +60,61 @@
     "checkedOn": "2026-11-12",
     "monumentRights": "Aerial view of the Acropolis of Athens (monuments of the 5th century BC, public domain; Greek law allows photographs of works in public places). Photo: CC0.",
     "kind": "scene (aerial photograph, replaces sprite and landscape)"
+  },
+  {
+    "file": "chalkida.webp",
+    "commonsTitle": "Chalkida Bridge - Flickr - stefg74.jpg",
+    "commonsUrl": "https://commons.wikimedia.org/wiki/File:Chalkida_Bridge_-_Flickr_-_stefg74.jpg",
+    "author": "stefg74 from Larisa, Greece",
+    "license": "CC BY 2.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by/2.0/",
+    "attributionRequired": true,
+    "shareAlike": false,
+    "attribution": "Chalkida Bridge by stefg74 (Wikimedia Commons), CC BY 2.0",
+    "changes": "Sky removed (colour keying), cropped, bottom faded, scaled to 760 px wide, converted to WebP.",
+    "checkedOn": "2026-11-18",
+    "monumentRights": "FLAG FOR REVIEW: modern structure (cable-stayed bridge, 2002). Shown under the Greek freedom-of-panorama rule for works permanently in public places (Law 2121/1993, art. 26), as for Rio-Antirrio. Remove the file and its entry if the owner prefers; the silhouette stays."
+  },
+  {
+    "file": "arta.webp",
+    "commonsTitle": "Bridge of Arta.jpg",
+    "commonsUrl": "https://commons.wikimedia.org/wiki/File:Bridge_of_Arta.jpg",
+    "author": "CHE",
+    "license": "CC BY-SA 4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+    "attributionRequired": true,
+    "shareAlike": true,
+    "attribution": "Bridge of Arta by CHE (Wikimedia Commons), CC BY-SA 4.0; modified image also under CC BY-SA 4.0",
+    "changes": "Sky removed (colour keying), cropped, bottom faded, scaled to 760 px wide, converted to WebP.",
+    "checkedOn": "2026-11-18",
+    "monumentRights": "Monument: bridge of Arta, 17th century (public domain). Photo: CC BY-SA 4.0; the modified image is released under the same licence (derivative)."
+  },
+  {
+    "file": "corinth.webp",
+    "commonsTitle": "The Third Line of Defense of the Acrocorinth on January 10, 2020.jpg",
+    "commonsUrl": "https://commons.wikimedia.org/wiki/File:The_Third_Line_of_Defense_of_the_Acrocorinth_on_January_10,_2020.jpg",
+    "author": "George E. Koronaios",
+    "license": "CC BY-SA 4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+    "attributionRequired": true,
+    "shareAlike": true,
+    "attribution": "The Third Line of Defense of the Acrocorinth by George E. Koronaios (Wikimedia Commons), CC BY-SA 4.0; modified image also under CC BY-SA 4.0",
+    "changes": "Sky removed (colour keying), cropped, bottom faded, scaled to 640 px wide, converted to WebP.",
+    "checkedOn": "2026-11-18",
+    "monumentRights": "Monument: Acrocorinth, medieval fortification (public domain). Photo: CC BY-SA 4.0; the modified image is released under the same licence (derivative)."
+  },
+  {
+    "file": "chania.webp",
+    "commonsTitle": "Chania Lighthouse R01.jpg",
+    "commonsUrl": "https://commons.wikimedia.org/wiki/File:Chania_Lighthouse_R01.jpg",
+    "author": "Marc Ryckaert (MJJR)",
+    "license": "CC BY 3.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by/3.0/",
+    "attributionRequired": true,
+    "shareAlike": false,
+    "attribution": "Chania Lighthouse by Marc Ryckaert (MJJR) (Wikimedia Commons), CC BY 3.0",
+    "changes": "Sky removed (colour keying), cropped, scaled to 520 px wide, converted to WebP.",
+    "checkedOn": "2026-11-18",
+    "monumentRights": "Monument: Venetian lighthouse of Chania, 16th century (public domain). Photo: CC BY 3.0."
   }
 ]

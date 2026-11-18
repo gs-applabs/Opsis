@@ -49,9 +49,15 @@ and the process exits together with Opsis. Data of earlier builds is migrated au
 The software is provided "as is" (see LICENSE). It injects a window behind the desktop icons and customises system icons and cursors: use it at your own risk.
 
 ## Landmark photos (weather wallpaper)
-Cut-outs of Wikimedia Commons photographs, each checked on its own (public domain, CC0 or CC BY only): Parthenon east side by Jebulon (CC0), plus the Greek landmark photographs listed in the manifest (Patras, Rio-Antirrio, Nafplio); changes: sky removed, cropped, scaled, converted to WebP. Full manifest: docs/LANDMARK-IMAGES.md and docs/LANDMARK-IMAGES.json.
+Cut-outs of Wikimedia Commons photographs, each checked on its own (public domain, CC0, CC BY or CC BY-SA only): Parthenon east side by Jebulon (CC0), plus the Greek landmark photographs listed in the manifest (Patras, Rio-Antirrio, Nafplio); changes: sky removed, cropped, scaled, converted to WebP. Full manifest: docs/LANDMARK-IMAGES.md and docs/LANDMARK-IMAGES.json.
 
 Additional landmark photos: Lighthouse of Patras (public domain), Rio-Antirrio Bridge (public domain, see docs/LANDMARK-IMAGES.md), Bourtzi Nafplio (CC0).
+Landmark photos that need attribution (changes: sky removed, cropped, scaled, converted to WebP):
+- Chalkida Bridge by stefg74 (https://commons.wikimedia.org/wiki/File:Chalkida_Bridge_-_Flickr_-_stefg74.jpg), CC BY 2.0 (https://creativecommons.org/licenses/by/2.0/).
+- Chania Lighthouse by Marc Ryckaert (MJJR) (https://commons.wikimedia.org/wiki/File:Chania_Lighthouse_R01.jpg), CC BY 3.0 (https://creativecommons.org/licenses/by/3.0/).
+- Bridge of Arta by CHE (https://commons.wikimedia.org/wiki/File:Bridge_of_Arta.jpg), CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/). The modified image (landmarks/arta.webp) is released under the same CC BY-SA 4.0 licence.
+- The Third Line of Defense of the Acrocorinth by George E. Koronaios (https://commons.wikimedia.org/wiki/File:The_Third_Line_of_Defense_of_the_Acrocorinth_on_January_10,_2020.jpg), CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/). The modified image (landmarks/corinth.webp) is released under the same CC BY-SA 4.0 licence.
+The CC BY-SA image files are separate assets; the application code stays MIT.
 Landmark silhouettes of the other prefecture capitals (weather wallpaper) are our own drawings, part of the app (MIT); no third-party artwork.
 
 Aerial scene of the Acropolis and Athens: The Acropolis of Athens from Mount Lycabettus on March 14, 2020, by George E. Koronaios (CC0), cropped, widened and faded (see docs/LANDMARK-IMAGES.md).
