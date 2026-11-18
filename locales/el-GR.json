@@ -1060,5 +1060,7 @@
   "LockGif.RebootTitle": "Επανεκκίνηση των Windows;",
   "LockGif.RebootBody": "Η λειτουργία των Windows άλλαξε. Μπορεί να χρειαστεί επανεκκίνηση για να κινηθεί η οθόνη κλειδώματος. Αποθήκευσε πρώτα τη δουλειά σου και μετά κλείδωσε τα Windows για έλεγχο.",
   "LockGif.RebootNow": "Επανεκκίνηση τώρα",
-  "LockGif.RebootLater": "Αργότερα"
+  "LockGif.RebootLater": "Αργότερα",
+  "DesktopMenu.NewContainer": "Νέο DeskContainer",
+  "DesktopMenu.ChangeWallpaper": "Αλλαγή wallpaper"
 }

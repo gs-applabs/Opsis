@@ -1037,5 +1037,7 @@
   "LockGif.RebootTitle": "Windows yeniden başlatılsın mı?",
   "LockGif.RebootBody": "Windows özelliği değiştirildi. Kilit ekranının hareket etmesi için yeniden başlatma gerekebilir. Önce işinizi kaydedin, sonra denetlemek için Windows'u kilitleyin.",
   "LockGif.RebootNow": "Şimdi yeniden başlat",
-  "LockGif.RebootLater": "Daha sonra"
+  "LockGif.RebootLater": "Daha sonra",
+  "DesktopMenu.NewContainer": "Yeni DeskContainer",
+  "DesktopMenu.ChangeWallpaper": "Duvar kağıdını değiştir"
 }

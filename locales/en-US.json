@@ -1060,5 +1060,7 @@
   "LockGif.RebootTitle": "Restart Windows?",
   "LockGif.RebootBody": "The Windows feature was changed. A restart may be needed before the lock screen animates. Save your work first, then lock Windows afterwards to check.",
   "LockGif.RebootNow": "Restart now",
-  "LockGif.RebootLater": "Later"
+  "LockGif.RebootLater": "Later",
+  "DesktopMenu.NewContainer": "New DeskContainer",
+  "DesktopMenu.ChangeWallpaper": "Change wallpaper"
 }

@@ -1037,5 +1037,7 @@
   "LockGif.RebootTitle": "要重启 Windows 吗？",
   "LockGif.RebootBody": "已更改 Windows 功能。锁屏要动起来可能需要重启。请先保存工作，之后锁定 Windows 进行检查。",
   "LockGif.RebootNow": "立即重启",
-  "LockGif.RebootLater": "稍后"
+  "LockGif.RebootLater": "稍后",
+  "DesktopMenu.NewContainer": "新建 DeskContainer",
+  "DesktopMenu.ChangeWallpaper": "更换壁纸"
 }

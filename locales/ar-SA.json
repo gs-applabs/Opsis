@@ -1037,5 +1037,7 @@
   "LockGif.RebootTitle": "إعادة تشغيل Windows؟",
   "LockGif.RebootBody": "تم تغيير ميزة Windows. قد تلزم إعادة التشغيل قبل أن تتحرك شاشة القفل. احفظ عملك أولًا ثم اقفل Windows للتحقق.",
   "LockGif.RebootNow": "إعادة التشغيل الآن",
-  "LockGif.RebootLater": "لاحقًا"
+  "LockGif.RebootLater": "لاحقًا",
+  "DesktopMenu.NewContainer": "DeskContainer جديد",
+  "DesktopMenu.ChangeWallpaper": "تغيير الخلفية"
 }

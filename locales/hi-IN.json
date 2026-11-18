@@ -1037,5 +1037,7 @@
   "LockGif.RebootTitle": "Windows पुनः आरंभ करें?",
   "LockGif.RebootBody": "Windows सुविधा बदली गई। लॉक स्क्रीन के एनिमेट होने से पहले पुनः आरंभ आवश्यक हो सकता है। पहले अपना काम सहेजें, फिर जाँचने के लिए Windows लॉक करें।",
   "LockGif.RebootNow": "अभी पुनः आरंभ करें",
-  "LockGif.RebootLater": "बाद में"
+  "LockGif.RebootLater": "बाद में",
+  "DesktopMenu.NewContainer": "नया DeskContainer",
+  "DesktopMenu.ChangeWallpaper": "वॉलपेपर बदलें"
 }

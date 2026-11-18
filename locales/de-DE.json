@@ -1037,5 +1037,7 @@
   "LockGif.RebootTitle": "Windows neu starten?",
   "LockGif.RebootBody": "Die Windows-Funktion wurde geändert. Ein Neustart kann nötig sein, bevor der Sperrbildschirm animiert wird. Speichern Sie zuerst Ihre Arbeit und sperren Sie danach Windows zur Kontrolle.",
   "LockGif.RebootNow": "Jetzt neu starten",
-  "LockGif.RebootLater": "Später"
+  "LockGif.RebootLater": "Später",
+  "DesktopMenu.NewContainer": "Neuer DeskContainer",
+  "DesktopMenu.ChangeWallpaper": "Hintergrund wechseln"
 }

@@ -1037,5 +1037,7 @@
   "LockGif.RebootTitle": "Перезагрузить Windows?",
   "LockGif.RebootBody": "Функция Windows изменена. Чтобы экран блокировки анимировался, может потребоваться перезагрузка. Сначала сохраните работу, затем заблокируйте Windows для проверки.",
   "LockGif.RebootNow": "Перезагрузить сейчас",
-  "LockGif.RebootLater": "Позже"
+  "LockGif.RebootLater": "Позже",
+  "DesktopMenu.NewContainer": "Новый DeskContainer",
+  "DesktopMenu.ChangeWallpaper": "Сменить обои"
 }

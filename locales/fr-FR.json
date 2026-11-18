@@ -1037,5 +1037,7 @@
   "LockGif.RebootTitle": "Redémarrer Windows ?",
   "LockGif.RebootBody": "La fonctionnalité Windows a été modifiée. Un redémarrage peut être nécessaire pour animer l'écran de verrouillage. Enregistrez votre travail, puis verrouillez Windows pour vérifier.",
   "LockGif.RebootNow": "Redémarrer maintenant",
-  "LockGif.RebootLater": "Plus tard"
+  "LockGif.RebootLater": "Plus tard",
+  "DesktopMenu.NewContainer": "Nouveau DeskContainer",
+  "DesktopMenu.ChangeWallpaper": "Changer de fond d'écran"
 }

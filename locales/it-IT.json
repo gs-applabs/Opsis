@@ -1037,5 +1037,7 @@
   "LockGif.RebootTitle": "Riavviare Windows?",
   "LockGif.RebootBody": "La funzionalità di Windows è stata modificata. Potrebbe servire un riavvio perché la schermata di blocco si animi. Salva il lavoro, poi blocca Windows per verificare.",
   "LockGif.RebootNow": "Riavvia ora",
-  "LockGif.RebootLater": "Più tardi"
+  "LockGif.RebootLater": "Più tardi",
+  "DesktopMenu.NewContainer": "Nuovo DeskContainer",
+  "DesktopMenu.ChangeWallpaper": "Cambia sfondo"
 }

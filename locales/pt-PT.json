@@ -1037,5 +1037,7 @@
   "LockGif.RebootTitle": "Reiniciar o Windows?",
   "LockGif.RebootBody": "A funcionalidade do Windows foi alterada. Pode ser preciso reiniciar para o ecrã de bloqueio animar. Guarde o trabalho e depois bloqueie o Windows para verificar.",
   "LockGif.RebootNow": "Reiniciar agora",
-  "LockGif.RebootLater": "Mais tarde"
+  "LockGif.RebootLater": "Mais tarde",
+  "DesktopMenu.NewContainer": "Novo DeskContainer",
+  "DesktopMenu.ChangeWallpaper": "Mudar fundo"
 }
