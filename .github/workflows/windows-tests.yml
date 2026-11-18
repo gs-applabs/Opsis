@@ -1,0 +1,39 @@
+name: Windows tests
+
+on:
+  pull_request:
+    paths:
+      - 'src/**'
+      - 'containers/**'
+      - 'libs/**'
+      - 'locales/**'
+      - 'tests/**'
+      - 'assets/**'
+      - 'docs/**'
+      - 'installer/**'
+      - 'tools/**'
+      - '*.md'
+      - '*.iss'
+      - '*.csproj'
+      - '*.props'
+      - '.github/workflows/windows-tests.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: windows-tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: windows-2025
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Build and test Opsis
+        run: dotnet test tests/Opsis.Tests/Opsis.Tests.csproj -c Release -m:1 --nologo
