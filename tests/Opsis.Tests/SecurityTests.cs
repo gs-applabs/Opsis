@@ -102,6 +102,21 @@ public sealed class SecurityTests : IDisposable
         Assert.NotNull(SafeLaunch.Reject(_dir, requireExe: true));
     }
 
+    [Fact]
+    public void WidgetDropRoutesThroughSafeLaunch()
+    {
+        // The drop handler is WinForms-bound, so guard the wiring: SafeLaunch.Reject must run before Process.Start in the DragDrop handler.
+        var d = new DirectoryInfo(AppContext.BaseDirectory);
+        while (d != null && !File.Exists(Path.Combine(d.FullName, "src", "Widgets", "WidgetEngine.cs"))) d = d.Parent;
+        Assert.NotNull(d);
+        var src = File.ReadAllText(Path.Combine(d!.FullName, "src", "Widgets", "WidgetEngine.cs"));
+        int drop = src.IndexOf("DataFormats.FileDrop) is not string[] files", StringComparison.Ordinal);
+        Assert.True(drop > 0);
+        int reject = src.IndexOf("SafeLaunch.Reject(f)", drop, StringComparison.Ordinal);
+        int start = src.IndexOf("Process.Start", drop, StringComparison.Ordinal);
+        Assert.True(reject > 0 && reject < start, "widget file drop must call SafeLaunch.Reject before Process.Start");
+    }
+
     // ---- zip-slip and zip bombs (audit 4)
     private string MakeZip(params (string Name, byte[] Data)[] entries)
     {
