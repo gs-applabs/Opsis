@@ -19,7 +19,7 @@ namespace MotionDesk.Containers
             Panel Swatch(string value, Color c, string tip)
             {
                 var p = new Panel { Width = 22, Height = 22, Margin = new Padding(2), BackColor = c, Cursor = Cursors.Hand, Tag = value };
-                new ToolTip().SetToolTip(p, tip);
+                new Opsis.UI.FlatToolTip().SetToolTip(p, tip);
                 p.Paint += (_, e) => { if (string.Equals(_value, value, StringComparison.OrdinalIgnoreCase)) { using var pen = new Pen(dark ? Color.White : Color.Black, 2); e.Graphics.DrawRectangle(pen, 1, 1, p.Width - 3, p.Height - 3); } };
                 p.Click += (_, _) => Pick(value);
                 _swatches.Add(p); Controls.Add(p); return p;
@@ -28,7 +28,7 @@ namespace MotionDesk.Containers
             auto.Paint += (_, e) => TextRenderer.DrawText(e.Graphics, "A", auto.Font, auto.ClientRectangle, Color.White, TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
             foreach (var h in Shades) Swatch(h, ColorTranslator.FromHtml(h), h);
             var custom = new Panel { Width = 22, Height = 22, Margin = new Padding(2), BackColor = Color.FromArgb(120, 120, 120), Cursor = Cursors.Hand };
-            new ToolTip().SetToolTip(custom, LocalizationManager.T("DCM.Custom"));
+            new Opsis.UI.FlatToolTip().SetToolTip(custom, LocalizationManager.T("DCM.Custom"));
             custom.Paint += (_, e) => TextRenderer.DrawText(e.Graphics, "…", custom.Font, custom.ClientRectangle, Color.White, TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
             custom.Click += (_, _) =>
             {

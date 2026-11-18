@@ -16,7 +16,8 @@ namespace MotionDesk.UI
     {
         private static string L(string en, string el) => LocalizationManager.CurrentLanguage == "el" ? el : en;
 
-        private HoverButton MediaButton(string text)
+        // Opsis.UI roles: Primary only for the main action of a page (Apply / Convert), Danger for destructive ones, Secondary otherwise.
+        private HoverButton MediaButton(string text, Opsis.UI.ButtonKind kind = Opsis.UI.ButtonKind.Secondary)
         {
             var b = new HoverButton
             {
@@ -24,6 +25,7 @@ namespace MotionDesk.UI
                 BaseColor = UiTheme.AccentBlue, HoverBackColor = ControlPaint.Light(UiTheme.AccentBlue, 0.15f), TabStop = false, Cursor = Cursors.Hand, Margin = new Padding(0, 2, 8, 0)
             };
             b.FlatAppearance.BorderSize = 0;
+            b.Kind = kind;
             return b;
         }
 
@@ -49,7 +51,7 @@ namespace MotionDesk.UI
                 };
                 if (dlg.ShowDialog(this) == DialogResult.OK) box.Text = dlg.FileName;
             };
-            var apply = MediaButton(LocalizationManager.T("Wallpaper.Apply"));
+            var apply = MediaButton(LocalizationManager.T("Wallpaper.Apply"), Opsis.UI.ButtonKind.Primary);
             apply.Click += (_, _) =>
             {
                 var s = WallpaperSettings.Load();
@@ -98,7 +100,7 @@ namespace MotionDesk.UI
             var row2 = new FlowLayoutPanel { AutoSize = true, WrapContents = false, Margin = new Padding(0, 0, 0, 10) };
             row2.Controls.Add(new Label { Text = L("Arguments", "Παράμετροι"), AutoSize = false, Width = 90, Height = 28, TextAlign = ContentAlignment.MiddleLeft, Font = UiTheme.FontBody, ForeColor = UiTheme.TextSecondary });
             var args = new TextBox { Width = 290, Text = settings.AppWallpaperArgs, BackColor = UiTheme.Surface, ForeColor = UiTheme.TextPrimary, BorderStyle = BorderStyle.FixedSingle, Font = UiTheme.FontBody, Margin = new Padding(0, 3, 10, 0) };
-            var apply = MediaButton(LocalizationManager.T("Wallpaper.Apply"));
+            var apply = MediaButton(LocalizationManager.T("Wallpaper.Apply"), Opsis.UI.ButtonKind.Primary);
             apply.Click += (_, _) =>
             {
                 var s = WallpaperSettings.Load(); s.AppWallpaperPath = path.Text.Trim().Trim('"'); s.AppWallpaperArgs = args.Text.Trim(); s.Save();
