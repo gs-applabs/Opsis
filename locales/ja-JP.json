@@ -1060,5 +1060,15 @@
   "DCM.Hide": "コンテナを非表示",
   "DCM.Cancel": "キャンセル",
   "DCX.PageHint": "各コンテナの設定・名前変更・削除は、そのコンテナ自身のメニュー（右クリック）にあります。",
-  "Win.RestartExplorerFail": "エクスプローラーを再起動できませんでした。Ctrl+Shift+Esc を押し、「新しいタスクの実行」で explorer.exe と入力してください。"
+  "Win.RestartExplorerFail": "エクスプローラーを再起動できませんでした。Ctrl+Shift+Esc を押し、「新しいタスクの実行」で explorer.exe と入力してください。",
+  "About.PluginUpdateUpToDate": "プラグインは最新です。",
+  "About.PluginUpdateNewer": "プラグイン {0}: 新しいバージョン {1} があります (インストール済み: {2})。",
+  "About.PluginUpdateInstall": "プラグインを更新 ({0})",
+  "About.PluginUpdateConfirmTitle": "プラグインの更新",
+  "About.PluginUpdateConfirm": "これらのプラグイン更新をダウンロードして検証 (SHA-256) しますか?\n\n{0}\n\n次回の Opsis 起動時に適用され、新しい内容の承認を一度だけ求められます。",
+  "About.PluginUpdateStaged": "プラグインの更新をダウンロードして検証しました。次回の Opsis 起動時に適用され、新しい内容の承認を一度だけ求められます。",
+  "About.PluginUpdateFailed": "プラグインの更新に失敗しました: {0}",
+  "About.PluginNeedsUpdate": "プラグイン「{0}」は読み込まれませんでした: {1}",
+  "Plugin.TrustUpdateTitle": "プラグインが更新されました",
+  "Plugin.TrustUpdateBody": "以前に承認したプラグイン「{0}」が変更されました (更新)。\n\nフォルダー: {1}\n新しい内容のフィンガープリント (SHA-256): {2}… (以前: {3}…)\n\nご自身でインストールまたは更新した場合 (例: Opsis の更新ボタン) のみ続行してください。新しいバージョンを読み込みますか?"
 }

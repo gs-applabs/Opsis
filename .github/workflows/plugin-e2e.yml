@@ -35,7 +35,11 @@ jobs:
 
       - name: Plugin tests
         shell: pwsh
-        run: dotnet test tests/Opsis.Tests -m:1 --nologo --filter "FullyQualifiedName~PluginWidgetContractTests|FullyQualifiedName~SecurityTests"
+        run: dotnet test tests/Opsis.Tests -m:1 --nologo --filter "FullyQualifiedName~PluginWidgetContractTests|FullyQualifiedName~PluginContractLoadTests|FullyQualifiedName~SecurityTests"
+
+      - name: Contract DLL copies have the same SHA-256
+        shell: pwsh
+        run: ./tools/check-contract-sha.ps1
 
       - name: Build the stub plugin and publish Opsis
         shell: pwsh

@@ -1060,5 +1060,15 @@
   "DCM.Hide": "隐藏容器",
   "DCM.Cancel": "取消",
   "DCX.PageHint": "每个容器的设置、重命名和删除都在它自己的菜单中（右键单击容器）。",
-  "Win.RestartExplorerFail": "无法重新启动 Windows 资源管理器。按 Ctrl+Shift+Esc，选择“运行新任务”并输入 explorer.exe。"
+  "Win.RestartExplorerFail": "无法重新启动 Windows 资源管理器。按 Ctrl+Shift+Esc，选择“运行新任务”并输入 explorer.exe。",
+  "About.PluginUpdateUpToDate": "插件已是最新。",
+  "About.PluginUpdateNewer": "插件 {0}:有新版本 {1}(已安装:{2})。",
+  "About.PluginUpdateInstall": "更新插件({0})",
+  "About.PluginUpdateConfirmTitle": "更新插件",
+  "About.PluginUpdateConfirm": "下载并验证(SHA-256)这些插件更新吗?\n\n{0}\n\n它们会在 Opsis 下次启动时应用,并且会请你批准一次新内容。",
+  "About.PluginUpdateStaged": "插件更新已下载并验证。它们会在 Opsis 下次启动时应用;会请你批准一次新内容。",
+  "About.PluginUpdateFailed": "插件更新失败:{0}",
+  "About.PluginNeedsUpdate": "插件“{0}”未加载:{1}",
+  "Plugin.TrustUpdateTitle": "插件已更新",
+  "Plugin.TrustUpdateBody": "你之前批准的插件“{0}”已更改(更新)。\n\n文件夹:{1}\n新内容指纹(SHA-256):{2}…(之前:{3}…)\n\n只有在你自己安装或更新了它(例如使用 Opsis 的更新按钮)时才继续。加载新版本吗?"
 }

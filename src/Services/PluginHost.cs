@@ -33,6 +33,14 @@ namespace MotionDesk.Services
             public bool Started;
         }
 
+        /// <summary>The plugin contract (OpsisNewsCrawler.Plugin.Abstractions) of THIS Opsis: the very assembly every plugin is bound to (see PluginLoadContext), 1.0.0.0 from Opsis 2.6.0.</summary>
+        public static Version ContractVersion => typeof(IOpsisNewsCrawlerPlugin).Assembly.GetName().Version ?? new Version(1, 0, 0, 0);
+
+        /// <summary>Plugins found but not loaded because they need a newer Opsis (built against a newer contract / using types this Opsis does not have). Shown in About; written to plugins.log.</summary>
+        public IReadOnlyList<PluginSkipped> Skipped { get { lock (_gate) return _skipped.ToList(); } }
+        private readonly List<PluginSkipped> _skipped = new();
+        private void AddSkipped(PluginSkipped s) { lock (_gate) { _skipped.RemoveAll(x => string.Equals(x.Folder, s.Folder, StringComparison.OrdinalIgnoreCase)); _skipped.Add(s); } }
+
         private readonly List<Loaded> _plugins = new();
         // Plugins are started, approved (LoadFolder), removed and read from several threads and from timers: every read works on a SNAPSHOT taken under this lock, and every change happens
         // under it. Enumerating the live list while another thread changed it threw "Collection was modified" in the tray menu.
@@ -132,6 +140,9 @@ namespace MotionDesk.Services
             if (_started) return;
             _started = true;
             SweepPendingRemovals();
+            // an update downloaded through the Opsis update button is put in place NOW, before anything of the plugin is loaded (its files are locked while it runs);
+            // its content has a new SHA-256, so it is NOT trusted: it goes through the approval below (one question, see PluginTrustRequest.IsUpdate)
+            try { PluginUpdateService.ApplyStaged(Path.Combine(AppPaths.AppDataFolder, "plugins"), Log); } catch (Exception ex) { Log($"Applying staged plugin updates failed: {ex.Message}"); }
             if (!AppSettings.Load().PluginsEnabled) return;
 
             foreach (var (folder, trustedRoot) in EnumerateCandidateFolders())
@@ -180,6 +191,19 @@ namespace MotionDesk.Services
         // test hooks (InternalsVisibleTo Opsis.Tests): a host instance with plugins added by hand
         internal void AddForTest(IOpsisNewsCrawlerPlugin plugin, bool started) => AddLoaded(new Loaded { Plugin = plugin, Started = started });
         internal void StartAllForTest() { foreach (var p in Snap()) { p.Plugin.Start(); p.Started = true; } }
+
+        /// <summary>The loaded plugins that tell where their releases are (contract 1.0.0.0, IPluginUpdateSource): what the Opsis update button checks.</summary>
+        public IReadOnlyList<PluginUpdateCandidate> GetUpdateCandidates()
+        {
+            var list = new List<PluginUpdateCandidate>();
+            foreach (var p in Snap())
+            {
+                if (p.Plugin is not IPluginUpdateSource src) continue;
+                try { list.Add(new PluginUpdateCandidate(p.Plugin.Id, p.Plugin.Name, Path.GetFileName(p.Folder), p.Plugin.Version, src.GetUpdateSource())); }
+                catch (Exception ex) { Log("Plugin '" + p.Plugin.Name + "' update source failed: " + ex.Message); }
+            }
+            return list;
+        }
 
         /// <summary>The desktop widget a started plugin offers to REPLACE a built-in one (for example "calendar"), or null. A plugin that fails is logged and skipped.</summary>
         public PluginWidget? FindWidgetReplacing(string builtInId)
@@ -273,6 +297,22 @@ namespace MotionDesk.Services
         {
             try { plugin.SetLanguage(LocalizationManager.CurrentLanguage); }
             catch (Exception ex) { Log($"Plugin '{plugin.Name}' SetLanguage failed: {ex.Message}"); }
+            PushHostSettings(plugin);
+        }
+
+        /// <summary>Contract 1.0.0.0: the settings that belong to Opsis (language, theme, hardware tier, UI scale, "Opsis manages the updates of this plugin"), for a plugin that implements IPluginHostSettingsAware.</summary>
+        internal static PluginHostSettings BuildHostSettings(IOpsisNewsCrawlerPlugin plugin)
+        {
+            bool dark = true; try { dark = ThemeManager.Current.IsDark; } catch (Exception) { }
+            int scale = 100; try { scale = AppSettings.Load().UiScalePercent; } catch (Exception) { }
+            return new PluginHostSettings(LocalizationManager.CurrentLanguage, dark, HardwareProfileService.CurrentTier.ToString(), scale, plugin is IPluginUpdateSource);
+        }
+
+        private void PushHostSettings(IOpsisNewsCrawlerPlugin plugin)
+        {
+            if (plugin is not IPluginHostSettingsAware aware) return;
+            try { aware.SetHostSettings(BuildHostSettings(plugin)); }
+            catch (Exception ex) { Log($"Plugin '{plugin.Name}' SetHostSettings failed: {ex.Message}"); }
         }
 
         // Handoff Φάση 6 (ελάχιστο): προαιρετική ικανότητα — καλείται ΜΟΝΟ αν το plugin υλοποιεί το
@@ -280,9 +320,10 @@ namespace MotionDesk.Services
         // IOpsisNewsCrawlerPlugin contract, άρα κανένα υπάρχον plugin δεν σπάει).
         private void PushHardwareProfile(IOpsisNewsCrawlerPlugin plugin)
         {
-            if (plugin is not OpsisNewsCrawler.Plugin.Abstractions.IPluginProfileAware aware) return;
+            if (plugin is not OpsisNewsCrawler.Plugin.Abstractions.IPluginProfileAware aware) { PushHostSettings(plugin); return; }
             try { aware.SetHardwareProfile(HardwareProfileService.CurrentTier.ToString()); }
             catch (Exception ex) { Log($"Plugin '{plugin.Name}' SetHardwareProfile failed: {ex.Message}"); }
+            PushHostSettings(plugin);
         }
 
         private void PushTheme(IOpsisNewsCrawlerPlugin plugin)
@@ -337,8 +378,12 @@ namespace MotionDesk.Services
                 catch (Exception ex) { Log($"Plugin '{folder}' skipped: trust check failed: {ex.Message}"); return false; }
                 if (!TrustStore.IsApproved(name, hash))
                 {
-                    lock (_pending) { _pending.RemoveAll(p => string.Equals(p.Folder, folder, StringComparison.OrdinalIgnoreCase)); _pending.Add(new PluginTrustRequest(name, folder, hash)); }
-                    Log($"Plugin '{name}' in '{folder}' is waiting for approval (sha256 {hash}); it is not loaded until the user approves it.");
+                    // a plugin the user approved before whose content changed (an update, usually the one installed by the Opsis update button) asks ONCE more: never trusted silently
+                    var previous = TrustStore.ApprovedHash(name);
+                    lock (_pending) { _pending.RemoveAll(p => string.Equals(p.Folder, folder, StringComparison.OrdinalIgnoreCase)); _pending.Add(new PluginTrustRequest(name, folder, hash, previous != null, previous)); }
+                    Log(previous != null
+                        ? $"Plugin '{name}' in '{folder}' changed since it was approved (was {previous[..Math.Min(16, previous.Length)]}, now {hash}); it is not loaded until the user approves the new content."
+                        : $"Plugin '{name}' in '{folder}' is waiting for approval (sha256 {hash}); it is not loaded until the user approves it.");
                     return false;
                 }
             }
@@ -429,9 +474,28 @@ namespace MotionDesk.Services
             if (IsReplacedByBuiltIn(folder)) { Log($"Plugin folder '{Path.GetFileName(folder)}' skipped: its features are built into Opsis 2.6.0"); return; }
             foreach (var dll in Directory.EnumerateFiles(folder, "*Plugin.dll"))
             {
+                // contract compatibility BEFORE anything of the plugin runs: a plugin built against a NEWER contract than this Opsis has cannot work (it needs types we do not have)
+                var compat = PluginContractCheck.Check(dll, ContractVersion);
+                if (!compat.Ok)
+                {
+                    Log($"Plugin '{Path.GetFileName(folder)}' skipped: {compat.Message}");
+                    AddSkipped(new PluginSkipped(Path.GetFileName(folder), folder, compat.Message, compat.Required));
+                    continue;
+                }
                 var context = new PluginLoadContext(dll);
                 var assembly = context.LoadFromAssemblyPath(dll);
-                foreach (var type in assembly.GetTypes())
+                Type[] types;
+                try { types = assembly.GetTypes(); }
+                catch (ReflectionTypeLoadException rex)
+                {
+                    // a type of the plugin uses a contract type this Opsis does not have: say it plainly
+                    var detail = string.Join("; ", rex.LoaderExceptions.Where(e => e != null).Select(e => e!.Message).Distinct().Take(3));
+                    var msg = $"it needs a newer Opsis (a contract type is missing in this one: {detail})";
+                    Log($"Plugin '{Path.GetFileName(folder)}' skipped: {msg}");
+                    AddSkipped(new PluginSkipped(Path.GetFileName(folder), folder, msg, null));
+                    continue;
+                }
+                foreach (var type in types)
                 {
                     if (type.IsAbstract || !typeof(IOpsisNewsCrawlerPlugin).IsAssignableFrom(type)) continue;
                     if (Activator.CreateInstance(type) is not IOpsisNewsCrawlerPlugin plugin) continue;
@@ -471,7 +535,8 @@ namespace MotionDesk.Services
 
             protected override Assembly? Load(AssemblyName name)
             {
-                // Το contract πρέπει να είναι το ίδιο Assembly instance με του host.
+                // Το contract πρέπει να είναι το ίδιο Assembly instance με του host. Contract 1.0.0.0: επιστρέφουμε ΠΑΝΤΑ το assembly του host ανεξάρτητα από την έκδοση με την οποία χτίστηκε το plugin
+                // (ένα plugin χτισμένο με 0.8.0.0 δένει στο 1.0.0.0· ένα plugin χτισμένο με ΝΕΟΤΕΡΟ contract απορρίπτεται νωρίτερα από το PluginContractCheck). Δοκιμάζεται στα PluginContractLoadTests.
                 // Το return null αφήνει την επίλυση στο default context και μπορεί να αποτύχει
                 // όταν το contract δεν βρίσκεται στο probing path της εφαρμογής.
                 var contractAssembly = typeof(IOpsisNewsCrawlerPlugin).Assembly;
@@ -526,4 +591,7 @@ namespace MotionDesk.Services
             catch (Exception) { }
         }
     }
+
+    /// <summary>A plugin folder that was found but not loaded because it needs a newer Opsis (<see cref="Required"/> = the contract version it was built against, when known).</summary>
+    public sealed record PluginSkipped(string Name, string Folder, string Message, Version? Required);
 }

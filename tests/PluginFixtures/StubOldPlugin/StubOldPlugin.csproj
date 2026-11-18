@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Test fixture, not part of the product: a real plugin DLL for the load-matrix tests (PluginContractLoadTests). Built against the contract 0.8.0.0 (Opsis 2.4.x). Output: ../out/StubOldPlugin -->
+  <PropertyGroup>
+    <TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <AssemblyName>StubOldPlugin</AssemblyName>
+    <DefineConstants>$(DefineConstants);OLD</DefineConstants>
+    <OutDir>$(MSBuildThisFileDirectory)../out/StubOldPlugin/</OutDir>
+    <GenerateDependencyFile>false</GenerateDependencyFile>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../Common/StubPlugin.cs" />
+    <Reference Include="OpsisNewsCrawler.Plugin.Abstractions"><HintPath>../../Opsis.Tests/Fixtures/Contract0800/contract-0.8.0.0.bin</HintPath><Private>false</Private></Reference>
+  </ItemGroup>
+</Project>

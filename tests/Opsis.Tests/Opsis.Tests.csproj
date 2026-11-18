@@ -18,6 +18,11 @@
   <ItemGroup>
     <ProjectReference Include="../../MotionDeskStudio.csproj" />
     <ProjectReference Include="../../core/Opsis.Lockscreen.Core/Opsis.Lockscreen.Core.csproj" />
+    <!-- real plugin DLLs for the load-matrix tests (built into tests/PluginFixtures/out) and the old contract 0.8.0.0 that stands for Opsis 2.4.6 -->
+    <None Include="Fixtures/**" CopyToOutputDirectory="PreserveNewest" />
+    <ProjectReference Include="../PluginFixtures/StubOldPlugin/StubOldPlugin.csproj" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="../PluginFixtures/StubNewPlugin/StubNewPlugin.csproj" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="../PluginFixtures/StubNewLitePlugin/StubNewLitePlugin.csproj" ReferenceOutputAssembly="false" />
     <!-- the plugin contract, for the plugin tests (the host shares this very assembly with every plugin) -->
     <Reference Include="Opsis.UI">
       <HintPath>../../libs/Opsis.UI.dll</HintPath>

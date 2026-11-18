@@ -1060,5 +1060,15 @@
   "DCM.Hide": "Ocultar contenedor",
   "DCM.Cancel": "Cancelar",
   "DCX.PageHint": "Los ajustes, renombrar y eliminar de cada contenedor están en su propio menú (clic derecho en el contenedor).",
-  "Win.RestartExplorerFail": "No se pudo reiniciar el Explorador de Windows. Pulsa Ctrl+Mayús+Esc, elige «Ejecutar nueva tarea» y escribe explorer.exe."
+  "Win.RestartExplorerFail": "No se pudo reiniciar el Explorador de Windows. Pulsa Ctrl+Mayús+Esc, elige «Ejecutar nueva tarea» y escribe explorer.exe.",
+  "About.PluginUpdateUpToDate": "Los plugins están actualizados.",
+  "About.PluginUpdateNewer": "Plugin {0}: nueva versión {1} disponible (instalada: {2}).",
+  "About.PluginUpdateInstall": "Actualizar plugins ({0})",
+  "About.PluginUpdateConfirmTitle": "Actualizar plugins",
+  "About.PluginUpdateConfirm": "¿Descargar y verificar (SHA-256) estas actualizaciones de plugins?\n\n{0}\n\nSe aplican la próxima vez que se inicie Opsis y se te pedirá una vez que apruebes el nuevo contenido.",
+  "About.PluginUpdateStaged": "Actualizaciones de plugins descargadas y verificadas. Se aplican la próxima vez que se inicie Opsis; se te pedirá una vez que apruebes el nuevo contenido.",
+  "About.PluginUpdateFailed": "Error al actualizar el plugin: {0}",
+  "About.PluginNeedsUpdate": "El plugin «{0}» no se cargó: {1}",
+  "Plugin.TrustUpdateTitle": "Plugin actualizado",
+  "Plugin.TrustUpdateBody": "El plugin «{0}», que aprobaste antes, ha cambiado (una actualización).\n\nCarpeta: {1}\nNueva huella del contenido (SHA-256): {2}… (antes: {3}…)\n\nContinúa solo si lo instalaste o actualizaste tú, por ejemplo con el botón de actualización de Opsis. ¿Cargar la nueva versión?"
 }

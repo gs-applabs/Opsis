@@ -78,6 +78,9 @@ namespace MotionDesk.Services
             public bool IsApproved(string name, string sha256) =>
                 _entries.Any(e => string.Equals(e.Name, name, StringComparison.OrdinalIgnoreCase) && string.Equals(e.Sha256, sha256, StringComparison.OrdinalIgnoreCase));
 
+            /// <summary>The SHA-256 the user approved for this plugin name, or null when it was never approved.</summary>
+            public string? ApprovedHash(string name) => _entries.FirstOrDefault(e => string.Equals(e.Name, name, StringComparison.OrdinalIgnoreCase))?.Sha256;
+
             public void Approve(string name, string sha256)
             {
                 _entries.RemoveAll(e => string.Equals(e.Name, name, StringComparison.OrdinalIgnoreCase));      // one approved content per plugin name
@@ -88,5 +91,6 @@ namespace MotionDesk.Services
         }
     }
 
-    public sealed record PluginTrustRequest(string Name, string Folder, string Sha256);
+    /// <summary>A plugin folder that waits for the user. <see cref="IsUpdate"/>: the plugin was approved before and its content changed (an update): the prompt says so (one re-approval, never silent).</summary>
+    public sealed record PluginTrustRequest(string Name, string Folder, string Sha256, bool IsUpdate = false, string? PreviousSha256 = null);
 }

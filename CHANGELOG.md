@@ -4,6 +4,7 @@
 
 ## 2.6.0 beta (τοπικά, δεν έχει δημοσιευτεί)
 
+- **Νέος μηχανισμός plugin 1.0.0 (φάση P):** contract `OpsisNewsCrawler.Plugin.Abstractions` 1.0.0.0 (μόνο προσθήκες: `IPluginUpdateSource`, `IPluginHostSettingsAware`)· τα plugins που χτίστηκαν με 0.8.0.0 φορτώνουν κανονικά, plugin χτισμένο με νεότερο contract απορρίπτεται με μήνυμα «χρειάζεται νεότερο Opsis»· οι ενημερώσεις plugins γίνονται ΜΟΝΟ από το κουμπί «Έλεγχος τώρα» του Opsis (GitHub release, trusted URL ΚΑΙ των δύο λογαριασμών, SHA-256, ασφαλές unzip, εφαρμογή στην επόμενη εκκίνηση)· plugin που άλλαξε περιεχόμενο ζητά ΜΙΑ νέα έγκριση (SHA-256), ποτέ σιωπηλή εμπιστοσύνη· κοινές ρυθμίσεις (γλώσσα, θέμα, επίπεδο απόδοσης, κλίμακα) μόνο στο Opsis· έλεγχος ίδιου SHA-256 στα αντίγραφα του contract (`tools/check-contract-sha.ps1`, test). Λεπτομέρειες: `docs/PHASE-P-STATUS.md`.
 - **Έκδοση:** εμφανίζεται «2.6.0 beta» παντού (πλευρική μπάρα, tray, Discord, ιστορικό, installer, exe)· ο αριθμός ορίζεται σε ΕΝΑ σημείο (`AppVersion`).
 - **Νέος πυρήνας DeskContainers (πειραματικός, `UseNativeContainers`):** γυάλινα παράθυρα με δικό τους τίτλο, drag & drop, κανόνες, snapshots, προσβασιμότητα· βλ. `docs/PLAN-2.6.0-PROGRESS.md`.
 - **Glass:** `UseGpuGlass` για DeskStrip/widgets/containers, θέμα Glass με dropdown και ξεχωριστά χρώματα, κοινά components Opsis.UI.

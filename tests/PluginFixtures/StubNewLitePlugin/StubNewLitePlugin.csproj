@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Test fixture, not part of the product: built against the contract 1.0.0.0 but uses none of the new types (it also loads in Opsis 2.4.x). Output: ../out/StubNewLitePlugin -->
+  <PropertyGroup>
+    <TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <AssemblyName>StubNewLitePlugin</AssemblyName>
+    <DefineConstants>$(DefineConstants);LITE</DefineConstants>
+    <OutDir>$(MSBuildThisFileDirectory)../out/StubNewLitePlugin/</OutDir>
+    <GenerateDependencyFile>false</GenerateDependencyFile>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../Common/StubPlugin.cs" />
+    <Reference Include="OpsisNewsCrawler.Plugin.Abstractions"><HintPath>../../../libs/OpsisNewsCrawler.Plugin.Abstractions.dll</HintPath><Private>false</Private></Reference>
+  </ItemGroup>
+</Project>

@@ -1,6 +1,6 @@
 # Writing a plugin for Opsis
 
-A plugin is a .NET class library whose file name ends in `Plugin.dll` and that implements `IOpsisNewsCrawlerPlugin` from `OpsisNewsCrawler.Plugin.Abstractions` (assembly version 0.8.0.0; reference it with `Private=false`: the host shares its own copy). Optional additions: `IPluginWidgetProvider` / `PluginFeeds` (see `PLUGIN-FEEDS-AND-WIDGETS.md`), `IPluginProfileAware`.
+A plugin is a .NET class library whose file name ends in `Plugin.dll` and that implements `IOpsisNewsCrawlerPlugin` from `OpsisNewsCrawler.Plugin.Abstractions` (assembly version 1.0.0.0 from Opsis 2.6.0 - plugins built against 0.8.0.0 still load, a plugin built against a newer contract than the host has is refused with "needs a newer Opsis"; see docs/PHASE-P-STATUS.md; reference it with `Private=false`: the host shares its own copy). Optional additions: `IPluginWidgetProvider` / `PluginFeeds` (see `PLUGIN-FEEDS-AND-WIDGETS.md`), `IPluginProfileAware`.
 
 ## Where it goes
 `%AppData%\Opsis\plugins\<name>\` (user-writable: Opsis asks the user to approve the exact content, SHA-256, once; until then the plugin waits in the tray menu entry "Plugins waiting for approval") or `<Opsis install folder>\plugins\<name>\` (Program Files: trusted).
