@@ -1043,5 +1043,6 @@
   "DCM.Rename": "Rinomina contenitore...",
   "DCM.Hide": "Nascondi contenitore",
   "DCM.Cancel": "Annulla",
-  "DCX.PageHint": "Impostazioni, rinomina ed eliminazione di un contenitore sono nel suo menu (clic destro sul contenitore)."
+  "DCX.PageHint": "Impostazioni, rinomina ed eliminazione di un contenitore sono nel suo menu (clic destro sul contenitore).",
+  "Win.RestartExplorerFail": "Impossibile riavviare Esplora risorse. Premi Ctrl+Maiusc+Esc, scegli «Esegui nuova attività» e digita explorer.exe."
 }

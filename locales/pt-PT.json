@@ -1043,5 +1043,6 @@
   "DCM.Rename": "Mudar nome do contentor...",
   "DCM.Hide": "Ocultar contentor",
   "DCM.Cancel": "Cancelar",
-  "DCX.PageHint": "As definições, mudar o nome e eliminar de cada contentor estão no seu próprio menu (clique direito no contentor)."
+  "DCX.PageHint": "As definições, mudar o nome e eliminar de cada contentor estão no seu próprio menu (clique direito no contentor).",
+  "Win.RestartExplorerFail": "Não foi possível reiniciar o Explorador do Windows. Prima Ctrl+Shift+Esc, escolha «Executar nova tarefa» e escreva explorer.exe."
 }

@@ -470,11 +470,12 @@ namespace MotionDesk.Widgets
                 _webView = new WebView2 { Dock = DockStyle.Fill, DefaultBackgroundColor = Color.Transparent };
                 Controls.Add(_webView);
                 await _webView.EnsureCoreWebView2Async(await WebView2Support.CreateEnvironmentAsync());
-                if (IsDisposed || _webView.CoreWebView2 == null) return;
-                WebView2Support.Harden(_webView.CoreWebView2);
-                _webView.CoreWebView2.AddHostObjectToScript("motionDesk", new WidgetBridge(this));
+                var core = WebView2Support.TryCore(_webView);
+                if (IsDisposed || core == null) return;
+                WebView2Support.Harden(core);
+                core.AddHostObjectToScript("motionDesk", new WidgetBridge(this));
                 string htmlPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "widgets", WidgetId, "index.html");
-                if (File.Exists(htmlPath)) _webView.CoreWebView2.Navigate(htmlPath);
+                if (File.Exists(htmlPath)) core.Navigate(htmlPath);
             }
             catch (Exception ex)
             {

@@ -1043,5 +1043,6 @@
   "DCM.Rename": "Kapsayıcıyı yeniden adlandır...",
   "DCM.Hide": "Kapsayıcıyı gizle",
   "DCM.Cancel": "İptal",
-  "DCX.PageHint": "Kapsayıcının ayarları, yeniden adlandırma ve silme işlemleri kendi menüsündedir (kapsayıcıya sağ tıklayın)."
+  "DCX.PageHint": "Kapsayıcının ayarları, yeniden adlandırma ve silme işlemleri kendi menüsündedir (kapsayıcıya sağ tıklayın).",
+  "Win.RestartExplorerFail": "Windows Gezgini yeniden başlatılamadı. Ctrl+Shift+Esc'ye basın, «Yeni görev çalıştır» seçip explorer.exe yazın."
 }

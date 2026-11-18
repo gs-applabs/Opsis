@@ -36,6 +36,18 @@ namespace MotionDesk.Widgets
         // νέο παράθυρο ή DevTools/μενού περιβάλλοντος πάνω στην επιφάνεια εργασίας.
         private static readonly Queue<DateTime> _failures = new();
 
+        /// <summary>
+        /// The CoreWebView2 of a control, or null when there is none YET or the control is gone. Reading CoreWebView2 (or calling a member of it) after the WebView2 control was disposed throws
+        /// "CoreWebView2 members cannot be accessed after the WebView2 control is disposed" - which timers, restart handlers and async continuations hit when Explorer restarts and the
+        /// wallpaper windows are rebuilt. Every access goes through here.
+        /// </summary>
+        public static CoreWebView2? TryCore(Microsoft.Web.WebView2.WinForms.WebView2? view)
+        {
+            if (view == null) return null;
+            try { return view.IsDisposed || view.Disposing ? null : view.CoreWebView2; }
+            catch (Exception ex) when (ex is InvalidOperationException or ObjectDisposedException or System.Runtime.InteropServices.COMException) { return null; }
+        }
+
         public static void Harden(CoreWebView2 core)
         {
             var settings = core.Settings;

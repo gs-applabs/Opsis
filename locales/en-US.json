@@ -1066,5 +1066,6 @@
   "DCM.Rename": "Rename container...",
   "DCM.Hide": "Hide container",
   "DCM.Cancel": "Cancel",
-  "DCX.PageHint": "Settings, rename and delete of a container are in its own menu (right-click the container)."
+  "DCX.PageHint": "Settings, rename and delete of a container are in its own menu (right-click the container).",
+  "Win.RestartExplorerFail": "Windows Explorer could not be restarted. Press Ctrl+Shift+Esc, choose \"Run new task\" and type explorer.exe."
 }

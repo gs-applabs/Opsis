@@ -1043,5 +1043,6 @@
   "DCM.Rename": "컨테이너 이름 바꾸기...",
   "DCM.Hide": "컨테이너 숨기기",
   "DCM.Cancel": "취소",
-  "DCX.PageHint": "컨테이너의 설정, 이름 바꾸기, 삭제는 해당 컨테이너의 메뉴(오른쪽 클릭)에 있습니다."
+  "DCX.PageHint": "컨테이너의 설정, 이름 바꾸기, 삭제는 해당 컨테이너의 메뉴(오른쪽 클릭)에 있습니다.",
+  "Win.RestartExplorerFail": "Windows 탐색기를 다시 시작하지 못했습니다. Ctrl+Shift+Esc를 눌러 '새 작업 실행'에서 explorer.exe를 입력하세요."
 }

@@ -693,7 +693,7 @@ namespace MotionDesk.Widgets
                     {
                         // Αν το WebView2 δεν ξεκίνησε, ΜΗΝ αποκαλύπτεις συμπαγές σκούρο παράθυρο πάνω από το φόντο
                         // των Windows (φαινόταν ως "το wallpaper δεν δουλεύει"): ξαναδοκίμασε και κράτα το κρυφό.
-                        if (_webView?.CoreWebView2 == null)
+                        if (WebView2Support.TryCore(_webView) == null)
                         {
                             MotionDesk.Services.AttachLog.Write($"[{TargetScreen.DeviceName}] WebView2 not ready after 4s - keeping window hidden, retrying init");
                             if (!_initializing) _ = InitializeWebViewAsync();
@@ -873,7 +873,7 @@ namespace MotionDesk.Widgets
         public async Task<bool> CapturePngAsync(string filePath)
         {
             var webView = _webView;
-            if (webView?.CoreWebView2 == null) return false;
+            if (WebView2Support.TryCore(webView) == null) return false;
             try
             {
                 // Η πραγματική οθόνη κλειδώματος των Windows δείχνει ήδη τη δική της ώρα/ημερομηνία —
@@ -881,10 +881,10 @@ namespace MotionDesk.Widgets
                 // στιγμιότυπο. Κρύβεται ΜΟΝΟ για τη λήψη και ξαναεμφανίζεται αμέσως μετά μέσω της
                 // ίδιας της λογικής της σελίδας (updateWeatherInfo), ώστε να μην αλλάξει τίποτα στο
                 // ζωντανό wallpaper που βλέπει ο χρήστης.
-                try { await webView.CoreWebView2.ExecuteScriptAsync("(function(){var e=document.getElementById('wxInfo'); if(e) e.style.display='none';})();"); } catch (Exception) { }
+                try { await WebView2Support.TryCore(webView)!.ExecuteScriptAsync("(function(){var e=document.getElementById('wxInfo'); if(e) e.style.display='none';})();"); } catch (Exception) { }
 
                 await using var stream = new MemoryStream();
-                await webView.CoreWebView2.CapturePreviewAsync(Microsoft.Web.WebView2.Core.CoreWebView2CapturePreviewImageFormat.Png, stream);
+                await WebView2Support.TryCore(webView)!.CapturePreviewAsync(Microsoft.Web.WebView2.Core.CoreWebView2CapturePreviewImageFormat.Png, stream);
                 stream.Position = 0;
                 await using var file = File.Create(filePath);
                 await stream.CopyToAsync(file);
@@ -897,7 +897,7 @@ namespace MotionDesk.Widgets
             }
             finally
             {
-                try { await webView.CoreWebView2.ExecuteScriptAsync("if (typeof updateWeatherInfo === 'function') updateWeatherInfo();"); } catch (Exception) { }
+                try { await WebView2Support.TryCore(webView)!.ExecuteScriptAsync("if (typeof updateWeatherInfo === 'function') updateWeatherInfo();"); } catch (Exception) { }
             }
         }
 
@@ -916,7 +916,7 @@ namespace MotionDesk.Widgets
                 _apiTimer = new System.Windows.Forms.Timer { Interval = 100 };
                 _apiTimer.Tick += (_, _) =>
                 {
-                    var core = _webView?.CoreWebView2;
+                    var core = WebView2Support.TryCore(_webView);
                     if (core == null || _bridge == null || _paused || !Visible) return;
                     _apiTick++;
                     try
@@ -944,7 +944,7 @@ namespace MotionDesk.Widgets
         }
         private void PointerTick(object? sender, EventArgs e)
         {
-            var core = _webView?.CoreWebView2;
+            var core = WebView2Support.TryCore(_webView);
             if (core == null || _paused || !Visible || !GetCursorPos(out var pt)) return;
             var b = TargetScreen.Bounds;
             if (!b.Contains(pt.X, pt.Y)) return;
@@ -971,25 +971,26 @@ namespace MotionDesk.Widgets
 
         public async Task RunScriptAsync(string js)
         {
-            if (_webView?.CoreWebView2 == null) return;
-            try { await _webView.CoreWebView2.ExecuteScriptAsync(js); } catch (Exception) { }
+            if (WebView2Support.TryCore(_webView) == null) return;
+            try { await WebView2Support.TryCore(_webView)!.ExecuteScriptAsync(js); } catch (Exception) { }
         }
 
         public async Task PushPropertiesAsync()
         {
-            if (_webView?.CoreWebView2 == null) return;
-            try { await _webView.CoreWebView2.ExecuteScriptAsync("window.opsisSendProps&&window.opsisSendProps()"); } catch (Exception) { }
+            if (WebView2Support.TryCore(_webView) == null) return;
+            try { await WebView2Support.TryCore(_webView)!.ExecuteScriptAsync("window.opsisSendProps&&window.opsisSendProps()"); } catch (Exception) { }
         }
 
-        public int BrowserProcessId { get { try { return (int)(_webView?.CoreWebView2?.BrowserProcessId ?? 0); } catch (Exception) { return 0; } } }
+        public int BrowserProcessId { get { try { return (int)(WebView2Support.TryCore(_webView)?.BrowserProcessId ?? 0); } catch (Exception) { return 0; } } }
 
         public async Task SetPausedAsync(bool paused)
         {
             _paused = paused;
             if (TargetScreen.Primary) ApplicationWallpaper.SetPaused(paused);
             // θυμόμαστε την κατάσταση ώστε να εφαρμοστεί και μετά από (re)navigation
-            if (_webView?.CoreWebView2 == null) return;
-            var core = _webView.CoreWebView2;
+            if (WebView2Support.TryCore(_webView) == null) return;
+            var core = WebView2Support.TryCore(_webView);
+            if (core == null) return;
             try
             {
                 // Πρώτα ξυπνάμε ένα ενδεχομένως suspended WebView2 — αλλιώς το script δεν εκτελείται.
@@ -1016,21 +1017,22 @@ namespace MotionDesk.Widgets
                 _webView = new WebView2 { Dock = DockStyle.Fill, DefaultBackgroundColor = BackColor, Visible = false };
                 Controls.Add(_webView);
                 await _webView.EnsureCoreWebView2Async(await WebView2Support.CreateEnvironmentAsync());
-                if (IsDisposed || _webView.CoreWebView2 == null) return;
-                WebView2Support.Harden(_webView.CoreWebView2);
+                var core = WebView2Support.TryCore(_webView);
+                if (IsDisposed || core == null) return;
+                WebView2Support.Harden(core);
                 _bridge = new WallpaperBridge(TargetScreen.DeviceName)
                 {
                     ContentReady = () => { if (!IsDisposed && IsHandleCreated) BeginInvoke(new Action(MarkContentReady)); }
                 };
                 _bridge.ApiChanged = on => { if (!IsDisposed && IsHandleCreated) BeginInvoke(new Action(() => { SetApiPump(on); UpdatePointerTimer(); })); };
                 _bridge.SubscriptionChanged = () => { if (!IsDisposed && IsHandleCreated) BeginInvoke(new Action(UpdatePointerTimer)); };
-                _webView.CoreWebView2.AddHostObjectToScript("wallpaper", _bridge);
+                core.AddHostObjectToScript("wallpaper", _bridge);
                 string htmlPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "widgets", "wallpaper", "index.html");
                 // Μετά από κάθε φόρτωση σελίδας ξαναεφαρμόζουμε την κατάσταση παύσης — αλλιώς ένα
                 // νέο/ανανεωμένο παράθυρο (π.χ. rebuild λόγω αλλαγής οθονών ενώ τρέχει fullscreen
                 // παιχνίδι) θα έπαιζε κανονικά πίσω από το παιχνίδι.
-                _webView.CoreWebView2.NavigationCompleted += (_, _) => { if (_paused) _ = SetPausedAsync(true); };
-                if (File.Exists(htmlPath)) _webView.CoreWebView2.Navigate(htmlPath);
+                core.NavigationCompleted += (_, _) => { if (_paused) _ = SetPausedAsync(true); };
+                if (File.Exists(htmlPath)) core.Navigate(htmlPath);
                 else MotionDesk.Services.AttachLog.Write($"[{TargetScreen.DeviceName}] wallpaper page MISSING: {htmlPath}");
             }
             catch (Exception ex)
@@ -1038,15 +1040,15 @@ namespace MotionDesk.Widgets
                 System.Diagnostics.Debug.WriteLine($"Wallpaper WebView2 initialization failed: {ex}");
                 MotionDesk.Services.AttachLog.Write($"[{TargetScreen.DeviceName}] WebView2 init FAILED: {ex.GetType().Name}: {ex.Message} (runtime={WebView2Support.GetRuntimeVersion() ?? "MISSING"})");
                 // Καθάρισε το μισο-φτιαγμένο control ώστε η επόμενη προσπάθεια να ξεκινά καθαρά.
-                try { if (_webView != null && _webView.CoreWebView2 == null) { Controls.Remove(_webView); _webView.Dispose(); _webView = null; } } catch (Exception) { }
+                try { if (_webView != null && WebView2Support.TryCore(_webView) == null) { Controls.Remove(_webView); _webView.Dispose(); _webView = null; } } catch (Exception) { }
             }
             finally { _initializing = false; }
         }
 
         private async Task RefreshWebViewAsync()
         {
-            if (_webView?.CoreWebView2 == null) return;
-            try { await _webView.CoreWebView2.ExecuteScriptAsync("window.motionDeskRefresh?.();"); }
+            if (WebView2Support.TryCore(_webView) == null) return;
+            try { await WebView2Support.TryCore(_webView)!.ExecuteScriptAsync("window.motionDeskRefresh?.();"); }
             catch (Exception ex) { System.Diagnostics.Debug.WriteLine(ex); }
         }
 

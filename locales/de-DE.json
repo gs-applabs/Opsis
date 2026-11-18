@@ -1043,5 +1043,6 @@
   "DCM.Rename": "Container umbenennen...",
   "DCM.Hide": "Container ausblenden",
   "DCM.Cancel": "Abbrechen",
-  "DCX.PageHint": "Einstellungen, Umbenennen und Löschen eines Containers findest du in dessen eigenem Menü (Rechtsklick auf den Container)."
+  "DCX.PageHint": "Einstellungen, Umbenennen und Löschen eines Containers findest du in dessen eigenem Menü (Rechtsklick auf den Container).",
+  "Win.RestartExplorerFail": "Der Windows-Explorer konnte nicht neu gestartet werden. Drücke Strg+Umschalt+Esc, wähle «Neuen Task ausführen» und gib explorer.exe ein."
 }
