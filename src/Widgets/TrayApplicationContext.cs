@@ -34,6 +34,7 @@ namespace MotionDesk.Widgets
         public TrayApplicationContext()
         {
             OpenPage = p => { try { ShowMainWindow(p); } catch (Exception) { } };
+            StartupPhases.BindUiThread(); StartupPhases.Mark("process start -> shell context created");
             // Safe mode (v2.0 handoff, Φάση 1 §S): αν ενεργό, παραλείπονται plugins/wallpaper/
             // "Last Session" παρακάτω — μόνο το βασικό UI. Ο μετρητής crash μηδενίζεται μετά από
             // 30s επιτυχούς λειτουργίας (one-shot timer πιο κάτω), όχι αμέσως, ώστε ένα crash λίγο
@@ -47,12 +48,14 @@ namespace MotionDesk.Widgets
             var healthyTimer = new System.Windows.Forms.Timer { Interval = 30000 };
             healthyTimer.Tick += (_, _) => { SafeModeService.MarkStartupHealthy(); healthyTimer.Stop(); healthyTimer.Dispose(); };
             healthyTimer.Start();
+            StartupPhases.Mark("safe-mode check + timers");
 
             // Plugin (π.χ. News Crawler): ξεκινούν πριν χτιστεί το μενού ώστε να προσθέσουν τα δικά τους στοιχεία.
             PluginHost.Instance.NavigationRequested += key => ShowMainWindow("plugin:" + key);
             // Plugins from user-writable folders run code inside Opsis: ask once, show the content hash, remember the approval (plugin-trust.json).
             // (the approval question is NOT asked while starting: see PluginHost.ConsiderFolder / ResolvePending)
             if (!safeMode) { PluginHost.Instance.StartAll(); SchedulePluginApproval(); try { MotionDesk.Appearance.AppearanceService.Instance.Start(); } catch (Exception) { } }
+            StartupPhases.Mark("plugins + appearance start");
             // Start-up before the other start-up apps: switched on ONCE after the first run when Start with Windows is on (Settings can turn it off; never repeated)
             try
             {
@@ -150,6 +153,8 @@ namespace MotionDesk.Widgets
             };
 
             _trayIcon.DoubleClick += (s, e) => ShowMainWindow();
+            StartupPhases.Mark("tray menu + tray icon visible");
+            StartupPhases.StartStallProbe();
 
             // ---- high-usage alerts + update check (GearWin-style self-update, βλ. AutoCheckForUpdatesAsync)
             _uiContext = System.Threading.SynchronizationContext.Current ?? new WindowsFormsSynchronizationContext();
@@ -183,10 +188,13 @@ namespace MotionDesk.Widgets
                 catch (Exception) { } // σιωπηλό fallback — ζητήθηκε ρητά, βλ. E2
             };
 
-            if (!safeMode && AppSettings.Load().QuickHideDoubleClickEnabled) DesktopIconVisibilityEngine.Instance.Start();
+            // the low-level mouse hook and the cross-process read of the desktop list (restore after a crash) wait until the UI thread has finished building the windows: a hook installed
+            // while the thread is busy makes the pointer stutter system-wide
+            if (!safeMode && AppSettings.Load().QuickHideDoubleClickEnabled) StartupPhases.Queue.Add("desktop icon engine (mouse hook)", () => DesktopIconVisibilityEngine.Instance.Start());
             AppActivity.Start();
             MotionDesk.Services.DiscordPresence.Instance.Apply();
             BackdropContrast.EnsureStarted();
+            StartupPhases.Mark("update check, hotkeys, icon engine, activity, discord, backdrop");
             if (!safeMode && AppSettings.Load().DesktopMenuEnabled)
             {
                 try { _controlPipe = new Opsis.Containers.PipeServer(DesktopMenu.PipeName, new DesktopMenu.Api()); _controlPipe.Start(); DesktopMenu.Apply(true); }
@@ -194,6 +202,7 @@ namespace MotionDesk.Widgets
             }
             if (!safeMode) { try { MusicOverlay.Apply(); } catch (Exception ex) { RotatingLogger.Write("music overlay failed to start: " + ex.Message); } }
             if (!safeMode && AppSettings.Load().UseNativeContainers)
+                StartupPhases.Queue.Add("native containers", () =>
             {
                 try
                 {
@@ -215,7 +224,7 @@ namespace MotionDesk.Widgets
                     _hotkeys.RegisterCtrlAltShift(Keys.OemOpenBrackets, () => host.CycleSnapshot(-1));
                 }
                 catch (Exception ex) { RotatingLogger.Write("native containers failed to start: " + ex.Message); }
-            }
+            });
 
             // Restore lightweight persistent preferences before showing the manager.
             var appSettings = AppSettings.Load();
@@ -224,7 +233,9 @@ namespace MotionDesk.Widgets
             WidgetSnapEngine.GridSize = Math.Clamp(appSettings.GridSize, 5, 100);
             _wallpaperEnabled = !safeMode && WallpaperHostEngine.Instance.IsEnabled;
 
+            if (!safeMode && appSettings.StartWallpaperWithWindows) _wallpaperEnabled = true;     // the state is known at once, the heavy part (WebView2) follows after the shell is up
             if (!safeMode)
+                StartupPhases.Queue.Add("wallpaper", () =>
             {
                 // Time-of-day schedule (may switch the wallpaper mode before the wallpaper starts)
                 WallpaperHostEngine.Instance.ApplyScheduleNow();
@@ -239,7 +250,8 @@ namespace MotionDesk.Widgets
                 WallpaperHostEngine.Instance.UpdateOverlayOnly();
 
                 CheckLockScreenFollowsWallpaper();
-            }
+            });
+            StartupPhases.Mark("settings restored, heavy steps queued");
 
             // "--background": η αυτόματη εκκίνηση με τα Windows (StartupManager.SetStartup) περνάει
             // αυτό το flag — ζητήθηκε ρητά ότι όταν υπάρχουν αποθηκευμένα widgets/DeskContainers, η
@@ -247,6 +259,7 @@ namespace MotionDesk.Widgets
             // διαχείρισης να αναδύεται κάθε φορά. Το MainWindow ΔΗΜΙΟΥΡΓΕΙΤΑΙ κανονικά (ώστε να
             // τρέξει η επαναφορά του "Last Session" — widgets/DeskContainers/wallpaper μέσα στον
             // constructor του), απλά δεν καλείται Show() πάνω του.
+            // order of the queue: wallpaper, containers, then (queued by the main window) the widgets of the last session
             bool launchedInBackground = Environment.GetCommandLineArgs().Any(a => a.Equals("--background", StringComparison.OrdinalIgnoreCase));
             if (launchedInBackground)
             {
@@ -260,6 +273,8 @@ namespace MotionDesk.Widgets
                 int pageArg = Array.FindIndex(cmd, a => a.Equals("--page", StringComparison.OrdinalIgnoreCase));
                 ShowMainWindow(pageArg >= 0 && pageArg + 1 < cmd.Length ? cmd[pageArg + 1] : null);
             }
+            StartupPhases.Mark("main window created");
+            StartupPhases.Queue.Start();      // wallpaper -> containers -> last session, one step per tick, after the shell is responsive
         }
 
         private ContextMenuStrip? _pluginMenuHost;

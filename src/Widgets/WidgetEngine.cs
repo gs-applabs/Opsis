@@ -2413,6 +2413,29 @@ namespace MotionDesk.Widgets
             }
         }
 
+        /// <summary>Same as <see cref="RestoreSnapshots"/>, but one widget every 150 ms so the UI thread is never held by several WebView2 starts at once (start-up).</summary>
+        public void RestoreSnapshotsStaggered(IEnumerable<WidgetSnapshot> snapshots, int stepMs = 150)
+        {
+            CloseAll();
+            var queue = new Queue<WidgetSnapshot>(snapshots.Where(s => !string.IsNullOrWhiteSpace(s.WidgetId)));
+            if (queue.Count == 0) return;
+            var timer = new System.Windows.Forms.Timer { Interval = 1 };
+            timer.Tick += (_, _) =>
+            {
+                timer.Interval = stepMs;
+                if (queue.Count == 0) { timer.Stop(); timer.Dispose(); return; }
+                var snapshot = queue.Dequeue();
+                try
+                {
+                    var widget = SpawnWidget(snapshot.WidgetId, snapshot.X, snapshot.Y, Math.Max(160, snapshot.Width), Math.Max(100, snapshot.Height));
+                    widget.IsLocked = snapshot.IsLocked;
+                    widget.SaveWidgetState();
+                }
+                catch (Exception ex) { MotionDesk.Services.RotatingLogger.Write("restore widget '" + snapshot.WidgetId + "' failed: " + ex.Message); }
+            };
+            timer.Start();
+        }
+
         public void CloseAll()
         {
             foreach (var widget in new List<WidgetWindow>(_activeWidgets))

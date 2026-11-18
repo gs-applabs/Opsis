@@ -220,7 +220,7 @@ namespace MotionDesk.UI
             // DeskContainers/wallpaper που ίσως προκάλεσαν τα διαδοχικά crashes — δεν επαναφέρεται.
             if (!SafeModeService.IsSafeMode && saved.RestoreLastSession && WorkspaceProfileService.ListProfiles().Contains("Last Session", StringComparer.OrdinalIgnoreCase))
             {
-                try { WorkspaceProfileService.Load("Last Session"); } catch { }
+                StartupPhases.Queue.Add("last session (widgets one by one)", () => { try { WorkspaceProfileService.Load("Last Session", staggered: true); } catch { } });
             }
             else if (saved.ShowSystemMonitor && !WidgetHostEngine.Instance.GetActiveWidgets().Any(w => w.WidgetId == "sysmon"))
             {
