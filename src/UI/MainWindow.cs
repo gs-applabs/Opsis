@@ -749,7 +749,7 @@ namespace MotionDesk.UI
             public bool SuppressWidth { get; set; }
             public void ApplyWidth() => Width = _collapsed ? 56 : 184;
 
-            private readonly ToolTip _tip = new() { InitialDelay = 300, AutoPopDelay = 4000 };
+            private readonly ToolTip _tip = new Opsis.UI.FlatToolTip() { InitialDelay = 300, AutoPopDelay = 4000 };
             private readonly string? _shortcutHint;
 
             // Tooltip με τη συντόμευση πληκτρολογίου (π.χ. "Widgets (Ctrl+2)") — πάντα ορατό,
@@ -2247,6 +2247,7 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
 
                 var resetBtn = new HoverButton { Text = LocalizationManager.T("Personalization.Reset"), Width = 90, Height = 30, Location = new Point(490, 7), FlatStyle = FlatStyle.Flat, ForeColor = UiTheme.TextSecondary, BackColor = UiTheme.SurfaceHover, Cursor = Cursors.Hand };
                 resetBtn.FlatAppearance.BorderSize = 0;
+                resetBtn.Kind = Opsis.UI.ButtonKind.Danger;
                 resetBtn.Click += (_, _) => { set(null); RefreshPreview(); _statusLabel.Text = LocalizationManager.T("Personalization.IconResetStatus"); };
                 row.Controls.Add(resetBtn);
 
@@ -3303,6 +3304,8 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                     // Ζητήθηκε ρητά: ξεχωριστό κουμπί ενεργοποίησης/απενεργοποίησης ΓΙΑ ΑΥΤΟ το plugin
                     // (όχι μόνο ο γενικός διακόπτης "Φόρτωση plugins" στις Ρυθμίσεις). Αλλαγές στα
                     // στοιχεία πλοήγησης/tray χρειάζονται επανεκκίνηση· το ίδιο το plugin σταματά/ξεκινά αμέσως.
+                    var stateBadge = new Opsis.UI.Badge { Text = "v" + captured.Version, Kind = Services.PluginHost.Instance.IsPluginEnabled(capturedId) ? Opsis.UI.BadgeKind.Success : Opsis.UI.BadgeKind.Neutral, Margin = new Padding(0, 0, 0, 6) };
+                    panel.Controls.Add(stateBadge);
                     var enableToggle = new FlatCheckBox
                     {
                         Text = LocalizationManager.T("About.PluginEnabled"),
@@ -3311,7 +3314,7 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                         BackColor = UiTheme.PageBackground,
                         Margin = new Padding(0, 0, 0, 6)
                     };
-                    enableToggle.CheckedChanged += (_, _) => Services.PluginHost.Instance.SetPluginEnabled(capturedId, enableToggle.Checked);
+                    enableToggle.CheckedChanged += (_, _) => { Services.PluginHost.Instance.SetPluginEnabled(capturedId, enableToggle.Checked); stateBadge.Kind = enableToggle.Checked ? Opsis.UI.BadgeKind.Success : Opsis.UI.BadgeKind.Neutral; };
                     panel.Controls.Add(enableToggle);
 
                     // Ζητήθηκε (σύγκριση με τον μηχανισμό plugin του Kombos): αφαίρεση plugin από
@@ -3328,6 +3331,7 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                         _statusLabel.Text = LocalizationManager.T(removedNow ? "About.PluginUninstalledNow" : "About.PluginUninstallQueued");
                         ShowAbout();
                     });
+                    uninstallBtn.Kind = Opsis.UI.ButtonKind.Danger;
                     uninstallBtn.Margin = new Padding(0, 0, 0, 6);
                     panel.Controls.Add(uninstallBtn);
 
@@ -3359,7 +3363,7 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
             UpdateCheckService.UpdateInfo? pendingUpdate = null;
             bool installingUpdate = false;
 
-            var updateProgress = new ProgressBar { Width = 400, Height = 18, Minimum = 0, Maximum = 100, Visible = false, Margin = new Padding(0, 0, 0, 6) };
+            var updateProgress = new Opsis.UI.FlatProgress { Width = 400, Height = 10, Visible = false, Margin = new Padding(0, 0, 0, 6) };
 
             var whatsNew = NewHoverButton(LocalizationManager.T("About.UpdateOpen"), () =>
             {
@@ -3409,6 +3413,7 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                     if (!installBtn!.IsDisposed) installBtn.Enabled = true;
                 }
             });
+            installBtn.Kind = Opsis.UI.ButtonKind.Primary;
             installBtn.Visible = false;
 
             var checkNow = NewHoverButton(LocalizationManager.T("About.UpdateCheckNow"), async () =>
@@ -3588,7 +3593,6 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
             var closeBtn = new HoverButton { Text = "OK", Width = 110, Height = 34, FlatStyle = FlatStyle.Flat, BackColor = UiTheme.AccentCyan, ForeColor = Color.White, Cursor = Cursors.Hand, DialogResult = DialogResult.OK, Anchor = AnchorStyles.Right | AnchorStyles.Bottom };
             closeBtn.FlatAppearance.BorderSize = 0;
             closeBtn.Location = new Point(footer.ClientSize.Width - closeBtn.Width - 20, 12);
-            closeBtn.HandleCreated += (_, _) => UiTheme.ApplyRoundedRegion(closeBtn, closeBtn.Height / 2);
             footer.Resize += (_, _) => closeBtn.Location = new Point(footer.ClientSize.Width - closeBtn.Width - 20, 12);
             footer.Controls.Add(closeBtn);
 
@@ -4315,7 +4319,6 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                     Cursor = Cursors.Hand
                 };
                 button.FlatAppearance.BorderSize = 0;
-                UiTheme.ApplyRoundedRegion(button, button.Height / 2);
                 button.Click += (sender, e) => action(sender, e);
                 grid.Controls.Add(button);
             }
@@ -4344,7 +4347,6 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                     Cursor = Cursors.Hand
                 };
                 button.FlatAppearance.BorderSize = 0;
-                UiTheme.ApplyRoundedRegion(button, button.Height / 2);
                 button.Click += (sender, e) => action(sender, e);
                 grid.Controls.Add(button);
                 map[text] = button;
@@ -4388,7 +4390,7 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
             FlatButton Make(string glyph, string tip, Action action)
             {
                 var b = new FlatButton { AutoSize = false, Width = 72, Height = 36, Text = glyph, Margin = new Padding(0, 0, 8, 0), Font = new Font("Segoe UI Symbol", 11f) };
-                new ToolTip().SetToolTip(b, tip);
+                new Opsis.UI.FlatToolTip().SetToolTip(b, tip);
                 b.Click += (_, _) => action();
                 return b;
             }
@@ -4487,8 +4489,27 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
         // χρησιμοποιείται σε δεκάδες σημεία σε όλη την εφαρμογή. Selectable=false αποτρέπει το
         // ίδιο bug που βρέθηκε στο PillButton του ZoneLayoutEditor: το τετράγωνο keyboard-focus
         // rectangle ενός Button προεξέχει έξω από ένα στρογγυλεμένο Region αν δεν απενεργοποιηθεί.
-        private sealed class HoverButton : Button
+        // 2.6.0 (Opsis.UI 0.5.0): thin wrapper over FlatButton, so every call site gets the GearWin look. Kind is derived from the legacy colour properties:
+        // accent BackColor/BaseColor = Primary (also the "active" state of the toggle grids), the red delete ForeColor = Danger; everything else Secondary.
+        private sealed class HoverButton : Opsis.UI.FlatButton
         {
+            private static readonly Color LegacyDanger = Color.FromArgb(231, 76, 60);
+            private static bool IsAccent(Color c) => c.ToArgb() == UiTheme.AccentBlue.ToArgb() || c.ToArgb() == UiTheme.AccentCyan.ToArgb();
+            private Color baseColor = UiTheme.Surface;
+
+            private void SyncKind()
+            {
+                if (Kind == Opsis.UI.ButtonKind.Danger && ForeColor.ToArgb() == LegacyDanger.ToArgb()) return;
+                Kind = IsAccent(BaseColor) || IsAccent(BackColor) ? Opsis.UI.ButtonKind.Primary : Opsis.UI.ButtonKind.Secondary;
+            }
+
+            protected override void OnBackColorChanged(EventArgs e) { base.OnBackColorChanged(e); SyncKind(); }
+            protected override void OnForeColorChanged(EventArgs e)
+            {
+                base.OnForeColorChanged(e);
+                if (ForeColor.ToArgb() == LegacyDanger.ToArgb()) Kind = Opsis.UI.ButtonKind.Danger; else SyncKind();
+            }
+
             // ΔΙΟΡΘΩΣΗ πραγματικού bug: τα Mouse Enter/Leave έκαναν πάντα hardcoded reset σε
             // UiTheme.Surface/SurfaceHover — οποιοδήποτε κουμπί με ΔΙΑΦΟΡΕΤΙΚΟ, σκόπιμο BackColor
             // (π.χ. accent-χρωματισμένο CTA) γύριζε αμέσως πίσω σε γκρι με το πρώτο hover, χωρίς
@@ -4497,20 +4518,16 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
             // δείκτη από πάνω του. Τώρα το βασικό/hover χρώμα είναι ρυθμιζόμενο ανά instance, με
             // προεπιλογή Surface/SurfaceHover (ίδια συμπεριφορά με πριν για όλα τα υπόλοιπα σημεία
             // κλήσης που δεν τα αλλάζουν ρητά).
-            public Color BaseColor { get; set; } = UiTheme.Surface;
+            public Color BaseColor { get => baseColor; set { baseColor = value; SyncKind(); } }
+            // Kept for source compatibility: FlatButton draws its own hover blend.
             public Color HoverBackColor { get; set; } = UiTheme.SurfaceHover;
 
             public HoverButton()
             {
-                MouseEnter += (_, _) => BackColor = HoverBackColor;
-                MouseLeave += (_, _) => BackColor = BaseColor;
-                SetStyle(ControlStyles.Selectable, false);
-            }
-
-            protected override void OnSizeChanged(EventArgs e)
-            {
-                base.OnSizeChanged(e);
-                if (Width > 0 && Height > 0) UiTheme.ApplyRoundedRegion(this, Height / 2);
+                // The old Button was fixed-size with the default 3 px margin; FlatButton auto-sizes. Keep the old behaviour (call sites set Width/Height).
+                AutoSize = false;
+                Margin = new Padding(3);
+                Padding = Padding.Empty;
             }
         }
 

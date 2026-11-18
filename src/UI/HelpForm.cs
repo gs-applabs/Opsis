@@ -195,7 +195,7 @@ namespace MotionDesk.UI
         {
             SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.UserPaint | ControlStyles.OptimizedDoubleBuffer | ControlStyles.SupportsTransparentBackColor, true);
             Size = new Size(36, 36); Cursor = Cursors.Hand; BackColor = Color.Transparent; TabStop = true;
-            new ToolTip().SetToolTip(this, LocalizationManager.T("Help.Tooltip"));
+            new Opsis.UI.FlatToolTip().SetToolTip(this, LocalizationManager.T("Help.Tooltip"));
             AccessibleName = LocalizationManager.T("Help.Title"); AccessibleRole = AccessibleRole.PushButton;
         }
         protected override void OnMouseEnter(EventArgs e) { _hover = true; Invalidate(); base.OnMouseEnter(e); }

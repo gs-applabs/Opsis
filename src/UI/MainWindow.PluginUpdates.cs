@@ -16,7 +16,7 @@ namespace MotionDesk.UI
         private IReadOnlyList<PluginUpdateInfo> _pluginUpdates = Array.Empty<PluginUpdateInfo>();
         private bool _installingPluginUpdates;
 
-        private async Task CheckPluginUpdatesAsync(Label status, ProgressBar progress, FlowLayoutPanel buttonRow)
+        private async Task CheckPluginUpdatesAsync(Label status, Opsis.UI.FlatProgress progress, FlowLayoutPanel buttonRow)
         {
             var candidates = PluginHost.Instance.GetUpdateCandidates();
             if (candidates.Count == 0) return;
@@ -35,7 +35,7 @@ namespace MotionDesk.UI
             buttonRow.Controls.Add(btn);
         }
 
-        private async Task InstallPluginUpdatesAsync(Label status, ProgressBar progress)
+        private async Task InstallPluginUpdatesAsync(Label status, Opsis.UI.FlatProgress progress)
         {
             if (_installingPluginUpdates || _pluginUpdates.Count == 0) return;
             var names = string.Join(", ", _pluginUpdates.Select(u => u.Plugin.Name + " " + u.Latest.ToString(3)));

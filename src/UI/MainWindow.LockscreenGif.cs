@@ -21,7 +21,7 @@ namespace MotionDesk.UI
             bool busy = false;
 
             Label Line(string text = "") { var l = new Label { Text = text, AutoSize = true, MaximumSize = new Size(700, 0), Font = UiTheme.FontBody, ForeColor = UiTheme.TextSecondary, Margin = new Padding(0, 0, 0, 4) }; card.Controls.Add(l); return l; }
-            HoverButton Btn(string text, EventHandler click) { var b = MediaButton(text); b.Click += click; return b; }
+            HoverButton Btn(string text, EventHandler click, Opsis.UI.ButtonKind kind = Opsis.UI.ButtonKind.Secondary) { var b = MediaButton(text, kind); b.Click += click; return b; }
             FlowLayoutPanel Row() { var r = new FlowLayoutPanel { AutoSize = true, WrapContents = true, Margin = new Padding(0, 2, 0, 6), MaximumSize = new Size(720, 0) }; card.Controls.Add(r); return r; }
 
             var panel = new FlowLayoutPanel { AutoSize = true, FlowDirection = FlowDirection.TopDown, WrapContents = false, Margin = new Padding(0) };
@@ -32,7 +32,7 @@ namespace MotionDesk.UI
             card.Controls.Add(panel);
 
             // everything below is created only for the panel; it is shown only while the opt-in is on
-            var prereq = new Label { AutoSize = true, MaximumSize = new Size(700, 0), Font = UiTheme.FontBody, ForeColor = UiTheme.TextSecondary, Margin = new Padding(0, 0, 0, 6) };
+            var prereq = new FlowLayoutPanel { AutoSize = true, FlowDirection = FlowDirection.TopDown, WrapContents = false, Margin = new Padding(0, 0, 0, 6), MaximumSize = new Size(700, 0) };
             var restoreInfo = new Label { AutoSize = true, MaximumSize = new Size(700, 0), Font = UiTheme.FontBody, ForeColor = UiTheme.TextSecondary, Margin = new Padding(0, 0, 0, 6) };
             var preview = new PictureBox { Width = 320, Height = 180, SizeMode = PictureBoxSizeMode.Zoom, BackColor = Color.Black, Margin = new Padding(0, 4, 0, 6) };
             var gifLabel = new Label { AutoSize = true, MaximumSize = new Size(700, 0), Font = UiTheme.FontBody, ForeColor = UiTheme.TextSecondary, Margin = new Padding(0, 0, 0, 4) };
@@ -43,13 +43,29 @@ namespace MotionDesk.UI
             void Status(string key) { if (!IsDisposed) _statusLabel.Text = LG(key); }
             void SetBusy(bool b) { busy = b; foreach (var x in new[] { bDisable, bApply, bSave, bRestore, bConvert }) if (x != null) x.Enabled = !b; }
 
-            string Mark(bool? ok) => ok == true ? "[OK] " : ok == false ? "[!] " : "[?] ";
+            // 2.6.0: prerequisites are shown as Opsis.UI Badges (text always carries the meaning: OK / ! / ? / -), one row per prerequisite.
+            Opsis.UI.BadgeKind MarkKind(bool? ok) => ok == true ? Opsis.UI.BadgeKind.Success : ok == false ? Opsis.UI.BadgeKind.Warning : Opsis.UI.BadgeKind.Neutral;
+            string MarkText(bool? ok) => ok == true ? "OK" : ok == false ? "!" : "?";
+            void PrereqRow(Opsis.UI.BadgeKind kind, string mark, string text)
+            {
+                var row = new FlowLayoutPanel { AutoSize = true, WrapContents = false, FlowDirection = FlowDirection.LeftToRight, Margin = new Padding(0, 0, 0, 2) };
+                row.Controls.Add(new Opsis.UI.Badge { Text = mark, Kind = kind, Margin = new Padding(0, 1, 8, 1) });
+                row.Controls.Add(new Label { Text = text, AutoSize = true, MaximumSize = new Size(620, 0), Font = UiTheme.FontBody, ForeColor = UiTheme.TextSecondary, Margin = new Padding(0, 4, 0, 0) });
+                prereq.Controls.Add(row);
+            }
             void Refresh()
             {
                 var st = LockscreenGifService.GetStatus();
                 bool? pic = st.Mode == LockScreenMode.PictureOrOther ? true : st.Mode == LockScreenMode.Unknown ? null : false;
-                string feature = !st.FeatureApplies ? "[-] " + LG("FeatureNA") : Mark(st.FeatureDisabled) + LG(st.FeatureDisabled == true ? "FeatureOff" : st.FeatureDisabled == false ? "FeatureOn" : "FeatureUnknown");
-                prereq.Text = LG("PrereqTitle") + "\n" + Mark(pic) + LG("PrereqPicture") + "\n" + Mark(st.CachePresent) + LG("PrereqCache") + "\n" + feature + (st.HelperPresent ? "" : "\n[!] " + LG("NoHelper"));
+                var old = prereq.Controls.Cast<Control>().ToList();
+                prereq.Controls.Clear();
+                foreach (var c in old) c.Dispose();
+                prereq.Controls.Add(new Label { Text = LG("PrereqTitle"), AutoSize = true, MaximumSize = new Size(700, 0), Font = UiTheme.FontBody, ForeColor = UiTheme.TextSecondary, Margin = new Padding(0, 0, 0, 4) });
+                PrereqRow(MarkKind(pic), MarkText(pic), LG("PrereqPicture"));
+                PrereqRow(MarkKind(st.CachePresent), MarkText(st.CachePresent), LG("PrereqCache"));
+                if (!st.FeatureApplies) PrereqRow(Opsis.UI.BadgeKind.Neutral, "-", LG("FeatureNA"));
+                else PrereqRow(MarkKind(st.FeatureDisabled), MarkText(st.FeatureDisabled), LG(st.FeatureDisabled == true ? "FeatureOff" : st.FeatureDisabled == false ? "FeatureOn" : "FeatureUnknown"));
+                if (!st.HelperPresent) PrereqRow(Opsis.UI.BadgeKind.Warning, "!", LG("NoHelper"));
                 restoreInfo.Text = st.HasBackup ? LG("HasBackup") : "";
                 if (bRestore != null) { bRestore.Visible = st.HasBackup; }
                 if (bDisable != null) bDisable.Visible = st.FeatureApplies && st.FeatureDisabled != true;
@@ -110,6 +126,7 @@ namespace MotionDesk.UI
                 catch (Exception ex) { _statusLabel.Text = LG("Failed") + " " + ex.Message; }
                 finally { SetBusy(false); Refresh(); }
             });
+            bApply.Kind = Opsis.UI.ButtonKind.Primary;
             r2.Controls.Add(bApply);
             bSave = Btn(LG("SaveGif"), (_, _) =>
             {
@@ -130,6 +147,7 @@ namespace MotionDesk.UI
                 }
                 finally { SetBusy(false); Refresh(); }
             });
+            bRestore.Kind = Opsis.UI.ButtonKind.Danger;
             r2.Controls.Add(bRestore);
             Add(r2); Add(gifLabel); Add(preview);
 
