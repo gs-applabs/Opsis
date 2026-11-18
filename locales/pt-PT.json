@@ -1037,5 +1037,16 @@
   "LockGif.RebootTitle": "Reiniciar o Windows?",
   "LockGif.RebootBody": "A funcionalidade do Windows foi alterada. Pode ser preciso reiniciar para o ecrã de bloqueio animar. Guarde o trabalho e depois bloqueie o Windows para verificar.",
   "LockGif.RebootNow": "Reiniciar agora",
-  "LockGif.RebootLater": "Mais tarde"
+  "LockGif.RebootLater": "Mais tarde",
+  "Help.Title": "Ajuda",
+  "Help.Tooltip": "Ajuda (F1)",
+  "Help.TabGuide": "Como utilizar",
+  "Help.TabPages": "Páginas",
+  "Help.TabShortcuts": "Atalhos",
+  "Help.TabRestore": "Comandos de restauro",
+  "Help.TabHistory": "Histórico de versões",
+  "Help.RestoreIntro": "Se algo correr mal, estes comandos repõem o estado anterior. Execute-os num terminal a partir da pasta de instalação do Opsis; não abrem nenhuma janela e só desfazem o que o Opsis alterou.",
+  "Help.RestoreDesktopIcons": "Opsis.exe --restore-desktop-icons\nVolta a mostrar os ícones do ambiente de trabalho se ficarem ocultos (por exemplo, após uma falha).",
+  "Help.RestoreLockscreen": "Opsis.exe --restore-lockscreen\nRepõe o ecrã de bloqueio original e desfaz o ecrã de bloqueio animado (o Windows pede autorização de administrador).",
+  "Help.CurrentPage": "Está aqui"
 }

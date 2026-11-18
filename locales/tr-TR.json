@@ -1037,5 +1037,16 @@
   "LockGif.RebootTitle": "Windows yeniden başlatılsın mı?",
   "LockGif.RebootBody": "Windows özelliği değiştirildi. Kilit ekranının hareket etmesi için yeniden başlatma gerekebilir. Önce işinizi kaydedin, sonra denetlemek için Windows'u kilitleyin.",
   "LockGif.RebootNow": "Şimdi yeniden başlat",
-  "LockGif.RebootLater": "Daha sonra"
+  "LockGif.RebootLater": "Daha sonra",
+  "Help.Title": "Yardım",
+  "Help.Tooltip": "Yardım (F1)",
+  "Help.TabGuide": "Nasıl kullanılır",
+  "Help.TabPages": "Sayfalar",
+  "Help.TabShortcuts": "Kısayollar",
+  "Help.TabRestore": "Geri yükleme komutları",
+  "Help.TabHistory": "Sürüm geçmişi",
+  "Help.RestoreIntro": "Bir şey ters giderse bu komutlar her şeyi eski haline getirir. Bunları Opsis kurulum klasöründen bir terminalde çalıştırın; pencere açmaz ve yalnızca Opsis'in değiştirdiklerini geri alır.",
+  "Help.RestoreDesktopIcons": "Opsis.exe --restore-desktop-icons\nMasaüstü simgeleri gizli kalırsa (örneğin bir çökmeden sonra) yeniden gösterir.",
+  "Help.RestoreLockscreen": "Opsis.exe --restore-lockscreen\nOrijinal kilit ekranını geri getirir ve hareketli kilit ekranını geri alır (Windows yönetici onayı ister).",
+  "Help.CurrentPage": "Buradasınız"
 }

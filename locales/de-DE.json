@@ -1037,5 +1037,16 @@
   "LockGif.RebootTitle": "Windows neu starten?",
   "LockGif.RebootBody": "Die Windows-Funktion wurde geändert. Ein Neustart kann nötig sein, bevor der Sperrbildschirm animiert wird. Speichern Sie zuerst Ihre Arbeit und sperren Sie danach Windows zur Kontrolle.",
   "LockGif.RebootNow": "Jetzt neu starten",
-  "LockGif.RebootLater": "Später"
+  "LockGif.RebootLater": "Später",
+  "Help.Title": "Hilfe",
+  "Help.Tooltip": "Hilfe (F1)",
+  "Help.TabGuide": "Anleitung",
+  "Help.TabPages": "Seiten",
+  "Help.TabShortcuts": "Tastenkürzel",
+  "Help.TabRestore": "Wiederherstellungsbefehle",
+  "Help.TabHistory": "Versionsverlauf",
+  "Help.RestoreIntro": "Wenn etwas schiefgeht, stellen diese Befehle den Ursprungszustand wieder her. Führen Sie sie in einem Terminal im Opsis-Installationsordner aus; sie öffnen kein Fenster und machen nur rückgängig, was Opsis geändert hat.",
+  "Help.RestoreDesktopIcons": "Opsis.exe --restore-desktop-icons\nZeigt die Desktopsymbole wieder an, falls sie verborgen bleiben (zum Beispiel nach einem Absturz).",
+  "Help.RestoreLockscreen": "Opsis.exe --restore-lockscreen\nStellt den ursprünglichen Sperrbildschirm wieder her und macht den animierten Sperrbildschirm rückgängig (Windows verlangt Administratorrechte).",
+  "Help.CurrentPage": "Sie sind hier"
 }

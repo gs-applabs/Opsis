@@ -98,6 +98,24 @@ namespace MotionDesk.Services
             // OPSIS_AUDIT_PAGES=Wallpaper,Widgets limits the pages; OPSIS_AUDIT_NOCLICK=1 only opens them (safe to run on a personal machine with an isolated OPSIS_APPDATA)
             var only = (Environment.GetEnvironmentVariable("OPSIS_AUDIT_PAGES") ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
             bool noClick = Environment.GetEnvironmentVariable("OPSIS_AUDIT_NOCLICK") == "1";
+            try
+            {
+                // the Help window (F1): every tab is screenshotted
+                win.NavigateTo("Wallpaper"); win.ShowHelpForAudit(); Pump(800);
+                if (MotionDesk.UI.HelpForm.Current is { } help)
+                {
+                    for (int t = 0; t < 5; t++)
+                    {
+                        help.SelectTabForAudit(t); Pump(400);
+                        using var hb = new Bitmap(help.Width, help.Height);
+                        help.DrawToBitmap(hb, new Rectangle(0, 0, help.Width, help.Height));
+                        hb.Save(Path.Combine(folder, "help-tab" + t + ".png"), System.Drawing.Imaging.ImageFormat.Png);
+                    }
+                    help.Close();
+                }
+                else problems.Add("the Help window did not open");
+            }
+            catch (Exception ex) { problems.Add("Help window: " + ex.Message); }
             foreach (var key in win.PageKeys.Where(k => only.Length == 0 || only.Contains(k)).ToList())
             {
                 Mark("page " + key);

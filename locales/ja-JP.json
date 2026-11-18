@@ -1037,5 +1037,16 @@
   "LockGif.RebootTitle": "Windows を再起動しますか？",
   "LockGif.RebootBody": "Windows の機能を変更しました。ロック画面が動くには再起動が必要な場合があります。先に作業を保存し、その後ロックして確認してください。",
   "LockGif.RebootNow": "今すぐ再起動",
-  "LockGif.RebootLater": "後で"
+  "LockGif.RebootLater": "後で",
+  "Help.Title": "ヘルプ",
+  "Help.Tooltip": "ヘルプ (F1)",
+  "Help.TabGuide": "使い方",
+  "Help.TabPages": "ページ",
+  "Help.TabShortcuts": "ショートカット",
+  "Help.TabRestore": "復元コマンド",
+  "Help.TabHistory": "バージョン履歴",
+  "Help.RestoreIntro": "問題が起きたときは、これらのコマンドで元に戻せます。Opsis のインストールフォルダーでターミナルから実行してください。ウィンドウは開かず、Opsis が変更した内容だけを元に戻します。",
+  "Help.RestoreDesktopIcons": "Opsis.exe --restore-desktop-icons\nデスクトップのアイコンが非表示のままの場合（クラッシュ後など）に、再び表示します。",
+  "Help.RestoreLockscreen": "Opsis.exe --restore-lockscreen\n元のロック画面に戻し、アニメーションのロック画面を取り消します（Windows が管理者の承認を求めます）。",
+  "Help.CurrentPage": "現在のページ"
 }

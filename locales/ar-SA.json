@@ -1037,5 +1037,16 @@
   "LockGif.RebootTitle": "إعادة تشغيل Windows؟",
   "LockGif.RebootBody": "تم تغيير ميزة Windows. قد تلزم إعادة التشغيل قبل أن تتحرك شاشة القفل. احفظ عملك أولًا ثم اقفل Windows للتحقق.",
   "LockGif.RebootNow": "إعادة التشغيل الآن",
-  "LockGif.RebootLater": "لاحقًا"
+  "LockGif.RebootLater": "لاحقًا",
+  "Help.Title": "مساعدة",
+  "Help.Tooltip": "مساعدة (F1)",
+  "Help.TabGuide": "طريقة الاستخدام",
+  "Help.TabPages": "الصفحات",
+  "Help.TabShortcuts": "اختصارات لوحة المفاتيح",
+  "Help.TabRestore": "أوامر الاستعادة",
+  "Help.TabHistory": "سجل الإصدارات",
+  "Help.RestoreIntro": "إذا حدث خطأ ما، فإن هذه الأوامر تعيد الأمور كما كانت. شغّلها في وحدة طرفية من مجلد تثبيت Opsis؛ فهي لا تفتح نافذة ولا تتراجع إلا عمّا غيّره Opsis.",
+  "Help.RestoreDesktopIcons": "Opsis.exe --restore-desktop-icons\nيُظهر أيقونات سطح المكتب من جديد إذا بقيت مخفية (مثلاً بعد انهيار البرنامج).",
+  "Help.RestoreLockscreen": "Opsis.exe --restore-lockscreen\nيعيد شاشة القفل الأصلية ويلغي شاشة القفل المتحركة (يطلب Windows موافقة المسؤول).",
+  "Help.CurrentPage": "أنت هنا"
 }

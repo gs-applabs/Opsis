@@ -1037,5 +1037,16 @@
   "LockGif.RebootTitle": "Windows पुनः आरंभ करें?",
   "LockGif.RebootBody": "Windows सुविधा बदली गई। लॉक स्क्रीन के एनिमेट होने से पहले पुनः आरंभ आवश्यक हो सकता है। पहले अपना काम सहेजें, फिर जाँचने के लिए Windows लॉक करें।",
   "LockGif.RebootNow": "अभी पुनः आरंभ करें",
-  "LockGif.RebootLater": "बाद में"
+  "LockGif.RebootLater": "बाद में",
+  "Help.Title": "सहायता",
+  "Help.Tooltip": "सहायता (F1)",
+  "Help.TabGuide": "उपयोग कैसे करें",
+  "Help.TabPages": "पृष्ठ",
+  "Help.TabShortcuts": "शॉर्टकट",
+  "Help.TabRestore": "पुनर्स्थापना कमांड",
+  "Help.TabHistory": "संस्करण इतिहास",
+  "Help.RestoreIntro": "कुछ गड़बड़ हो जाए तो ये कमांड सब कुछ पहले जैसा कर देते हैं। इन्हें Opsis के इंस्टॉल फ़ोल्डर से टर्मिनल में चलाएँ; ये कोई विंडो नहीं खोलते और केवल वही वापस करते हैं जो Opsis ने बदला था।",
+  "Help.RestoreDesktopIcons": "Opsis.exe --restore-desktop-icons\nयदि डेस्कटॉप आइकन छिपे रह जाएँ (जैसे क्रैश के बाद) तो उन्हें फिर से दिखाता है।",
+  "Help.RestoreLockscreen": "Opsis.exe --restore-lockscreen\nमूल लॉक स्क्रीन वापस लाता है और एनिमेटेड लॉक स्क्रीन को हटाता है (Windows व्यवस्थापक की अनुमति माँगता है)।",
+  "Help.CurrentPage": "आप यहाँ हैं"
 }

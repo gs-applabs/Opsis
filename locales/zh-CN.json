@@ -1037,5 +1037,16 @@
   "LockGif.RebootTitle": "要重启 Windows 吗？",
   "LockGif.RebootBody": "已更改 Windows 功能。锁屏要动起来可能需要重启。请先保存工作，之后锁定 Windows 进行检查。",
   "LockGif.RebootNow": "立即重启",
-  "LockGif.RebootLater": "稍后"
+  "LockGif.RebootLater": "稍后",
+  "Help.Title": "帮助",
+  "Help.Tooltip": "帮助 (F1)",
+  "Help.TabGuide": "使用说明",
+  "Help.TabPages": "页面",
+  "Help.TabShortcuts": "快捷键",
+  "Help.TabRestore": "恢复命令",
+  "Help.TabHistory": "版本历史",
+  "Help.RestoreIntro": "如果出了问题，这些命令可以恢复原状。请在 Opsis 安装文件夹中的终端里运行；它们不会打开窗口，只会撤销 Opsis 所做的更改。",
+  "Help.RestoreDesktopIcons": "Opsis.exe --restore-desktop-icons\n如果桌面图标一直处于隐藏状态（例如程序崩溃后），重新显示它们。",
+  "Help.RestoreLockscreen": "Opsis.exe --restore-lockscreen\n恢复原来的锁屏并撤销动画锁屏（Windows 会请求管理员批准）。",
+  "Help.CurrentPage": "你在这里"
 }

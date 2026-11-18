@@ -437,6 +437,9 @@ namespace MotionDesk.UI
             _header = new HeaderWavePanel(() => _headerWaveT) { Dock = DockStyle.Top, Height = 64 };
             _pageTitle = new Label { Dock = DockStyle.Fill, Text = "Dashboard", Font = UiTheme.FontHeading, TextAlign = ContentAlignment.MiddleLeft, BackColor = Color.Transparent };
             _header.Controls.Add(_pageTitle);
+            var helpButton = new HelpGlyphButton { Dock = DockStyle.Right };
+            helpButton.Click += (_, _) => ShowHelp();
+            _header.Controls.Add(helpButton);
             _headerRule = new Panel { Dock = DockStyle.Bottom, Height = 1 };
             _header.Controls.Add(_headerRule);
             _headerWaveTimer = new System.Windows.Forms.Timer { Interval = HardwareProfileService.ScaleDecorativeInterval(45) };
@@ -1077,7 +1080,7 @@ namespace MotionDesk.UI
                     NavigateTo("Settings");
                     return true;
                 case Keys.F1:
-                    NavigateTo("About");
+                    ShowHelp();
                     return true;
                 case Keys.F5:
                     if (_pageBuilders.TryGetValue(_currentPageKey, out var builder)) builder();
@@ -2947,11 +2950,7 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
         // ακολουθούν την επιλεγμένη γλώσσα — πριν ήταν hardcoded και μισές ελληνικά / μισές αγγλικά.
         // ΥΠΕΝΘΥΜΙΣΗ για κάθε μελλοντικό version bump: αυτός ο πίνακας ΔΕΝ ενημερώνεται αυτόματα από
         // το VersionNotes.* κλειδί — ξεχάστηκε 3 φορές στη σειρά (1.9.1/1.9.2/1.9.3), ο χρήστης το
-        // έπιασε ζωντανά ("το ιστορικό μένει στην 1.9.0"). Πρόσθεσε ΚΑΙ εδώ τη νέα έκδοση.
-        private static readonly (string Version, string Date)[] VersionHistory =
-        {
-            ("2.6.0", "2026-11"), ("2.4.6.1", "2026-11"), ("2.4.6", "2026-11"), ("2.4.5", "2026-11"), ("2.4.4", "2026-11"), ("2.4.3", "2026-11"), ("2.4.2", "2026-11"), ("2.4.1", "2026-11"), ("2.4.0", "2026-11"), ("2.3.1", "2026-10"), ("2.3.0", "2026-10"), ("2.2.6", "2026-10"), ("2.2.5", "2026-10"), ("2.2.0", "2026-10"), ("2.1.3", "2026-10"), ("2.1.2", "2026-10"), ("2.1.1", "2026-10"), ("2.1.0", "2026-10"), ("2.0.0", "2026-10"), ("1.9.12", "2026-10"), ("1.9.11", "2026-10"), ("1.9.10", "2026-10"), ("1.9.9", "2026-10"), ("1.9.8", "2026-10"), ("1.9.7", "2026-10"), ("1.9.6", "2026-10"), ("1.9.5", "2026-10"), ("1.9.4", "2026-10"), ("1.9.3", "2026-10"), ("1.9.2", "2026-10"), ("1.9.1", "2026-10"), ("1.9.0", "2026-10"), ("1.8.9", "2026-10"), ("1.8.8", "2026-10"), ("1.8.7", "2026-10"), ("1.8.6", "2026-10"), ("1.8.5", "2026-10"), ("1.7.8", "2026-10"), ("1.7.6", "2026-10"), ("1.7.5", "2026-10"), ("1.6.8", "2026-10"), ("1.6.2", "2026-10"), ("1.6.1", "2026-10"), ("1.6.0", "2026-09"), ("1.5.0", "2026-09"), ("1.4.1", "2026-09"), ("1.4.0", "2026-09"), ("1.3.0", "2026-09"), ("1.2.9", "2026-09"), ("1.2.8", "2026-09"), ("1.2.7", "2026-09"), ("1.2.6", "2026-09"), ("1.2.5", "2026-09"), ("1.2.4", "2026-09"), ("1.2.3", "2026-09"), ("1.2.2", "2026-09"), ("1.2.1", "2026-09"), ("1.2.0", "2026-09"), ("1.1.2", "2026-09"), ("1.1.1", "2026-09"), ("1.1.0", "2026-09"), ("1.0.0", "2026-09")
-        };
+        // έπιασε ζωντανά ("το ιστορικό μένει στην 1.9.0"). Πρόσθεσε ΚΑΙ στο VersionCatalog.cs τη νέα έκδοση.
 
 
         // "Audio Enhancement" — ζητήθηκε ρητά, εμπνευσμένο από τη ΛΟΓΙΚΗ του FXSound (github.com/
@@ -3626,6 +3625,15 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
             catch (Exception) { /* cosmetic */ }
         }
 
+        internal void ShowHelpForAudit() => ShowHelp();
+        private void ShowHelp() => HelpForm.ShowHelp(this, _currentPageKey, () =>
+        {
+            var cards = new System.Collections.Generic.List<Control>();
+            bool latest = true;
+            foreach (var entry in VersionCatalog.All) { cards.Add(BuildVersionCard(entry.Version, entry.Date, latest, 600)); latest = false; }
+            return cards;
+        });
+
         private void ShowVersionHistory()
         {
             using var dialog = new Form
@@ -3650,7 +3658,7 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
 
             // Στυλ GearWin: η τρέχουσα έκδοση σε κάρτα γεμάτη με το accent (λευκό κείμενο), οι παλιότερες σε απλές κάρτες που ανοίγουν με κλικ.
             bool isLatest = true;
-            foreach (var entry in VersionHistory)
+            foreach (var entry in VersionCatalog.All)
             {
                 list.Controls.Add(BuildVersionCard(entry.Version, entry.Date, isLatest, contentWidth));
                 isLatest = false;

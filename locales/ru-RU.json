@@ -1037,5 +1037,16 @@
   "LockGif.RebootTitle": "Перезагрузить Windows?",
   "LockGif.RebootBody": "Функция Windows изменена. Чтобы экран блокировки анимировался, может потребоваться перезагрузка. Сначала сохраните работу, затем заблокируйте Windows для проверки.",
   "LockGif.RebootNow": "Перезагрузить сейчас",
-  "LockGif.RebootLater": "Позже"
+  "LockGif.RebootLater": "Позже",
+  "Help.Title": "Справка",
+  "Help.Tooltip": "Справка (F1)",
+  "Help.TabGuide": "Как пользоваться",
+  "Help.TabPages": "Страницы",
+  "Help.TabShortcuts": "Сочетания клавиш",
+  "Help.TabRestore": "Команды восстановления",
+  "Help.TabHistory": "История версий",
+  "Help.RestoreIntro": "Если что-то пошло не так, эти команды вернут всё на место. Запускайте их в терминале из папки установки Opsis: они не открывают окон и отменяют только то, что изменил Opsis.",
+  "Help.RestoreDesktopIcons": "Opsis.exe --restore-desktop-icons\nСнова показывает значки рабочего стола, если они остались скрытыми (например, после сбоя).",
+  "Help.RestoreLockscreen": "Opsis.exe --restore-lockscreen\nВозвращает исходный экран блокировки и отменяет анимированный экран блокировки (Windows запросит разрешение администратора).",
+  "Help.CurrentPage": "Вы здесь"
 }

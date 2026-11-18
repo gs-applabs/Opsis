@@ -1037,5 +1037,16 @@
   "LockGif.RebootTitle": "Redémarrer Windows ?",
   "LockGif.RebootBody": "La fonctionnalité Windows a été modifiée. Un redémarrage peut être nécessaire pour animer l'écran de verrouillage. Enregistrez votre travail, puis verrouillez Windows pour vérifier.",
   "LockGif.RebootNow": "Redémarrer maintenant",
-  "LockGif.RebootLater": "Plus tard"
+  "LockGif.RebootLater": "Plus tard",
+  "Help.Title": "Aide",
+  "Help.Tooltip": "Aide (F1)",
+  "Help.TabGuide": "Mode d'emploi",
+  "Help.TabPages": "Pages",
+  "Help.TabShortcuts": "Raccourcis",
+  "Help.TabRestore": "Commandes de restauration",
+  "Help.TabHistory": "Historique des versions",
+  "Help.RestoreIntro": "En cas de problème, ces commandes remettent les choses en place. Lancez-les dans un terminal depuis le dossier d'installation d'Opsis ; elles n'ouvrent aucune fenêtre et n'annulent que ce qu'Opsis a modifié.",
+  "Help.RestoreDesktopIcons": "Opsis.exe --restore-desktop-icons\nAffiche de nouveau les icônes du bureau si elles restent masquées (par exemple après un plantage).",
+  "Help.RestoreLockscreen": "Opsis.exe --restore-lockscreen\nRétablit l'écran de verrouillage d'origine et annule l'écran de verrouillage animé (Windows demande l'accord de l'administrateur).",
+  "Help.CurrentPage": "Vous êtes ici"
 }

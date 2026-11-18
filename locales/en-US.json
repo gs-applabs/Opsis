@@ -1060,5 +1060,16 @@
   "LockGif.RebootTitle": "Restart Windows?",
   "LockGif.RebootBody": "The Windows feature was changed. A restart may be needed before the lock screen animates. Save your work first, then lock Windows afterwards to check.",
   "LockGif.RebootNow": "Restart now",
-  "LockGif.RebootLater": "Later"
+  "LockGif.RebootLater": "Later",
+  "Help.Title": "Help",
+  "Help.Tooltip": "Help (F1)",
+  "Help.TabGuide": "How to use",
+  "Help.TabPages": "Pages",
+  "Help.TabShortcuts": "Shortcuts",
+  "Help.TabRestore": "Restore commands",
+  "Help.TabHistory": "Version history",
+  "Help.RestoreIntro": "If something goes wrong, these commands put things back. Run them in a terminal from the Opsis install folder; they open no window and only undo what Opsis changed.",
+  "Help.RestoreDesktopIcons": "Opsis.exe --restore-desktop-icons\nShows the desktop icons again if they stay hidden (for example after a crash).",
+  "Help.RestoreLockscreen": "Opsis.exe --restore-lockscreen\nPuts the original lock screen back and undoes the animated lock screen (Windows asks for administrator approval).",
+  "Help.CurrentPage": "You are here"
 }
