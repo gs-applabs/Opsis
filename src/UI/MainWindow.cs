@@ -1690,17 +1690,38 @@ namespace MotionDesk.UI
             glass.CheckedChanged += (_, _) => WallpaperHostEngine.Instance.SetWeatherGlass(glass.Checked);
             host.Controls.Add(glass);
 
-            // the landmark on the horizon: Automatic (nearest to the weather location), none, or ANY landmark the user picks - independent of where the computer is
-            var lmRow = new FlowLayoutPanel { AutoSize = true, WrapContents = false, Margin = new Padding(0, 0, 0, 10) };
+            // the landmark on the horizon: Automatic (the capital nearest to the weather location), a random one (daily), none, or ANY of the 52 Greek prefecture capitals (filter by region first)
+            var lmRow = new FlowLayoutPanel { AutoSize = true, WrapContents = false, Margin = new Padding(0, 0, 0, 4) };
             lmRow.Controls.Add(new Label { Text = LocalizationManager.T("Wallpaper.WeatherLandmarks"), AutoSize = false, Width = 300, Height = 28, TextAlign = ContentAlignment.MiddleLeft, Font = UiTheme.FontBody, ForeColor = UiTheme.TextSecondary });
-            var lmIds = new List<string> { LandmarkCatalog.Auto, LandmarkCatalog.Off }; lmIds.AddRange(LandmarkCatalog.Items.Select(e => e.Id));
-            var lmNames = new List<string> { LocalizationManager.T("Wallpaper.LandmarkAuto"), LocalizationManager.T("Wallpaper.LandmarkOff") }; lmNames.AddRange(LandmarkCatalog.Items.Select(e => e.Name));
+            bool lmGreek = LocalizationManager.CurrentLanguage.StartsWith("el", StringComparison.OrdinalIgnoreCase);
+            string LmLabel(LandmarkCatalog.Entry e) => lmGreek ? e.CapitalEl + " - " + e.NameEl : e.Capital + " - " + e.Name;
             var lmCurrent = settings.WeatherLandmarks ? (LandmarkCatalog.IsValid(settings.WeatherLandmarkId) ? settings.WeatherLandmarkId : LandmarkCatalog.Auto) : LandmarkCatalog.Off;
-            var lmCombo = new FlatComboBox { Width = 260 };
-            lmCombo.SetItems(lmNames.ToArray(), lmNames[Math.Max(0, lmIds.IndexOf(lmCurrent))]);
-            lmCombo.SelectedIndexChanged += (_, _) => { int i = lmCombo.SelectedIndex; if (i >= 0 && i < lmIds.Count) WallpaperHostEngine.Instance.SetWeatherLandmark(lmIds[i]); };
+            var lmRegionIds = new List<string> { "" }; lmRegionIds.AddRange(LandmarkCatalog.Regions);
+            var lmRegionNames = new List<string> { LocalizationManager.T("Wallpaper.LandmarkRegionAll") }; lmRegionNames.AddRange(LandmarkCatalog.Regions.Select(r => LocalizationManager.T("Wallpaper.Region." + r)));
+            var lmIds = new List<string>(); var lmNames = new List<string>();
+            var lmCombo = new FlatComboBox { Width = 330 };
+            bool lmFilling = false;
+            void FillLandmarks(string region, string selected)
+            {
+                lmFilling = true;
+                lmIds.Clear(); lmNames.Clear();
+                lmIds.AddRange(new[] { LandmarkCatalog.Auto, LandmarkCatalog.Random, LandmarkCatalog.Off });
+                lmNames.AddRange(new[] { LocalizationManager.T("Wallpaper.LandmarkAuto"), LocalizationManager.T("Wallpaper.LandmarkRandom"), LocalizationManager.T("Wallpaper.LandmarkOff") });
+                foreach (var e in LandmarkCatalog.Items.Where(e => region.Length == 0 || e.Region == region)) { lmIds.Add(e.Id); lmNames.Add(LmLabel(e)); }
+                lmCombo.SetItems(lmNames.ToArray(), lmNames[Math.Max(0, lmIds.IndexOf(selected))]);
+                lmFilling = false;
+            }
+            var lmRegionCombo = new FlatComboBox { Width = 230 };
+            lmRegionCombo.SetItems(lmRegionNames.ToArray(), lmRegionNames[0]);
+            FillLandmarks("", lmCurrent);
+            lmCombo.SelectedIndexChanged += (_, _) => { int i = lmCombo.SelectedIndex; if (!lmFilling && i >= 0 && i < lmIds.Count) WallpaperHostEngine.Instance.SetWeatherLandmark(lmIds[i]); };
+            lmRegionCombo.SelectedIndexChanged += (_, _) => { int i = lmRegionCombo.SelectedIndex; if (i >= 0 && i < lmRegionIds.Count) FillLandmarks(lmRegionIds[i], LandmarkCatalog.Items.Any(e => e.Id == lmCurrent && (lmRegionIds[i].Length == 0 || e.Region == lmRegionIds[i])) ? lmCurrent : LandmarkCatalog.Auto); };
             lmRow.Controls.Add(lmCombo);
             host.Controls.Add(lmRow);
+            var lmRegionRow = new FlowLayoutPanel { AutoSize = true, WrapContents = false, Margin = new Padding(0, 0, 0, 10) };
+            lmRegionRow.Controls.Add(new Label { Text = LocalizationManager.T("Wallpaper.LandmarkRegion"), AutoSize = false, Width = 300, Height = 28, TextAlign = ContentAlignment.MiddleLeft, Font = UiTheme.FontBody, ForeColor = UiTheme.TextSecondary });
+            lmRegionRow.Controls.Add(lmRegionCombo);
+            host.Controls.Add(lmRegionRow);
         }
 
         // ALL wallpaper modes (videos, Waves, Particles, Weather): live weather, location and the clock / date / temperature overlay

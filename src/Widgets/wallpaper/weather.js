@@ -760,7 +760,7 @@ function resolveLandmark() {
     landmarkKey = key; landmarkPick = null; landmarkScene = { scene: 'sea' };
     const L = window.OpsisLandmarks;
     if (cfg.landmarks !== false && L && cfg.landmarkId !== 'Off') {
-        landmarkPick = cfg.landmarkId && cfg.landmarkId !== 'Auto' ? L.byId(cfg.landmarkId) : L.pickLandmark(cfg.lat, cfg.lon);
+        landmarkPick = cfg.landmarkId === 'Random' ? L.randomLandmark() : cfg.landmarkId && cfg.landmarkId !== 'Auto' ? L.byId(cfg.landmarkId) : L.pickLandmark(cfg.lat, cfg.lon);
         if (landmarkPick) landmarkScene = L.sceneOf(landmarkPick.id);
     }
     return landmarkPick;
@@ -852,6 +852,7 @@ function drawLandmarkOnHorizon(sky, graded, shade, haze) {
     if (flash > 0) pal.amb = clamp(pal.amb + flash * 0.5, 0, 1);
     const maxH = Math.max(90, H * 0.34), L = window.OpsisLandmarks;
     if (landmarkScene.scene === 'photo') return;
+    if (!L.isSprite(landmarkPick.id)) { L.drawLandmark(skyCtx, landmarkPick.id, W * 0.72, HORIZON + (landmarkScene.scene === 'land' ? 0 : 2), Math.min(maxH, pal.maxW * 0.9), pal); return; }   // our own vector silhouette
     const size = L.spriteSize(landmarkPick.id, maxH, pal.maxW); if (!size) return;
     if (landmarkScene.scene === 'photo') return;                          // the photo scene replaces the hills, the monument and the ground (drawScenePhoto)
     if (landmarkScene.scene !== 'land') { L.drawLandmark(skyCtx, landmarkPick.id, W * 0.72, HORIZON + 2, maxH, pal); return; }
