@@ -49,7 +49,7 @@ public sealed class LandmarksWiringTests
         foreach (var e in manifest.EnumerateArray())
         {
             var lic = e.GetProperty("license").GetString()!;
-            Assert.Matches(@"^(Public domain|CC0|CC BY [0-9.]+)$", lic);                        // never -SA, -NC, -ND
+            Assert.Matches(@"^(Public domain|CC0|CC BY(-SA)? [0-9.]+)$", lic);                        // never -NC, -ND (user decision 2026-11-18: CC BY-SA allowed with the attribution recorded)
             Assert.StartsWith("https://commons.wikimedia.org/wiki/File:", e.GetProperty("commonsUrl").GetString());
             Assert.False(string.IsNullOrWhiteSpace(e.GetProperty("author").GetString()));
             Assert.Matches(@"^\d{4}-\d{2}-\d{2}$", e.GetProperty("checkedOn").GetString()!);
@@ -65,7 +65,7 @@ public sealed class LandmarksWiringTests
     {
         var js = File.ReadAllText(Path.Combine(Wall(), "landmarks.js"));
         var ids = System.Text.RegularExpressions.Regex.Match(js, @"SPRITE_IDS = \[([^\]]+)\]").Groups[1].Value.Split(',').Select(x => x.Trim().Trim('\'')).OrderBy(x => x).ToList();
-        Assert.Equal(ids, MotionDesk.Widgets.LandmarkCatalog.Items.Select(e => e.Id).OrderBy(x => x).ToList());
+        Assert.All(ids, id => Assert.Contains(id, MotionDesk.Widgets.LandmarkCatalog.Items.Select(e => e.Id)));          // the photographs are a subset of the catalog (the rest are silhouettes, see LandmarksGreekCapitalsTests)
         Assert.All(ids, id => Assert.Contains("'" + id + "': {", js.Substring(js.IndexOf("const SCENE", StringComparison.Ordinal)).Replace(id + ": {", "'" + id + "': {")));   // every landmark has a scene (land or sea)
         Assert.True(MotionDesk.Widgets.LandmarkCatalog.IsValid("Auto") && MotionDesk.Widgets.LandmarkCatalog.IsValid("Off") && !MotionDesk.Widgets.LandmarkCatalog.IsValid("../evil"));
     }

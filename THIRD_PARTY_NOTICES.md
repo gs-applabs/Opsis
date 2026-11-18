@@ -52,6 +52,7 @@ The software is provided "as is" (see LICENSE). It injects a window behind the d
 Cut-outs of Wikimedia Commons photographs, each checked on its own (public domain, CC0 or CC BY only): Parthenon east side by Jebulon (CC0), plus the Greek landmark photographs listed in the manifest (Patras, Rio-Antirrio, Nafplio); changes: sky removed, cropped, scaled, converted to WebP. Full manifest: docs/LANDMARK-IMAGES.md and docs/LANDMARK-IMAGES.json.
 
 Additional landmark photos: Lighthouse of Patras (public domain), Rio-Antirrio Bridge (public domain, see docs/LANDMARK-IMAGES.md), Bourtzi Nafplio (CC0).
+Landmark silhouettes of the other prefecture capitals (weather wallpaper) are our own drawings, part of the app (MIT); no third-party artwork.
 
 Aerial scene of the Acropolis and Athens: The Acropolis of Athens from Mount Lycabettus on March 14, 2020, by George E. Koronaios (CC0), cropped, widened and faded (see docs/LANDMARK-IMAGES.md).
 
