@@ -205,7 +205,7 @@
   "About.InstructionsList": "1. ウィジェット: 「ウィジェット」ページで 1 つ選ぶと、デスクトップに表示されます。タイトル バーをドラッグして移動、☰ でオプション、🔒/🔓 で位置の固定、✕ で閉じます。\n2. DeskZones: Ctrl+Shift+N でゾーン レイアウト エディターを開きます。ウィンドウをドラッグするときに Shift を押し続けると、ゾーンにスナップできます。\n3. DeskContainers: トレイ メニュー → コンテナーを追加し、ファイルやフォルダーをドラッグしてグループ化します。\n4. 壁紙: 「壁紙」ページで動画を追加して有効にします。他のアプリが全画面になると、再生は自動的に一時停止します。\n5. 個人用設定: 「個人用設定」ページ (Ctrl+0) でシステムのアイコン/カーソル/サウンドを扱えます。\n6. トレイ アイコン（右下、時計の横）から、メイン ウィンドウを開かずにプロファイル、壁紙、設定へすばやくアクセスできます。",
   "About.SectionLicense": "ライセンス",
   "About.LicenseSummary": "MIT ライセンスに基づく無料のオープンソース ソフトウェアです。自由に使用、改変、再配布でき、「現状のまま」無保証で提供されます。ライセンス全文とサードパーティ コンポーネントは、インストール フォルダーの LICENSE ファイルに記載されています。",
-  "About.LandmarkCredits": "Landmark photos (weather wallpaper): Wikimedia Commons cut-outs. Eiffel Tower and Big Ben by salomon10, CC BY 2.0 (creativecommons.org/licenses/by/2.0); Parthenon (Jebulon) and Taj Mahal (Mustang Joe) CC0. Full list: landmarks\\ATTRIBUTION.md.",
+  "About.LandmarkCredits": "名所の写真（天気の壁紙）。Wikimedia Commons のギリシャの名所の切り抜き：パルテノン神殿 (Jebulon)、ナフプリオとアクロポリスの情景 (George E. Koronaios) CC0、パトラ (Xocolatl) とリオ・アンティリオ橋 (Erik Drost) パブリックドメイン、ハルキダ (stefg74) CC BY 2.0、ハニア (Marc Ryckaert) CC BY 3.0、アルタ (CHE) とコリントス (George E. Koronaios) CC BY-SA 4.0。その他の名所は Opsis が描いたシルエットです。詳細なクレジット：THIRD_PARTY_NOTICES.md。",
   "About.LicenseButton": "ライセンス",
   "Common.NoActiveWidgets": "アクティブなウィジェットはありません。",
   "Common.NoActiveZones": "アクティブな DeskZone はありません。",

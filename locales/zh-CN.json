@@ -205,7 +205,7 @@
   "About.InstructionsList": "1. 小组件：进入“小组件”页面，选择一个即可在桌面上生成。拖动其标题栏可移动，☰ 打开选项，🔒/🔓 锁定位置，✕ 关闭。\n2. DeskZones：Ctrl+Shift+N 打开区域布局编辑器；拖动任意窗口时按住 Shift 即可将其吸附到某个区域。\n3. DeskContainers：托盘菜单 → 添加容器，然后将文件/文件夹拖到其上进行分组。\n4. 壁纸：进入“壁纸”页面，添加视频并启用。当其他应用全屏时，播放会自动暂停。\n5. 个性化：“个性化”页面（Ctrl+0）涵盖系统图标/光标/声音。\n6. 托盘图标（右下角，时钟旁边）可在不打开主窗口的情况下快速访问配置文件、壁纸和设置。",
   "About.SectionLicense": "许可证",
   "About.LicenseSummary": "基于 MIT 许可证的免费开源软件——可自由使用、修改和再分发，按“原样”提供，不附带任何担保。完整的许可证文本和第三方组件列于安装文件夹中的 LICENSE 文件。",
-  "About.LandmarkCredits": "Landmark photos (weather wallpaper): Wikimedia Commons cut-outs. Eiffel Tower and Big Ben by salomon10, CC BY 2.0 (creativecommons.org/licenses/by/2.0); Parthenon (Jebulon) and Taj Mahal (Mustang Joe) CC0. Full list: landmarks\\ATTRIBUTION.md.",
+  "About.LandmarkCredits": "地标照片（天气壁纸），来自维基共享资源的希腊地标抠图：帕特农神庙 (Jebulon)、纳夫普利翁和卫城场景 (George E. Koronaios) CC0；帕特雷 (Xocolatl) 和里奥-安蒂里奥大桥 (Erik Drost) 公有领域；哈尔基达 (stefg74) CC BY 2.0；哈尼亚 (Marc Ryckaert) CC BY 3.0；阿尔塔 (CHE) 和科林斯 (George E. Koronaios) CC BY-SA 4.0。其余地标均为 Opsis 自行绘制的剪影。完整署名：THIRD_PARTY_NOTICES.md。",
   "About.LicenseButton": "许可证",
   "Common.NoActiveWidgets": "没有活动的小组件。",
   "Common.NoActiveZones": "没有活动的 DeskZone。",
