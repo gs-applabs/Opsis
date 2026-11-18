@@ -37,7 +37,7 @@ namespace MotionDesk.Containers
                 if (code >= 0)
                 {
                     var m = Marshal.PtrToStructure<MsLlHook>(lParam); int msg = wParam.ToInt32();
-                    if (msg == 0x0201) { _down = new Point(m.X, m.Y); var inOffer = _offer != null && _offer.Bounds.Contains(_down); _downOnDesktop = !inOffer && AppSettings.Load().OfferContainerFromSelection && DesktopIconVisibilityEngine.IsDesktopListAt(_down); if (!inOffer) CloseOffer(); }
+                    if (msg == 0x0201) { _down = new Point(m.X, m.Y); var inOffer = _offer != null && _offer.Bounds.Contains(_down); _downOnDesktop = !inOffer && AppSettings.Peek().OfferContainerFromSelection && DesktopIconVisibilityEngine.IsDesktopListAt(_down); if (!inOffer) CloseOffer(); }
                     else if (msg == 0x0202 && _downOnDesktop) { _downOnDesktop = false; if (Math.Abs(m.X - _down.X) + Math.Abs(m.Y - _down.Y) > 16) { _check.Stop(); _check.Start(); } }
                 }
             }
