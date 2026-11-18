@@ -1093,5 +1093,19 @@
   "About.PluginUpdateFailed": "Plugin update failed: {0}",
   "About.PluginNeedsUpdate": "The plugin \"{0}\" was not loaded: {1}",
   "Plugin.TrustUpdateTitle": "Plugin updated",
-  "Plugin.TrustUpdateBody": "The plugin \"{0}\" that you approved before has changed (an update).\n\nFolder: {1}\nNew content fingerprint (SHA-256): {2}… (before: {3}…)\n\nContinue only if you installed or updated it yourself, for example with the update button of Opsis. Load the new version?"
+  "Plugin.TrustUpdateBody": "The plugin \"{0}\" that you approved before has changed (an update).\n\nFolder: {1}\nNew content fingerprint (SHA-256): {2}… (before: {3}…)\n\nContinue only if you installed or updated it yourself, for example with the update button of Opsis. Load the new version?",
+  "Help.Title": "Help",
+  "Help.Tooltip": "Help (F1)",
+  "Help.TabGuide": "How to use",
+  "Help.TabPages": "Pages",
+  "Help.TabShortcuts": "Shortcuts",
+  "Help.TabRestore": "Restore commands",
+  "Help.TabHistory": "Version history",
+  "Help.RestoreIntro": "If something goes wrong, these commands put things back. Run them in a terminal from the Opsis install folder; they open no window and only undo what Opsis changed.",
+  "Help.RestoreDesktopIcons": "Opsis.exe --restore-desktop-icons\nShows the desktop icons again if they stay hidden (for example after a crash).",
+  "Help.RestoreLockscreen": "Opsis.exe --restore-lockscreen\nPuts the original lock screen back and undoes the animated lock screen (Windows asks for administrator approval).",
+  "Help.CurrentPage": "You are here",
+  "Settings.MusicOverlayAutoHide": "Hide the card after a track change (0 = keep while playing)",
+  "Settings.MusicOverlayClickThrough": "Clicks pass through the card",
+  "Settings.MusicOverlayClickThroughDesc": "On: the desktop behind the card stays clickable. Off: click the card to hide it until the next track."
 }

@@ -1070,5 +1070,19 @@
   "About.PluginUpdateFailed": "فشل تحديث الإضافة: {0}",
   "About.PluginNeedsUpdate": "لم يتم تحميل الإضافة «{0}»: {1}",
   "Plugin.TrustUpdateTitle": "تم تحديث الإضافة",
-  "Plugin.TrustUpdateBody": "الإضافة «{0}» التي وافقت عليها سابقًا تغيّرت (تحديث).\n\nالمجلد: {1}\nبصمة المحتوى الجديد (SHA-256): {2}… (قبل: {3}…)\n\nتابع فقط إذا كنت قد ثبّتها أو حدّثتها بنفسك، مثلًا بزر التحديث في Opsis. هل تريد تحميل الإصدار الجديد؟"
+  "Plugin.TrustUpdateBody": "الإضافة «{0}» التي وافقت عليها سابقًا تغيّرت (تحديث).\n\nالمجلد: {1}\nبصمة المحتوى الجديد (SHA-256): {2}… (قبل: {3}…)\n\nتابع فقط إذا كنت قد ثبّتها أو حدّثتها بنفسك، مثلًا بزر التحديث في Opsis. هل تريد تحميل الإصدار الجديد؟",
+  "Help.Title": "مساعدة",
+  "Help.Tooltip": "مساعدة (F1)",
+  "Help.TabGuide": "طريقة الاستخدام",
+  "Help.TabPages": "الصفحات",
+  "Help.TabShortcuts": "اختصارات لوحة المفاتيح",
+  "Help.TabRestore": "أوامر الاستعادة",
+  "Help.TabHistory": "سجل الإصدارات",
+  "Help.RestoreIntro": "إذا حدث خطأ ما، فإن هذه الأوامر تعيد الأمور كما كانت. شغّلها في وحدة طرفية من مجلد تثبيت Opsis؛ فهي لا تفتح نافذة ولا تتراجع إلا عمّا غيّره Opsis.",
+  "Help.RestoreDesktopIcons": "Opsis.exe --restore-desktop-icons\nيُظهر أيقونات سطح المكتب من جديد إذا بقيت مخفية (مثلاً بعد انهيار البرنامج).",
+  "Help.RestoreLockscreen": "Opsis.exe --restore-lockscreen\nيعيد شاشة القفل الأصلية ويلغي شاشة القفل المتحركة (يطلب Windows موافقة المسؤول).",
+  "Help.CurrentPage": "أنت هنا",
+  "Settings.MusicOverlayAutoHide": "إخفاء البطاقة بعد تغيّر المقطع (0 = تبقى ظاهرة أثناء التشغيل)",
+  "Settings.MusicOverlayClickThrough": "النقرات تمر عبر البطاقة",
+  "Settings.MusicOverlayClickThroughDesc": "مفعّل: يبقى سطح المكتب خلف البطاقة قابلاً للنقر. معطّل: النقر على البطاقة يخفيها حتى المقطع التالي."
 }

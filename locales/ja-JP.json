@@ -1070,5 +1070,19 @@
   "About.PluginUpdateFailed": "プラグインの更新に失敗しました: {0}",
   "About.PluginNeedsUpdate": "プラグイン「{0}」は読み込まれませんでした: {1}",
   "Plugin.TrustUpdateTitle": "プラグインが更新されました",
-  "Plugin.TrustUpdateBody": "以前に承認したプラグイン「{0}」が変更されました (更新)。\n\nフォルダー: {1}\n新しい内容のフィンガープリント (SHA-256): {2}… (以前: {3}…)\n\nご自身でインストールまたは更新した場合 (例: Opsis の更新ボタン) のみ続行してください。新しいバージョンを読み込みますか?"
+  "Plugin.TrustUpdateBody": "以前に承認したプラグイン「{0}」が変更されました (更新)。\n\nフォルダー: {1}\n新しい内容のフィンガープリント (SHA-256): {2}… (以前: {3}…)\n\nご自身でインストールまたは更新した場合 (例: Opsis の更新ボタン) のみ続行してください。新しいバージョンを読み込みますか?",
+  "Help.Title": "ヘルプ",
+  "Help.Tooltip": "ヘルプ (F1)",
+  "Help.TabGuide": "使い方",
+  "Help.TabPages": "ページ",
+  "Help.TabShortcuts": "ショートカット",
+  "Help.TabRestore": "復元コマンド",
+  "Help.TabHistory": "バージョン履歴",
+  "Help.RestoreIntro": "問題が起きたときは、これらのコマンドで元に戻せます。Opsis のインストールフォルダーでターミナルから実行してください。ウィンドウは開かず、Opsis が変更した内容だけを元に戻します。",
+  "Help.RestoreDesktopIcons": "Opsis.exe --restore-desktop-icons\nデスクトップのアイコンが非表示のままの場合（クラッシュ後など）に、再び表示します。",
+  "Help.RestoreLockscreen": "Opsis.exe --restore-lockscreen\n元のロック画面に戻し、アニメーションのロック画面を取り消します（Windows が管理者の承認を求めます）。",
+  "Help.CurrentPage": "現在のページ",
+  "Settings.MusicOverlayAutoHide": "曲が変わったらカードを隠す（0 = 再生中は表示したまま）",
+  "Settings.MusicOverlayClickThrough": "クリックをカードの背後に通す",
+  "Settings.MusicOverlayClickThroughDesc": "オン: カードの後ろのデスクトップをクリックできます。オフ: カードをクリックすると次の曲まで隠れます。"
 }

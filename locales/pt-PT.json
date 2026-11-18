@@ -1070,5 +1070,19 @@
   "About.PluginUpdateFailed": "Falha ao atualizar o plugin: {0}",
   "About.PluginNeedsUpdate": "O plugin «{0}» não foi carregado: {1}",
   "Plugin.TrustUpdateTitle": "Plugin atualizado",
-  "Plugin.TrustUpdateBody": "O plugin «{0}», que aprovou antes, mudou (uma atualização).\n\nPasta: {1}\nNova impressão digital do conteúdo (SHA-256): {2}… (antes: {3}…)\n\nContinue só se o instalou ou atualizou você mesmo, por exemplo com o botão de atualização do Opsis. Carregar a nova versão?"
+  "Plugin.TrustUpdateBody": "O plugin «{0}», que aprovou antes, mudou (uma atualização).\n\nPasta: {1}\nNova impressão digital do conteúdo (SHA-256): {2}… (antes: {3}…)\n\nContinue só se o instalou ou atualizou você mesmo, por exemplo com o botão de atualização do Opsis. Carregar a nova versão?",
+  "Help.Title": "Ajuda",
+  "Help.Tooltip": "Ajuda (F1)",
+  "Help.TabGuide": "Como utilizar",
+  "Help.TabPages": "Páginas",
+  "Help.TabShortcuts": "Atalhos",
+  "Help.TabRestore": "Comandos de restauro",
+  "Help.TabHistory": "Histórico de versões",
+  "Help.RestoreIntro": "Se algo correr mal, estes comandos repõem o estado anterior. Execute-os num terminal a partir da pasta de instalação do Opsis; não abrem nenhuma janela e só desfazem o que o Opsis alterou.",
+  "Help.RestoreDesktopIcons": "Opsis.exe --restore-desktop-icons\nVolta a mostrar os ícones do ambiente de trabalho se ficarem ocultos (por exemplo, após uma falha).",
+  "Help.RestoreLockscreen": "Opsis.exe --restore-lockscreen\nRepõe o ecrã de bloqueio original e desfaz o ecrã de bloqueio animado (o Windows pede autorização de administrador).",
+  "Help.CurrentPage": "Está aqui",
+  "Settings.MusicOverlayAutoHide": "Ocultar o cartão após uma mudança de faixa (0 = manter durante a reprodução)",
+  "Settings.MusicOverlayClickThrough": "Os cliques atravessam o cartão",
+  "Settings.MusicOverlayClickThroughDesc": "Ativo: o ambiente de trabalho por trás do cartão continua clicável. Inativo: clicar no cartão oculta-o até à faixa seguinte."
 }

@@ -1070,5 +1070,19 @@
   "About.PluginUpdateFailed": "Plugin-Update fehlgeschlagen: {0}",
   "About.PluginNeedsUpdate": "Das Plugin „{0}“ wurde nicht geladen: {1}",
   "Plugin.TrustUpdateTitle": "Plugin aktualisiert",
-  "Plugin.TrustUpdateBody": "Das Plugin „{0}“, das Sie zuvor genehmigt haben, hat sich geändert (ein Update).\n\nOrdner: {1}\nNeuer Inhalts-Fingerabdruck (SHA-256): {2}… (vorher: {3}…)\n\nFahren Sie nur fort, wenn Sie es selbst installiert oder aktualisiert haben, z. B. mit der Update-Schaltfläche von Opsis. Neue Version laden?"
+  "Plugin.TrustUpdateBody": "Das Plugin „{0}“, das Sie zuvor genehmigt haben, hat sich geändert (ein Update).\n\nOrdner: {1}\nNeuer Inhalts-Fingerabdruck (SHA-256): {2}… (vorher: {3}…)\n\nFahren Sie nur fort, wenn Sie es selbst installiert oder aktualisiert haben, z. B. mit der Update-Schaltfläche von Opsis. Neue Version laden?",
+  "Help.Title": "Hilfe",
+  "Help.Tooltip": "Hilfe (F1)",
+  "Help.TabGuide": "Anleitung",
+  "Help.TabPages": "Seiten",
+  "Help.TabShortcuts": "Tastenkürzel",
+  "Help.TabRestore": "Wiederherstellungsbefehle",
+  "Help.TabHistory": "Versionsverlauf",
+  "Help.RestoreIntro": "Wenn etwas schiefgeht, stellen diese Befehle den Ursprungszustand wieder her. Führen Sie sie in einem Terminal im Opsis-Installationsordner aus; sie öffnen kein Fenster und machen nur rückgängig, was Opsis geändert hat.",
+  "Help.RestoreDesktopIcons": "Opsis.exe --restore-desktop-icons\nZeigt die Desktopsymbole wieder an, falls sie verborgen bleiben (zum Beispiel nach einem Absturz).",
+  "Help.RestoreLockscreen": "Opsis.exe --restore-lockscreen\nStellt den ursprünglichen Sperrbildschirm wieder her und macht den animierten Sperrbildschirm rückgängig (Windows verlangt Administratorrechte).",
+  "Help.CurrentPage": "Sie sind hier",
+  "Settings.MusicOverlayAutoHide": "Karte nach einem Titelwechsel ausblenden (0 = während der Wiedergabe sichtbar lassen)",
+  "Settings.MusicOverlayClickThrough": "Klicks gehen durch die Karte hindurch",
+  "Settings.MusicOverlayClickThroughDesc": "An: Der Desktop hinter der Karte bleibt anklickbar. Aus: Ein Klick auf die Karte blendet sie bis zum nächsten Titel aus."
 }

@@ -1070,5 +1070,19 @@
   "About.PluginUpdateFailed": "Eklenti güncellemesi başarısız: {0}",
   "About.PluginNeedsUpdate": "«{0}» eklentisi yüklenmedi: {1}",
   "Plugin.TrustUpdateTitle": "Eklenti güncellendi",
-  "Plugin.TrustUpdateBody": "Daha önce onayladığınız «{0}» eklentisi değişti (bir güncelleme).\n\nKlasör: {1}\nYeni içerik parmak izi (SHA-256): {2}… (önceki: {3}…)\n\nYalnızca kendiniz yüklediyseniz veya güncellediyseniz, örneğin Opsis'in güncelleme düğmesiyle, devam edin. Yeni sürüm yüklensin mi?"
+  "Plugin.TrustUpdateBody": "Daha önce onayladığınız «{0}» eklentisi değişti (bir güncelleme).\n\nKlasör: {1}\nYeni içerik parmak izi (SHA-256): {2}… (önceki: {3}…)\n\nYalnızca kendiniz yüklediyseniz veya güncellediyseniz, örneğin Opsis'in güncelleme düğmesiyle, devam edin. Yeni sürüm yüklensin mi?",
+  "Help.Title": "Yardım",
+  "Help.Tooltip": "Yardım (F1)",
+  "Help.TabGuide": "Nasıl kullanılır",
+  "Help.TabPages": "Sayfalar",
+  "Help.TabShortcuts": "Kısayollar",
+  "Help.TabRestore": "Geri yükleme komutları",
+  "Help.TabHistory": "Sürüm geçmişi",
+  "Help.RestoreIntro": "Bir şey ters giderse bu komutlar her şeyi eski haline getirir. Bunları Opsis kurulum klasöründen bir terminalde çalıştırın; pencere açmaz ve yalnızca Opsis'in değiştirdiklerini geri alır.",
+  "Help.RestoreDesktopIcons": "Opsis.exe --restore-desktop-icons\nMasaüstü simgeleri gizli kalırsa (örneğin bir çökmeden sonra) yeniden gösterir.",
+  "Help.RestoreLockscreen": "Opsis.exe --restore-lockscreen\nOrijinal kilit ekranını geri getirir ve hareketli kilit ekranını geri alır (Windows yönetici onayı ister).",
+  "Help.CurrentPage": "Buradasınız",
+  "Settings.MusicOverlayAutoHide": "Parça değişince kartı gizle (0 = çalarken açık tut)",
+  "Settings.MusicOverlayClickThrough": "Tıklamalar karttan geçer",
+  "Settings.MusicOverlayClickThroughDesc": "Açık: kartın arkasındaki masaüstü tıklanabilir kalır. Kapalı: karta tıklamak onu bir sonraki parçaya kadar gizler."
 }

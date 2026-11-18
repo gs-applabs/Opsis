@@ -1070,5 +1070,19 @@
   "About.PluginUpdateFailed": "Error al actualizar el plugin: {0}",
   "About.PluginNeedsUpdate": "El plugin «{0}» no se cargó: {1}",
   "Plugin.TrustUpdateTitle": "Plugin actualizado",
-  "Plugin.TrustUpdateBody": "El plugin «{0}», que aprobaste antes, ha cambiado (una actualización).\n\nCarpeta: {1}\nNueva huella del contenido (SHA-256): {2}… (antes: {3}…)\n\nContinúa solo si lo instalaste o actualizaste tú, por ejemplo con el botón de actualización de Opsis. ¿Cargar la nueva versión?"
+  "Plugin.TrustUpdateBody": "El plugin «{0}», que aprobaste antes, ha cambiado (una actualización).\n\nCarpeta: {1}\nNueva huella del contenido (SHA-256): {2}… (antes: {3}…)\n\nContinúa solo si lo instalaste o actualizaste tú, por ejemplo con el botón de actualización de Opsis. ¿Cargar la nueva versión?",
+  "Help.Title": "Ayuda",
+  "Help.Tooltip": "Ayuda (F1)",
+  "Help.TabGuide": "Cómo se usa",
+  "Help.TabPages": "Páginas",
+  "Help.TabShortcuts": "Atajos",
+  "Help.TabRestore": "Comandos de restauración",
+  "Help.TabHistory": "Historial de versiones",
+  "Help.RestoreIntro": "Si algo sale mal, estos comandos lo dejan como estaba. Ejecútelos en un terminal desde la carpeta de instalación de Opsis; no abren ninguna ventana y solo deshacen lo que Opsis cambió.",
+  "Help.RestoreDesktopIcons": "Opsis.exe --restore-desktop-icons\nVuelve a mostrar los iconos del escritorio si siguen ocultos (por ejemplo, tras un cierre inesperado).",
+  "Help.RestoreLockscreen": "Opsis.exe --restore-lockscreen\nRestaura la pantalla de bloqueo original y deshace la pantalla de bloqueo animada (Windows pide permiso de administrador).",
+  "Help.CurrentPage": "Está aquí",
+  "Settings.MusicOverlayAutoHide": "Ocultar la tarjeta tras un cambio de pista (0 = mantenerla mientras suena)",
+  "Settings.MusicOverlayClickThrough": "Los clics atraviesan la tarjeta",
+  "Settings.MusicOverlayClickThroughDesc": "Activado: el escritorio detrás de la tarjeta sigue siendo pulsable. Desactivado: al pulsar la tarjeta se oculta hasta la siguiente pista."
 }

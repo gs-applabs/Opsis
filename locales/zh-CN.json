@@ -1070,5 +1070,19 @@
   "About.PluginUpdateFailed": "插件更新失败:{0}",
   "About.PluginNeedsUpdate": "插件“{0}”未加载:{1}",
   "Plugin.TrustUpdateTitle": "插件已更新",
-  "Plugin.TrustUpdateBody": "你之前批准的插件“{0}”已更改(更新)。\n\n文件夹:{1}\n新内容指纹(SHA-256):{2}…(之前:{3}…)\n\n只有在你自己安装或更新了它(例如使用 Opsis 的更新按钮)时才继续。加载新版本吗?"
+  "Plugin.TrustUpdateBody": "你之前批准的插件“{0}”已更改(更新)。\n\n文件夹:{1}\n新内容指纹(SHA-256):{2}…(之前:{3}…)\n\n只有在你自己安装或更新了它(例如使用 Opsis 的更新按钮)时才继续。加载新版本吗?",
+  "Help.Title": "帮助",
+  "Help.Tooltip": "帮助 (F1)",
+  "Help.TabGuide": "使用说明",
+  "Help.TabPages": "页面",
+  "Help.TabShortcuts": "快捷键",
+  "Help.TabRestore": "恢复命令",
+  "Help.TabHistory": "版本历史",
+  "Help.RestoreIntro": "如果出了问题，这些命令可以恢复原状。请在 Opsis 安装文件夹中的终端里运行；它们不会打开窗口，只会撤销 Opsis 所做的更改。",
+  "Help.RestoreDesktopIcons": "Opsis.exe --restore-desktop-icons\n如果桌面图标一直处于隐藏状态（例如程序崩溃后），重新显示它们。",
+  "Help.RestoreLockscreen": "Opsis.exe --restore-lockscreen\n恢复原来的锁屏并撤销动画锁屏（Windows 会请求管理员批准）。",
+  "Help.CurrentPage": "你在这里",
+  "Settings.MusicOverlayAutoHide": "切换曲目后隐藏卡片（0 = 播放期间一直显示）",
+  "Settings.MusicOverlayClickThrough": "点击穿透卡片",
+  "Settings.MusicOverlayClickThroughDesc": "开启：卡片后面的桌面仍可点击。关闭：点击卡片会将其隐藏，直到下一首曲目。"
 }

@@ -1070,5 +1070,19 @@
   "About.PluginUpdateFailed": "Aggiornamento del plugin non riuscito: {0}",
   "About.PluginNeedsUpdate": "Il plugin «{0}» non è stato caricato: {1}",
   "Plugin.TrustUpdateTitle": "Plugin aggiornato",
-  "Plugin.TrustUpdateBody": "Il plugin «{0}», che avevi approvato, è cambiato (un aggiornamento).\n\nCartella: {1}\nNuova impronta del contenuto (SHA-256): {2}… (prima: {3}…)\n\nContinua solo se lo hai installato o aggiornato tu, ad esempio con il pulsante di aggiornamento di Opsis. Caricare la nuova versione?"
+  "Plugin.TrustUpdateBody": "Il plugin «{0}», che avevi approvato, è cambiato (un aggiornamento).\n\nCartella: {1}\nNuova impronta del contenuto (SHA-256): {2}… (prima: {3}…)\n\nContinua solo se lo hai installato o aggiornato tu, ad esempio con il pulsante di aggiornamento di Opsis. Caricare la nuova versione?",
+  "Help.Title": "Guida",
+  "Help.Tooltip": "Guida (F1)",
+  "Help.TabGuide": "Come si usa",
+  "Help.TabPages": "Pagine",
+  "Help.TabShortcuts": "Scorciatoie",
+  "Help.TabRestore": "Comandi di ripristino",
+  "Help.TabHistory": "Cronologia delle versioni",
+  "Help.RestoreIntro": "Se qualcosa va storto, questi comandi rimettono tutto a posto. Eseguili in un terminale dalla cartella di installazione di Opsis; non aprono finestre e annullano solo ciò che Opsis ha modificato.",
+  "Help.RestoreDesktopIcons": "Opsis.exe --restore-desktop-icons\nMostra di nuovo le icone del desktop se restano nascoste (ad esempio dopo un arresto anomalo).",
+  "Help.RestoreLockscreen": "Opsis.exe --restore-lockscreen\nRipristina la schermata di blocco originale e annulla quella animata (Windows chiede l'autorizzazione dell'amministratore).",
+  "Help.CurrentPage": "Sei qui",
+  "Settings.MusicOverlayAutoHide": "Nascondi la scheda dopo un cambio di brano (0 = tienila durante la riproduzione)",
+  "Settings.MusicOverlayClickThrough": "I clic attraversano la scheda",
+  "Settings.MusicOverlayClickThroughDesc": "Attivo: il desktop dietro la scheda resta cliccabile. Disattivo: facendo clic sulla scheda la nascondi fino al brano successivo."
 }
