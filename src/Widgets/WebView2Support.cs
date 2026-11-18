@@ -71,14 +71,21 @@ namespace MotionDesk.Widgets
             };
         }
 
+        /// <summary>The WebView2 user-data folder: the normal one under LocalAppData\Opsis, but inside the isolated data folder when OPSIS_APPDATA is set (tests and measurements),
+        /// so an isolated run never shares - or fights over - the browser profile of the real installation (it failed with 0x800700AA while the real Opsis was running).</summary>
+        internal static string UserDataFolder(string? isolatedAppData = null, string? localAppData = null)
+        {
+            isolatedAppData ??= Environment.GetEnvironmentVariable("OPSIS_APPDATA");
+            if (!string.IsNullOrWhiteSpace(isolatedAppData)) return Path.Combine(isolatedAppData, "WebView2");
+            return Path.Combine(localAppData ?? Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Opsis", "WebView2");
+        }
+
         private static async Task<CoreWebView2Environment> CreateEnvironmentAsyncCore()
         {
             // (LocalApplicationData, όχι ApplicationData/AppPaths.AppDataFolder: cache δεδομένα του
             // WebView2 runtime, όχι ρυθμίσεις χρήστη — σωστά τοπικό/μη-roaming, ξαναδημιουργείται
             // αβλαβώς αν χαθεί, οπότε δεν χρειάζεται μετάβαση από το παλιό όνομα.)
-            string userDataFolder = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                "Opsis", "WebView2");
+            string userDataFolder = UserDataFolder();
             Directory.CreateDirectory(userDataFolder);
             // Λιγότερη μνήμη/CPU σε αδύναμα συστήματα: χωρίς background networking/sync/translate, χωρίς renderer
             // backgrounding (το wallpaper είναι πίσω από όλα, τα Windows θα το "κοιμίζανε").
