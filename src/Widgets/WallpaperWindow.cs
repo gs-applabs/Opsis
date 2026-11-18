@@ -113,6 +113,9 @@ namespace MotionDesk.Widgets
             catch (Exception) { return "[]"; }
         }
 
+        /// <summary>Called by visualizer.js when the element is off or paused: releases the shared loopback capture (ref-counted, other users keep theirs).</summary>
+        public void StopAudioBands() { try { _spectrum?.Dispose(); } catch (Exception) { } _spectrum = null; }
+
         public string GetPerformanceMode() => WallpaperSettings.Load().PerformanceMode;
 
         public bool GetIsLightTheme()
@@ -156,6 +159,7 @@ namespace MotionDesk.Widgets
                 elAccent = settings.ElementsAccent,
                 elCard = settings.ElementsCard,
                 elAuto = settings.ElementsAutoColor,
+                viz = (settings.Visualizer ?? new VisualizerConfig()).ToPageObject(MediaSource.ImageUri(settings.Visualizer?.BackgroundImagePath)),
                 pageLocal = ApiActive,
                 rotateFirstMs = firstMs,
                 imageUri = effectiveMode == "Image" ? MediaSource.ImageUri(settings.ImagePath) : "",
@@ -374,6 +378,7 @@ namespace MotionDesk.Widgets
         public bool ElementsAutoColor { get; set; } = true;     // without a card: the text turns dark / light with the colour of the wallpaper behind it
         public string ElementsSide { get; set; } = "Left";      // Left | Right: the elements are stacked in a column on that edge of the screen
         public string ElementsVAlign { get; set; } = "Center";  // Top | Center | Bottom
+        public VisualizerConfig Visualizer { get; set; } = new();   // the Music visualizer element (visualizer.js)
         public Dictionary<string, string> PageProperties { get; set; } = new();   // "<page>|<key>" -> value, see WallpaperManifest
         public DateTime? LastRotateUtc { get; set; }                               // when the playlist last advanced (the rotation timer survives restarts)
         public string WaveStyle { get; set; } = "Ribbons"; // "Ribbons" | "Aurora" — παραλλαγές ΜΕΣΑ στο Waves mode

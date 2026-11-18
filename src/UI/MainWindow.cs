@@ -1582,6 +1582,7 @@ namespace MotionDesk.UI
             if (settings.Mode is "Page" or "Image") BuildMediaWallpaperSection(panel, settings);
             if (settings.Mode == "Application") BuildApplicationSection(panel, settings);
             BuildElementsSection(panel, settings);
+            BuildVisualizerSection(panel, settings);
             if (settings.Mode == "Weather") BuildWeatherWallpaperSection(panel, settings);
             if (settings.Mode == "Desktop") AddText(panel, LocalizationManager.T("Wallpaper.DesktopIntro"));
 

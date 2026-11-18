@@ -155,6 +155,7 @@
         const b = bridge(); if (!b) return;
         let c = cfg;
         try { c = JSON.parse(await b.GetWaveConfigJson()); } catch (x) { /* use the last one */ }
+        if (window.opsisApplyViz) window.opsisApplyViz(c);   // the Music visualizer (visualizer.js) is configured from the same refresh
         const list = (c.elements || []).filter(x => defs[x.id]);
         const want = new Map(list.map(x => [x.id, x]));
         for (const [id, e] of [...active]) if (!want.has(id)) { e.remove(); active.delete(id); }
@@ -177,5 +178,5 @@
         if ([...active.keys()].some(id => defs[id].tick)) { tickClocks(); clockTimer = setInterval(tickClocks, 1000); }
         setAutoContrast(!c.elCard && c.elAuto !== false);
     };
-    window.opsisPauseElements = function (paused) { if (paused) clearTimers(); else window.opsisApplyElements(); };
+    window.opsisPauseElements = function (paused) { if (window.opsisPauseViz) window.opsisPauseViz(paused); if (paused) clearTimers(); else window.opsisApplyElements(); };
 })();
