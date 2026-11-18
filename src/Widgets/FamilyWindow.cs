@@ -98,30 +98,55 @@ namespace MotionDesk.Widgets
             var open = Application.OpenForms.OfType<Form>().FirstOrDefault(f => f.Tag as string == "opsis-family");
             if (open != null) { open.Activate(); return; }
             var apps = FamilyApp.Load();
-            var f = NewForm(OpsisStrings.T("ui.familyTitle"), new Size(640, Math.Min(760, 120 + Math.Max(1, apps.Count) * 78))); f.Tag = "opsis-family";
-            var list = new FlowLayoutPanel { Dock = DockStyle.Fill, FlowDirection = FlowDirection.TopDown, WrapContents = false, AutoScroll = true, Padding = new Padding(16) };
+            // same layout as the family window of GearWin / Kombos: title + close on top, one card per app (icon, name, description, state, buttons), cards wrap
+            var f = NewForm(OpsisStrings.T("ui.familyTitle"), new Size(1040, 640)); f.Tag = "opsis-family"; f.MinimumSize = new Size(420, 360); f.FormBorderStyle = FormBorderStyle.Sizable; f.MaximizeBox = true;
+            var header = new Panel { Dock = DockStyle.Top, Height = 64, Padding = new Padding(24, 14, 24, 8), BackColor = UiTheme.Background };
+            var close = new Opsis.UI.FlatButton { Text = OpsisStrings.T("ui.close"), Primary = true, Width = 110, Height = 34, Dock = DockStyle.Right };
+            close.Click += (_, _) => f.Close();
+            header.Controls.Add(new Label { Text = OpsisStrings.T("ui.familyTitle"), Dock = DockStyle.Fill, Font = new Font("Segoe UI Semibold", 18f), ForeColor = UiTheme.TextPrimary, TextAlign = ContentAlignment.MiddleLeft });
+            header.Controls.Add(close);
+            var list = new FlowLayoutPanel { Dock = DockStyle.Fill, FlowDirection = FlowDirection.LeftToRight, WrapContents = true, AutoScroll = true, Padding = new Padding(16, 8, 16, 16), BackColor = UiTheme.Background };
             foreach (var app in apps)
             {
-                var row = new Panel { Width = 580, Height = 68, BackColor = UiTheme.Surface, Margin = new Padding(0, 0, 0, 8) };
-                row.Controls.Add(new Label { Text = app.Name, Location = new Point(14, 8), AutoSize = true, Font = new Font("Segoe UI Semibold", 10.5f), ForeColor = UiTheme.TextPrimary });
-                row.Controls.Add(new Label { Text = app.Tagline, Location = new Point(14, 32), Size = new Size(380, 30), ForeColor = UiTheme.TextSecondary });
-                string? installed = app.InstalledPath;
-                var btn = new Opsis.UI.FlatButton { Width = 150, Height = 32, Location = new Point(416, 18), Primary = installed == null, Text = installed != null ? OpsisStrings.T("ui.open") : OpsisStrings.T("ui.download") };
-                var captured = app;
-                btn.Click += (_, _) =>
+                bool self = app.Id.Equals("opsis", StringComparison.OrdinalIgnoreCase);
+                string? installed = self ? null : app.InstalledPath;
+                var card = new Panel { Width = 320, Height = 190, BackColor = UiTheme.Surface, Margin = new Padding(8), Padding = new Padding(16) };
+                card.Paint += (_, e) =>
                 {
-                    try
-                    {
-                        if (installed != null && SafeLaunch.IsAllowed(installed)) Process.Start(new ProcessStartInfo(installed) { UseShellExecute = true });
-                        else if (captured.Repo.Length > 0 && captured.Owner.Length > 0) Process.Start(new ProcessStartInfo(captured.ReleasesUrl) { UseShellExecute = true });
-                    }
-                    catch (Exception ex) { RotatingLogger.Write("Family window: " + ex.Message); }
+                    using var pen = new Pen(self || installed != null ? UiTheme.AccentCyan : UiTheme.Border, self ? 2 : 1);
+                    e.Graphics.DrawRectangle(pen, 0, 0, card.Width - 1, card.Height - 1);
                 };
-                row.Controls.Add(btn);
-                list.Controls.Add(row);
+                card.Controls.Add(new Label { Text = app.Name.Length > 0 ? app.Name[..1].ToUpperInvariant() : "?", Location = new Point(16, 16), Size = new Size(48, 48), TextAlign = ContentAlignment.MiddleCenter,
+                    Font = new Font("Segoe UI Semibold", 18f), BackColor = UiTheme.AccentBlue, ForeColor = Color.White });
+                card.Controls.Add(new Label { Text = app.Name, Location = new Point(76, 14), Size = new Size(228, 26), Font = new Font("Segoe UI Semibold", 13f), ForeColor = UiTheme.TextPrimary, AutoEllipsis = true });
+                card.Controls.Add(new Label { Text = self || installed != null ? "●" : "○", Location = new Point(76, 42), Size = new Size(228, 20), ForeColor = self || installed != null ? UiTheme.AccentCyan : UiTheme.TextMuted });
+                card.Controls.Add(new Label { Text = app.Tagline, Location = new Point(16, 76), Size = new Size(288, 54), ForeColor = UiTheme.TextSecondary });
+                if (!self)
+                {
+                    var captured = app;
+                    var btn = new Opsis.UI.FlatButton { Width = 130, Height = 32, Location = new Point(16, 140), Primary = installed == null, Text = installed != null ? OpsisStrings.T("ui.open") : OpsisStrings.T("ui.download") };
+                    btn.Click += (_, _) =>
+                    {
+                        try
+                        {
+                            if (installed != null && SafeLaunch.IsAllowed(installed)) Process.Start(new ProcessStartInfo(installed) { UseShellExecute = true });
+                            else if (captured.Repo.Length > 0 && captured.Owner.Length > 0) Process.Start(new ProcessStartInfo(captured.ReleasesUrl) { UseShellExecute = true });
+                        }
+                        catch (Exception ex) { RotatingLogger.Write("Family window: " + ex.Message); }
+                    };
+                    card.Controls.Add(btn);
+                    if (app.Repo.Length > 0 && app.Owner.Length > 0)
+                    {
+                        var more = new Opsis.UI.FlatButton { Width = 100, Height = 32, Location = new Point(156, 140), Text = "GitHub" };
+                        more.Click += (_, _) => { try { Process.Start(new ProcessStartInfo(captured.ReleasesUrl) { UseShellExecute = true }); } catch (Exception ex) { RotatingLogger.Write("Family window: " + ex.Message); } };
+                        card.Controls.Add(more);
+                    }
+                }
+                list.Controls.Add(card);
             }
             if (apps.Count == 0) list.Controls.Add(new Label { Text = LocalizationManager.T("Family.NoList"), AutoSize = true, ForeColor = UiTheme.TextSecondary });
             f.Controls.Add(list);
+            f.Controls.Add(header);
             f.Show();
         }
     }
