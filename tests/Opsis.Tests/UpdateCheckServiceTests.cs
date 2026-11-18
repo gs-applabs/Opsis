@@ -9,11 +9,12 @@ namespace Opsis.Tests;
 public sealed class UpdateCheckServiceTests
 {
     [Theory]
-    [InlineData("https://github.com/giorstergiopoulos-design/Opsis/releases/download/v1.9.12/OpsisSetup.exe", true)]
+    [InlineData("https://github.com/gs-applabs/Opsis/releases/download/v1.9.12/OpsisSetup.exe", true)]
+    [InlineData("https://github.com/giorstergiopoulos-design/Opsis/releases/download/v1.9.12/OpsisSetup.exe", true)] // legacy name (GitHub redirects the renamed repo)
     [InlineData("https://github.com/someone-else/Opsis/releases/download/v1.9.12/OpsisSetup.exe", false)]
-    [InlineData("https://evil.com/github.com/giorstergiopoulos-design/Opsis/releases/download/v1.9.12/OpsisSetup.exe", false)]
-    [InlineData("http://github.com/giorstergiopoulos-design/Opsis/releases/download/v1.9.12/OpsisSetup.exe", false)] // http, not https
-    [InlineData("https://github.com/giorstergiopoulos-design/Opsis/releases/latest", false)] // right host, wrong path shape
+    [InlineData("https://evil.com/github.com/gs-applabs/Opsis/releases/download/v1.9.12/OpsisSetup.exe", false)]
+    [InlineData("http://github.com/gs-applabs/Opsis/releases/download/v1.9.12/OpsisSetup.exe", false)] // http, not https
+    [InlineData("https://github.com/gs-applabs/Opsis/releases/latest", false)] // right host, wrong path shape
     [InlineData(null, false)]
     public void IsTrustedDownloadUrl_OnlyAcceptsThisRepositorysReleaseDownloads(string? url, bool expected) =>
         Assert.Equal(expected, UpdateCheckService.IsTrustedDownloadUrl(url));
@@ -51,13 +52,13 @@ public sealed class UpdateCheckServiceTests
     private static string ReleaseJson(string tag, bool draft = false, bool prerelease = false, bool includeDigest = true, bool includeSha256Asset = true)
     {
         string hex64 = new string('a', 64);
-        string setupAsset = "{ \"name\": \"OpsisSetup.exe\", \"browser_download_url\": \"https://github.com/giorstergiopoulos-design/Opsis/releases/download/" + tag + "/OpsisSetup.exe\""
+        string setupAsset = "{ \"name\": \"OpsisSetup.exe\", \"browser_download_url\": \"https://github.com/gs-applabs/Opsis/releases/download/" + tag + "/OpsisSetup.exe\""
             + (includeDigest ? ", \"digest\": \"sha256:" + hex64 + "\"" : "") + " }";
         string sha256Asset = includeSha256Asset
-            ? ", { \"name\": \"OpsisSetup.exe.sha256\", \"browser_download_url\": \"https://github.com/giorstergiopoulos-design/Opsis/releases/download/" + tag + "/OpsisSetup.exe.sha256\" }"
+            ? ", { \"name\": \"OpsisSetup.exe.sha256\", \"browser_download_url\": \"https://github.com/gs-applabs/Opsis/releases/download/" + tag + "/OpsisSetup.exe.sha256\" }"
             : "";
         return "{ \"tag_name\": \"" + tag + "\", "
-            + "\"html_url\": \"https://github.com/giorstergiopoulos-design/Opsis/releases/tag/" + tag + "\", "
+            + "\"html_url\": \"https://github.com/gs-applabs/Opsis/releases/tag/" + tag + "\", "
             + "\"draft\": " + (draft ? "true" : "false") + ", "
             + "\"prerelease\": " + (prerelease ? "true" : "false") + ", "
             + "\"assets\": [ " + setupAsset + sha256Asset + " ] }";
@@ -69,7 +70,7 @@ public sealed class UpdateCheckServiceTests
         var info = UpdateCheckService.Parse(ReleaseJson("v9.9.9"), new Version(1, 9, 12));
         Assert.NotNull(info);
         Assert.Equal(new Version(9, 9, 9), info!.Version);
-        Assert.Equal("https://github.com/giorstergiopoulos-design/Opsis/releases/download/v9.9.9/OpsisSetup.exe", info.SetupUrl);
+        Assert.Equal("https://github.com/gs-applabs/Opsis/releases/download/v9.9.9/OpsisSetup.exe", info.SetupUrl);
         Assert.NotNull(info.ChecksumUrl);
         Assert.NotNull(info.Sha256);
         Assert.True(info.CanInstallAutomatically);

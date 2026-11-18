@@ -7,11 +7,11 @@
     <!-- the repository folder is written as /src/ inside every file (source paths, PDB references); no PDB is produced for Release -->
     <PathMap>$(MSBuildThisFileDirectory)=/src/</PathMap>
     <DebugType Condition="'$(Configuration)' == 'Release'">none</DebugType>
-    <Authors>giorstergiopoulos-design</Authors>
-    <Company>giorstergiopoulos-design</Company>
-    <Copyright>Copyright (c) 2026 giorstergiopoulos-design</Copyright>
+    <Authors>gs-applabs</Authors>
+    <Company>gs-applabs</Company>
+    <Copyright>Copyright (c) 2026 gs-applabs</Copyright>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
-    <RepositoryUrl>https://github.com/giorstergiopoulos-design/Opsis</RepositoryUrl>
+    <RepositoryUrl>https://github.com/gs-applabs/Opsis</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
   </PropertyGroup>
 </Project>

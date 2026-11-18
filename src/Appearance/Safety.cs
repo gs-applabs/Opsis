@@ -1,4 +1,4 @@
-// Part of Opsis (MIT, Copyright (c) 2026 giorstergiopoulos-design).
+// Part of Opsis (MIT, Copyright (c) 2026 gs-applabs).
 using System.ComponentModel;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;

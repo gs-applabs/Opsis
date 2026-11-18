@@ -1,4 +1,4 @@
-// Part of Opsis (MIT, Copyright (c) 2026 giorstergiopoulos-design).
+// Part of Opsis (MIT, Copyright (c) 2026 gs-applabs).
 namespace MotionDesk.Appearance;
 
 /// <summary>

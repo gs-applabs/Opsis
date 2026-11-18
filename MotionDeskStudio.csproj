@@ -38,9 +38,9 @@
          Description) — το project ήδη ΔΕΝ κάνει trimming/single-file/ReadyToRun/obfuscation
          (άλλος συνηθισμένος λόγος false positive), οπότε δεν χρειάζεται αλλαγή εκεί.
     -->
-    <Company>giorstergiopoulos-design</Company>
-    <Authors>giorstergiopoulos-design</Authors>
-    <Copyright>Copyright (c) 2026 giorstergiopoulos-design</Copyright>
+    <Company>gs-applabs</Company>
+    <Authors>gs-applabs</Authors>
+    <Copyright>Copyright (c) 2026 gs-applabs</Copyright>
     <Description>Opsis - Desktop Customization — animated desktop wallpaper and workspace customization for Windows.</Description>
   </PropertyGroup>
 

@@ -1,4 +1,4 @@
-// Part of Opsis (MIT, Copyright (c) 2026 giorstergiopoulos-design).
+// Part of Opsis (MIT, Copyright (c) 2026 gs-applabs).
 using System.Drawing;
 using System.Text.Json;
 using Microsoft.Win32;

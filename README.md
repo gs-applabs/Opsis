@@ -227,4 +227,4 @@ easier to review than broad refactors bundled with a feature.
 
 ## Άδεια / License
 
-[MIT](LICENSE) © giorstergiopoulos-design — the standard MIT text; third-party components and their licences, and the disclaimer, are in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+[MIT](LICENSE) © gs-applabs — the standard MIT text; third-party components and their licences, and the disclaimer, are in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).

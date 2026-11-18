@@ -1,4 +1,4 @@
-// Part of Opsis (MIT, Copyright (c) 2026 giorstergiopoulos-design).
+// Part of Opsis (MIT, Copyright (c) 2026 gs-applabs).
 namespace MotionDesk.Appearance;
 
 /// <summary>Slideshow ρυθμίσεις: άλλαξε το wallpaper των Windows από έναν φάκελο ανά τακτά διαστήματα (όπως ο Wallpaper Manager του Seelen).</summary>

@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Net.Http;
 using System.Reflection;
 using System.Text.Json;
@@ -15,9 +16,11 @@ namespace MotionDesk.Services
     // πριν τρέξει οτιδήποτε. Ποτέ δεν κατεβάζει/τρέχει τίποτα από μόνο του χωρίς κλικ του χρήστη.
     public static class UpdateCheckService
     {
-        public const string Repository = "giorstergiopoulos-design/Opsis";
+        public const string Repository = "gs-applabs/Opsis";
+        // Repo renamed (giorstergiopoulos-design -> gs-applabs); GitHub redirects the old name, so both are trusted.
+        public const string LegacyRepository = "giorstergiopoulos-design/Opsis";
+        private static readonly string[] TrustedRepositories = { Repository, LegacyRepository };
         private const string SetupName = "OpsisSetup.exe";
-        private static readonly string DownloadPrefix = $"https://github.com/{Repository}/releases/download/";
 
         // Ζητήθηκε ρητά (v2.0 handoff, update mechanism βάσει GearWin): έλεγχος σε ΚΑΘΕ εκκίνηση και
         // μετά κάθε ~12 ώρες — αντικαθιστά το προηγούμενο "μία φορά τον μήνα".
@@ -66,7 +69,7 @@ namespace MotionDesk.Services
             if (!TryParseVersion(tag, out var latest) || latest <= current) return null;
 
             var page = root.TryGetProperty("html_url", out var h) ? h.GetString() ?? "" : $"https://github.com/{Repository}/releases";
-            if (!page.StartsWith($"https://github.com/{Repository}/", StringComparison.Ordinal)) return null;
+            if (!TrustedRepositories.Any(r => page.StartsWith($"https://github.com/{r}/", StringComparison.Ordinal))) return null;
 
             string? setup = null, sum = null, digest = null;
             if (root.TryGetProperty("assets", out var assets))
@@ -90,7 +93,7 @@ namespace MotionDesk.Services
         // true ΜΟΝΟ για https://github.com/<αυτό το repo>/releases/download/... — τίποτα άλλο.
         public static bool IsTrustedDownloadUrl(string? url) =>
             Uri.TryCreate(url, UriKind.Absolute, out var u) && u.Scheme == Uri.UriSchemeHttps && u.Host == "github.com"
-            && string.IsNullOrEmpty(u.UserInfo) && url!.StartsWith(DownloadPrefix, StringComparison.Ordinal);
+            && string.IsNullOrEmpty(u.UserInfo) && TrustedRepositories.Any(r => url!.StartsWith($"https://github.com/{r}/releases/download/", StringComparison.Ordinal));
 
         // "sha256:ABC..." -> "abc..." (64 hex digits), οτιδήποτε άλλο null.
         public static string? ParseDigest(string? digest)
