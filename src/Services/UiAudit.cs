@@ -138,8 +138,8 @@ namespace MotionDesk.Services
                     Control? c = controls.FirstOrDefault(x => !done.Contains(Sig(x, controls)));
                     if (c == null) break;
                     done.Add(Sig(c, controls));
-                    // switches that change Windows itself (system transparency, fast start-up, start with Windows) or talk to other programs are listed but not flipped
-                    if (c.Text.Contains("(Windows)") || c.Text.Contains("with Windows", StringComparison.OrdinalIgnoreCase) || c.Text.Contains("Discord", StringComparison.OrdinalIgnoreCase) || c.Text.Contains("OpenStreetMap", StringComparison.OrdinalIgnoreCase)) { skipped.Add($"[{key}] '{c.Text}'"); continue; }
+                    // switches that change Windows itself (system transparency, fast start-up, start with Windows, the animated lock screen that asks before touching system files) or talk to other programs are listed but not flipped
+                    if (c.Text.Contains("(Windows)") || c.Text.Contains("asks for confirmation", StringComparison.OrdinalIgnoreCase) || c.Text.Contains("with Windows", StringComparison.OrdinalIgnoreCase) || c.Text.Contains("Discord", StringComparison.OrdinalIgnoreCase) || c.Text.Contains("OpenStreetMap", StringComparison.OrdinalIgnoreCase)) { skipped.Add($"[{key}] '{c.Text}'"); continue; }
                     var t = System.Diagnostics.Stopwatch.StartNew();
                     Mark($"  [{key}] {c.GetType().Name} '{c.Text}'");
                     try
