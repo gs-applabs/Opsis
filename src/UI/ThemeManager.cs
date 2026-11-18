@@ -120,8 +120,8 @@ namespace MotionDesk.UI
     {
         private static UiPalette _raw = ResolveInitial();
 
-        // 2.6.0: the raw palette while Glass is off, a tinted copy (GlassHost) while it is on.
-        public static UiPalette Current { get => GlassHost.Apply(_raw); private set => _raw = value; }
+        // The app theme is the raw palette (the application Glass theme was removed; widgets / DeskStrip / containers keep their own GPU glass).
+        public static UiPalette Current { get => _raw; private set => _raw = value; }
         public static event Action? Changed;
 
         // Ξεχωριστό, ΦΤΗΝΟ event για ζωντανή προεπισκόπηση ενώ σέρνεις το slider σκουρότητας —

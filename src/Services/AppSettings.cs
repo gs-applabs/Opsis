@@ -164,8 +164,6 @@ namespace MotionDesk.Services
         public bool DesktopMenuEnabled { get; set; }
         public string MusicOverlayAnchor { get; set; } = "BottomRight";
 
-        /// <summary>2.6.0: the shared Glass theme choices (Opsis.UI.GlassSettings): Solid by default.</summary>
-        public GlassSettings Glass { get; set; } = new();
 
         private static string ConfigPath => Path.Combine(AppPaths.AppDataFolder, "settings.json");
 

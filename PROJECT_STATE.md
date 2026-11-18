@@ -560,3 +560,6 @@ Status: Version bumped 1.9.11 → 1.9.12, `VersionNotes.1.9.12` added (EN/EL). B
 - Idle measurement (this PC, `Opsis.exe --background`, 20 s window, isolated AppData): Low 0.72 % CPU / 99.6 MB; High 0.53 % / 100.1 MB. Nothing active, so tiers do not differ at idle; not measured with wallpaper/widgets.
 - CI: `.github/workflows/installer-e2e.yml` (+ `tests/e2e/check-install.ps1`) has NOT run yet; verify on the first push (needs the public repo for free minutes).
 - Tests: 123 pass (`dotnet test tests/Opsis.Tests -m:1 -p:UseSharedCompilation=false -nodeReuse:false`).
+
+## Δ2 (2026-11-18, re-done): the application Glass theme was removed
+The Theme page, `AppSettings.Glass` and `GlassHost` are gone (old `Glass` keys in settings.json are ignored; ThemeMode keeps the solid theme). GPU glass of widgets / DeskStrip / containers is unchanged (`GlassService`, fixed default pane style). The Opsis.UI library keeps its Glass code.

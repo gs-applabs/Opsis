@@ -100,22 +100,16 @@ namespace MotionDesk.Services
             catch (Exception) { return false; }
         }
 
-        /// <summary>The look of a pane, from the user's Glass choices (Opsis.UI.GlassSettings) with the given corner radius.</summary>
-        public static OpsisGlass.GlassStyle Style(int cornerRadius)
+        /// <summary>The look of a pane (fixed defaults: the application Glass theme and its settings were removed) with the given corner radius.</summary>
+        public static OpsisGlass.GlassStyle Style(int cornerRadius) => new OpsisGlass.GlassStyle
         {
-            var g = AppSettings.Load().Glass;
-            Color tint;
-            try { tint = ColorTranslator.FromHtml(g.TintColor); } catch (Exception) { tint = Color.FromArgb(0x99, 0xCC, 0xFF); }
-            return new OpsisGlass.GlassStyle
-            {
-                Tint = tint,
-                TintAlpha = (float)(0.10 + 0.30 * Math.Clamp(g.Intensity, 0, 100) / 100.0),
-                BlurSigma = Math.Clamp(g.Blur, 0, 40) / 5f,
-                CornerRadius = cornerRadius,
-                Gloss = Math.Clamp(g.Glossy, 0, 100) / 100f,
-                Rim = Math.Clamp(g.RimLight, 0, 100) / 100f
-            };
-        }
+            Tint = Color.FromArgb(0x00, 0xBC, 0xD4),
+            TintAlpha = (float)(0.10 + 0.30 * 40 / 100.0),
+            BlurSigma = 24 / 5f,
+            CornerRadius = cornerRadius,
+            Gloss = 0.55f,
+            Rim = 0.50f
+        };
 
         public static void Shutdown()
         {

@@ -18,9 +18,9 @@ namespace MotionDesk.UI
 
         public static Color Background => ThemeManager.Current.Background;
         public static Color Sidebar => ThemeManager.Current.Sidebar;
-        /// <summary>Background of the main window's page area and sidebar: pure black (the glass key) while the Windows backdrop is on, so the real backdrop shows through; the normal colour otherwise.</summary>
-        public static Color PageBackground => GlassHost.SeeThrough ? Color.Black : Background;
-        public static Color NavBackground => GlassHost.SeeThrough ? Color.Black : Sidebar;
+        /// <summary>Background of the main window's page area and sidebar.</summary>
+        public static Color PageBackground => Background;
+        public static Color NavBackground => Sidebar;
         public static Color Surface => ThemeManager.Current.Surface;
         public static Color SurfaceHover => ThemeManager.Current.SurfaceHover;
         public static Color Border => ThemeManager.Current.Border;

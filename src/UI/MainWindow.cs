@@ -98,7 +98,6 @@ namespace MotionDesk.UI
         {
             base.OnHandleCreated(e);
             GlassBlur.DisableNativeBorderAccent(Handle);
-            GlassHost.MainAttached = true; GlassManager.Attach(this);      // the Windows backdrop (Acrylic / Mica) behind the window; page and sidebar use the key colour while it is on
         }
 
         public MainWindow()
@@ -121,7 +120,6 @@ namespace MotionDesk.UI
             Flicker.Attach(this);   // κάθε container/παιδί (τωρινό και μελλοντικό) με double buffering
             var appSettings = AppSettings.Load();
             UiTheme.ApplyScale(appSettings.UiScalePercent);
-            GlassHost.Install(appSettings.Glass);
             WidgetSnapEngine.EnableGridSnap = appSettings.GridSnap;
             WidgetSnapEngine.SnapThreshold = Math.Clamp(appSettings.SnapThreshold, 5, 50);
             WidgetSnapEngine.GridSize = Math.Clamp(appSettings.GridSize, 5, 100);
@@ -138,7 +136,6 @@ namespace MotionDesk.UI
             _pageBuilders["Dashboard"] = () => SafeBuildPage("Dashboard", ShowDashboard);
             _pageBuilders["Widgets"] = () => SafeBuildPage("Widgets", ShowWidgets);
             _pageBuilders["DeskZones"] = () => SafeBuildPage("DeskZones", ShowDeskZones);
-            _pageBuilders["Theme"] = () => SafeBuildPage("Theme", ShowTheme);
             _pageBuilders["DeskContainers"] = () => SafeBuildPage("DeskContainers", ShowDeskContainers);
             _pageBuilders["DeskStrip"] = () => SafeBuildPage("DeskStrip", ShowDeskStrip);
             _pageBuilders["Wallpaper"] = () => SafeBuildPage("Wallpaper", ShowWallpaper);
@@ -534,7 +531,6 @@ namespace MotionDesk.UI
             AddNavButton(_nav, LocalizationManager.T("Nav.Settings"), "Settings", ShowSettings, 6);
             AddNavButton(_nav, LocalizationManager.T("Nav.Automation"), "Automation", ShowAutomation, 8);
             AddNavButton(_nav, LocalizationManager.T("Nav.Personalization"), "Personalization", ShowPersonalization, 0);
-            AddNavButton(_nav, OpsisStrings.T("ui.theme.title"), "Theme", ShowTheme, (string?)null);
             // Ζητήθηκε ρητά: αντί για απλό "Audio Visualizer", νέα καρτέλα "Διαχείριση Ήχου" με
             // presets ενίσχυσης + ζωντανό visualizer, εμπνευσμένη από τη λογική του FXSound.
             // "Audio management" (equalizer for all system audio) is an extra feature: offered only when Opsis Media Suite (the former Waveframe) is installed
@@ -624,7 +620,7 @@ namespace MotionDesk.UI
             // no-op σε Win10/παλαιότερο Win11 (βλ. σχόλιο στο UiTheme.ApplyMicaBackdrop). Fallback σε
             // Low-End ικανότητα: καθόλου Mica (μένει το συμπαγές UiTheme.PageBackground από πάνω, ήδη
             // εφαρμοσμένο) — ζητήθηκε ρητά "fallback σε συμπαγές χρώμα σε Low-End".
-            if (IsHandleCreated && !GlassHost.SeeThrough)
+            if (IsHandleCreated)
             {
                 GlassBlur.ApplyMicaBackdrop(Handle, enabled: Services.PerformanceProfile.ForFeature(Services.PerfFeature.Effects).BlurEffects);
                 GlassBlur.ApplyRoundedCorners(Handle);
@@ -2574,30 +2570,6 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
             SetPage("DeskZones.SectionContainers", panel);
         }
 
-        // 2.6.0: the shared Theme page (Opsis.UI.GlassSettingsPage): Solid / Glass dropdown, a SEPARATE colours card with its own Reset, and a collapsed Advanced group.
-        // Changes apply live (GlassManager -> GlassHost -> ThemeManager.Changed) and are saved in settings.json.
-        private void ShowTheme()
-        {
-            _currentPageKey = "Theme";
-            var settings = AppSettings.Load();
-            var page = new GlassSettingsPage(settings.Glass) { Dock = DockStyle.Fill };
-            GlassBlur.ApplyScrollbarTheme(page, UiTheme.Background.GetBrightness() < 0.5f);
-            page.SettingsChanged += (_, _) => { var a = AppSettings.Load(); a.Glass = page.Settings; a.Save(); };
-            _pageTitle.Text = OpsisStrings.T("ui.theme.title");
-            // "Follow Windows": the shared page has no such entry, so it sits in a strip above it. On = the theme follows the Windows light / dark setting live; off = the base theme chosen below.
-            var holder = new Panel { Dock = DockStyle.Fill, BackColor = UiTheme.PageBackground };
-            var follow = new FlatCheckBox { Text = Lx("Ακολούθηση του θέματος των Windows", "Follow the Windows theme"), AutoSize = true, Checked = settings.ThemeMode == "Follow", BackColor = UiTheme.PageBackground, Location = new Point(28, 12) };
-            var strip = new Panel { Dock = DockStyle.Top, Height = 46, BackColor = UiTheme.PageBackground };
-            strip.Controls.Add(follow);
-            follow.CheckedChanged += (_, _) =>
-            {
-                if (follow.Checked) ThemeManager.SetMode("Follow");
-                else ThemeManager.SetMode(GlassHost.ModeForBase(AppSettings.Load().Glass.BaseTheme) ?? "Dark");
-            };
-            holder.Controls.Add(page); holder.Controls.Add(strip);
-            Flicker.BatchRedraw(_content, () => SetPageCore(holder));
-        }
-
         private void ShowCommandPalette()
         {
             using var dialog = new Form
@@ -2612,7 +2584,7 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                 MinimizeBox = false
             };
             dialog.HandleCreated += (_, _) => { int d = UiTheme.Background.GetBrightness() < 0.5f ? 1 : 0; try { DwmSetWindowAttribute(dialog.Handle, DWMWA_USE_IMMERSIVE_DARK_MODE, ref d, sizeof(int)); } catch (DllNotFoundException) { } };
-            dialog.HandleCreated += (_, _) => { GlassBlur.ApplyWindowDropShadow(dialog.Handle); GlassManager.Attach(dialog); };
+            dialog.HandleCreated += (_, _) => { GlassBlur.ApplyWindowDropShadow(dialog.Handle); };
 
             var box = new TextBox
             {
@@ -2925,7 +2897,7 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
             dialog.Controls.Add(profileLabel); dialog.Controls.Add(profileBox);
             dialog.Controls.Add(okBtn); dialog.Controls.Add(cancelBtn);
             dialog.AcceptButton = okBtn; dialog.CancelButton = cancelBtn;
-            dialog.HandleCreated += (_, _) => { GlassBlur.ApplyWindowDropShadow(dialog.Handle); GlassManager.Attach(dialog); };
+            dialog.HandleCreated += (_, _) => { GlassBlur.ApplyWindowDropShadow(dialog.Handle); };
 
             if (dialog.ShowDialog(this) != DialogResult.OK || string.IsNullOrWhiteSpace(nameBox.Text)) return false;
             rule.Name = nameBox.Text.Trim();
@@ -3213,7 +3185,7 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
             var cancel = new Button { Text = LocalizationManager.T("Common.Cancel"), DialogResult = DialogResult.Cancel, Left = 358, Top = 424, Width = 90, Height = 32 };
             dialog.Controls.AddRange(new Control[] { intro, list, ok, cancel });
             dialog.AcceptButton = ok; dialog.CancelButton = cancel;
-            dialog.HandleCreated += (_, _) => { GlassBlur.ApplyWindowDropShadow(dialog.Handle); GlassManager.Attach(dialog); };
+            dialog.HandleCreated += (_, _) => { GlassBlur.ApplyWindowDropShadow(dialog.Handle); };
             if (dialog.ShowDialog(this) != DialogResult.OK) return;
 
             for (int i = 0; i < special.Length; i++) special[i].Set(list.GetItemChecked(i));
@@ -3527,7 +3499,7 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                 MinimizeBox = false
             };
             dialog.HandleCreated += (_, _) => { int d = UiTheme.Background.GetBrightness() < 0.5f ? 1 : 0; try { DwmSetWindowAttribute(dialog.Handle, DWMWA_USE_IMMERSIVE_DARK_MODE, ref d, sizeof(int)); } catch (DllNotFoundException) { } };
-            dialog.HandleCreated += (_, _) => { GlassBlur.ApplyWindowDropShadow(dialog.Handle); GlassManager.Attach(dialog); };
+            dialog.HandleCreated += (_, _) => { GlassBlur.ApplyWindowDropShadow(dialog.Handle); };
 
             var header = new Panel { Dock = DockStyle.Top, Height = 64, BackColor = UiTheme.Surface, Padding = new Padding(20, 0, 20, 0) };
             // ΔΙΟΡΘΩΣΗ "το εικονίδιο επικαλύπτει το MIT": το "⚖" (U+2696) δεν υπάρχει αξιόπιστα στη
@@ -3639,7 +3611,7 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                 MinimizeBox = false
             };
             dialog.HandleCreated += (_, _) => { int d = UiTheme.Background.GetBrightness() < 0.5f ? 1 : 0; try { DwmSetWindowAttribute(dialog.Handle, DWMWA_USE_IMMERSIVE_DARK_MODE, ref d, sizeof(int)); } catch { } };
-            dialog.HandleCreated += (_, _) => { GlassBlur.ApplyWindowDropShadow(dialog.Handle); GlassManager.Attach(dialog); };
+            dialog.HandleCreated += (_, _) => { GlassBlur.ApplyWindowDropShadow(dialog.Handle); };
 
             const int contentWidth = 630;
             var list = new FlowLayoutPanel { Dock = DockStyle.Fill, FlowDirection = FlowDirection.TopDown, WrapContents = false, AutoScroll = true, Padding = new Padding(22, 18, 22, 18), BackColor = UiTheme.PageBackground };
@@ -3935,8 +3907,6 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
             // Το μέγεθος της κάρτας αλλάζει καθώς ο καλών προσθέτει γραμμές ΜΕΤΑ την επιστροφή αυτής
             // της μεθόδου — η στρογγυλεμένη περιοχή πρέπει να ξανα-υπολογίζεται σε κάθε αλλαγή μεγέθους.
             card.Resize += (_, _) => UiTheme.ApplyRoundedRegion(card, 12);
-            // glass: a bright rim and a soft highlight on the edge of the card (strength from the Glass settings)
-            card.Paint += (_, e) => { var st = GlassManager.State; if (!st.Active || card.Width < 8 || card.Height < 8) return; using var rim = new Pen(Color.FromArgb((int)(Math.Clamp(st.Rim, 0, 1) * 150), 255, 255, 255)); e.Graphics.DrawRectangle(rim, 0, 0, card.Width - 1, card.Height - 1); };
             parent.Controls.Add(card);
             return inner;
         }
@@ -4792,7 +4762,7 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                     "Midnight", "Forest", "Dawn", "High contrast" };
                 int idx = Array.IndexOf(modes, current); if (idx < 0) idx = 0;
                 combo.SetItems(labels, labels[idx]);
-                combo.SelectedIndexChanged += (_, _) => { var m = modes[Math.Max(0, combo.SelectedIndex)]; ThemeManager.SetMode(m); GlassHost.NoteMode(m); };
+                combo.SelectedIndexChanged += (_, _) => { var m = modes[Math.Max(0, combo.SelectedIndex)]; ThemeManager.SetMode(m); };
                 row.Controls.Add(combo);
                 return row;
             }
