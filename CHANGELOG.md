@@ -2,6 +2,14 @@
 
 Πλήρες ιστορικό εκδόσεων του Opsis (πρώην MotionDesk Studio). Στα Ελληνικά — δείτε και μέσα στην εφαρμογή (Σχετικά -> Ιστορικό εκδόσεων) ή σε άλλη γλώσσα από τα locale αρχεία.
 
+## 2.4.6.2 (2026-11-18)
+
+- **Plugin contract fix:** `libs\OpsisNewsCrawler.Plugin.Abstractions.dll` now includes the rich-feed types (PluginRichFeed etc.), byte-identical to the copy shipped with Opsis News Crawler 0.24.1 (assembly version 0.8.0.0). The Crawler 0.24.x plugin failed to load inside Opsis 2.4.6.1 without it.
+- **Weather:** providers behind one interface (NWS stations in the US, Open-Meteo best_match, MET Norway) with fallback; sun/moon computed from latitude/longitude; source and observation time shown in settings; opt-in approximate device location with a delete button.
+- **Weather place names:** offline GeoNames gazetteer of Greece (neighbourhood, town, region) plus an opt-in OpenStreetMap lookup on button press; the source is shown; UI and settings in 14 languages.
+- **DeskContainers settings page:** number rows clamp a stored value to their range (fixes a page error).
+- **Security / rename:** repository owner renamed giorstergiopoulos-design -> gs-applabs (update trust accepts both names); a file dropped on a widget goes through SafeLaunch.Reject.
+
 ## 2.4.6.1
 
 - **Συντομεύσεις:** έλεγχος των global hotkeys έναντι των προεπιλογών των Windows (Win+D/L/E/R/Tab, Alt+Tab, Win+βελάκια, Ctrl+Shift+Esc, Win+Shift+S) — καμία σύγκρουση. Αν ένα `RegisterHotKey` αποτύχει (πιασμένο από άλλη εφαρμογή/οδηγό), το tray δείχνει πλέον μήνυμα με τις συντομεύσεις που δεν θα δουλέψουν (14 γλώσσες).

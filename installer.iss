@@ -3,7 +3,7 @@
   #error This installer must be compiled with Inno Setup 7 or newer.
 #endif
 #define MyAppName "Opsis - Desktop Customization"
-#define MyAppVersion "2.4.6.1"
+#define MyAppVersion "2.4.6.2"
 #define MyAppPublisher "gs-applabs"
 #define MyAppURL "https://github.com/gs-applabs/Opsis"
 #define MyAppExeName "Opsis.exe"
