@@ -1048,5 +1048,8 @@
   "Help.RestoreIntro": "Si algo sale mal, estos comandos lo dejan como estaba. Ejecútelos en un terminal desde la carpeta de instalación de Opsis; no abren ninguna ventana y solo deshacen lo que Opsis cambió.",
   "Help.RestoreDesktopIcons": "Opsis.exe --restore-desktop-icons\nVuelve a mostrar los iconos del escritorio si siguen ocultos (por ejemplo, tras un cierre inesperado).",
   "Help.RestoreLockscreen": "Opsis.exe --restore-lockscreen\nRestaura la pantalla de bloqueo original y deshace la pantalla de bloqueo animada (Windows pide permiso de administrador).",
-  "Help.CurrentPage": "Está aquí"
+  "Help.CurrentPage": "Está aquí",
+  "Settings.MusicOverlayAutoHide": "Ocultar la tarjeta tras un cambio de pista (0 = mantenerla mientras suena)",
+  "Settings.MusicOverlayClickThrough": "Los clics atraviesan la tarjeta",
+  "Settings.MusicOverlayClickThroughDesc": "Activado: el escritorio detrás de la tarjeta sigue siendo pulsable. Desactivado: al pulsar la tarjeta se oculta hasta la siguiente pista."
 }

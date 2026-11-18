@@ -1048,5 +1048,8 @@
   "Help.RestoreIntro": "Bir şey ters giderse bu komutlar her şeyi eski haline getirir. Bunları Opsis kurulum klasöründen bir terminalde çalıştırın; pencere açmaz ve yalnızca Opsis'in değiştirdiklerini geri alır.",
   "Help.RestoreDesktopIcons": "Opsis.exe --restore-desktop-icons\nMasaüstü simgeleri gizli kalırsa (örneğin bir çökmeden sonra) yeniden gösterir.",
   "Help.RestoreLockscreen": "Opsis.exe --restore-lockscreen\nOrijinal kilit ekranını geri getirir ve hareketli kilit ekranını geri alır (Windows yönetici onayı ister).",
-  "Help.CurrentPage": "Buradasınız"
+  "Help.CurrentPage": "Buradasınız",
+  "Settings.MusicOverlayAutoHide": "Parça değişince kartı gizle (0 = çalarken açık tut)",
+  "Settings.MusicOverlayClickThrough": "Tıklamalar karttan geçer",
+  "Settings.MusicOverlayClickThroughDesc": "Açık: kartın arkasındaki masaüstü tıklanabilir kalır. Kapalı: karta tıklamak onu bir sonraki parçaya kadar gizler."
 }

@@ -1048,5 +1048,8 @@
   "Help.RestoreIntro": "Wenn etwas schiefgeht, stellen diese Befehle den Ursprungszustand wieder her. Führen Sie sie in einem Terminal im Opsis-Installationsordner aus; sie öffnen kein Fenster und machen nur rückgängig, was Opsis geändert hat.",
   "Help.RestoreDesktopIcons": "Opsis.exe --restore-desktop-icons\nZeigt die Desktopsymbole wieder an, falls sie verborgen bleiben (zum Beispiel nach einem Absturz).",
   "Help.RestoreLockscreen": "Opsis.exe --restore-lockscreen\nStellt den ursprünglichen Sperrbildschirm wieder her und macht den animierten Sperrbildschirm rückgängig (Windows verlangt Administratorrechte).",
-  "Help.CurrentPage": "Sie sind hier"
+  "Help.CurrentPage": "Sie sind hier",
+  "Settings.MusicOverlayAutoHide": "Karte nach einem Titelwechsel ausblenden (0 = während der Wiedergabe sichtbar lassen)",
+  "Settings.MusicOverlayClickThrough": "Klicks gehen durch die Karte hindurch",
+  "Settings.MusicOverlayClickThroughDesc": "An: Der Desktop hinter der Karte bleibt anklickbar. Aus: Ein Klick auf die Karte blendet sie bis zum nächsten Titel aus."
 }

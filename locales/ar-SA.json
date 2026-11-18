@@ -1048,5 +1048,8 @@
   "Help.RestoreIntro": "إذا حدث خطأ ما، فإن هذه الأوامر تعيد الأمور كما كانت. شغّلها في وحدة طرفية من مجلد تثبيت Opsis؛ فهي لا تفتح نافذة ولا تتراجع إلا عمّا غيّره Opsis.",
   "Help.RestoreDesktopIcons": "Opsis.exe --restore-desktop-icons\nيُظهر أيقونات سطح المكتب من جديد إذا بقيت مخفية (مثلاً بعد انهيار البرنامج).",
   "Help.RestoreLockscreen": "Opsis.exe --restore-lockscreen\nيعيد شاشة القفل الأصلية ويلغي شاشة القفل المتحركة (يطلب Windows موافقة المسؤول).",
-  "Help.CurrentPage": "أنت هنا"
+  "Help.CurrentPage": "أنت هنا",
+  "Settings.MusicOverlayAutoHide": "إخفاء البطاقة بعد تغيّر المقطع (0 = تبقى ظاهرة أثناء التشغيل)",
+  "Settings.MusicOverlayClickThrough": "النقرات تمر عبر البطاقة",
+  "Settings.MusicOverlayClickThroughDesc": "مفعّل: يبقى سطح المكتب خلف البطاقة قابلاً للنقر. معطّل: النقر على البطاقة يخفيها حتى المقطع التالي."
 }

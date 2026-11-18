@@ -4567,8 +4567,18 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                 }
                 appearanceAdvanced.AddControl(Checkbox(LocalizationManager.T("Settings.DesktopMenu"), AppSettings.Load().DesktopMenuEnabled,
                     v => { var a = AppSettings.Load(); a.DesktopMenuEnabled = v; a.Save(); try { DesktopMenu.Apply(v); } catch (Exception) { } }, LocalizationManager.T("Settings.DesktopMenuDesc"), restart: true));
+                appearanceAdvanced.AddControl(BuildDarkIntensityRow());
+                appearance.Add(appearanceAdvanced);
+
+                // ---- Music overlay (its own card since 2.6.0): on/off, position, auto-hide, click-through; all live
+                var music = NewCard(LocalizationManager.T("Settings.MusicOverlay"), () =>
+                {
+                    var d = new AppSettings(); var a = AppSettings.Load();
+                    a.MusicOverlayEnabled = d.MusicOverlayEnabled; a.MusicOverlayAnchor = d.MusicOverlayAnchor; a.MusicOverlayAutoHideSeconds = d.MusicOverlayAutoHideSeconds; a.MusicOverlayClickThrough = d.MusicOverlayClickThrough;
+                    a.Save(); MusicOverlay.Apply();
+                });
                 // music overlay (plan 2.1.6): live, no restart
-                appearanceAdvanced.AddControl(Checkbox(LocalizationManager.T("Settings.MusicOverlay"), AppSettings.Load().MusicOverlayEnabled,
+                music.AddControl(Checkbox(LocalizationManager.T("Settings.MusicOverlay"), AppSettings.Load().MusicOverlayEnabled,
                     v => { var a = AppSettings.Load(); a.MusicOverlayEnabled = v; a.Save(); MusicOverlay.Apply(); }, LocalizationManager.T("Settings.MusicOverlayDesc")));
                 {
                     var anchorRow = new FlowLayoutPanel { AutoSize = true, WrapContents = false, Margin = new Padding(0, 4, 0, 8) };
@@ -4580,10 +4590,12 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                     anchorCombo.SetItems(anchorNames, anchorNames[Array.IndexOf(anchors, curAnchor)]);
                     anchorCombo.SelectedIndexChanged += (_, _) => { var a = AppSettings.Load(); a.MusicOverlayAnchor = anchors[Math.Clamp(anchorCombo.SelectedIndex, 0, anchors.Length - 1)].ToString(); a.Save(); MusicOverlay.Apply(); };
                     anchorRow.Controls.Add(anchorCombo);
-                    appearanceAdvanced.AddControl(anchorRow);
+                    music.AddControl(anchorRow);
                 }
-                appearanceAdvanced.AddControl(BuildDarkIntensityRow());
-                appearance.Add(appearanceAdvanced);
+                music.AddControl(NumericRow(LocalizationManager.T("Settings.MusicOverlayAutoHide"), Math.Clamp(AppSettings.Load().MusicOverlayAutoHideSeconds, 0, 600), 0, 600,
+                    v => { var a = AppSettings.Load(); a.MusicOverlayAutoHideSeconds = v; a.Save(); MusicOverlay.Apply(); }, 0, "s"));
+                music.AddControl(Checkbox(LocalizationManager.T("Settings.MusicOverlayClickThrough"), AppSettings.Load().MusicOverlayClickThrough,
+                    v => { var a = AppSettings.Load(); a.MusicOverlayClickThrough = v; a.Save(); MusicOverlay.Apply(); }, LocalizationManager.T("Settings.MusicOverlayClickThroughDesc")));
 
                 // ---- Snapping
                 var snapping = NewCard(LocalizationManager.T("Settings.SectionSnapping"), () =>

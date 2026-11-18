@@ -1071,5 +1071,8 @@
   "Help.RestoreIntro": "If something goes wrong, these commands put things back. Run them in a terminal from the Opsis install folder; they open no window and only undo what Opsis changed.",
   "Help.RestoreDesktopIcons": "Opsis.exe --restore-desktop-icons\nShows the desktop icons again if they stay hidden (for example after a crash).",
   "Help.RestoreLockscreen": "Opsis.exe --restore-lockscreen\nPuts the original lock screen back and undoes the animated lock screen (Windows asks for administrator approval).",
-  "Help.CurrentPage": "You are here"
+  "Help.CurrentPage": "You are here",
+  "Settings.MusicOverlayAutoHide": "Hide the card after a track change (0 = keep while playing)",
+  "Settings.MusicOverlayClickThrough": "Clicks pass through the card",
+  "Settings.MusicOverlayClickThroughDesc": "On: the desktop behind the card stays clickable. Off: click the card to hide it until the next track."
 }

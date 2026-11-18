@@ -17,6 +17,12 @@ namespace MotionDesk.Widgets
         private readonly LayeredSurface _surface = new();
         private readonly GlassPaneBinder _pane;
         private OverlayAnchor _anchor;
+        private int _autoHideSeconds;
+        private bool _clickThrough = true;
+        private string _trackKey = "";
+        private DateTime _trackSince = DateTime.UtcNow;
+        private bool _dismissed;
+        private readonly System.Windows.Forms.Timer _hideTimer = new() { Interval = 1000 };
 
         public MusicOverlayWindow(NowPlayingService now, OverlayAnchor anchor)
         {
@@ -24,16 +30,38 @@ namespace MotionDesk.Widgets
             FormBorderStyle = FormBorderStyle.None; ShowInTaskbar = false; StartPosition = FormStartPosition.Manual; TopMost = false;
             _pane = new GlassPaneBinder(this, 18, () => GlassService.Enabled);
             _now.Changed += Refresh;
+            _hideTimer.Tick += (_, _) => Refresh();
+            MouseClick += (_, _) => { if (!_clickThrough) { _dismissed = true; Refresh(); } };
             Microsoft.Win32.SystemEvents.DisplaySettingsChanged += OnDisplay;
         }
 
-        protected override CreateParams CreateParams { get { var cp = base.CreateParams; cp.ExStyle |= 0x00080000 | 0x08000000 | 0x80 | 0x20; return cp; } }   // layered, no-activate, tool window, transparent (click-through)
+        protected override CreateParams CreateParams { get { var cp = base.CreateParams; cp.ExStyle |= 0x00080000 | 0x08000000 | 0x80 | (_clickThrough ? 0x20 : 0); return cp; } }   // layered, no-activate, tool window, transparent (click-through)
         protected override bool ShowWithoutActivation => true;
 
         private float Scale => DeviceDpi / 96f;
         private bool GlassOn => GlassService.Enabled;
 
+        [System.Runtime.InteropServices.DllImport("user32.dll", EntryPoint = "GetWindowLongPtrW")] private static extern IntPtr GetWindowLongPtr(IntPtr h, int i);
+        [System.Runtime.InteropServices.DllImport("user32.dll", EntryPoint = "SetWindowLongPtrW")] private static extern IntPtr SetWindowLongPtr(IntPtr h, int i, IntPtr v);
+
         public void SetAnchor(OverlayAnchor a) { _anchor = a; Refresh(); }
+
+        /// <summary>Applies the live options: auto-hide seconds and click-through (WS_EX_TRANSPARENT is switched on the existing window).</summary>
+        public void SetOptions(int autoHideSeconds, bool clickThrough)
+        {
+            _autoHideSeconds = Math.Max(0, autoHideSeconds);
+            if (_clickThrough != clickThrough)
+            {
+                _clickThrough = clickThrough; _dismissed = false;
+                if (IsHandleCreated)
+                {
+                    long ex = GetWindowLongPtr(Handle, -20).ToInt64();
+                    ex = clickThrough ? ex | 0x20 : ex & ~0x20L;
+                    SetWindowLongPtr(Handle, -20, new IntPtr(ex));
+                }
+            }
+            Refresh();
+        }
 
         private void OnDisplay(object? s, EventArgs e) { if (IsHandleCreated && !IsDisposed) BeginInvoke(new Action(Refresh)); }
 
@@ -43,7 +71,11 @@ namespace MotionDesk.Widgets
             if (IsDisposed) return;
             var n = _now.Current;
             var primary = Screen.PrimaryScreen;
-            bool show = n != null && n.Playing && !string.IsNullOrWhiteSpace(n.Title) && !AppActivity.IsPausedFor(primary);
+            var key = n == null ? "" : n.Title + "\u001f" + n.Artist;
+            if (key != _trackKey) { _trackKey = key; _trackSince = DateTime.UtcNow; _dismissed = false; }
+            bool show = n != null && n.Playing && !string.IsNullOrWhiteSpace(n.Title) && !AppActivity.IsPausedFor(primary)
+                && OverlayVisibility.ShouldShow(_dismissed, _autoHideSeconds, DateTime.UtcNow - _trackSince);
+            _hideTimer.Enabled = show && _autoHideSeconds > 0;
             if (!show) { if (Visible) Hide(); return; }
             var size = new Size((int)(340 * Scale), (int)(88 * Scale));
             var wa = (primary ?? Screen.AllScreens[0]).WorkingArea;
@@ -99,9 +131,16 @@ namespace MotionDesk.Widgets
 
         protected override void Dispose(bool disposing)
         {
-            if (disposing) { Microsoft.Win32.SystemEvents.DisplaySettingsChanged -= OnDisplay; _now.Changed -= Refresh; _pane.Dispose(); _surface.Dispose(); }
+            if (disposing) { Microsoft.Win32.SystemEvents.DisplaySettingsChanged -= OnDisplay; _now.Changed -= Refresh; _hideTimer.Dispose(); _pane.Dispose(); _surface.Dispose(); }
             base.Dispose(disposing);
         }
+    }
+
+    /// <summary>Whether the card is shown (given that something plays): not dismissed by a click and not past the auto-hide time.</summary>
+    internal static class OverlayVisibility
+    {
+        public static bool ShouldShow(bool dismissed, int autoHideSeconds, TimeSpan sinceTrackStart) =>
+            !dismissed && (autoHideSeconds <= 0 || sinceTrackStart < TimeSpan.FromSeconds(autoHideSeconds));
     }
 
     /// <summary>Starts / stops the music overlay from the settings (UI thread). Nothing is created while the setting is off.</summary>
@@ -114,8 +153,9 @@ namespace MotionDesk.Widgets
             var s = AppSettings.Load();
             if (!s.MusicOverlayEnabled) { Stop(); return; }
             var anchor = Enum.TryParse<OverlayAnchor>(s.MusicOverlayAnchor, true, out var a) ? a : OverlayAnchor.BottomRight;
-            if (_win != null) { _win.SetAnchor(anchor); return; }
+            if (_win != null) { _win.SetAnchor(anchor); _win.SetOptions(s.MusicOverlayAutoHideSeconds, s.MusicOverlayClickThrough); return; }
             _svc = new NowPlayingService(); _win = new MusicOverlayWindow(_svc, anchor);
+            _win.SetOptions(s.MusicOverlayAutoHideSeconds, s.MusicOverlayClickThrough);
             _ = _svc.StartAsync();
         }
 

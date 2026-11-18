@@ -1048,5 +1048,8 @@
   "Help.RestoreIntro": "कुछ गड़बड़ हो जाए तो ये कमांड सब कुछ पहले जैसा कर देते हैं। इन्हें Opsis के इंस्टॉल फ़ोल्डर से टर्मिनल में चलाएँ; ये कोई विंडो नहीं खोलते और केवल वही वापस करते हैं जो Opsis ने बदला था।",
   "Help.RestoreDesktopIcons": "Opsis.exe --restore-desktop-icons\nयदि डेस्कटॉप आइकन छिपे रह जाएँ (जैसे क्रैश के बाद) तो उन्हें फिर से दिखाता है।",
   "Help.RestoreLockscreen": "Opsis.exe --restore-lockscreen\nमूल लॉक स्क्रीन वापस लाता है और एनिमेटेड लॉक स्क्रीन को हटाता है (Windows व्यवस्थापक की अनुमति माँगता है)।",
-  "Help.CurrentPage": "आप यहाँ हैं"
+  "Help.CurrentPage": "आप यहाँ हैं",
+  "Settings.MusicOverlayAutoHide": "ट्रैक बदलने के बाद कार्ड छिपाएँ (0 = चलते समय दिखाए रखें)",
+  "Settings.MusicOverlayClickThrough": "क्लिक कार्ड के आर-पार जाते हैं",
+  "Settings.MusicOverlayClickThroughDesc": "चालू: कार्ड के पीछे का डेस्कटॉप क्लिक करने योग्य रहता है। बंद: कार्ड पर क्लिक करने से वह अगले ट्रैक तक छिप जाता है।"
 }

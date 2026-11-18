@@ -166,6 +166,10 @@ namespace MotionDesk.Services
         /// <summary>Opt-in: "New DeskContainer" / "Next animated wallpaper" in the desktop right-click menu (per-user registry verbs, see DesktopMenu).</summary>
         public bool DesktopMenuEnabled { get; set; }
         public string MusicOverlayAnchor { get; set; } = "BottomRight";
+        /// <summary>Music overlay: seconds the card stays after a track change (0 = for as long as something plays).</summary>
+        public int MusicOverlayAutoHideSeconds { get; set; }
+        /// <summary>Music overlay: true (default) = mouse clicks go to the desktop behind the card; false = the card can be clicked (a click hides it until the next track).</summary>
+        public bool MusicOverlayClickThrough { get; set; } = true;
 
 
         private static string ConfigPath => Path.Combine(AppPaths.AppDataFolder, "settings.json");

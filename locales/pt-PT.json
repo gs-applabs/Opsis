@@ -1048,5 +1048,8 @@
   "Help.RestoreIntro": "Se algo correr mal, estes comandos repõem o estado anterior. Execute-os num terminal a partir da pasta de instalação do Opsis; não abrem nenhuma janela e só desfazem o que o Opsis alterou.",
   "Help.RestoreDesktopIcons": "Opsis.exe --restore-desktop-icons\nVolta a mostrar os ícones do ambiente de trabalho se ficarem ocultos (por exemplo, após uma falha).",
   "Help.RestoreLockscreen": "Opsis.exe --restore-lockscreen\nRepõe o ecrã de bloqueio original e desfaz o ecrã de bloqueio animado (o Windows pede autorização de administrador).",
-  "Help.CurrentPage": "Está aqui"
+  "Help.CurrentPage": "Está aqui",
+  "Settings.MusicOverlayAutoHide": "Ocultar o cartão após uma mudança de faixa (0 = manter durante a reprodução)",
+  "Settings.MusicOverlayClickThrough": "Os cliques atravessam o cartão",
+  "Settings.MusicOverlayClickThroughDesc": "Ativo: o ambiente de trabalho por trás do cartão continua clicável. Inativo: clicar no cartão oculta-o até à faixa seguinte."
 }

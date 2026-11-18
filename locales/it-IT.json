@@ -1048,5 +1048,8 @@
   "Help.RestoreIntro": "Se qualcosa va storto, questi comandi rimettono tutto a posto. Eseguili in un terminale dalla cartella di installazione di Opsis; non aprono finestre e annullano solo ciò che Opsis ha modificato.",
   "Help.RestoreDesktopIcons": "Opsis.exe --restore-desktop-icons\nMostra di nuovo le icone del desktop se restano nascoste (ad esempio dopo un arresto anomalo).",
   "Help.RestoreLockscreen": "Opsis.exe --restore-lockscreen\nRipristina la schermata di blocco originale e annulla quella animata (Windows chiede l'autorizzazione dell'amministratore).",
-  "Help.CurrentPage": "Sei qui"
+  "Help.CurrentPage": "Sei qui",
+  "Settings.MusicOverlayAutoHide": "Nascondi la scheda dopo un cambio di brano (0 = tienila durante la riproduzione)",
+  "Settings.MusicOverlayClickThrough": "I clic attraversano la scheda",
+  "Settings.MusicOverlayClickThroughDesc": "Attivo: il desktop dietro la scheda resta cliccabile. Disattivo: facendo clic sulla scheda la nascondi fino al brano successivo."
 }

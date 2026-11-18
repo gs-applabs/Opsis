@@ -1048,5 +1048,8 @@
   "Help.RestoreIntro": "En cas de problème, ces commandes remettent les choses en place. Lancez-les dans un terminal depuis le dossier d'installation d'Opsis ; elles n'ouvrent aucune fenêtre et n'annulent que ce qu'Opsis a modifié.",
   "Help.RestoreDesktopIcons": "Opsis.exe --restore-desktop-icons\nAffiche de nouveau les icônes du bureau si elles restent masquées (par exemple après un plantage).",
   "Help.RestoreLockscreen": "Opsis.exe --restore-lockscreen\nRétablit l'écran de verrouillage d'origine et annule l'écran de verrouillage animé (Windows demande l'accord de l'administrateur).",
-  "Help.CurrentPage": "Vous êtes ici"
+  "Help.CurrentPage": "Vous êtes ici",
+  "Settings.MusicOverlayAutoHide": "Masquer la carte après un changement de piste (0 = la garder pendant la lecture)",
+  "Settings.MusicOverlayClickThrough": "Les clics traversent la carte",
+  "Settings.MusicOverlayClickThroughDesc": "Activé : le bureau derrière la carte reste cliquable. Désactivé : cliquer sur la carte la masque jusqu'à la piste suivante."
 }

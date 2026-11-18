@@ -1048,5 +1048,8 @@
   "Help.RestoreIntro": "문제가 생기면 이 명령으로 원래대로 되돌립니다. Opsis 설치 폴더의 터미널에서 실행하세요. 창을 열지 않으며 Opsis가 바꾼 것만 되돌립니다.",
   "Help.RestoreDesktopIcons": "Opsis.exe --restore-desktop-icons\n바탕 화면 아이콘이 숨겨진 채로 남아 있으면(예: 충돌 후) 다시 표시합니다.",
   "Help.RestoreLockscreen": "Opsis.exe --restore-lockscreen\n원래 잠금 화면을 복원하고 애니메이션 잠금 화면을 되돌립니다(Windows가 관리자 승인을 요청합니다).",
-  "Help.CurrentPage": "현재 위치"
+  "Help.CurrentPage": "현재 위치",
+  "Settings.MusicOverlayAutoHide": "곡이 바뀐 뒤 카드 숨기기(0 = 재생 중에는 계속 표시)",
+  "Settings.MusicOverlayClickThrough": "클릭이 카드를 통과",
+  "Settings.MusicOverlayClickThroughDesc": "켜짐: 카드 뒤의 바탕 화면을 클릭할 수 있습니다. 꺼짐: 카드를 클릭하면 다음 곡까지 숨겨집니다."
 }
