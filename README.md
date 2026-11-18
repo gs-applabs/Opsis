@@ -29,7 +29,7 @@
 
 **Opsis** (πρώην *MotionDesk Studio*) είναι μια native εφαρμογή WinForms για Windows 10/11 που φέρνει
 σε ένα μέρος ό,τι χρειάζεται για να προσαρμόσεις και να οργανώσεις την επιφάνεια εργασίας σου: ζωντανό
-wallpaper πάνω στο ίδιο το desktop (όχι ξεχωριστό παράθυρο), DeskContainers για την ομαδοποίηση εικονιδίων,
+wallpaper πάνω στο ίδιο το desktop (όχι ξεχωριστό παράθυρο), DeskContainers με ζωντανή προβολή φακέλων,
 ζώνες στοίχισης παραθύρων στυλ FancyZones/PowerToys, native πάντα-από-πάνω widgets, ένα πραγματικό
 σύστημα plugin, και δεκάδες μικρότερες λειτουργίες ποιότητας ζωής — χωρίς Electron, χωρίς περιττό
 runtime.
@@ -40,7 +40,7 @@ runtime.
 |---|---|
 | 🏠 Πίνακας Ελέγχου | Ζωντανή σύνοψη συστήματος/επιφάνειας εργασίας/wallpaper, γρήγορη εκκίνηση, εναλλαγή προφίλ χώρου εργασίας |
 | 🧩 Widgets | Ρολόι, Δίκτυο, Ήχος, Καιρός, Δίσκοι, Παρακολούθηση Συστήματος, Γρήγορες Ρυθμίσεις (ένταση/φωτεινότητα/σχέδιο ενέργειας), Αναπαραγωγή (media), Ειδοποιήσεις, Ημερολόγιο, Bluetooth — native, πάντα-από-πάνω, με δικό τους resize/θέμα |
-| 🗂️ DeskZones | Στοίχιση παραθύρων τύπου FancyZones (πλέγμα, σειρές, στήλες, custom διατάξεις ανά οθόνη) + DeskContainers (νέα μηχανή με καρτέλες, σημειώσεις, Portal και προφίλ) για ομαδοποίηση εικονιδίων |
+| 🗂️ DeskZones | Στοίχιση παραθύρων τύπου FancyZones (πλέγμα, σειρές, στήλες, custom διατάξεις ανά οθόνη) + DeskContainers με ζωντανούς φακέλους και τοποθέτηση ανά οθόνη με κώδικα από το PecoFence |
 | 🖼️ Wallpaper | Μηχανή ζωντανού wallpaper: procedural "Opsis Waves" (θέμα-aware, wind-reactive κύματα, πραγματική βροχή σε τζάμι) ή video/playlist (.mp4, αυτόματη μετατροπή .wmv μέσω FFmpeg), ζωντανό overlay καιρού, performance modes με αυτόματη εξοικονόμηση μπαταρίας |
 | ⚡ Απόδοση | CPU/RAM/GPU/δίκτυο/διεργασίες σε πραγματικό χρόνο, ειδοποιήσεις υψηλής χρήσης |
 | ⚙️ Ρυθμίσεις | Θέμα (ανοιχτό/σκούρο/ακολούθηση Windows + Midnight/Forest/Dawn/High contrast), γλώσσα, στοίχιση σε πλέγμα, διαφάνεια παραθύρου, αυτόματη εκκίνηση |
@@ -55,6 +55,12 @@ runtime.
 διαφάνεια (τεχνική TranslucentTB, χωρίς DLL injection), αυτόματη ενημέρωση από τα GitHub releases (έλεγχος σε κάθε εκκίνηση και ανά 12 ώρες, επαλήθευση SHA-256, και η εγκατάσταση γίνεται μόνο αφού το επιβεβαιώσεις), και σύστημα plugin επεκτάσιμο μέσω
 `AssemblyLoadContext` (το πρώτο, το **Opsis News Crawler**, προσθέτει μπάρα ειδήσεων/τιμών στην
 επιφάνεια εργασίας· το δεύτερο, το [**Opsis Appearance**](https://github.com/giorstergiopoulos-design/OpsisAppearance), αλλάζει την εμφάνιση των ίδιων των Windows — αυτόματο Light/Dark, accent, taskbar, χρωματιστό border παραθύρων, γωνίες). Και τα δύο διατίθενται και ως αυτόνομες εφαρμογές.
+
+Η παλέτα `Ctrl+K` βρίσκει εντολές και εφαρμογές με συντομογραφίες, π.χ. `vs` για Visual Studio, και δέχεται ελληνικές λέξεις χωρίς τόνους. Στο εικονίδιο του Opsis δίπλα στο ρολόι, τα εργαλεία επιφάνειας εργασίας μπορούν να αποτρέψουν την αυτόματη αναστολή για 30 ή 60 λεπτά, αφήνοντας την οθόνη να σβήσει κανονικά. Η προσωρινή λειτουργία λήγει με το κλείδωμα της συνεδρίας ή με τη διακοπή από το μενού. Δείτε τις [πηγές των λειτουργιών](THIRD_PARTY_NOTICES.md#feature-references).
+
+Στα **DeskZones → DeskContainers**, διάλεξε έναν φάκελο για να εμφανίζεται σε δικό του παράθυρο με ζωντανή ανανέωση. Η θέση και το μέγεθος αποθηκεύονται ανά οθόνη. Η νέα μηχανή χρησιμοποιεί προσαρμοσμένο κώδικα από το PecoFence. Τα παλιά προφίλ παραμένουν στα δεδομένα του Opsis και οι φάκελοι προστίθενται ξανά από το νέο μενού. Σε φορητή αναβάθμιση, κλείσε πρώτα την παλιά μηχανή ώστε να επανέλθουν τυχόν κρυμμένα εικονίδια.
+
+Στην **Εξατομίκευση → Οθόνη κλειδώματος** μπορείς να εφαρμόσεις κινούμενο GIF. Επίλεξε **Εικόνα** στις ρυθμίσεις των Windows και κλείδωσε μία φορά για να δημιουργηθεί η cache. Η εφαρμογή του GIF ζητά δικαιώματα διαχειριστή και ενημερώνει την cache του τρέχοντος χρήστη. Έλεγξε την αναπαραγωγή με `Win+L`. Η υποστήριξη αναπαραγωγής εξαρτάται από την έκδοση των Windows. Στο **DeskStrip**, η αδιαφάνεια φόντου ρυθμίζεται από 0% έως 100%.
 
 ### Στιγμιότυπα οθόνης / Screenshots
 
@@ -81,9 +87,7 @@ runtime.
 
 Κατεβάστε το τελευταίο `OpsisSetup.exe` από τα [Releases](../../releases/latest) και εκτελέστε το.
 Κατά την εγκατάσταση μπορείτε προαιρετικά να συμπεριλάβετε το plugin **Opsis News Crawler** (ενεργό
-από προεπιλογή, εύκολα απενεργοποιήσιμο). Το Opsis ελέγχει μόνο του για ενημερώσεις μία φορά τον μήνα
-(ρυθμιζόμενο) — ποτέ δεν κατεβάζει ή εγκαθιστά τίποτα αυτόματα, μόνο ενημερώνει και ανοίγει τη σελίδα
-της νέας έκδοσης.
+από προεπιλογή, εύκολα απενεργοποιήσιμο). Όταν ο έλεγχος ενημερώσεων είναι ενεργός, το Opsis ελέγχει για νέα έκδοση σε κάθε εκκίνηση και περίπου κάθε 12 ώρες. Μπορείτε να ξεκινήσετε τη λήψη και την εγκατάσταση από τη σελίδα «Σχετικά».
 
 Για σιωπηλή/αυτοματοποιημένη εγκατάσταση (Inno Setup):
 
@@ -110,7 +114,7 @@ MotionDeskStudio.csproj` ή `RunLatest.bat` για απευθείας εκτέλ
 src/
   Services/     Οριζόντιες υπηρεσίες (ρυθμίσεις, διαδρομές, ενημερώσεις, plugin host, device interop)
   UI/           Κύριο παράθυρο, σελίδες, themed controls
-  Widgets/      Μηχανή wallpaper, DeskZones, DeskContainers, native widgets, tray
+  Widgets/      Μηχανή wallpaper, DeskZones, DeskStrip, native widgets, tray
 locales/        14 αρχεία JSON γλωσσών
 assets/         Εικονίδια
 screenshots/    Στιγμιότυπα για αυτό το README
@@ -121,7 +125,7 @@ installer.iss   Script Inno Setup
 
 **Opsis** (formerly *MotionDesk Studio*) is a native WinForms desktop-customization suite for
 Windows 10/11. It renders live wallpapers directly on the desktop (WorkerW/Progman injection, the
-same technique behind tools like Lively Wallpaper), gives you icon DeskContainers,
+same technique behind tools like Lively Wallpaper), provides live desktop folder containers,
 FancyZones-style window snapping, native always-on-top widgets, a real plugin system, and
 system-wide quality-of-life tooling — all as a single lightweight app with no browser runtime
 bundled in.
@@ -132,7 +136,7 @@ bundled in.
 |---|---|
 | 🏠 Dashboard | Live system/desktop/wallpaper summary, quick launch, workspace profile switching |
 | 🧩 Widgets | Clock, Network, Audio, Weather, Disk, System Monitor, Quick Settings (volume/brightness/power plan), Now Playing, Notifications, Calendar, Bluetooth — native, always-on-top, each with its own resize/theme |
-| 🗂️ DeskZones | FancyZones-style window snapping (grid, rows, columns, per-monitor custom layouts) + DeskContainers with tabs, notes, portals and profiles for icon grouping |
+| 🗂️ DeskZones | FancyZones-style window snapping (grid, rows, columns, per-monitor custom layouts) + live folder containers with PecoFence-inspired placement |
 | 🖼️ Wallpaper | Live wallpaper engine: procedural "Opsis Waves" (theme-aware, wind-reactive waves, real rain-on-glass) or video/playlist (`.mp4`, `.wmv` auto-converted via FFmpeg), live weather overlay, performance modes with automatic battery saving |
 | ⚡ Performance | Real-time CPU/RAM/GPU/network/process monitoring, high-usage alerts |
 | ⚙️ Settings | Theme (light/dark/follow Windows + Midnight/Forest/Dawn/High contrast), language, grid snap, window opacity, startup with Windows |
@@ -148,12 +152,17 @@ Chinese, Japanese, Portuguese, Korean, Turkish, Arabic, Hindi), real taskbar tra
 `AssemblyLoadContext` (the first one, **Opsis News Crawler**, adds a news/market ticker bar to the
 desktop; the second, [**Opsis Appearance**](https://github.com/giorstergiopoulos-design/OpsisAppearance), changes the look of Windows itself — automatic Light/Dark, accent, taskbar, coloured window borders, corners). Both are also available as stand-alone apps).
 
+The `Ctrl+K` palette finds commands and apps using abbreviations such as `vs` for Visual Studio and accepts accent-free queries. In the Opsis tray menu, Desktop tools can prevent automatic sleep for 30 or 60 minutes while allowing the display to turn off. Locking the session or selecting Stop keeping awake ends the temporary request. See the [feature references](THIRD_PARTY_NOTICES.md#feature-references).
+
+In **DeskZones → DeskContainers**, choose a folder to mirror in a live desktop window. Size and anchored placement are saved per display using a port from PecoFence. Prior profiles stay in the Opsis data folder. Add folders again from the new menu. When upgrading a portable copy, exit the previous engine first so it restores hidden desktop icons.
+
+In **Personalization → Lock screen**, select Apply animated GIF. Choose **Picture** in Windows lock-screen settings and lock once to create the image cache. Applying a GIF prompts for administrator approval and updates the current user's existing cache. Check animation with `Win+L`. Playback depends on the Windows build. In **DeskStrip**, background opacity is adjustable from 0% to 100%.
+
 ### Install
 
 Download the latest `OpsisSetup.exe` from [Releases](../../releases/latest) and run it. During setup
 you can optionally include the **Opsis News Crawler** plugin (checked by default, easy to skip).
-Opsis checks for updates on its own once a month (configurable) — it never downloads or installs
-anything automatically, it only notifies you and opens the new release's page.
+When update checks are enabled, Opsis checks for a new release at startup and about every 12 hours. You can start the download and installation from the About page.
 
 Silent/scripted install (Inno Setup):
 
@@ -180,7 +189,7 @@ MotionDeskStudio.csproj` / `RunLatest.bat`.
 src/
   Services/     Cross-cutting services (settings, paths, updates, plugin host, device interop)
   UI/           Main window, pages, themed controls
-  Widgets/      Wallpaper engine, DeskZones, DeskContainers, native widgets, tray
+  Widgets/      Wallpaper engine, DeskZones, DeskStrip, native widgets, tray
 locales/        14 language JSON files
 assets/         Icons
 screenshots/    Screenshots used by this README

@@ -4,7 +4,7 @@
 param(
     [Parameter(Mandatory = $true)][ValidateSet('installed', 'removed')][string]$Mode,
     [string]$ExpectedVersion = '',
-    [switch]$SkipAutostart          # the PREVIOUS release is checked without the autostart expectation of the new build
+    [switch]$SkipAutostart       # skips new-version checks when installing the upgrade fixture
 )
 $ErrorActionPreference = 'Continue'
 $failures = New-Object System.Collections.Generic.List[string]
@@ -21,7 +21,7 @@ function Get-OpsisRunValues { (Get-ItemProperty $runKey -ErrorAction SilentlyCon
 
 if ($Mode -eq 'installed') {
     Check 'Program Files\Opsis\Opsis.exe exists' (Test-Path (Join-Path $appDir 'Opsis.exe'))
-    Check 'DeskContainers engine (containers\OpsisContainers.exe) exists' (Test-Path (Join-Path $appDir 'containers\OpsisContainers.exe'))
+    if (-not $SkipAutostart) { Check 'legacy DeskContainers engine was removed' (-not (Test-Path (Join-Path $appDir 'containers\OpsisContainers.exe'))) }
     Check 'machine-wide uninstall entry exists' (Test-Path $uninstallKey)
     if ($ExpectedVersion -and (Test-Path $uninstallKey)) {
         $v = (Get-ItemProperty $uninstallKey).DisplayVersion

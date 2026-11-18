@@ -20,7 +20,9 @@ public static class AppActivity
     private static SynchronizationContext? _ui;
     private static int _fullscreenHits;
     private static int _slowTick;
-    private static bool _fullscreen, _locked, _remote, _batterySaver, _screensaver, _highLoad, _awake;
+    private static bool _fullscreen, _locked, _remote, _batterySaver, _screensaver, _highLoad;
+    private static bool _sessionLocked;
+    private static DateTimeOffset? _timedAwakeUntil;
     private static int _loadHits;
     private static string? _fullscreenDevice;
 
@@ -54,9 +56,13 @@ public static class AppActivity
         // SystemEvents καλεί από δικό του thread -> Post στο UI thread.
         _ui?.Post(_ =>
         {
-            if (e.Reason == SessionSwitchReason.SessionLock) _locked = AppSettings.Load().PauseOnLock;
-            else if (e.Reason == SessionSwitchReason.SessionUnlock) _locked = false;
-            Publish();
+            if (_timer == null || e.Reason is not (SessionSwitchReason.SessionLock or SessionSwitchReason.SessionUnlock)) return;
+            var settings = AppSettings.Load();
+            _sessionLocked = e.Reason == SessionSwitchReason.SessionLock;
+            _locked = _sessionLocked && settings.PauseOnLock;
+            if (_sessionLocked) _timedAwakeUntil = null;
+            try { Publish(); }
+            finally { UpdateKeepAwake(settings); }
         }, null);
     }
 
@@ -79,10 +85,10 @@ public static class AppActivity
                 _screensaver = settings.PauseOnScreensaver && IsScreensaverRunning();
                 UpdateLoad(settings);
             }
-            if (!settings.PauseOnLock) _locked = false;
+            _locked = _sessionLocked && settings.PauseOnLock;
             _fullscreen = fullscreen;
-            Publish();
-            UpdateKeepAwake(settings);
+            try { Publish(); }
+            finally { UpdateKeepAwake(settings); }
         }
         catch (Exception ex) { RotatingLogger.Write("AppActivity: " + ex.Message); }
     }
@@ -119,14 +125,57 @@ public static class AppActivity
         else { _loadHits = 0; _highLoad = false; }
     }
 
-    // Keeps the PC and the display awake while the wallpaper is running and not paused. Called from the UI-thread timer only
-    // (SetThreadExecutionState belongs to the calling thread).
-    private static void UpdateKeepAwake(AppSettings s)
+    internal static bool IsTimedAwakeActive => _timedAwakeUntil > DateTimeOffset.UtcNow;
+
+    // The tray callbacks and the polling timer run on the UI thread, which owns the Windows power request.
+    internal static bool StartTimedAwake(TimeSpan duration)
     {
-        bool want = s.KeepPcAwake && !IsFullscreenAppActive && MotionDesk.Widgets.WallpaperHostEngine.Instance.IsRunning;
-        if (want == _awake) return;
-        _awake = want;
-        SetThreadExecutionState(want ? (ES_CONTINUOUS | ES_SYSTEM_REQUIRED | ES_DISPLAY_REQUIRED) : ES_CONTINUOUS);
+        if (_sessionLocked || duration <= TimeSpan.Zero) return false;
+        var previous = _timedAwakeUntil;
+        _timedAwakeUntil = DateTimeOffset.UtcNow + duration;
+        if (UpdateKeepAwake(AppSettings.Load())) return true;
+        _timedAwakeUntil = previous;
+        return false;
+    }
+
+    internal static bool StopTimedAwake()
+    {
+        _timedAwakeUntil = null;
+        return UpdateKeepAwake(AppSettings.Load());
+    }
+
+    internal static void Stop()
+    {
+        if (_timer == null) return;
+        _timer.Dispose();
+        _timer = null;
+        SystemEvents.SessionSwitch -= OnSessionSwitch;
+        _ui = null;
+        _timedAwakeUntil = null;
+        ApplyExecutionState(ES_CONTINUOUS);
+    }
+
+    private static bool UpdateKeepAwake(AppSettings settings)
+    {
+        if (!IsTimedAwakeActive) _timedAwakeUntil = null;
+
+        // A temporary tray request keeps the system awake. The wallpaper preference also keeps the display on.
+        bool wallpaperAwake = settings.KeepPcAwake && !_locked && !IsFullscreenAppActive &&
+            MotionDesk.Widgets.WallpaperHostEngine.Instance.IsRunning;
+        uint desired = ES_CONTINUOUS;
+        if (wallpaperAwake || _timedAwakeUntil.HasValue) desired |= ES_SYSTEM_REQUIRED;
+        if (wallpaperAwake) desired |= ES_DISPLAY_REQUIRED;
+        return ApplyExecutionState(desired);
+    }
+
+    private static uint _executionState = ES_CONTINUOUS;
+
+    private static bool ApplyExecutionState(uint desired)
+    {
+        if (_executionState == desired) return true;
+        if (SetThreadExecutionState(desired) == 0) return false;
+        _executionState = desired;
+        return true;
     }
 
     private static bool IsScreensaverRunning() => SystemParametersInfo(SPI_GETSCREENSAVERRUNNING, 0, out int running, 0) && running != 0;

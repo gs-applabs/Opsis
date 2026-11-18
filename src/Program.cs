@@ -28,6 +28,12 @@ namespace MotionDesk
                 return;
             }
 
+            if (args.Length == 3 && args[0] == "--apply-lockscreen-gif")
+            {
+                Environment.ExitCode = AnimatedLockScreen.ApplyElevated(args[1], args[2]);
+                return;
+            }
+
             // Headless self-test (v2.0 handoff, Φάση 1/9) — ΔΕΝ περνάει από το single-instance Mutex
             // ούτε αρχικοποιεί UI/tray, ώστε να μπορεί να τρέξει από ένα build script ακόμα κι αν
             // μια κανονική εκτέλεση του Opsis είναι ήδη ανοιχτή.
@@ -130,7 +136,6 @@ namespace MotionDesk
             {
                 Services.RotatingLogger.Write("Performance: effective tier is now " + t);
                 try { MotionDesk.Widgets.WallpaperHostEngine.Instance.PushPerf(); } catch (Exception) { }
-                try { Services.ContainersBridge.Command("perf:" + Services.PerformanceProfile.ForFeature(Services.PerfFeature.DeskContainers).Tier); } catch (Exception) { }
             };
 
             // Το .NET 5+ δεν περιλαμβάνει πλέον τις legacy κωδικοσελίδες (π.χ. 737 για ελληνικά

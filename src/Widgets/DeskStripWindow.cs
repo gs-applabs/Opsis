@@ -20,6 +20,7 @@ namespace MotionDesk.Widgets
     {
         public List<string> Paths { get; set; } = new();
         public DockPosition Position { get; set; } = DockPosition.Bottom;
+        public int BackgroundOpacity { get; set; } = 100;
         public bool AutoHide { get; set; } = false;
         public int IconSize { get; set; } = 44;               // 28..72
         public bool Magnify { get; set; } = true;
@@ -125,7 +126,10 @@ namespace MotionDesk.Widgets
         public void UpdateSettings(Action<DeskStripSettings> change)
         {
             var oldPos = _s.Position; var oldSize = _s.IconSize;
+            var oldOpacity = _s.BackgroundOpacity;
             change(_s);
+            _s.BackgroundOpacity = Math.Clamp(_s.BackgroundOpacity, 0, 100);
+            if (oldOpacity != _s.BackgroundOpacity) { ApplyBlur(); Invalidate(); }
             _s.IconSize = Math.Clamp(_s.IconSize, 28, 72);
             _s.Paths = _s.Paths.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
             if (_s.IconSize != oldSize) { foreach (var b in _iconCache.Values) b?.Dispose(); _iconCache.Clear(); foreach (var it in _items) it.Icon = null; }
@@ -137,7 +141,12 @@ namespace MotionDesk.Widgets
 
         private void OnScreenChanged(object? sender, EventArgs e)
         {
-            if (IsHandleCreated && !IsDisposed) BeginInvoke(new Action(() => ApplyLayout(animate: false)));
+            if (IsHandleCreated && !IsDisposed) BeginInvoke(new Action(() =>
+            {
+                if (IsDisposed) return;
+                ApplyBlur();
+                ApplyLayout(animate: false);
+            }));
         }
 
         // ---- ανίχνευση παραθύρων ----------------------------------------------------------------------------------
@@ -387,9 +396,11 @@ namespace MotionDesk.Widgets
             var g = e.Graphics;
             g.SmoothingMode = SmoothingMode.AntiAlias;
             g.InterpolationMode = InterpolationMode.HighQualityBicubic;
-            using (var bgPath = MotionDesk.UI.UiTheme.RoundedPath(new Rectangle(0, 0, Width - 1, Height - 1), 20))
+            if (_s.BackgroundOpacity > 0)
             {
-                using var tint = new SolidBrush(Color.FromArgb(Low ? 215 : 70, 24, 26, 34));
+                using var bgPath = MotionDesk.UI.UiTheme.RoundedPath(new Rectangle(0, 0, Width - 1, Height - 1), 20);
+                int alpha = (Low ? 215 : 70) * _s.BackgroundOpacity / 100;
+                using var tint = new SolidBrush(Color.FromArgb(alpha, 24, 26, 34));
                 g.FillPath(tint, bgPath);
                 using var pen = new Pen(Color.FromArgb(70, 255, 255, 255));
                 g.DrawPath(pen, bgPath);
@@ -671,14 +682,28 @@ namespace MotionDesk.Widgets
 
         private void ApplyBlur()
         {
-            if (Low) return;   // σε αδύναμα συστήματα: συμπαγές χρώμα, χωρίς acrylic
-            var accent = new ACCENT_POLICY { AccentState = 3, GradientColor = unchecked((int)0x66202228) };
-            int size = Marshal.SizeOf(accent);
-            IntPtr ptr = Marshal.AllocHGlobal(size);
-            Marshal.StructureToPtr(accent, ptr, false);
-            var data = new WINDOWCOMPOSITIONATTRIBDATA { Attribute = 19, SizeOfData = size, Data = ptr };
-            SetWindowCompositionAttribute(Handle, ref data);
-            Marshal.FreeHGlobal(ptr);
+            if (!IsHandleCreated) return;
+            int opacity = _s.BackgroundOpacity;
+            var tint = Color.FromArgb(0x28, 0x22, 0x20);
+            if (opacity == 0)
+            {
+                MotionDesk.UI.GlassBlur.Disable(Handle);
+                BackColor = Color.Fuchsia;
+                TransparencyKey = Color.Fuchsia;
+                return;
+            }
+
+            TransparencyKey = Color.Empty;
+            BackColor = Color.FromArgb(20, 20, 20);
+            if (opacity == 100)
+            {
+                if (Low) MotionDesk.UI.GlassBlur.Disable(Handle);
+                else MotionDesk.UI.GlassBlur.Apply(Handle, tint, 102.0 / 153);
+                return;
+            }
+
+            // Native composition affects the surface while the icon pixels stay opaque.
+            MotionDesk.UI.GlassBlur.ApplyTint(Handle, tint, 102 * opacity / 100);
         }
 
         // ---- αποθήκευση -------------------------------------------------------------------------------------------
@@ -709,15 +734,13 @@ namespace MotionDesk.Widgets
                 _s.Paths = state.Paths.Where(p => File.Exists(p) || Directory.Exists(p)).ToList();
                 _s.Position = Enum.IsDefined(state.Position) ? state.Position : DockPosition.Bottom;
                 _s.AutoHide = state.AutoHide; _s.IconSize = Math.Clamp(state.IconSize == 0 ? 44 : state.IconSize, 28, 72);
+                _s.BackgroundOpacity = Math.Clamp(state.BackgroundOpacity, 0, 100);
                 _s.Magnify = state.Magnify; _s.ShowRunning = state.ShowRunning; _s.ShowPreviews = state.ShowPreviews;
             }
             catch (JsonException) { }
             catch (IOException) { }
         }
 
-        [StructLayout(LayoutKind.Sequential)] private struct ACCENT_POLICY { public int AccentState; public int AccentFlags; public int GradientColor; public int AnimationId; }
-        [StructLayout(LayoutKind.Sequential)] private struct WINDOWCOMPOSITIONATTRIBDATA { public int Attribute; public IntPtr Data; public int SizeOfData; }
-        [DllImport("user32.dll")] private static extern int SetWindowCompositionAttribute(IntPtr hwnd, ref WINDOWCOMPOSITIONATTRIBDATA data);
     }
 
     /// <summary>Πλωτό tooltip/προεπισκόπηση πάνω από ένα εικονίδιο του dock: τίτλος + DWM thumbnails των παραθύρων.</summary>

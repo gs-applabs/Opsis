@@ -75,9 +75,6 @@ namespace MotionDesk.Widgets
             wallpaperMenu.DropDownItems.Add(LocalizationManager.T("Tray.WallpaperSettings"), null, (s, e) => ShowMainWindow("Wallpaper"));
             contextMenu.Items.Add(wallpaperMenu);
 
-            // ---- DeskContainers (items and state come from the engine through the bridge)
-            if (ContainersEngine.IsAvailable) contextMenu.Items.Add(BuildContainersTrayMenu());
-
             // ---- Desktop tools
             var desktopMenu = new ToolStripMenuItem(LocalizationManager.T("Tray.GroupDesktop"));
             desktopMenu.DropDownItems.Add(LocalizationManager.T("Tray.DeskZonesEdit"), null, (s, e) => AddDeskZone());
@@ -89,6 +86,9 @@ namespace MotionDesk.Widgets
                 gridSnapItem.Checked = WidgetSnapEngine.EnableGridSnap;
             };
             desktopMenu.DropDownItems.Add(gridSnapItem);
+            desktopMenu.DropDownItems.Add(BuildAwakeTrayMenu());
+            desktopMenu.DropDownItems.Add(LocalizationManager.T("DeskContainers.ChooseFolder"), null,
+                (_, _) => DeskContainers.Instance.ChooseFolder(_mainWindow));
             contextMenu.Items.Add(desktopMenu);
 
             // ---- Workspace profiles (Work / Gaming / Focus keep their names in every language: they are profile ids)
@@ -165,12 +165,11 @@ namespace MotionDesk.Widgets
                 catch (Exception) { } // σιωπηλό fallback — ζητήθηκε ρητά, βλ. E2
             };
 
+            if (!safeMode) DeskContainers.Instance.Restore();
             if (!safeMode && AppSettings.Load().QuickHideDoubleClickEnabled) DesktopIconVisibilityEngine.Instance.Start();
             AppActivity.Start();
             MotionDesk.Services.DiscordPresence.Instance.Apply();
             BackdropContrast.EnsureStarted();
-            if (!safeMode && ContainersEngine.Enabled) ContainersEngine.Start();
-            ContainersEngine.SettingsRequested += () => ShowMainWindow("DeskZones");
 
             // Restore lightweight persistent preferences before showing the manager.
             var appSettings = AppSettings.Load();
@@ -496,75 +495,31 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
         // Κοινός, πλήρης καθαρισμός εξόδου — καλείται ΚΑΙ από το μενού "Έξοδος" ΚΑΙ από ένα
         // self-update install (μέσω RequestExit/ExitRequested) ώστε και στις δύο περιπτώσεις να
         // αποθηκεύεται η συνεδρία και να σταματούν σωστά τα plugins/hotkeys πριν το Application.Exit().
-        // DeskContainers group of the tray menu. The engine publishes its state (profiles, switches, hidden containers) in bridge\state.json;
-        // the submenu is rebuilt every time it opens, and every entry sends a command to the engine through the bridge.
-        private ToolStripMenuItem BuildContainersTrayMenu()
+        private static ToolStripMenuItem BuildAwakeTrayMenu()
         {
             string T(string key) => LocalizationManager.T(key);
-            var menu = new ToolStripMenuItem(T("DCM.GroupTitle"));
-            void Fill()
+            var menu = new ToolStripMenuItem(T("Tray.Awake"));
+            foreach (int minutes in new[] { 30, 60 })
             {
-                foreach (ToolStripItem old in menu.DropDownItems) old.Dispose();
-                menu.DropDownItems.Clear();
-                void Add(ToolStripItemCollection to, string key, string cmd) => to.Add(T(key), null, (s, e) => ContainersBridge.Command(cmd));
-                if (!ContainersEngine.IsRunning)
-                {
-                    menu.DropDownItems.Add(T("DCM.StartEngine"), null, (s, e) => ContainersEngine.Start());
-                    menu.DropDownItems.Add(T("DCM.OpenSettingsPage"), null, (s, e) => ShowMainWindow("DeskZones"));
-                    return;
-                }
-                var state = ContainersBridge.ReadState();
-                Add(menu.DropDownItems, "DCM.NewContainer", "new-fence");
-                Add(menu.DropDownItems, "DCM.NewNote", "new-note");
-                menu.DropDownItems.Add(new ToolStripSeparator());
-
-                var profiles = new ToolStripMenuItem(T("DCM.Profiles"));
-                foreach (var name in state.Profiles)
-                {
-                    string n = name;
-                    var it = new ToolStripMenuItem(n) { Checked = string.Equals(n, state.Profile, StringComparison.OrdinalIgnoreCase) };
-                    it.Click += (s, e) => ContainersBridge.Command("profile:" + n);
-                    profiles.DropDownItems.Add(it);
-                }
-                if (profiles.DropDownItems.Count > 0) profiles.DropDownItems.Add(new ToolStripSeparator());
-                Add(profiles.DropDownItems, "DCM.ManageProfiles", "manage-profiles");
-                Add(profiles.DropDownItems, "DCM.ManageAutomation", "manage-automation");
-                var auto = new ToolStripMenuItem(T("DCM.ProfileAutomation")) { Checked = state.Automation };
-                auto.Click += (s, e) => ContainersBridge.Command("toggle-automation");
-                profiles.DropDownItems.Add(auto);
-                menu.DropDownItems.Add(profiles);
-
-                var smart = new ToolStripMenuItem(T("DCM.Smart"));
-                var org = new ToolStripMenuItem(T("DCM.AutoOrganize")) { Checked = state.AutoOrganize };
-                org.Click += (s, e) => ContainersBridge.Command("toggle-autoorganize");
-                smart.DropDownItems.Add(org);
-                Add(smart.DropDownItems, "DCM.SmartRules", "smart-rules");
-                Add(smart.DropDownItems, "DCM.OrganizeNow", "organize-now");
-                menu.DropDownItems.Add(smart);
-
-                var hidden = new ToolStripMenuItem(T("DCM.HiddenContainers")) { Enabled = state.Hidden.Length > 0 };
-                foreach (var title in state.Hidden)
-                {
-                    string t = title;
-                    hidden.DropDownItems.Add(t, null, (s, e) => ContainersBridge.Command("show-hidden:" + t));
-                }
-                menu.DropDownItems.Add(hidden);
-                Add(menu.DropDownItems, "DCM.FocusContainer", "focus-fence");
-                menu.DropDownItems.Add(new ToolStripSeparator());
-                Add(menu.DropDownItems, "DCM.QuickHide", "quick-hide");
-                Add(menu.DropDownItems, "DCM.QuickShow", "quick-show");
-                Add(menu.DropDownItems, "DCM.Reload", "reload-all");
-                Add(menu.DropDownItems, "DCM.Backup", "backup");
-                menu.DropDownItems.Add(new ToolStripSeparator());
-                menu.DropDownItems.Add(T("DCM.OpenSettingsPage"), null, (s, e) => ShowMainWindow("DeskZones"));
+                var duration = TimeSpan.FromMinutes(minutes);
+                menu.DropDownItems.Add(string.Format(T("Tray.AwakeMinutes"), minutes), null,
+                    (_, _) => Apply(() => AppActivity.StartTimedAwake(duration)));
             }
-            menu.DropDownOpening += (s, e) => Fill();
-            Fill();
+            var stop = menu.DropDownItems.Add(T("Tray.AwakeStop"), null, (_, _) => Apply(AppActivity.StopTimedAwake));
+            menu.DropDownOpening += (_, _) => stop.Enabled = AppActivity.IsTimedAwakeActive;
+
+            void Apply(Func<bool> change)
+            {
+                if (!change())
+                    MessageBox.Show(T("Tray.AwakeError"), T("Tray.Awake"), MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+
             return menu;
         }
 
         private void PerformExit()
         {
+            AppActivity.Stop();
             try { WorkspaceProfileService.Save("Last Session"); WorkspaceProfileService.ExitSaveDone = true; } catch { }
             PluginHost.Instance.StopAll();
             _hotkeys.Dispose();

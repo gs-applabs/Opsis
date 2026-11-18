@@ -372,15 +372,14 @@ Name: "installffmpeg"; Description: "{cm:FfmpegTask}"; GroupDescription: "{cm:Ex
 
 [Files]
 ; Κύρια αρχεία εφαρμογής (δημιουργούνται από: dotnet publish -c Release -r win-x64)
-Source: "bin\Release\net10.0-windows10.0.19041.0\win-x64\publish\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs
+Source: "bin\Release\net10.0-windows10.0.19041.0\win-x64\publish\*"; DestDir: "{app}"; Excludes: "\containers\*"; Flags: ignoreversion recursesubdirs
+
+[InstallDelete]
+Type: filesandordirs; Name: "{app}\containers"
 
 [Icons]
 Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
 Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon
-
-[UninstallRun]
-Filename: "{app}\containers\OpsisContainers.exe"; Parameters: "--unhide-desktop"; Flags: runhidden skipifdoesntexist; RunOnceId: "UnhideDesktopIcons"
-Filename: "{sys}\taskkill.exe"; Parameters: "/F /IM OpsisContainers.exe"; Flags: runhidden; RunOnceId: "StopOpsisContainers"
 
 [Registry]
 ; Αυτόματη εκκίνηση μέσω Registry (αν επιλεχθεί στο wizard)
@@ -614,12 +613,16 @@ begin
   RegDeleteValue(HKCU, 'Software\Microsoft\Windows\CurrentVersion\Run', 'MotionDesk Studio');
 end;
 
-// The DeskContainers engine (containers\OpsisContainers.exe) keeps its files locked while it runs: stop it before files are replaced.
+// Retire the legacy engine and restore the desktop icons it hid before deleting its program files.
 function PrepareToInstall(var NeedsRestart: Boolean): String;
 var
   ResultCode: Integer;
+  OldEngine: String;
 begin
   Exec(ExpandConstant('{sys}\taskkill.exe'), '/F /IM OpsisContainers.exe', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+  OldEngine := ExpandConstant('{app}\containers\OpsisContainers.exe');
+  if FileExists(OldEngine) then
+    ExecAsOriginalUser(OldEngine, '--unhide-desktop', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
   RemovePerUserInstall;
   Result := '';
 end;

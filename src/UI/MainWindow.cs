@@ -1278,8 +1278,7 @@ namespace MotionDesk.UI
             panel.Controls.Add(quickHideCheck);
             panel.Controls.Add(keepIconsBtn);
 
-            // DeskContainers engine: only its on/off control lives here; every other DeskContainers setting is in the three-bars menu of a container.
-            if (ContainersEngine.IsAvailable) BuildContainersSettings(panel);
+            BuildContainersSettings(panel);
 
             // Applications that are never snapped (one process name per line, e.g. vlc, obs64)
             AddSection(panel, LocalizationManager.T("DeskZones.SectionExcludedApps"));
@@ -2199,6 +2198,10 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
             var sizeSlider = new FlatSlider { Minimum = 28, Maximum = 72, Value = Math.Clamp(dockCfg.IconSize, 28, 72), Width = 300, Height = 28, Margin = new Padding(0, 0, 0, 10) };
             sizeSlider.ValueChanged += (_, _) => { ShowSize(sizeSlider.Value); DeskStripHostEngine.Instance.UpdateSettings(c => c.IconSize = sizeSlider.Value); };
             deskStripCard.Controls.Add(sizeSlider);
+            deskStripCard.Controls.Add(SettingsView.NumericRow(
+                LocalizationManager.T("Personalization.DeskStripBackgroundOpacity"),
+                Math.Clamp(dockCfg.BackgroundOpacity, 0, 100), 0, 100,
+                opacity => DeskStripHostEngine.Instance.UpdateSettings(c => c.BackgroundOpacity = opacity), 0, "%"));
 
             var pinnedList = new FlowLayoutPanel { AutoSize = true, FlowDirection = FlowDirection.TopDown, WrapContents = false };
             deskStripCard.Controls.Add(pinnedList);
@@ -2402,15 +2405,17 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                     if (dlg.ShowDialog(this) != DialogResult.OK) return;
                     fileName = dlg.FileName;
                 }
-                // Εκτός UI thread: το helper περιμένει έως 15s (UAC prompt) — στο UI thread πάγωνε όλο το
-                // παράθυρο ΚΑΙ (λόγω του global mouse hook του quick-hide) το ποντίκι όλου του συστήματος.
+                // Wait for the UAC helper off the UI thread so the window and desktop hooks stay responsive.
                 string error = string.Empty;
                 bool ok = await Task.Run(() => LockScreenEngine.TrySetLockScreenImageElevated(fileName, out error));
                 if (IsDisposed) return;
-                var settings = AppSettings.Load();
-                settings.LockScreenFollowsWallpaper = false; // χειροκίνητη εικόνα -> σταματά να ακολουθεί το wallpaper
-                settings.Save();
-                if (ok) _statusLabel.Text = LocalizationManager.T("Personalization.LockScreenSuccess");
+                if (ok)
+                {
+                    var settings = AppSettings.Load();
+                    settings.LockScreenFollowsWallpaper = false;
+                    settings.Save();
+                    ShowStatus(LocalizationManager.T("Personalization.LockScreenSuccess"), StatusKind.Success);
+                }
                 else if (error == "cancelled") _statusLabel.Text = LocalizationManager.T("Personalization.LockScreenCancelled");
                 else _statusLabel.Text = LocalizationManager.T("Personalization.LockScreenFailed");
             }),
@@ -2454,13 +2459,52 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                 string error = string.Empty;
                 bool ok = await Task.Run(() => LockScreenEngine.TryResetLockScreenElevated(out error));
                 if (IsDisposed) return;
-                var settings = AppSettings.Load();
-                settings.LockScreenFollowsWallpaper = false;
-                settings.Save();
-                if (ok) _statusLabel.Text = LocalizationManager.T("Personalization.LockScreenResetSuccess");
+                if (ok)
+                {
+                    var settings = AppSettings.Load();
+                    settings.LockScreenFollowsWallpaper = false;
+                    settings.Save();
+                    ShowStatus(LocalizationManager.T("Personalization.LockScreenResetSuccess"), StatusKind.Success);
+                }
                 else if (error == "cancelled") _statusLabel.Text = LocalizationManager.T("Personalization.LockScreenCancelled");
                 else _statusLabel.Text = LocalizationManager.T("Personalization.LockScreenFailed");
             }));
+
+            AddText(lockScreenCard, LocalizationManager.T("Personalization.LockScreenGifNote"));
+            AddButtonGrid(lockScreenCard,
+                (LocalizationManager.T("Personalization.OpenLockScreenGif"), async (sender, _) =>
+                {
+                    if (AppSettings.Load().LockScreenFollowsWallpaper)
+                    {
+                        ShowStatus(LocalizationManager.T("Personalization.LockScreenGifNote"), StatusKind.Info);
+                        return;
+                    }
+
+                    using var picker = new OpenFileDialog
+                    {
+                        Title = LocalizationManager.T("Personalization.OpenLockScreenGif"),
+                        Filter = "GIF (*.gif)|*.gif"
+                    };
+                    if (picker.ShowDialog(this) != DialogResult.OK) return;
+                    string path = picker.FileName;
+
+                    var button = sender as Control;
+                    if (button != null) button.Enabled = false;
+                    try
+                    {
+                        int result = await Task.Run(() => AnimatedLockScreen.ApplyFromUi(path));
+                        if (IsDisposed) return;
+                        var (key, status) = result switch
+                        {
+                            0 => ("Personalization.LockScreenGifApplied", StatusKind.Success),
+                            2 => ("Personalization.LockScreenCancelled", StatusKind.Info),
+                            3 => ("Personalization.LockScreenGifNote", StatusKind.Error),
+                            _ => ("Personalization.LockScreenFailed", StatusKind.Error)
+                        };
+                        ShowStatus(LocalizationManager.T(key), status);
+                    }
+                    finally { if (button is { IsDisposed: false }) button.Enabled = true; }
+                }));
 
             SetPage("Page.Personalization.Title", panel);
         }
@@ -2485,7 +2529,9 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                 ForeColor = UiTheme.TextPrimary,
                 FormBorderStyle = FormBorderStyle.FixedDialog,
                 MaximizeBox = false,
-                MinimizeBox = false
+                MinimizeBox = false,
+                ShowInTaskbar = false,
+                KeyPreview = true
             };
             dialog.HandleCreated += (_, _) => { int d = UiTheme.Background.GetBrightness() < 0.5f ? 1 : 0; try { DwmSetWindowAttribute(dialog.Handle, DWMWA_USE_IMMERSIVE_DARK_MODE, ref d, sizeof(int)); } catch (DllNotFoundException) { } };
             dialog.HandleCreated += (_, _) => GlassBlur.ApplyWindowDropShadow(dialog.Handle);
@@ -2495,6 +2541,7 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                 Dock = DockStyle.Top,
                 Font = new Font("Segoe UI", 14),
                 PlaceholderText = LocalizationManager.T("Command.PalettePlaceholder"),
+                AccessibleName = LocalizationManager.T("Command.PalettePlaceholder"),
                 BackColor = UiTheme.Surface,
                 ForeColor = UiTheme.TextPrimary,
                 BorderStyle = BorderStyle.FixedSingle
@@ -2507,7 +2554,8 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                 ForeColor = UiTheme.TextPrimary,
                 BorderStyle = BorderStyle.None,
                 DrawMode = DrawMode.OwnerDrawFixed,
-                ItemHeight = 30
+                ItemHeight = 30,
+                AccessibleName = LocalizationManager.T("Command.PaletteTitle")
             };
             list.DrawItem += (_, e) =>
             {
@@ -2515,14 +2563,13 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                 bool selected = (e.State & DrawItemState.Selected) != 0;
                 using var bg = new SolidBrush(selected ? UiTheme.SurfaceHover : UiTheme.Background);
                 e.Graphics.FillRectangle(bg, e.Bounds);
-                using var textBrush = new SolidBrush(selected ? UiTheme.AccentCyan : UiTheme.TextPrimary);
-                e.Graphics.DrawString(list.Items[e.Index].ToString(), e.Font!, textBrush, e.Bounds.X + 10, e.Bounds.Y + 5);
+                var bounds = Rectangle.Inflate(e.Bounds, -10, 0);
+                var foreground = selected ? UiTheme.AccentCyan : UiTheme.TextPrimary;
+                TextRenderer.DrawText(e.Graphics, list.Items[e.Index].ToString(), e.Font!, bounds, foreground,
+                    TextFormatFlags.SingleLine | TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis | TextFormatFlags.NoPrefix);
+                e.DrawFocusRectangle();
             };
 
-            // ΔΙΟΡΘΩΣΗ REQ-008: οι εντολές ΗΤΑΝ ταυτόχρονα το εμφανιζόμενο κείμενο ΚΑΙ το κλειδί
-            // αντιστοίχισης στο switch — πάντα αγγλικά, ανεξάρτητα από την επιλεγμένη γλώσσα.
-            // Τώρα κάθε εντολή έχει ξεχωριστό σταθερό "id" (για το switch) από το μεταφρασμένο
-            // label που βλέπει ο χρήστης (για εμφάνιση/αναζήτηση), μέσω ενός dictionary label->id.
             string profileFmt = LocalizationManager.T("Dashboard.ProfileButtonFormat");
             var commandDefs = new (string Id, string Label)[]
             {
@@ -2543,39 +2590,68 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                 ("GamingProfile", string.Format(profileFmt, "Gaming")),
                 ("FocusProfile", string.Format(profileFmt, "Focus")),
             };
-            // Οι σελίδες των plugin (π.χ. News Crawler) εμφανίζονται κι εδώ.
-            var commandList = commandDefs.ToList();
-            foreach (var pluginPage in Services.PluginHost.Instance.GetNavigationItems())
-                commandList.Add(("plugin:" + pluginPage.Key, Services.PluginHost.TitleOf(pluginPage)));
-            // v2.0.0 (t35, "Start Menu replacement" σε ασφαλή μορφή): το Ctrl+K γίνεται και app
-            // launcher — ΧΩΡΙΣ να πειράζει το πραγματικό Start. Πρώτα οι καρφιτσωμένες της taskbar,
-            // μετά οι συντομεύσεις του Start Menu· Enter τις εκκινεί (όπως ένα διπλό-κλικ σε .lnk).
-            var appByLabel = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-            try
+            var entries = commandDefs.Select(command => new CommandPaletteEntry(command.Id, command.Label)).ToList();
+            foreach (var pluginPage in PluginHost.Instance.GetNavigationItems())
+                entries.Add(new CommandPaletteEntry("plugin:" + pluginPage.Key, PluginHost.TitleOf(pluginPage)));
+            var commandLabels = entries.Select(entry => entry.Label).ToHashSet(StringComparer.OrdinalIgnoreCase);
+            var feedback = new Label
             {
-                var roots = new[]
+                Dock = DockStyle.Bottom,
+                Height = 28,
+                TextAlign = ContentAlignment.MiddleLeft,
+                ForeColor = UiTheme.TextSecondary,
+                AccessibleRole = AccessibleRole.StaticText
+            };
+            using var discoveryCancellation = new System.Threading.CancellationTokenSource();
+            var detectionToken = discoveryCancellation.Token;
+            bool loadingApps = true;
+
+            void RefreshResults(bool preserveSelection = false)
+            {
+                var previous = preserveSelection ? list.SelectedItem : null;
+                list.BeginUpdate();
+                try
                 {
-                    Environment.GetFolderPath(Environment.SpecialFolder.Programs),
-                    Environment.GetFolderPath(Environment.SpecialFolder.CommonPrograms)
-                };
-                var lnks = TaskbarPinsReader.GetPinnedAppPaths().Concat(roots.Where(Directory.Exists).SelectMany(r => Directory.EnumerateFiles(r, "*.lnk", SearchOption.AllDirectories)));
-                foreach (var lnk in lnks)
-                {
-                    string name = Path.GetFileNameWithoutExtension(lnk);
-                    if (name.Contains("uninstall", StringComparison.OrdinalIgnoreCase) || commandList.Any(c => c.Label.Equals(name, StringComparison.OrdinalIgnoreCase))) continue;
-                    appByLabel.TryAdd(name, lnk);
+                    list.Items.Clear();
+                    list.Items.AddRange(CommandPaletteEntry.Find(entries, box.Text).ToArray());
+                    if (list.Items.Count > 0)
+                    {
+                        int index = previous is null ? -1 : list.Items.IndexOf(previous);
+                        list.SelectedIndex = index >= 0 ? index : 0;
+                    }
                 }
+                finally { list.EndUpdate(); }
+
+                feedback.Text = loadingApps ? LocalizationManager.T("WidgetText.Loading")
+                    : list.Items.Count == 0 ? OpsisStrings.T("ui.noMatch") : "";
+                feedback.Visible = feedback.Text.Length > 0;
             }
-            catch (Exception) { }
-            foreach (var appLabel in appByLabel.Keys) commandList.Add(("app:" + appLabel, appLabel));
-            var idByLabel = commandList.GroupBy(c => c.Label, StringComparer.OrdinalIgnoreCase).ToDictionary(g => g.Key, g => g.First().Id, StringComparer.OrdinalIgnoreCase);
-            var allLabels = commandList.Select(c => c.Label).ToArray();
-            list.Items.AddRange(allLabels);
-            if (list.Items.Count > 0) list.SelectedIndex = 0;
+
+            dialog.Shown += async (_, _) =>
+            {
+                box.Focus();
+                try
+                {
+                    var shortcuts = await Task.Run(() => LauncherShortcuts.Discover(detectionToken), detectionToken);
+                    if (detectionToken.IsCancellationRequested || dialog.IsDisposed) return;
+                    foreach (var path in shortcuts)
+                    {
+                        var label = Path.GetFileNameWithoutExtension(path);
+                        if (!commandLabels.Contains(label)) entries.Add(new CommandPaletteEntry("app", label, path));
+                    }
+                }
+                catch (OperationCanceledException) when (detectionToken.IsCancellationRequested) { return; }
+                catch (Exception ex) { RotatingLogger.Write("Command palette shortcuts: " + ex.Message); }
+
+                if (detectionToken.IsCancellationRequested || dialog.IsDisposed) return;
+                loadingApps = false;
+                RefreshResults(preserveSelection: list.SelectedIndex > 0);
+            };
 
             void Execute()
             {
-                if (list.SelectedItem is not string label || !idByLabel.TryGetValue(label, out var id)) return;
+                if (list.SelectedItem is not CommandPaletteEntry command) return;
+                var id = command.Id;
                 switch (id) {
                     case "Dashboard": NavigateTo("Dashboard"); break; case "WidgetGallery": NavigateTo("Widgets"); break; case "DeskZones": NavigateTo("DeskZones"); break;
                     case "WallpaperStudio": NavigateTo("Wallpaper"); break; case "Profiles": NavigateTo("Profiles"); break;
@@ -2584,8 +2660,8 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                     case "About": NavigateTo("About"); break;
                     case "AudioEnhancement": NavigateTo("AudioEnhancement"); break;
                     case string pluginId when pluginId.StartsWith("plugin:", StringComparison.Ordinal): NavigateTo(pluginId); break;
-                    case string appId when appId.StartsWith("app:", StringComparison.Ordinal):
-                        if (appByLabel.TryGetValue(appId[4..], out var appPath) && MotionDesk.Services.SafeLaunch.IsAllowed(appPath))
+                    case "app":
+                        if (command.ShortcutPath is { } appPath && SafeLaunch.IsAllowed(appPath))
                             try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(appPath) { UseShellExecute = true }); } catch (Exception) { }
                         break;
                     case "EnableWallpaper": WallpaperHostEngine.Instance.Enable(); break;
@@ -2594,21 +2670,39 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                 }
                 dialog.Close();
             }
-            box.TextChanged += (_, _) =>
+            box.TextChanged += (_, _) => RefreshResults();
+            list.MouseDoubleClick += (_, e) =>
             {
-                list.Items.Clear();
-                list.Items.AddRange(allLabels.Where(c => c.Contains(box.Text, StringComparison.OrdinalIgnoreCase)).ToArray());
-                if (list.Items.Count > 0) list.SelectedIndex = 0;
+                if (e.Button == MouseButtons.Left && list.IndexFromPoint(e.Location) >= 0) Execute();
             };
-            list.DoubleClick += (_, _) => Execute();
-            box.KeyDown += (_, e) =>
+            dialog.KeyDown += (_, e) =>
             {
-                if (e.KeyCode == Keys.Enter) { Execute(); e.SuppressKeyPress = true; }
-                else if (e.KeyCode == Keys.Down && list.Items.Count > 0) { list.SelectedIndex = Math.Min(list.SelectedIndex + 1, list.Items.Count - 1); e.SuppressKeyPress = true; }
-                else if (e.KeyCode == Keys.Up && list.Items.Count > 0) { list.SelectedIndex = Math.Max(list.SelectedIndex - 1, 0); e.SuppressKeyPress = true; }
-                else if (e.KeyCode == Keys.Escape) dialog.Close();
+                switch (e.KeyCode)
+                {
+                    case Keys.Escape:
+                        dialog.Close();
+                        break;
+                    case Keys.Enter when box.Focused || list.Focused:
+                        Execute();
+                        break;
+                    case Keys.Down when box.Focused && list.Items.Count > 0:
+                        list.SelectedIndex = Math.Min(list.SelectedIndex + 1, list.Items.Count - 1);
+                        break;
+                    case Keys.Up when box.Focused && list.Items.Count > 0:
+                        list.SelectedIndex = Math.Max(list.SelectedIndex - 1, 0);
+                        break;
+                    default:
+                        return;
+                }
+                e.SuppressKeyPress = true;
             };
-            dialog.Controls.Add(list); dialog.Controls.Add(box); box.Focus(); dialog.ShowDialog(this);
+            dialog.Controls.Add(list);
+            dialog.Controls.Add(feedback);
+            dialog.Controls.Add(box);
+            dialog.ActiveControl = box;
+            RefreshResults();
+            try { dialog.ShowDialog(this); }
+            finally { discoveryCancellation.Cancel(); }
         }
 
         private void ShowProfiles()
@@ -3115,7 +3209,6 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
             panel.Controls.Add(BuildTopicCard("Nav.Widgets", "Widgets.Intro"));
             panel.Controls.Add(BuildTopicCard("Nav.DeskZones", "DeskZones.Intro"));
             panel.Controls.Add(BuildTopicCard("DeskZones.SectionContainers", "DeskZones.ContainersIntro"));
-            panel.Controls.Add(BuildTopicCard("About.DeskContainersGuideTitle", "About.DeskContainersGuide"));
             panel.Controls.Add(BuildTopicCard("Nav.Wallpaper", "Wallpaper.Intro"));
             panel.Controls.Add(BuildTopicCard("Nav.Personalization", "Personalization.Intro"));
             panel.Controls.Add(BuildTopicCard("Nav.Automation", "Automation.Intro"));
