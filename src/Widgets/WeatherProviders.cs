@@ -34,7 +34,7 @@ namespace MotionDesk.Services
     public static class WeatherHttp
     {
         /// <summary>Identifying User-Agent (MET Norway and NWS require one). No personal data, only the app name and the public project page.</summary>
-        public static string UserAgent => $"Opsis/{Version()} (+https://github.com/giorstergiopoulos-design/Opsis)";
+        public static string UserAgent => $"Opsis/{Version()} (+https://github.com/gs-applabs/Opsis)";
 
         private static string Version()
         {

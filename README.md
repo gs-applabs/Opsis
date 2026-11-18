@@ -54,7 +54,7 @@ runtime.
 Ρωσικά, Κινέζικα, Ιαπωνικά, Πορτογαλικά, Κορεατικά, Τουρκικά, Αραβικά, Χίντι), πραγματική taskbar
 διαφάνεια (τεχνική TranslucentTB, χωρίς DLL injection), αυτόματη ενημέρωση από τα GitHub releases (έλεγχος σε κάθε εκκίνηση και ανά 12 ώρες, επαλήθευση SHA-256, και η εγκατάσταση γίνεται μόνο αφού το επιβεβαιώσεις), και σύστημα plugin επεκτάσιμο μέσω
 `AssemblyLoadContext` (το πρώτο, το **Opsis News Crawler**, προσθέτει μπάρα ειδήσεων/τιμών στην
-επιφάνεια εργασίας· το δεύτερο, το [**Opsis Appearance**](https://github.com/giorstergiopoulos-design/OpsisAppearance), αλλάζει την εμφάνιση των ίδιων των Windows — αυτόματο Light/Dark, accent, taskbar, χρωματιστό border παραθύρων, γωνίες). Και τα δύο διατίθενται και ως αυτόνομες εφαρμογές.
+επιφάνεια εργασίας· το δεύτερο, το [**Opsis Appearance**](https://github.com/gs-applabs/OpsisAppearance), αλλάζει την εμφάνιση των ίδιων των Windows — αυτόματο Light/Dark, accent, taskbar, χρωματιστό border παραθύρων, γωνίες). Και τα δύο διατίθενται και ως αυτόνομες εφαρμογές.
 
 ### Στιγμιότυπα οθόνης / Screenshots
 
@@ -146,7 +146,7 @@ Also: full support for 14 languages (English, Greek, German, French, Spanish, It
 Chinese, Japanese, Portuguese, Korean, Turkish, Arabic, Hindi), real taskbar translucency
 (TranslucentTB technique, no DLL injection), self-update from GitHub releases (checked on every start and every 12 hours, SHA-256 verified, and installed only after you confirm), and a plugin system built on
 `AssemblyLoadContext` (the first one, **Opsis News Crawler**, adds a news/market ticker bar to the
-desktop; the second, [**Opsis Appearance**](https://github.com/giorstergiopoulos-design/OpsisAppearance), changes the look of Windows itself — automatic Light/Dark, accent, taskbar, coloured window borders, corners). Both are also available as stand-alone apps).
+desktop; the second, [**Opsis Appearance**](https://github.com/gs-applabs/OpsisAppearance), changes the look of Windows itself — automatic Light/Dark, accent, taskbar, coloured window borders, corners). Both are also available as stand-alone apps).
 
 ### Install
 
@@ -227,4 +227,4 @@ easier to review than broad refactors bundled with a feature.
 
 ## Άδεια / License
 
-[MIT](LICENSE) © giorstergiopoulos-design — the standard MIT text; third-party components and their licences, and the disclaimer, are in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+[MIT](LICENSE) © gs-applabs — the standard MIT text; third-party components and their licences, and the disclaimer, are in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).

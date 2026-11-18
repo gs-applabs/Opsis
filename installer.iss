@@ -4,17 +4,17 @@
 #endif
 #define MyAppName "Opsis - Desktop Customization"
 #define MyAppVersion "2.4.6.1"
-#define MyAppPublisher "giorstergiopoulos-design"
-#define MyAppURL "https://github.com/giorstergiopoulos-design/Opsis"
+#define MyAppPublisher "gs-applabs"
+#define MyAppURL "https://github.com/gs-applabs/Opsis"
 #define MyAppExeName "Opsis.exe"
 ; Πού βρίσκεται ο installer του News Crawler (δημοσιεύεται ως GitHub release του αντίστοιχου repo).
 ; ΠΡΟΣΟΧΗ: το URL είναι η υπόθεση για το repo του crawler — άλλαξέ το αν ο installer ανέβει αλλού.
 ; Opsis Appearance (plugin): το installer του δημοσιεύεται ως GitHub release του αντίστοιχου repo (ίδιος μηχανισμός με τον crawler).
 #ifndef AppearanceSetupUrl
-  #define AppearanceSetupUrl "https://github.com/giorstergiopoulos-design/OpsisAppearance/releases/latest/download/OpsisAppearance-Setup.exe"
+  #define AppearanceSetupUrl "https://github.com/gs-applabs/OpsisAppearance/releases/latest/download/OpsisAppearance-Setup.exe"
 #endif
 #ifndef CrawlerSetupUrl
-  #define CrawlerSetupUrl "https://github.com/giorstergiopoulos-design/OpsisNewsCrawler/releases/latest/download/OpsisNewsCrawler-Setup.exe"
+  #define CrawlerSetupUrl "https://github.com/gs-applabs/OpsisNewsCrawler/releases/latest/download/OpsisNewsCrawler-Setup.exe"
 #endif
 
 ; Κοινή σελίδα εξαρτήσεων (.NET 10 Desktop Runtime / WebView2 Runtime) με τον installer του News

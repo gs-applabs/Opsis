@@ -52,17 +52,29 @@ public sealed class HygieneTests
         Assert.True(hits.Count == 0, string.Join("\n", hits));
     }
 
+
+    [Fact]
+    public void TheRepositoryRenameIsConsistent()
+    {
+        // The old owner name may appear only in the update trust list, history documents and patches; every shipped file uses the new one.
+        var old = "giorstergiopoulos" + "-design";
+        var root = Root();
+        var files = new[] { "Directory.Build.props", "MotionDeskStudio.csproj", "installer.iss", "LICENSE", "README.md", Path.Combine("suite", "apps.json"), Path.Combine("src", "Widgets", "WeatherProviders.cs") };
+        foreach (var f in files) Assert.DoesNotContain(old, File.ReadAllText(Path.Combine(root, f)));
+        Assert.Equal("gs-applabs/Opsis", UpdateCheckService.Repository);
+        Assert.True(UpdateCheckService.IsTrustedDownloadUrl("https://github.com/" + old + "/Opsis/releases/download/v1.0.0/OpsisSetup.exe"));
+    }
     [Fact]
     public void VersionInfoNamesTheSamePublisherEverywhere()
     {
         var vi = FileVersionInfo.GetVersionInfo(typeof(MainWindow).Assembly.Location);
-        Assert.Equal("giorstergiopoulos-design", vi.CompanyName);
+        Assert.Equal("gs-applabs", vi.CompanyName);
         Assert.Contains("Opsis", vi.ProductName);
         Assert.False(string.IsNullOrWhiteSpace(vi.FileDescription) && string.IsNullOrWhiteSpace(vi.Comments));
-        Assert.Contains("giorstergiopoulos-design", vi.LegalCopyright);
+        Assert.Contains("gs-applabs", vi.LegalCopyright);
         Assert.StartsWith(MainVersion(), vi.FileVersion);
         var script = File.ReadAllText(Path.Combine(Root(), "installer.iss"));
-        Assert.Contains("#define MyAppPublisher \"giorstergiopoulos-design\"", script);
+        Assert.Contains("#define MyAppPublisher \"gs-applabs\"", script);
         Assert.Contains("AppPublisherURL=", script);
         Assert.Contains("VersionInfoCompany=", script);
         Assert.Contains("#define MyAppVersion \"" + MainVersion() + "\"", script);
@@ -79,7 +91,7 @@ public sealed class HygieneTests
     public void TheLicenceIsTheStandardMitText()
     {
         var text = File.ReadAllText(Path.Combine(Root(), "LICENSE")).Replace("\r\n", "\n");
-        Assert.StartsWith("MIT License\n\nCopyright (c) 2026 giorstergiopoulos-design\n\nPermission is hereby granted, free of charge", text);
+        Assert.StartsWith("MIT License\n\nCopyright (c) 2026 gs-applabs\n\nPermission is hereby granted, free of charge", text);
         Assert.EndsWith("SOFTWARE.\n", text);
         Assert.DoesNotContain("Third-Party", text);
         Assert.True(text.Length < 1200, "the LICENSE file must hold only the licence (notices go to THIRD_PARTY_NOTICES.md)");
