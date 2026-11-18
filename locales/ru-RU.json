@@ -1037,5 +1037,12 @@
   "LockGif.RebootTitle": "Перезагрузить Windows?",
   "LockGif.RebootBody": "Функция Windows изменена. Чтобы экран блокировки анимировался, может потребоваться перезагрузка. Сначала сохраните работу, затем заблокируйте Windows для проверки.",
   "LockGif.RebootNow": "Перезагрузить сейчас",
-  "LockGif.RebootLater": "Позже"
+  "LockGif.RebootLater": "Позже",
+  "DesktopMenu.NewContainer": "Новый DeskContainer",
+  "DesktopMenu.ChangeWallpaper": "Сменить обои",
+  "DCM.Rename": "Переименовать контейнер...",
+  "DCM.Hide": "Скрыть контейнер",
+  "DCM.Cancel": "Отмена",
+  "DCX.PageHint": "Настройки, переименование и удаление контейнера находятся в его собственном меню (правый клик по контейнеру).",
+  "Win.RestartExplorerFail": "Не удалось перезапустить Проводник. Нажмите Ctrl+Shift+Esc, выберите «Запустить новую задачу» и введите explorer.exe."
 }

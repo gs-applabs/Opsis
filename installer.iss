@@ -346,6 +346,9 @@ Type: filesandordirs; Name: "{app}\containers"
 [Registry]
 ; Αυτόματη εκκίνηση μέσω Registry (αν επιλεχθεί στο wizard)
 Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: string; ValueName: "{#MyAppName}"; ValueData: """{app}\{#MyAppExeName}"""; Tasks: autostart; Flags: uninsdeletevalue
+; Desktop right-click verbs are opt-in (Opsis writes them itself, per user); uninstall removes them (DesktopMenuTests checks this list against the code)
+Root: HKCU; Subkey: "Software\Classes\DesktopBackground\Shell\OpsisNewContainer"; ValueType: none; Flags: dontcreatekey uninsdeletekey
+Root: HKCU; Subkey: "Software\Classes\DesktopBackground\Shell\OpsisNextWallpaper"; ValueType: none; Flags: dontcreatekey uninsdeletekey
 
 [Run]
 ; 1. Προαιρετική εγκατάσταση FFmpeg μέσω winget (μόνο αν ο χρήστης επέλεξε το tickbox παραπάνω).

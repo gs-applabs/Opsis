@@ -25,5 +25,8 @@
     <Reference Include="OpsisNewsCrawler.Plugin.Abstractions">
       <HintPath>../../libs/OpsisNewsCrawler.Plugin.Abstractions.dll</HintPath>
     </Reference>
+    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.2903.40" ExcludeAssets="all" GeneratePathProperty="true" />
+    <Reference Include="Microsoft.Web.WebView2.Core"><HintPath>$(PkgMicrosoft_Web_WebView2)/lib_manual/netcoreapp3.0/Microsoft.Web.WebView2.Core.dll</HintPath></Reference>
+    <Reference Include="Microsoft.Web.WebView2.WinForms"><HintPath>$(PkgMicrosoft_Web_WebView2)/lib_manual/netcoreapp3.0/Microsoft.Web.WebView2.WinForms.dll</HintPath></Reference>
   </ItemGroup>
 </Project>

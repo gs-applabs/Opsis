@@ -1037,5 +1037,12 @@
   "LockGif.RebootTitle": "Windows neu starten?",
   "LockGif.RebootBody": "Die Windows-Funktion wurde geändert. Ein Neustart kann nötig sein, bevor der Sperrbildschirm animiert wird. Speichern Sie zuerst Ihre Arbeit und sperren Sie danach Windows zur Kontrolle.",
   "LockGif.RebootNow": "Jetzt neu starten",
-  "LockGif.RebootLater": "Später"
+  "LockGif.RebootLater": "Später",
+  "DesktopMenu.NewContainer": "Neuer DeskContainer",
+  "DesktopMenu.ChangeWallpaper": "Hintergrund wechseln",
+  "DCM.Rename": "Container umbenennen...",
+  "DCM.Hide": "Container ausblenden",
+  "DCM.Cancel": "Abbrechen",
+  "DCX.PageHint": "Einstellungen, Umbenennen und Löschen eines Containers findest du in dessen eigenem Menü (Rechtsklick auf den Container).",
+  "Win.RestartExplorerFail": "Der Windows-Explorer konnte nicht neu gestartet werden. Drücke Strg+Umschalt+Esc, wähle «Neuen Task ausführen» und gib explorer.exe ein."
 }

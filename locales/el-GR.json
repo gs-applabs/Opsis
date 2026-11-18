@@ -1060,5 +1060,12 @@
   "LockGif.RebootTitle": "Επανεκκίνηση των Windows;",
   "LockGif.RebootBody": "Η λειτουργία των Windows άλλαξε. Μπορεί να χρειαστεί επανεκκίνηση για να κινηθεί η οθόνη κλειδώματος. Αποθήκευσε πρώτα τη δουλειά σου και μετά κλείδωσε τα Windows για έλεγχο.",
   "LockGif.RebootNow": "Επανεκκίνηση τώρα",
-  "LockGif.RebootLater": "Αργότερα"
+  "LockGif.RebootLater": "Αργότερα",
+  "DesktopMenu.NewContainer": "Νέο DeskContainer",
+  "DesktopMenu.ChangeWallpaper": "Αλλαγή wallpaper",
+  "DCM.Rename": "Μετονομασία container...",
+  "DCM.Hide": "Απόκρυψη container",
+  "DCM.Cancel": "Άκυρο",
+  "DCX.PageHint": "Οι ρυθμίσεις, η μετονομασία και η διαγραφή κάθε container βρίσκονται στο δικό του μενού (δεξί κλικ πάνω του).",
+  "Win.RestartExplorerFail": "Δεν ήταν δυνατή η επανεκκίνηση του Εξερευνητή των Windows. Πάτα Ctrl+Shift+Esc, «Εκτέλεση νέας εργασίας» και γράψε explorer.exe."
 }

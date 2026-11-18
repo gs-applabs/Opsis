@@ -58,7 +58,7 @@ public static class WorkspaceProfileService
         MotionDesk.Services.AtomicFile.WriteAllText(Path.Combine(Root, name + ".json"), JsonSerializer.Serialize(profile, new JsonSerializerOptions { WriteIndented = true }));
     }
 
-    public static bool Load(string name)
+    public static bool Load(string name, bool staggered = false)
     {
         var path = Path.Combine(Root, Sanitize(name) + ".json");
         if (!File.Exists(path)) return false;
@@ -86,7 +86,8 @@ public static class WorkspaceProfileService
         WidgetSnapEngine.SnapThreshold = Math.Clamp(profile.AppSettings.SnapThreshold, 5, 50);
         WidgetSnapEngine.GridSize = Math.Clamp(profile.AppSettings.GridSize, 5, 100);
 
-        WidgetHostEngine.Instance.RestoreSnapshots(profile.Widgets ?? new List<WidgetSnapshot>());
+        if (staggered) WidgetHostEngine.Instance.RestoreSnapshotsStaggered(profile.Widgets ?? new List<WidgetSnapshot>());      // start-up: one widget (one WebView2) per tick
+        else WidgetHostEngine.Instance.RestoreSnapshots(profile.Widgets ?? new List<WidgetSnapshot>());
         // DeskContainers keep their own profiles inside the DeskContainers engine (menu > Profiles), not in the workspace profile.
         // Τα DeskZones layouts ΔΕΝ είναι πλέον μέρος του workspace profile — ζουν ανεξάρτητα στο
         // δικό τους αρχείο (ZoneLayoutStore), ακριβώς όπως τα πραγματικά FancyZones layouts δεν

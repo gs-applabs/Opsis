@@ -211,21 +211,38 @@ namespace MotionDesk.Widgets
         /// <summary>True when the point is over the desktop icon list (not over another window).</summary>
         public static bool IsDesktopListAt(Point screenPos) { try { var l = FindDesktopListView(); return l != IntPtr.Zero && WindowFromPoint(screenPos) == l; } catch (Exception) { return false; } }
 
+        /// <summary>
+        /// Pure: maps the display names of selected desktop icons (extension hidden, as Explorer shows them) to file paths. <paramref name="entriesPerFolder"/> is the content of the
+        /// user desktop first, then the public desktop; the first folder that has the name wins, desktop.ini is never offered, every path appears once.
+        /// </summary>
+        public static List<string> MatchDisplayNames(IEnumerable<string> names, IReadOnlyList<IReadOnlyList<string>> entriesPerFolder)
+        {
+            var result = new List<string>(); var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var n in names)
+            {
+                if (string.IsNullOrWhiteSpace(n)) continue;
+                foreach (var folder in entriesPerFolder)
+                {
+                    // an exact file name beats a name without extension (a folder "a" and a shortcut "a.lnk" can coexist)
+                    var hit = folder.FirstOrDefault(f => string.Equals(Path.GetFileName(f), n, StringComparison.OrdinalIgnoreCase))
+                              ?? folder.FirstOrDefault(f => string.Equals(Path.GetFileNameWithoutExtension(f), n, StringComparison.OrdinalIgnoreCase));
+                    if (hit == null || string.Equals(Path.GetFileName(hit), "desktop.ini", StringComparison.OrdinalIgnoreCase)) continue;
+                    if (seen.Add(hit)) result.Add(hit);
+                    break;
+                }
+            }
+            return result;
+        }
+
         /// <summary>Full paths of the desktop icons that are selected right now (rubber-band or Ctrl+click), matched by name in the user and the public desktop folders.</summary>
         public static List<string> SelectedDesktopPaths()
         {
             var names = new List<string>();
             try { WithDesktopList((hp, list, count) => { for (int i = 0; i < count; i++) if ((SendMessage(list, 0x102C, (IntPtr)i, (IntPtr)2).ToInt32() & 2) != 0) names.Add(GetItemTextRemote(hp, list, i)); }); } catch (Exception) { }
             var dirs = new[] { Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory), Environment.GetFolderPath(Environment.SpecialFolder.CommonDesktopDirectory) };
-            var result = new List<string>();
-            foreach (var n in names)
-            {
-                foreach (var d in dirs)
-                {
-                    try { var hit = Directory.EnumerateFileSystemEntries(d).FirstOrDefault(f => string.Equals(Path.GetFileName(f), n, StringComparison.OrdinalIgnoreCase) || string.Equals(Path.GetFileNameWithoutExtension(f), n, StringComparison.OrdinalIgnoreCase)); if (hit != null) { result.Add(hit); break; } } catch (Exception) { }
-                }
-            }
-            return result;
+            var entries = new List<IReadOnlyList<string>>();
+            foreach (var d in dirs) { try { entries.Add(Directory.EnumerateFileSystemEntries(d).ToList()); } catch (Exception) { entries.Add(Array.Empty<string>()); } }
+            return MatchDisplayNames(names, entries);
         }
 
         /// <summary>Hides the desktop icons of the given files (only files that really are on the desktop). Returns how many were hidden.</summary>

@@ -1037,5 +1037,12 @@
   "LockGif.RebootTitle": "إعادة تشغيل Windows؟",
   "LockGif.RebootBody": "تم تغيير ميزة Windows. قد تلزم إعادة التشغيل قبل أن تتحرك شاشة القفل. احفظ عملك أولًا ثم اقفل Windows للتحقق.",
   "LockGif.RebootNow": "إعادة التشغيل الآن",
-  "LockGif.RebootLater": "لاحقًا"
+  "LockGif.RebootLater": "لاحقًا",
+  "DesktopMenu.NewContainer": "DeskContainer جديد",
+  "DesktopMenu.ChangeWallpaper": "تغيير الخلفية",
+  "DCM.Rename": "إعادة تسمية الحاوية...",
+  "DCM.Hide": "إخفاء الحاوية",
+  "DCM.Cancel": "إلغاء",
+  "DCX.PageHint": "إعدادات كل حاوية وإعادة تسميتها وحذفها في قائمتها الخاصة (انقر بالزر الأيمن على الحاوية).",
+  "Win.RestartExplorerFail": "تعذّر تشغيل مستكشف ويندوز من جديد. اضغط Ctrl+Shift+Esc ثم «تشغيل مهمة جديدة» واكتب explorer.exe."
 }

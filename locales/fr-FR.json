@@ -1037,5 +1037,12 @@
   "LockGif.RebootTitle": "Redémarrer Windows ?",
   "LockGif.RebootBody": "La fonctionnalité Windows a été modifiée. Un redémarrage peut être nécessaire pour animer l'écran de verrouillage. Enregistrez votre travail, puis verrouillez Windows pour vérifier.",
   "LockGif.RebootNow": "Redémarrer maintenant",
-  "LockGif.RebootLater": "Plus tard"
+  "LockGif.RebootLater": "Plus tard",
+  "DesktopMenu.NewContainer": "Nouveau DeskContainer",
+  "DesktopMenu.ChangeWallpaper": "Changer de fond d'écran",
+  "DCM.Rename": "Renommer le conteneur...",
+  "DCM.Hide": "Masquer le conteneur",
+  "DCM.Cancel": "Annuler",
+  "DCX.PageHint": "Les réglages, le renommage et la suppression d'un conteneur sont dans son propre menu (clic droit sur le conteneur).",
+  "Win.RestartExplorerFail": "L'Explorateur Windows n'a pas pu être redémarré. Appuyez sur Ctrl+Maj+Échap, choisissez « Exécuter une nouvelle tâche » et saisissez explorer.exe."
 }

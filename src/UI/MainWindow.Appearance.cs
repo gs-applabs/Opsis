@@ -206,8 +206,12 @@ namespace MotionDesk.UI
             Bt(cr, "Win.RestartExplorer", () =>
             {
                 if (MessageBox.Show(this, T("Win.RestartExplorerAsk"), T("Win.RestartExplorer"), MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes) return;
-                try { using var k = System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(TrustedExe.System32("taskkill.exe"), "/f /im explorer.exe") { CreateNoWindow = true, UseShellExecute = false }); k?.WaitForExit(5000); }
-                catch (Exception e) { Fail(e); }
+                // off the UI thread (it waits for the new shell); Windows normally restarts it, if not Opsis starts it from %WINDIR%
+                System.Threading.Tasks.Task.Run(ExplorerRestarter.RestartReal).ContinueWith(t =>
+                {
+                    if (t.IsCompletedSuccessfully && t.Result) return;
+                    try { BeginInvoke(new Action(() => MessageBox.Show(this, T("Win.RestartExplorerFail"), T("Win.RestartExplorer"), MessageBoxButtons.OK, MessageBoxIcon.Warning))); } catch (Exception) { }
+                });
             }, 190);
 
             // ---- wallpaper slideshow (static pictures; the animated wallpaper library is on the Wallpaper page)

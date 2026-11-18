@@ -1037,5 +1037,12 @@
   "LockGif.RebootTitle": "Riavviare Windows?",
   "LockGif.RebootBody": "La funzionalità di Windows è stata modificata. Potrebbe servire un riavvio perché la schermata di blocco si animi. Salva il lavoro, poi blocca Windows per verificare.",
   "LockGif.RebootNow": "Riavvia ora",
-  "LockGif.RebootLater": "Più tardi"
+  "LockGif.RebootLater": "Più tardi",
+  "DesktopMenu.NewContainer": "Nuovo DeskContainer",
+  "DesktopMenu.ChangeWallpaper": "Cambia sfondo",
+  "DCM.Rename": "Rinomina contenitore...",
+  "DCM.Hide": "Nascondi contenitore",
+  "DCM.Cancel": "Annulla",
+  "DCX.PageHint": "Impostazioni, rinomina ed eliminazione di un contenitore sono nel suo menu (clic destro sul contenitore).",
+  "Win.RestartExplorerFail": "Impossibile riavviare Esplora risorse. Premi Ctrl+Maiusc+Esc, scegli «Esegui nuova attività» e digita explorer.exe."
 }

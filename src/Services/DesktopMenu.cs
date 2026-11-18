@@ -6,7 +6,7 @@ using Opsis.Containers;
 namespace MotionDesk.Services
 {
     /// <summary>
-    /// Desktop right-click entries (plan 0B.3), opt-in and per-user (HKCU, no elevation): "New DeskContainer" and "Next animated wallpaper".
+    /// Desktop right-click entries (plan 0B.3), opt-in and per-user (HKCU, no elevation): "New DeskContainer" and "Change wallpaper" (next animated wallpaper).
     /// Basis (Microsoft Learn, "Creating Shortcut Menu Handlers" / "Add a File Explorer context menu command to a packaged desktop app"): static verbs under
     /// DesktopBackground\Shell are the documented classic mechanism and appear in the classic menu ("Show more options" / Shift+right-click on Windows 11); the NEW Windows 11
     /// top-level menu needs an IExplorerCommand COM handler registered with package identity (sparse package + code signing), which is not done here.
@@ -15,30 +15,41 @@ namespace MotionDesk.Services
     public static class DesktopMenu
     {
         private const string Root = @"Software\Classes\DesktopBackground\Shell\";
-        private static readonly (string Key, string Title, string Action)[] Verbs =
+        private static readonly (string Key, string TitleKey, string Fallback, string Action)[] Verbs =
         {
-            ("OpsisNewContainer", "Opsis: New DeskContainer", "new-container"),
-            ("OpsisNextWallpaper", "Opsis: Next animated wallpaper", "next-video"),
+            ("OpsisNewContainer", "DesktopMenu.NewContainer", "New DeskContainer", "new-container"),
+            ("OpsisNextWallpaper", "DesktopMenu.ChangeWallpaper", "Change wallpaper", "next-video"),
         };
+
+        /// <summary>Registry keys the verbs live under (relative to the root); the installer removes exactly these.</summary>
+        public static IEnumerable<string> VerbKeyPaths => Verbs.Select(v => Root + v.Key);
 
         public static string ExePath => Environment.ProcessPath ?? "";
 
-        public static void Register(string exe)
+        private static string TitleOf(string key, string fallback)
         {
-            foreach (var (key, title, action) in Verbs)
+            try { var t = LocalizationManager.T(key); return string.IsNullOrWhiteSpace(t) || t == key ? fallback : t; } catch (Exception) { return fallback; }
+        }
+
+        /// <param name="root">Registry root; HKCU by default, a throw-away key in tests (never HKLM, nothing needs elevation).</param>
+        public static void Register(string exe, RegistryKey? root = null)
+        {
+            root ??= Registry.CurrentUser;
+            foreach (var (key, titleKey, fallback, action) in Verbs)
             {
-                using var k = Registry.CurrentUser.CreateSubKey(Root + key);
-                k.SetValue("MUIVerb", title); k.SetValue("Icon", "\"" + exe + "\"");
+                using var k = root.CreateSubKey(Root + key);
+                k.SetValue("MUIVerb", TitleOf(titleKey, fallback)); k.SetValue("Icon", "\"" + exe + "\"");
                 using var c = k.CreateSubKey("command"); c.SetValue("", "\"" + exe + "\" --desktop-action " + action);
             }
         }
 
-        public static void Unregister()
+        public static void Unregister(RegistryKey? root = null)
         {
-            foreach (var (key, _, _) in Verbs) { try { Registry.CurrentUser.DeleteSubKeyTree(Root + key, false); } catch (Exception) { } }
+            root ??= Registry.CurrentUser;
+            foreach (var path in VerbKeyPaths) { try { root.DeleteSubKeyTree(path, false); } catch (Exception) { } }
         }
 
-        public static bool IsRegistered() { try { using var k = Registry.CurrentUser.OpenSubKey(Root + Verbs[0].Key); return k != null; } catch (Exception) { return false; } }
+        public static bool IsRegistered(RegistryKey? root = null) { try { using var k = (root ?? Registry.CurrentUser).OpenSubKey(Root + Verbs[0].Key); return k != null; } catch (Exception) { return false; } }
 
         public static void Apply(bool enabled) { if (enabled) Register(ExePath); else Unregister(); }
 

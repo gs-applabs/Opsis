@@ -38,7 +38,7 @@ namespace MotionDesk.UI
                 v => { var a = AppSettings.Load(); a.WidgetsTintPercent = v; a.Save(); ThemeManager.NotifyChanged(); }, 0, "%"));
             return col;
         }
-        // DeskContainers page: on/off, the containers (title bar colour / opacity / height / font, lock, delete) and the layout snapshots.
+        // DeskContainers page: global options only (on/off, list of containers, snapshots); per-container settings are in the container's own menu.
         private void BuildContainersSettings(Control panel)
         {
             var engine = AddCardSection(panel, Lx("DeskContainers (νέος πυρήνας)", "DeskContainers (new core)"));
@@ -64,31 +64,9 @@ namespace MotionDesk.UI
             if (list.Count == 0) { AddText(card, LocalizationManager.T("DCX.NoContainers")); }
             else
             {
-                var names = list.Select((c, n) => (string.IsNullOrWhiteSpace(c.Title) ? "Container" : c.Title) + "  (" + (n + 1) + ")").ToArray();
-                int sel = 0;
-                var holder = new FlowLayoutPanel { AutoSize = true, FlowDirection = FlowDirection.TopDown, WrapContents = false, Margin = new Padding(0) };
-                void Build()
-                {
-                    foreach (Control old in holder.Controls.Cast<Control>().ToList()) { holder.Controls.Remove(old); old.Dispose(); }
-                    var c = host.Containers().ElementAtOrDefault(sel); if (c == null) return;
-                    string id = c.Id;
-                    // the SAME panel as in the container's own right-click settings: palette, fonts, sizes, tint, glossy, click mode, hover roll-up, exclusion from quick-hide
-                    holder.Controls.Add(new MotionDesk.Containers.ContainerSettingsPanel(host, c, dark: true));
-                    holder.Controls.Add(SettingsView.Checkbox(Lx("Κρυμμένο", "Hidden"), c.Hidden, v => host.SetHidden(id, v)));
-                    var del = new HoverButton { Text = LocalizationManager.T("DCX.DeleteContainer"), Width = 230, Height = 32, FlatStyle = FlatStyle.Flat, ForeColor = UiTheme.TextPrimary, BackColor = UiTheme.SurfaceHover, Cursor = Cursors.Hand, Margin = new Padding(0, 6, 0, 0) };
-                    del.FlatAppearance.BorderSize = 0;
-                    del.Click += (_, _) =>
-                    {
-                        string name = string.IsNullOrWhiteSpace(c.Title) ? c.Id : c.Title;
-                        if (MessageBox.Show(this, string.Format(LocalizationManager.T("DCX.DeleteConfirm"), name), LocalizationManager.T("DCX.DeleteTitle"), MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes) return;
-                        host.Service.Handle("delete", new System.Text.Json.Nodes.JsonObject { ["id"] = id }); host.Sync(); ShowDeskContainers();
-                    };
-                    holder.Controls.Add(del);
-                }
-                var pick = new FlatComboBox { Width = 300, Margin = new Padding(0, 0, 0, 8) };
-                pick.SetItems(names, names[0]);
-                pick.SelectedIndexChanged += (_, _) => { sel = Math.Max(0, pick.SelectedIndex); Build(); };
-                card.Controls.Add(pick); card.Controls.Add(holder); Build();
+                // global page: only the list (live names); the settings, rename and delete of ONE container live in that container's own menu
+                for (int n = 0; n < list.Count; n++) AddText(card, (n + 1) + ".  " + (string.IsNullOrWhiteSpace(list[n].Title) ? "Container" : list[n].Title) + "  (" + list[n].Items.Count + ")" + (list[n].Hidden ? "  - " + LocalizationManager.T("DCM.Hide") : ""));
+                AddText(card, LocalizationManager.T("DCX.PageHint"));
             }
 
             // ---- layout snapshots (named layouts; the rules of the installation are kept when one is loaded)
