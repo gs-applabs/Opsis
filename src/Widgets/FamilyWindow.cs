@@ -72,6 +72,27 @@ namespace MotionDesk.Widgets
         }
     }
 
+    /// <summary>The real app icons of the family (embedded as suite-icon-&lt;id&gt;.png, 96 px). Returns null for an app without an icon (the card then shows the initial).</summary>
+    internal static class FamilyIcons
+    {
+        private static readonly Dictionary<string, Image?> Cache = new(StringComparer.OrdinalIgnoreCase);
+        internal static string ResourceName(string id) => $"suite-icon-{id}.png";
+        internal static bool Exists(string id) => typeof(FamilyIcons).Assembly.GetManifestResourceInfo(ResourceName(id)) != null;
+        public static Image? Get(string id)
+        {
+            if (Cache.TryGetValue(id, out var cached)) return cached;
+            Image? img = null;
+            try
+            {
+                using var s = typeof(FamilyIcons).Assembly.GetManifestResourceStream(ResourceName(id));
+                if (s != null) { using var tmp = new Bitmap(s); img = new Bitmap(tmp); }
+            }
+            catch (Exception) { }
+            Cache[id] = img;
+            return img;
+        }
+    }
+
     /// <summary>The "Opsis family" window and the "Welcome guide" window: both belong to Opsis itself (plugins do not offer them when they are hosted by Opsis).</summary>
     internal static class FamilyWindows
     {
@@ -116,7 +137,9 @@ namespace MotionDesk.Widgets
                     using var pen = new Pen(self || installed != null ? UiTheme.AccentCyan : UiTheme.Border, self ? 2 : 1);
                     e.Graphics.DrawRectangle(pen, 0, 0, card.Width - 1, card.Height - 1);
                 };
-                card.Controls.Add(new Label { Text = app.Name.Length > 0 ? app.Name[..1].ToUpperInvariant() : "?", Location = new Point(16, 16), Size = new Size(48, 48), TextAlign = ContentAlignment.MiddleCenter,
+                var icon = FamilyIcons.Get(app.Id);
+                if (icon != null) card.Controls.Add(new PictureBox { Image = icon, SizeMode = PictureBoxSizeMode.Zoom, Location = new Point(16, 16), Size = new Size(48, 48), BackColor = Color.Transparent });
+                else card.Controls.Add(new Label { Text = app.Name.Length > 0 ? app.Name[..1].ToUpperInvariant() : "?", Location = new Point(16, 16), Size = new Size(48, 48), TextAlign = ContentAlignment.MiddleCenter,
                     Font = new Font("Segoe UI Semibold", 18f), BackColor = UiTheme.AccentBlue, ForeColor = Color.White });
                 card.Controls.Add(new Label { Text = app.Name, Location = new Point(76, 14), Size = new Size(228, 26), Font = new Font("Segoe UI Semibold", 13f), ForeColor = UiTheme.TextPrimary, AutoEllipsis = true });
                 card.Controls.Add(new Label { Text = self || installed != null ? "●" : "○", Location = new Point(76, 42), Size = new Size(228, 20), ForeColor = self || installed != null ? UiTheme.AccentCyan : UiTheme.TextMuted });

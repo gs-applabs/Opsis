@@ -116,6 +116,20 @@ namespace MotionDesk.Services
                 else problems.Add("the Help window did not open");
             }
             catch (Exception ex) { problems.Add("Help window: " + ex.Message); }
+            try
+            {
+                MotionDesk.Widgets.FamilyWindows.ShowFamily(); Pump(800);
+                var fam = Application.OpenForms.OfType<Form>().FirstOrDefault(f => f.Tag as string == "opsis-family");
+                if (fam != null)
+                {
+                    using var fb = new Bitmap(fam.Width, fam.Height);
+                    fam.DrawToBitmap(fb, new Rectangle(0, 0, fam.Width, fam.Height));
+                    fb.Save(Path.Combine(folder, "family-window.png"), System.Drawing.Imaging.ImageFormat.Png);
+                    fam.Close();
+                }
+                else problems.Add("the family window did not open");
+            }
+            catch (Exception ex) { problems.Add("Family window: " + ex.Message); }
             foreach (var key in win.PageKeys.Where(k => only.Length == 0 || only.Contains(k)).ToList())
             {
                 Mark("page " + key);
