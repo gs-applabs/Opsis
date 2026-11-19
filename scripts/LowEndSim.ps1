@@ -12,7 +12,7 @@
   διαφέρουν) αλλά πιάνει τα προβλήματα που φαίνονται όταν οι πόροι μειωθούν δραστικά.
 #>
 param(
-  [string]$Exe = "$PSScriptRoot\..\bin\Release\net10.0-windows10.0.19041.0\win-x64\Opsis.exe",
+  [string]$Exe = "$PSScriptRoot\..\bin\Release\net11.0-windows10.0.19041.0\win-x64\Opsis.exe",
   [int]$DurationSec = 90,
   [int]$LogicalCores = 2,
   [double]$CpuSpeedFactor = 0.5,

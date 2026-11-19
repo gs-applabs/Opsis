@@ -48,7 +48,7 @@ Opsis Appearance plugin (repo `OpsisAppearance`, cloned in `DocumentsOpsisAppear
 Name: Opsis - Desktop Customization (renamed 2026-10-13 from "MotionDesk Studio" — see the v2.0 rename entry below)
 
 ## Technology
-- .NET: 10.0 (net10.0-windows10.0.19041.0), win-x64 (upgraded from 8.0, see v1.9.0 below)
+- .NET: 11.0 (net11.0-windows10.0.19041.0), win-x64 — the 2.6.0 line requires the .NET 11 Desktop Runtime (2.4.6.x stays net10; before that 8.0, see v1.9.0 below). Plugins must target the same runtime as the host: a net11 plugin does not load in a net10 host, a net11 host loads older plugins.
 - C#: WinForms (NOT WPF — the older root CLAUDE.md said WPF; corrected here per actual source, System.Windows.Forms throughout)
 - UI: Native WinForms, WebView2 for wallpaper/HTML widgets
 - Mobile: N/A

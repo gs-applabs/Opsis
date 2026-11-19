@@ -27,7 +27,7 @@ function Step($msg) { Write-Host "[*] $msg" -ForegroundColor Cyan }
 function Fail($msg) { Write-Host "[-] $msg" -ForegroundColor Red; exit 1 }
 
 if (-not (Test-Path $Csproj)) { Fail "$Csproj not found in $root. Run from the Opsis repo (scripts\ must be inside it)." }
-if (-not (Get-Command dotnet -ErrorAction SilentlyContinue)) { Fail "dotnet SDK not found. Install the .NET 10 SDK." }
+if (-not (Get-Command dotnet -ErrorAction SilentlyContinue)) { Fail "dotnet SDK not found. Install the .NET 11 SDK." }
 
 Step "dotnet build"
 & dotnet build $Csproj -c $Configuration
@@ -35,8 +35,8 @@ if ($LASTEXITCODE -ne 0) { Fail "Build failed (exit $LASTEXITCODE)." }
 
 Step "dotnet publish"
 # ΔΙΟΡΘΩΣΗ (PHASE0_REPORT.md): το πραγματικό TFM αυτού του repo είναι
-# net10.0-windows10.0.19041.0, όχι το γενικό net10.0 που υπέθετε η πρώτη εκδοχή.
-$publishDir = Join-Path $root "bin\$Configuration\net10.0-windows10.0.19041.0\$Runtime\publish"
+# net11.0-windows10.0.19041.0, όχι το γενικό net11.0 που υπέθετε η πρώτη εκδοχή.
+$publishDir = Join-Path $root "bin\$Configuration\net11.0-windows10.0.19041.0\$Runtime\publish"
 & dotnet publish $Csproj -c $Configuration -r $Runtime --self-contained false
 if ($LASTEXITCODE -ne 0) { Fail "Publish failed (exit $LASTEXITCODE)." }
 if (-not (Test-Path $publishDir)) { Fail "Publish dir not found: $publishDir (check TargetFramework / output path)." }

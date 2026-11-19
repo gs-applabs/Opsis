@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>
+    <TargetFramework>net11.0-windows10.0.19041.0</TargetFramework>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <SelfContained>false</SelfContained>
     <UseWindowsForms>true</UseWindowsForms>
@@ -17,7 +17,7 @@
     <ApplicationIcon>assets\Opsis.ico</ApplicationIcon>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <!-- .NET 10 WinForms SDK: WFO1000 ζητάει [DesignerSerializationVisibility] σε κάθε public
+    <!-- .NET 11 WinForms SDK: WFO1000 ζητάει [DesignerSerializationVisibility] σε κάθε public
          property custom Control για τον Designer serializer. Αυτό το project ΔΕΝ χρησιμοποιεί ΠΟΤΕ
          τον WinForms Visual Designer (όλα τα controls χτίζονται με κώδικα) — το attribute δεν θα
          είχε κανένα πρακτικό αποτέλεσμα, μόνο θα πρόσθετε ~35+ άσχετα attributes σε custom controls.

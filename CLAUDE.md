@@ -1006,7 +1006,7 @@ Carried over from the previous project-specific CLAUDE.md, corrected against act
 
 - **Application name:** Opsis - Desktop Customization (renamed 2026-10-13 from "MotionDesk Studio" — see the v2.0 rename entry in `PROJECT_STATE.md` for what did/didn't change: exe is now `Opsis.exe`, AppData folder is `%AppData%\Opsis` with automatic one-time migration from the old `%AppData%\MotionDeskStudio`, GitHub repo is now `giorstergiopoulos-design/Opsis`. The `.csproj` **file itself** is still named `MotionDeskStudio.csproj` and the C# `RootNamespace`/`namespace MotionDesk.*` are still `MotionDesk` — both deliberately left alone as invisible-to-the-user, high-churn-for-no-benefit renames).
 - **Target platform:** Windows 10 / Windows 11
-- **Framework:** .NET 10.0 (upgraded from .NET 8 — see v1.9.0 in `PROJECT_STATE.md`) — **WinForms** (not WPF as a much older version of this file said; verify against `System.Windows.Forms` usage throughout `src/`), with Win32 interop (P/Invoke) for the WorkerW/DWM wallpaper engine and WebView2 for HTML-based wallpaper/widget content.
+- **Framework:** .NET 11.0 on the 2.6.0 line (net11.0-windows10.0.19041.0; 2.4.6.x stays net10; earlier .NET 10 upgrade from .NET 8 — see v1.9.0 in `PROJECT_STATE.md`) — **WinForms** (not WPF as a much older version of this file said; verify against `System.Windows.Forms` usage throughout `src/`), with Win32 interop (P/Invoke) for the WorkerW/DWM wallpaper engine and WebView2 for HTML-based wallpaper/widget content.
 - **Build:** `dotnet build MotionDeskStudio.csproj -c Release`
 - **Run:** `RunLatest.bat`, or `dotnet run --project MotionDeskStudio.csproj`
 - **Publish for installer:** `dotnet publish MotionDeskStudio.csproj -c Release -r win-x64 --self-contained false`

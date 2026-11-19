@@ -42,7 +42,7 @@ function Build-MotionDesk($p) {
         $running = Get-Process -Name 'MotionDesk' -ErrorAction SilentlyContinue
         if ($running) { Write-Host 'Closing running MotionDesk.exe before build...' -ForegroundColor Yellow; $running | Stop-Process -Force; Start-Sleep -Seconds 2 }
         Run dotnet @('build','MotionDeskStudio.csproj','-c','Release')
-        # NO -o: installer.iss reads bin\Release\net8.0-windows10.0.19041.0\win-x64\publish
+        # NO -o: installer.iss reads bin\Release\net11.0-windows10.0.19041.0\win-x64\publish
         Run dotnet @('publish','MotionDeskStudio.csproj','-c','Release','-r','win-x64','--self-contained','false')
         if (-not $NoInstaller) { Run $Iscc @('installer.iss'); "-> $($p.Path)\Output\MotionDeskStudioSetup.exe" }
     } finally { Pop-Location }

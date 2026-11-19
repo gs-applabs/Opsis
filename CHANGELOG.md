@@ -4,6 +4,7 @@
 
 ## 2.6.0 (2026-11-18)
 
+- **.NET 11:** η γραμμή 2.6.0 στοχεύει net11.0-windows10.0.19041.0 και **απαιτεί .NET 11 Desktop Runtime** (ο installer το ζητά/εγκαθιστά· η γραμμή 2.4.6.x μένει net10). Plugins πρέπει να στοχεύουν το ίδιο runtime με το host. Opsis.UI 0.5.1.
 - **Νέος μηχανισμός plugin 1.0.0 (φάση P):** contract `OpsisNewsCrawler.Plugin.Abstractions` 1.0.0.0 (μόνο προσθήκες: `IPluginUpdateSource`, `IPluginHostSettingsAware`)· τα plugins που χτίστηκαν με 0.8.0.0 φορτώνουν κανονικά, plugin χτισμένο με νεότερο contract απορρίπτεται με μήνυμα «χρειάζεται νεότερο Opsis»· οι ενημερώσεις plugins γίνονται ΜΟΝΟ από το κουμπί «Έλεγχος τώρα» του Opsis (GitHub release, trusted URL ΚΑΙ των δύο λογαριασμών, SHA-256, ασφαλές unzip, εφαρμογή στην επόμενη εκκίνηση)· plugin που άλλαξε περιεχόμενο ζητά ΜΙΑ νέα έγκριση (SHA-256), ποτέ σιωπηλή εμπιστοσύνη· κοινές ρυθμίσεις (γλώσσα, θέμα, επίπεδο απόδοσης, κλίμακα) μόνο στο Opsis· έλεγχος ίδιου SHA-256 στα αντίγραφα του contract (`tools/check-contract-sha.ps1`, test). Λεπτομέρειες: `docs/PHASE-P-STATUS.md`.
 - **Έκδοση:** «2.6.0» παντού (πλευρική μπάρα, tray, Discord, ιστορικό, installer `OpsisSetup-2.6.0`, exe)· ο αριθμός ορίζεται σε ΕΝΑ σημείο (`AppVersion`).
 - **Νέος πυρήνας DeskContainers (πειραματικός, `UseNativeContainers`):** γυάλινα παράθυρα με δικό τους τίτλο, drag & drop, κανόνες, snapshots, προσβασιμότητα· βλ. `docs/PLAN-2.6.0-PROGRESS.md`.
