@@ -83,3 +83,30 @@ namespace MotionDesk.Widgets
         }
     }
 }
+
+namespace MotionDesk.Widgets
+{
+    /// <summary>
+    /// 2.6.0 widget surface in the look of the shared Opsis.UI cards: rounded surface, a 1 px Border outline and the soft glass rim. In "Transparent" mode with the colour key there is no surface and no
+    /// outline (anti-aliased edges would leave a dark fringe on the see-through form); with a tint the translucent surface keeps the outline.
+    /// </summary>
+    internal sealed class WidgetCardPanel : System.Windows.Forms.Panel
+    {
+        public WidgetCardPanel()
+        {
+            SetStyle(System.Windows.Forms.ControlStyles.OptimizedDoubleBuffer | System.Windows.Forms.ControlStyles.AllPaintingInWmPaint | System.Windows.Forms.ControlStyles.ResizeRedraw, true);
+        }
+
+        protected override void OnPaint(System.Windows.Forms.PaintEventArgs e)
+        {
+            base.OnPaint(e);
+            if (MotionDesk.UI.WidgetTheme.IsColorKey || Width < 8 || Height < 8) return;
+            var g = e.Graphics;
+            g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+            var rect = new System.Drawing.Rectangle(0, 0, Width - 1, Height - 1);
+            using var path = Opsis.UI.FlatDraw.Rounded(rect, 12);
+            using (var pen = new System.Drawing.Pen(MotionDesk.UI.WidgetTheme.Border)) g.DrawPath(pen, path);
+            Opsis.UI.FlatDraw.GlassRim(g, path, rect);
+        }
+    }
+}

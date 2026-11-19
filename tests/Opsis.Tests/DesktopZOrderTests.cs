@@ -34,3 +34,27 @@ public sealed class DesktopZOrderTests
     public void NoDesktopWindowMeansNoDecision() =>
         Assert.Null(DesktopZOrder.InsertAfter(new List<IntPtr> { H(1), H(2) }, new HashSet<IntPtr>(), H(99)));
 }
+
+public sealed class DesktopZOrderInPlaceTests
+{
+    private static IntPtr H(int n) => new(n);
+    private static readonly HashSet<IntPtr> Desktop = new() { H(10), H(11) };
+
+    [Fact]
+    public void OtherContainersAndGlassPanesBetweenUsAndTheDesktopCountAsInPlace()
+    {
+        // top ... app(1) C1(50) pane1(51) C2(52) pane2(53) WorkerW(10)
+        var chain = new List<IntPtr> { H(1), H(50), H(51), H(52), H(53), H(10), H(11) };
+        var ours = new HashSet<IntPtr> { H(50), H(51), H(52), H(53) };
+        Assert.True(MotionDesk.Containers.DesktopZOrder.IsInPlace(chain, Desktop, H(50), ours.Contains));
+        Assert.True(MotionDesk.Containers.DesktopZOrder.IsInPlace(chain, Desktop, H(52), ours.Contains));
+    }
+
+    [Fact]
+    public void AForeignWindowBetweenUsAndTheDesktopIsNotInPlace()
+    {
+        var chain = new List<IntPtr> { H(50), H(7), H(10) };
+        Assert.False(MotionDesk.Containers.DesktopZOrder.IsInPlace(chain, Desktop, H(50), h => h == H(50)));
+        Assert.False(MotionDesk.Containers.DesktopZOrder.IsInPlace(new List<IntPtr> { H(1) }, Desktop, H(50), _ => true));
+    }
+}

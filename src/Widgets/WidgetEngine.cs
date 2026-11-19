@@ -696,7 +696,7 @@ namespace MotionDesk.Widgets
             BackColor = fullyTransparent ? Color.Black : UiTheme.Background;
             TransparencyKey = UiTheme.IsColorKey ? Color.Black : default;
 
-            var panel = new Panel { Dock = DockStyle.Fill, BackColor = UiTheme.SurfaceGlass, Padding = new Padding(14) };
+            var panel = new WidgetCardPanel { Dock = DockStyle.Fill, BackColor = UiTheme.SurfaceGlass, Padding = new Padding(14) };
             _themedPanel = panel;
             var titleBar = new Panel { Dock = DockStyle.Top, Height = 30, BackColor = Color.Transparent };
 

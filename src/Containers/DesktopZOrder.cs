@@ -46,15 +46,35 @@ namespace MotionDesk.Containers
             return set;
         }
 
+        /// <summary>
+        /// Pure: is <paramref name="self"/> already "just above the desktop"? Windows of ours (other containers, their glass panes) between it and the desktop do not count: before 2.6.0 only a desktop window
+        /// DIRECTLY below counted as "in place", so with two containers (or with glass on: the pane sits right below the container) every container was re-inserted every second, the panes
+        /// were re-seated by their own timer, and the windows flickered / swapped places all the time.
+        /// </summary>
+        public static bool IsInPlace(IReadOnlyList<IntPtr> chainTopToBottom, ISet<IntPtr> desktopWindows, IntPtr self, Func<IntPtr, bool> isOurs)
+        {
+            int i = -1;
+            for (int k = 0; k < chainTopToBottom.Count; k++) if (chainTopToBottom[k] == self) { i = k; break; }
+            if (i < 0) return false;
+            for (int j = i + 1; j < chainTopToBottom.Count; j++)
+            {
+                var h = chainTopToBottom[j];
+                if (desktopWindows.Contains(h)) return true;
+                if (!isOurs(h)) return false;
+            }
+            return false;
+        }
+
         /// <summary>Moves <paramref name="hwnd"/> to just above the desktop. Returns false when no desktop window exists (Explorer is restarting): the caller tries again later.</summary>
-        public static bool Place(IntPtr hwnd)
+        public static bool Place(IntPtr hwnd, ISet<IntPtr>? siblings = null)
         {
             var desktop = DesktopWindows();
             if (desktop.Count == 0) return false;
             var chain = Chain();
             // already in place? (cheap check: the window right below us in the chain is a desktop window)
-            int i = chain.IndexOf(hwnd);
-            if (i >= 0 && i + 1 < chain.Count && desktop.Contains(chain[i + 1])) return true;
+            var sb = new StringBuilder(32);
+            bool Ours(IntPtr h) { if (siblings != null && siblings.Contains(h)) return true; sb.Clear(); GetClassName(h, sb, 32); return sb.ToString() == "OpsisGlassPane"; }
+            if (IsInPlace(chain, desktop, hwnd, Ours)) return true;
             var after = InsertAfter(chain, desktop, hwnd);
             const uint Flags = 0x0001 | 0x0002 | 0x0010 | 0x0200 | 0x0040;   // NOSIZE | NOMOVE | NOACTIVATE | NOOWNERZORDER | SHOWWINDOW
             return SetWindowPos(hwnd, after ?? HwndTop, 0, 0, 0, 0, Flags);

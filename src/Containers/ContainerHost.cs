@@ -233,7 +233,7 @@ namespace MotionDesk.Containers
         public void ReseatZOrder()
         {
             if (KeepOnTopForTests) { foreach (var w in _windows.Values) if (w.IsHandleCreated && !w.TopMost) w.TopMost = true; return; }
-            foreach (var w in _windows.Values) if (w.IsHandleCreated && w.Visible) DesktopZOrder.Place(w.Handle);
+            { var mine = new HashSet<IntPtr>(_windows.Values.Where(x => x.IsHandleCreated).Select(x => x.Handle)); foreach (var w in _windows.Values) if (w.IsHandleCreated && w.Visible) DesktopZOrder.Place(w.Handle, mine); }
         }
 
         /// <summary>Phase 5: rules (monitor count, process running, time of day, fullscreen app) are evaluated every 3 s, edge-triggered; cheap when there are none.</summary>

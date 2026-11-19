@@ -130,6 +130,23 @@ namespace MotionDesk.Services
                 else problems.Add("the family window did not open");
             }
             catch (Exception ex) { problems.Add("Family window: " + ex.Message); }
+            // OPSIS_AUDIT_WIDGETS=1: opens a few native widgets (NOT through SpawnWidget: that one would register Opsis for Windows start-up), screenshots each one and closes it
+            if (Environment.GetEnvironmentVariable("OPSIS_AUDIT_WIDGETS") == "1")
+            {
+                foreach (var wid in new[] { "sysmon", "clock", "disk", "network" })
+                {
+                    try
+                    {
+                        using var w = new MotionDesk.Widgets.WidgetWindow(wid, 80, 80, 340, 240);
+                        w.Show(); Pump(1500);
+                        using var wb = new Bitmap(w.Width, w.Height);
+                        w.DrawToBitmap(wb, new Rectangle(0, 0, w.Width, w.Height));
+                        wb.Save(Path.Combine(folder, "widget-" + wid + ".png"), System.Drawing.Imaging.ImageFormat.Png);
+                        w.Close();
+                    }
+                    catch (Exception ex) { problems.Add($"widget {wid}: {ex.Message}"); }
+                }
+            }
             foreach (var key in win.PageKeys.Where(k => only.Length == 0 || only.Contains(k)).ToList())
             {
                 Mark("page " + key);
