@@ -2534,8 +2534,10 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
             _currentPageKey = "DeskStrip";
             var panel = CreatePagePanel();
             // ---------- DeskStrip ----------
-            var deskStripCard = AddCardSection(panel, LocalizationManager.T("Personalization.SectionDeskStrip"));
-            AddText(deskStripCard, LocalizationManager.T("Personalization.DeskStripIntro"));
+            // 2.6.0 page template: subtitle, then the cards Basics / Behaviour / Appearance / Pinned apps (advanced rows would follow the Advanced marker of a card)
+            var deskStripCard = panel;
+            AddText(panel, LocalizationManager.T("Personalization.DeskStripIntro"));
+            AddSection(panel, LocalizationManager.T("Page.Basic"));
 
             var deskStripToggle = new FlatToggle { RowWidth = 700, Text = LocalizationManager.T("Personalization.EnableDeskStrip"), Checked = DeskStripHostEngine.Instance.IsEnabled, BackColor = UiTheme.Surface, Margin = new Padding(0, 4, 0, 10) };
             deskStripCard.Controls.Add(deskStripToggle);
@@ -2558,10 +2560,12 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                 deskStripCard.Controls.Add(cb);
                 return cb;
             }
+            AddSection(panel, LocalizationManager.T("Page.Behaviour"));
             DockCheck(Ld("Αυτόματη απόκρυψη (εμφάνιση από την άκρη της οθόνης)", "Auto-hide (reveal from the screen edge)"), dockCfg.AutoHide, (c, v) => c.AutoHide = v);
-            DockCheck(Ld("Μεγέθυνση εικονιδίων στο hover", "Magnify icons on hover"), dockCfg.Magnify, (c, v) => c.Magnify = v);
             DockCheck(Ld("Εμφάνιση τρεχουσών εφαρμογών", "Show running apps"), dockCfg.ShowRunning, (c, v) => c.ShowRunning = v);
             DockCheck(Ld("Προεπισκόπηση παραθύρου στο hover", "Window preview on hover"), dockCfg.ShowPreviews, (c, v) => c.ShowPreviews = v);
+            AddSection(panel, LocalizationManager.T("Page.Look"));
+            DockCheck(Ld("Μεγέθυνση εικονιδίων στο hover", "Magnify icons on hover"), dockCfg.Magnify, (c, v) => c.Magnify = v);
             var sizeLabel = new Label { AutoSize = true, ForeColor = UiTheme.TextMuted, Font = UiTheme.FontBody, Margin = new Padding(0, 6, 0, 2) };
             void ShowSize(int v) => sizeLabel.Text = Ld($"Μέγεθος εικονιδίων: {v}px", $"Icon size: {v}px");
             ShowSize(dockCfg.IconSize);
@@ -2570,6 +2574,7 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
             sizeSlider.ValueChanged += (_, _) => { ShowSize(sizeSlider.Value); DeskStripHostEngine.Instance.UpdateSettings(c => c.IconSize = sizeSlider.Value); };
             deskStripCard.Controls.Add(sizeSlider);
 
+            AddSection(panel, LocalizationManager.T("Page.PinnedApps"));
             var pinnedList = new FlowLayoutPanel { AutoSize = true, FlowDirection = FlowDirection.TopDown, WrapContents = false };
             deskStripCard.Controls.Add(pinnedList);
 
@@ -2639,7 +2644,7 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
             panel.Disposed += (_, _) => deskStripRefreshTimer.Dispose();
 
 
-            SetPage("Personalization.SectionDeskStrip", panel);
+            SetPage("Personalization.SectionDeskStrip", Cardify(panel, LocalizationManager.T("Page.Basic")));
         }
 
         // 2.6.0: DeskContainers (and the double-click "hide desktop icons") have their own page; DeskZones keeps only the window zones.
@@ -2649,8 +2654,9 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
             var panel = CreatePagePanel();
             // Ξεχωριστή, δεύτερη λειτουργία στην ίδια σελίδα: DeskContainers — η "πραγματική"
             // έννοια των Fences (ομαδοποίηση αρχείων/φακέλων/συντομεύσεων, όχι παραθύρων).
-            AddSection(panel, LocalizationManager.T("DeskZones.SectionContainers"));
+            // 2.6.0 page template: subtitle (the intro), then the cards: Basics, then the ones of the engine (BuildContainersSettings)
             AddText(panel, LocalizationManager.T("DeskZones.ContainersIntro"));
+            AddSection(panel, LocalizationManager.T("Page.Basic"));
 
             // Ζητήθηκε ρητά: ο μηχανισμός "διπλό-κλικ σε κενό σημείο της επιφάνειας εργασίας
             // κρύβει/επαναφέρει τα εικονίδια" (DesktopIconVisibilityEngine) υπήρχε ήδη πλήρως
@@ -2659,7 +2665,7 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
             // restart της εφαρμογής).
             // Επιλογή εικονιδίων που ΜΕΝΟΥΝ όταν το διπλό κλικ κρύβει την επιφάνεια εργασίας.
             string LdKeep(string el, string en) => LocalizationManager.CurrentLanguage == "el" ? el : en;
-            var keepIconsBtn = new HoverButton { Text = LdKeep("Εικονίδια που μένουν ορατά…", "Icons that stay visible…"), Width = 260, Height = 32, Margin = new Padding(0, 0, 0, 10), FlatStyle = FlatStyle.Flat, ForeColor = UiTheme.TextPrimary, BackColor = UiTheme.SurfaceHover, Cursor = Cursors.Hand };
+            var keepIconsBtn = new HoverButton { Text = LdKeep("Εικονίδια που μένουν ορατά…", "Icons that stay visible…"), AutoSize = true, MinimumSize = new Size(260, 32), Padding = new Padding(14, 3, 14, 3), Margin = new Padding(0, 0, 0, 10), FlatStyle = FlatStyle.Flat, ForeColor = UiTheme.TextPrimary, BackColor = UiTheme.SurfaceHover, Cursor = Cursors.Hand };
             keepIconsBtn.FlatAppearance.BorderSize = 0;
             keepIconsBtn.Click += (_, _) => ShowKeepIconsDialog();
             var quickHideCheck = new FlatToggle { RowWidth = 700, Text = LocalizationManager.T("DeskZones.QuickHideDoubleClick"), Checked = AppSettings.Load().QuickHideDoubleClickEnabled, BackColor = UiTheme.PageBackground, Margin = new Padding(0, 0, 0, 10) };
@@ -2676,7 +2682,7 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
             BuildContainersSettings(panel);
 
 
-            SetPage("DeskZones.SectionContainers", panel);
+            SetPage("DeskZones.SectionContainers", Cardify(panel, LocalizationManager.T("Page.Basic")));
         }
 
         private void ShowCommandPalette()
