@@ -2,7 +2,7 @@
   #error This installer requires Inno Setup 7 or newer.
 #endif
 #define MyAppName "Opsis Studio"
-#define MyAppVersion "2.7.6.2401"
+#define MyAppVersion "2.7.7.2402"
 #define MyAppExeName "Opsis.Studio.exe"
 #define MyAppPublisher "gs-applabs"
 #define MyAppURL "https://github.com/gs-applabs/Opsis"
@@ -21,8 +21,8 @@ AppPublisherURL={#MyAppURL}
 AppSupportURL={#MyAppURL}/issues
 AppUpdatesURL={#MyAppURL}/releases
 VersionInfoCompany={#MyAppPublisher}
-VersionInfoVersion=2.7.6.2401
-VersionInfoProductVersion=2.7.6.2401
+VersionInfoVersion=2.7.7.2402
+VersionInfoProductVersion=2.7.7.2402
 VersionInfoDescription=Opsis Studio Setup
 VersionInfoProductName={#MyAppName}
 DefaultDirName={autopf}\{#MyAppName}
@@ -35,6 +35,7 @@ WizardStyle=modern
 PrivilegesRequired=admin
 AppMutex=Opsis.SingleInstance
 CloseApplications=yes
+CloseApplicationsFilterExcludes=OpsisExplorer.dll
 RestartApplications=no
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
@@ -122,7 +123,8 @@ Name: "autostart"; Description: "{cm:AutostartTask}"; GroupDescription: "{cm:Sta
 [Files]
 Source: "{#PublishDir}\Opsis.Studio.exe"; DestDir: "{app}"; Flags: ignoreversion restartreplace
 Source: "{#PublishDir}\Opsis.Studio.dll"; DestDir: "{app}"; Flags: ignoreversion restartreplace
-Source: "{#PublishDir}\*"; DestDir: "{app}"; Excludes: "\Opsis.Studio.exe,\Opsis.Studio.dll"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "{#PublishDir}\OpsisExplorer.dll"; DestDir: "{app}"; Flags: ignoreversion restartreplace
+Source: "{#PublishDir}\*"; DestDir: "{app}"; Excludes: "\Opsis.Studio.exe,\Opsis.Studio.dll,\OpsisExplorer.dll"; Flags: ignoreversion recursesubdirs createallsubdirs
 #ifdef CrawlerSetup
 Source: "{#CrawlerSetup}"; DestDir: "{tmp}"; DestName: "OpsisNewsCrawler-Setup.exe"; Tasks: installcrawler; Flags: deleteafterinstall
 #endif
@@ -132,6 +134,8 @@ Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
 Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon
 
 [Registry]
+Root: HKCU; Subkey: "Software\Classes\DesktopBackground\shellex\ContextMenuHandlers\OpsisStudio"; Flags: dontcreatekey uninsdeletekey
+Root: HKCU; Subkey: "Software\Classes\CLSID\{{7F45B246-0BA9-4C86-AB71-09F969610F62}"; Flags: dontcreatekey uninsdeletekey
 Root: HKCU; Subkey: "Software\Classes\DesktopBackground\Shell\OpsisStudio"; Flags: dontcreatekey uninsdeletekey
 Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: string; ValueName: "OpsisStudio"; ValueData: """{app}\{#MyAppExeName}"" --background"; Tasks: autostart; Flags: uninsdeletevalue
 

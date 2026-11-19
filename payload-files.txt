@@ -17,6 +17,7 @@ Opsis.Studio.dll
 Opsis.Studio.exe
 Opsis.Studio.runtimeconfig.json
 Opsis.UI.dll
+OpsisExplorer.dll
 OpsisNewsCrawler.Plugin.Abstractions.dll
 RAMSPDToolkit-NDD.dll
 SharpGen.Runtime.COM.dll
@@ -73,6 +74,7 @@ widget-sdk/catalog/local-time/theme.css
 widget-sdk/catalog/local-time/widget.js
 widget-sdk/catalog/local-time/widget.json
 widgets/sysmon/index.html
+widgets/wallpaper/ancient-athens.js
 widgets/wallpaper/ancient-athens/blue-4k.webp
 widgets/wallpaper/ancient-athens/blue.jpg
 widgets/wallpaper/ancient-athens/day-4k.webp
@@ -81,7 +83,6 @@ widgets/wallpaper/ancient-athens/golden-4k.webp
 widgets/wallpaper/ancient-athens/golden.jpg
 widgets/wallpaper/ancient-athens/night-4k.webp
 widgets/wallpaper/ancient-athens/night.jpg
-widgets/wallpaper/ancient-athens.js
 widgets/wallpaper/city-landscape.js
 widgets/wallpaper/elements.js
 widgets/wallpaper/gallery/abyss.jpg
@@ -133,6 +134,9 @@ widgets/wallpaper/gallery/opal.jpg
 widgets/wallpaper/gallery/opal.preview.jpg
 widgets/wallpaper/gallery/petals.jpg
 widgets/wallpaper/gallery/petals.preview.jpg
+widgets/wallpaper/gallery/plates/alpine.webp
+widgets/wallpaper/gallery/plates/city.webp
+widgets/wallpaper/gallery/plates/forest.webp
 widgets/wallpaper/gallery/prism.jpg
 widgets/wallpaper/gallery/prism.preview.jpg
 widgets/wallpaper/gallery/reef.jpg
@@ -147,13 +151,13 @@ widgets/wallpaper/gallery/tide.jpg
 widgets/wallpaper/gallery/tide.preview.jpg
 widgets/wallpaper/gallery/weather.jpg
 widgets/wallpaper/index.html
+widgets/wallpaper/landmarks.js
 widgets/wallpaper/landmarks/ATTRIBUTION.md
 widgets/wallpaper/landmarks/manifest.json
 widgets/wallpaper/landmarks/nafplio.webp
 widgets/wallpaper/landmarks/parthenon.webp
 widgets/wallpaper/landmarks/patras.webp
 widgets/wallpaper/landmarks/rioantirrio.webp
-widgets/wallpaper/landmarks.js
 widgets/wallpaper/scenes/ATTRIBUTION.md
 widgets/wallpaper/scenes/acropolis-lights.webp
 widgets/wallpaper/scenes/acropolis.webp
@@ -214,6 +218,7 @@ widgets/wallpaper/scenes/greece/whitetower.webp
 widgets/wallpaper/scenes/greece/xanthi.webp
 widgets/wallpaper/scenes/greece/zakynthos.webp
 widgets/wallpaper/scenes/ioannina.webp
+widgets/wallpaper/scenes/islands.json
 widgets/wallpaper/scenes/islands/aegina.webp
 widgets/wallpaper/scenes/islands/agathonisi.webp
 widgets/wallpaper/scenes/islands/agios-achilleios.webp
@@ -307,7 +312,6 @@ widgets/wallpaper/scenes/islands/tinos.webp
 widgets/wallpaper/scenes/islands/tourlida.webp
 widgets/wallpaper/scenes/islands/trizonia.webp
 widgets/wallpaper/scenes/islands/zakynthos.webp
-widgets/wallpaper/scenes/islands.json
 widgets/wallpaper/scenes/kastoria.webp
 widgets/wallpaper/scenes/kavala.webp
 widgets/wallpaper/scenes/larissa.webp
