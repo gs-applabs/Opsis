@@ -2,7 +2,7 @@
   #error This installer requires Inno Setup 7 or newer.
 #endif
 #define MyAppName "Opsis Studio"
-#define MyAppVersion "2.6.0-studio.23"
+#define MyAppVersion "2.7.5.2400"
 #define MyAppExeName "Opsis.Studio.exe"
 #define MyAppPublisher "gs-applabs"
 #define MyAppURL "https://github.com/gs-applabs/Opsis"
@@ -20,8 +20,8 @@ AppPublisher={#MyAppPublisher}
 AppPublisherURL={#MyAppURL}
 AppSupportURL={#MyAppURL}/issues
 VersionInfoCompany={#MyAppPublisher}
-VersionInfoVersion=2.6.0.2301
-VersionInfoProductVersion=2.6.0.2301
+VersionInfoVersion=2.7.5.2400
+VersionInfoProductVersion=2.7.5.2400
 VersionInfoDescription=Opsis Studio Setup
 DefaultDirName={autopf}\{#MyAppName}
 DefaultGroupName={#MyAppName}
@@ -124,6 +124,7 @@ Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
 Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon
 
 [Registry]
+Root: HKCU; Subkey: "Software\Classes\DesktopBackground\Shell\OpsisStudio"; Flags: dontcreatekey uninsdeletekey
 Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: string; ValueName: "OpsisStudio"; ValueData: """{app}\{#MyAppExeName}"" --background"; Tasks: autostart; Flags: uninsdeletevalue
 
 [Run]

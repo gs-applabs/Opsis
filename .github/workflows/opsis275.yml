@@ -1,7 +1,7 @@
 name: Opsis Studio Inno Setup 7
 on:
   push:
-    branches: [opsis-studio23-weather-check]
+    branches: [opsis-275-wallpaper-check]
 permissions:
   contents: read
 jobs:
@@ -20,6 +20,11 @@ jobs:
           ref: bc56d152f290876606e4f9c186a1f073bb255423
           path: classic
           persist-credentials: false
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '11.0.100'
+      - name: Exercise native gallery, previews and Explorer registration
+        run: dotnet run --project check/GalleryCheck.csproj -c Release
       - name: Verify the weather compositor in Chromium
         run: |
           $browser = Join-Path ${env:ProgramFiles} 'Google\Chrome\Application\chrome.exe'
@@ -52,6 +57,7 @@ jobs:
           if ($p.ExitCode -ne 0) { throw 'Inno Setup did not install' }
           "ISCC=$toolpath\ISCC.exe" >> $env:GITHUB_ENV
       - name: Build the Opsis Studio installer
+        if: success() || failure()
         run: |
           Copy-Item classic\assets assets -Recurse
           Copy-Item classic\installer\wizard installer\wizard -Recurse
@@ -59,6 +65,7 @@ jobs:
           & $env:ISCC /DExternalPayload installer.iss
           if ($LASTEXITCODE -ne 0) { throw 'Inno compilation failed' }
       - name: Verify install and uninstall using test files
+        if: success() || failure()
         run: |
           $setup = Get-Item Output\Opsis-Studio-*-Setup-x64.exe
           $payload = New-Item -ItemType Directory -Force (Join-Path $setup.DirectoryName 'payload')
@@ -90,13 +97,14 @@ jobs:
           if ($updated.ExitCode -ne 0 -or (Get-Content "$dir\Opsis.Studio.dll") -ne 'updated assembly fixture') { throw 'In-place update failed' }
           Write-Output 'PASS: in-place update replaces the DLL once the payload is readable'
           $entry = 'HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\{0F9363FA-64CB-45CF-8D70-E748B9C5BDA8}_is1'
-          if ((Get-ItemProperty $entry).DisplayVersion -ne '2.6.0-studio.23') { throw 'Wrong version or product registration' }
+          if ((Get-ItemProperty $entry).DisplayVersion -ne '2.7.5.2400') { throw 'Wrong version or product registration' }
           $p = Start-Process "$dir\unins000.exe" -ArgumentList '/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART' -Wait -PassThru
           if ($p.ExitCode -ne 0 -or (Test-Path "$dir\Opsis.Studio.exe") -or (Test-Path $entry)) { throw 'Uninstall did not clear the test install' }
           Get-FileHash $setup.FullName -Algorithm SHA256 | Format-List
       - uses: actions/upload-artifact@v4
+        if: success() || failure()
         with:
-          name: opsis-studio23-weather-setup
+          name: opsis-275-wallpaper-setup
           path: Output/*.exe
           if-no-files-found: error
           retention-days: 3
