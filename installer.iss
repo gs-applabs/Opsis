@@ -2,7 +2,7 @@
   #error This installer requires Inno Setup 7 or newer.
 #endif
 #define MyAppName "Opsis Studio"
-#define MyAppVersion "2.7.5.2400"
+#define MyAppVersion "2.7.6.2401"
 #define MyAppExeName "Opsis.Studio.exe"
 #define MyAppPublisher "gs-applabs"
 #define MyAppURL "https://github.com/gs-applabs/Opsis"
@@ -19,14 +19,16 @@ AppVersion={#MyAppVersion}
 AppPublisher={#MyAppPublisher}
 AppPublisherURL={#MyAppURL}
 AppSupportURL={#MyAppURL}/issues
+AppUpdatesURL={#MyAppURL}/releases
 VersionInfoCompany={#MyAppPublisher}
-VersionInfoVersion=2.7.5.2400
-VersionInfoProductVersion=2.7.5.2400
+VersionInfoVersion=2.7.6.2401
+VersionInfoProductVersion=2.7.6.2401
 VersionInfoDescription=Opsis Studio Setup
+VersionInfoProductName={#MyAppName}
 DefaultDirName={autopf}\{#MyAppName}
 DefaultGroupName={#MyAppName}
 OutputDir=Output
-OutputBaseFilename=Opsis-Studio-{#MyAppVersion}-Setup-x64
+OutputBaseFilename=OpsisSetup-{#MyAppVersion}
 Compression=lzma2/ultra64
 SolidCompression=yes
 WizardStyle=modern
@@ -104,19 +106,25 @@ turkish.StartupGroup=Başlangıç ayarları:
 arabic.StartupGroup=إعدادات بدء التشغيل:
 hindi.StartupGroup=स्टार्टअप सेटिंग्स:
 
+greek.DesktopMenuTask=Εμφάνιση του Opsis στο δεξί κλικ της επιφάνειας εργασίας
+english.DesktopMenuTask=Show Opsis in the desktop right-click menu
+greek.CrawlerTask=Εγκατάσταση του News Crawler ως πρόσθετου του Opsis
+english.CrawlerTask=Install the News Crawler as an Opsis plugin
+
 [Tasks]
+Name: "desktopmenu"; Description: "{cm:DesktopMenuTask}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: checkedonce
+#ifdef CrawlerSetup
+Name: "installcrawler"; Description: "{cm:CrawlerTask}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
+#endif
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
 Name: "autostart"; Description: "{cm:AutostartTask}"; GroupDescription: "{cm:StartupGroup}"; Flags: unchecked
 
 [Files]
-#ifdef ExternalPayload
-Source: "{src}\payload\Opsis.Studio.exe"; DestDir: "{app}"; Flags: external ignoreversion restartreplace
-Source: "{src}\payload\Opsis.Studio.dll"; DestDir: "{app}"; Flags: external ignoreversion restartreplace
-Source: "{src}\payload\*"; DestDir: "{app}"; Excludes: "\Opsis.Studio.exe,\Opsis.Studio.dll"; Flags: external ignoreversion recursesubdirs createallsubdirs
-#else
 Source: "{#PublishDir}\Opsis.Studio.exe"; DestDir: "{app}"; Flags: ignoreversion restartreplace
 Source: "{#PublishDir}\Opsis.Studio.dll"; DestDir: "{app}"; Flags: ignoreversion restartreplace
 Source: "{#PublishDir}\*"; DestDir: "{app}"; Excludes: "\Opsis.Studio.exe,\Opsis.Studio.dll"; Flags: ignoreversion recursesubdirs createallsubdirs
+#ifdef CrawlerSetup
+Source: "{#CrawlerSetup}"; DestDir: "{tmp}"; DestName: "OpsisNewsCrawler-Setup.exe"; Tasks: installcrawler; Flags: deleteafterinstall
 #endif
 
 [Icons]
@@ -128,42 +136,14 @@ Root: HKCU; Subkey: "Software\Classes\DesktopBackground\Shell\OpsisStudio"; Flag
 Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: string; ValueName: "OpsisStudio"; ValueData: """{app}\{#MyAppExeName}"" --background"; Tasks: autostart; Flags: uninsdeletevalue
 
 [Run]
+#ifdef CrawlerSetup
+Filename: "{tmp}\OpsisNewsCrawler-Setup.exe"; Parameters: "/MODE=integrated /PLUGINROOT=""{app}\plugins"" /VERYSILENT /SUPPRESSMSGBOXES /NORESTART /DEPS=none"; Tasks: installcrawler; Flags: waituntilterminated
+#endif
+Filename: "{app}\{#MyAppExeName}"; Parameters: "--setup-desktop-menu on {language}"; Tasks: desktopmenu; Flags: runhidden waituntilterminated runasoriginaluser; Check: DotNetDesktop11Present
+Filename: "{app}\{#MyAppExeName}"; Parameters: "--setup-desktop-menu off {language}"; Tasks: not desktopmenu; Flags: runhidden waituntilterminated runasoriginaluser; Check: DotNetDesktop11Present
 Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#MyAppName}}"; Flags: nowait postinstall skipifsilent runasoriginaluser; Check: DotNetDesktop11Present
 
 [Code]
-#ifdef ExternalPayload
-function InitializeSetup(): Boolean;
-begin
-  Result := FileExists(ExpandConstant('{src}\payload\{#MyAppExeName}')) and
-    FileExists(ExpandConstant('{src}\payload\Opsis.Studio.dll')) and
-    FileExists(ExpandConstant('{src}\payload\Opsis.Studio.runtimeconfig.json'));
-  if not Result then
-    SuppressibleMsgBox('Extract the full setup ZIP and run Setup from the extracted folder.' + #13#10 +
-      'Αποσυμπίεσε όλο το ZIP και άνοιξε τον οδηγό εγκατάστασης από τον φάκελο.', mbError, MB_OK, IDOK);
-end;
-
-function CheckPayloadFile(const Name: String): String;
-var
-  Source: TFileStream;
-begin
-  Result := '';
-  try
-    Source := TFileStream.Create(ExpandConstant('{src}\payload\') + Name, fmOpenRead or fmShareDenyNone);
-    try
-      if Source.Size = 0 then RaiseException('Empty file');
-    finally
-      Source.Free;
-    end;
-  except
-    Log('Cannot read payload file ' + Name + ': ' + GetExceptionMessage);
-    if ActiveLanguage = 'greek' then
-      Result := 'Δεν είναι δυνατή η ανάγνωση του αρχείου ' + Name + '. Αποσυμπίεσε ξανά όλο το ZIP σε έναν τοπικό φάκελο, όπως οι Λήψεις, και εκτέλεσε τον οδηγό από εκεί.'
-    else
-      Result := 'Setup cannot read ' + Name + '. Extract the entire ZIP again into a local folder such as Downloads and run Setup from there.';
-  end;
-end;
-#endif
-
 procedure InitializeWizard();
 var
   Previous: String;
@@ -183,21 +163,6 @@ end;
 function PrepareToInstall(var NeedsRestart: Boolean): String;
 begin
   Result := '';
-#ifdef ExternalPayload
-  if CompareText(RemoveBackslashUnlessRoot(ExpandConstant('{app}')), ExpandConstant('{src}\payload')) = 0 then
-  begin
-    if ActiveLanguage = 'greek' then
-      Result := 'Ο φάκελος εγκατάστασης πρέπει να είναι διαφορετικός από τον φάκελο payload.'
-    else
-      Result := 'The installation folder must be different from the payload folder.';
-    Exit;
-  end;
-  Result := CheckPayloadFile('{#MyAppExeName}');
-  if Result = '' then Result := CheckPayloadFile('Opsis.Studio.dll');
-  if Result = '' then Result := CheckPayloadFile('Opsis.Studio.deps.json');
-  if Result = '' then Result := CheckPayloadFile('Opsis.Studio.runtimeconfig.json');
-  if Result <> '' then Exit;
-#endif
   if WizardSilent then
     DepsDownloadSelected();
   DepsInstallSelected();

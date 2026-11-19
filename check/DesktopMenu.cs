@@ -1,4 +1,5 @@
 using System.Text.Json.Nodes;
+using System.Runtime.InteropServices;
 using Microsoft.Win32;
 using MotionDesk.Containers;
 using MotionDesk.Widgets;
@@ -10,6 +11,7 @@ public static class DesktopMenu
 {
     private const string Root = @"Software\Classes\DesktopBackground\Shell\";
     private const string MenuKey = Root + "OpsisStudio";
+    private const string Submenu = @"ExtendedSubCommandsKey\shell";
     private static readonly string[] LegacyVerbs = ["OpsisStudioNewContainer", "OpsisStudioNextWallpaper"];
     private static readonly (string Key, string English, string Greek, string Action)[] Playback =
     [
@@ -30,25 +32,26 @@ public static class DesktopMenu
     };
 
     // Static cascades are shown in the Windows classic desktop menu, including Show more options on Windows 11.
-    public static void Register(string exe)
+    public static void Register(string exe, bool? greekOverride = null)
     {
         if (!Path.IsPathFullyQualified(exe) || exe.Contains('"') || !File.Exists(exe))
             throw new ArgumentException("Invalid Opsis executable path.", nameof(exe));
 
-        bool greek = LocalizationManager.CurrentLanguage == "el";
+        bool greek = greekOverride ?? (LocalizationManager.CurrentLanguage == "el");
         using var menu = Registry.CurrentUser.CreateSubKey(MenuKey);
         menu.SetValue("MUIVerb", "Opsis");
-        menu.SetValue("SubCommands", "");
         menu.SetValue("Icon", "\"" + exe + "\"");
-        using var shell = menu.CreateSubKey("shell");
+        menu.DeleteValue("SubCommands", false);
+        menu.DeleteSubKeyTree("shell", false);
+        using var shell = menu.CreateSubKey(Submenu);
         WriteVerb(shell, "01NewContainer", greek ? "Νέο DeskContainer" : "New DeskContainer", "new-container", exe);
         using var animation = shell.CreateSubKey("02Wallpaper");
         animation.SetValue("MUIVerb", greek ? "Κινούμενο wallpaper" : "Animated wallpaper");
-        animation.SetValue("SubCommands", "");
-        using var commands = animation.CreateSubKey("shell");
+        using var commands = animation.CreateSubKey(Submenu);
         foreach (var (key, english, greekText, action) in Playback)
             WriteVerb(commands, key, greek ? greekText : english, action, exe);
         RemoveLegacyVerbs();
+        NotifyExplorer();
     }
 
     private static void WriteVerb(RegistryKey parent, string key, string title, string action, string exe)
@@ -68,11 +71,12 @@ public static class DesktopMenu
     {
         Registry.CurrentUser.DeleteSubKeyTree(MenuKey, false);
         RemoveLegacyVerbs();
+        NotifyExplorer();
     }
 
     public static bool IsRegistered()
     {
-        try { using var key = Registry.CurrentUser.OpenSubKey(MenuKey); return key != null; }
+        try { using var key = Registry.CurrentUser.OpenSubKey(MenuKey + "\\" + Submenu + @"\02Wallpaper"); return key != null; }
         catch (Exception) { return false; }
     }
 
@@ -80,6 +84,19 @@ public static class DesktopMenu
     {
         if (enabled) Register(ExePath); else Unregister();
     }
+
+    internal static void ApplyInstallerChoice(bool enabled, bool greek)
+    {
+        if (enabled) Register(ExePath, greek); else Unregister();
+        var settings = AppSettings.Load();
+        settings.DesktopMenuEnabled = enabled;
+        settings.Save();
+    }
+
+    private static void NotifyExplorer() => SHChangeNotify(0x08000000, 0, IntPtr.Zero, IntPtr.Zero);
+
+    [DllImport("shell32.dll")]
+    private static extern void SHChangeNotify(uint eventId, uint flags, IntPtr item1, IntPtr item2);
 
     public static bool Send(string action)
     {

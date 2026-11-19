@@ -1,0 +1,85 @@
+name: Opsis 2.7.6 native integration and installer
+on:
+  push:
+    branches: [opsis-276-native-check]
+permissions:
+  contents: read
+jobs:
+  native:
+    runs-on: windows-2025
+    timeout-minutes: 15
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          ref: bc56d152f290876606e4f9c186a1f073bb255423
+          path: original
+          persist-credentials: false
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '11.0.100'
+      - name: Test Explorer menu and Vista-style DeskFlip
+        run: dotnet run --project check/Check.csproj -c Release
+      - name: Fetch and verify Inno Setup 7.1.1
+        if: success() || failure()
+        run: |
+          $inno = Join-Path $env:RUNNER_TEMP 'inno-7.1.1.exe'
+          Invoke-WebRequest 'https://github.com/jrsoftware/issrc/releases/download/is-7_1_1/innosetup-7.1.1-x64.exe' -OutFile $inno
+          $sign = Get-AuthenticodeSignature $inno
+          if ($sign.Status -ne 'Valid' -or $sign.SignerCertificate.Subject -notmatch 'Pyrsys B\.V\.') { throw 'Unexpected compiler signature' }
+          $tools = Join-Path $env:RUNNER_TEMP 'Inno7'
+          $process = Start-Process $inno -ArgumentList '/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART',"/DIR=$tools" -Wait -PassThru
+          if ($process.ExitCode -ne 0) { throw 'Inno did not install' }
+          "ISCC=$tools\ISCC.exe" >> $env:GITHUB_ENV
+      - name: Build the embedded installer layout with test files
+        if: success() || failure()
+        run: |
+          Copy-Item original\assets assets -Recurse
+          Copy-Item original\installer\wizard installer\wizard -Recurse
+          Copy-Item original\installer\*.isl installer
+          foreach ($file in Get-Content payload-files.txt) {
+            $dest = Join-Path 'publish' $file
+            New-Item -Force -ItemType Directory (Split-Path $dest) | Out-Null
+            Set-Content -LiteralPath $dest -Value "Embedded Windows installer fixture - $file"
+          }
+          dotnet new console --framework net11.0 --output launchstub
+          Set-Content -LiteralPath 'launchstub/Program.cs' -Value 'return 0;'
+          dotnet publish launchstub -c Release -o app-fixture -p:AssemblyName=Opsis.Studio
+          foreach ($f in @('Opsis.Studio.exe','Opsis.Studio.dll','Opsis.Studio.deps.json','Opsis.Studio.runtimeconfig.json')) {
+            Copy-Item (Join-Path 'app-fixture' $f) (Join-Path 'publish' $f) -Force
+          }
+          Set-Content -LiteralPath 'crawler-fixture.exe' -Value 'Crawler setup local staging fixture'
+          & $env:ISCC /DCrawlerSetup=crawler-fixture.exe installer.iss
+          if ($LASTEXITCODE -ne 0) { throw 'Inno compilation failed' }
+      - name: Repack a representative payload and test the single EXE
+        if: success() || failure()
+        run: |
+          New-Item -ItemType Directory -Force TestOutput | Out-Null
+          $app = Join-Path $env:RUNNER_TEMP 'OpsisEmbeddedSmoke'
+          $log = Join-Path $env:RUNNER_TEMP 'opsis-embedded.log'
+          Add-Content -LiteralPath 'publish/widgets/wallpaper/index.html' -Value 'Changed after template compilation.'
+          python repack.py Output/OpsisSetup-2.7.6.2401.exe publish crawler-fixture.exe TestOutput/OpsisSetup-2.7.6.2401.exe
+          if ($LASTEXITCODE -ne 0) { throw 'Embedded payload reprobe failed' }
+          # The main executable is a no-op fixture. The crawler task stays off.
+          $setup = (Resolve-Path TestOutput/OpsisSetup-2.7.6.2401.exe).Path
+          $p = Start-Process $setup -ArgumentList '/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART','/DEPS=none','/TASKS=""',"/DIR=$app","/LOG=$log" -Wait -PassThru
+          if ($p.ExitCode -ne 0 -or -not (Select-String -Path "$app\widgets\wallpaper\index.html" -SimpleMatch 'Changed after template compilation.' -Quiet)) {
+            Get-Content $log | Select-Object -Last 50
+            throw 'Payload did not install'
+          }
+          $entry = 'HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\{0F9363FA-64CB-45CF-8D70-E748B9C5BDA8}_is1'
+          if ((Get-ItemProperty $entry).DisplayVersion -ne '2.7.6.2401') { throw 'Version identity mismatch' }
+          $uninstall = Start-Process "$app\unins000.exe" -ArgumentList '/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART' -PassThru -Wait
+          if ($uninstall.ExitCode -ne 0 -or (Test-Path "$app\Opsis.Studio.dll") -or (Test-Path $entry)) { throw 'Fixture uninstall failed' }
+      - uses: actions/upload-artifact@v4
+        if: success() || failure()
+        with:
+          name: opsis276-inno-template
+          path: Output/OpsisSetup-2.7.6.2401.exe
+          if-no-files-found: error
+          retention-days: 3
