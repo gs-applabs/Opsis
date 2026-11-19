@@ -2819,10 +2819,10 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
         private void BuildProfilesSection(Control panel)
         {
             AddText(panel, LocalizationManager.T("Profiles.Intro"));
-            var list = new ListBox { Width = 440, Height = 180, Font = new Font("Segoe UI", 10) };
+            var list = new ListBox { Width = 440, Height = 180, Font = new Font("Segoe UI", 10), BackColor = UiTheme.Surface, ForeColor = UiTheme.TextPrimary, BorderStyle = BorderStyle.FixedSingle, IntegralHeight = false };
             void Refresh() { list.Items.Clear(); foreach (var p in WorkspaceProfileService.ListProfiles()) list.Items.Add(p); }
             Refresh(); panel.Controls.Add(list);
-            var name = new TextBox { Width = 240, Text = "Work" }; panel.Controls.Add(name);
+            var name = new TextBox { Width = 240, Text = "Work", BackColor = UiTheme.Surface, ForeColor = UiTheme.TextPrimary, BorderStyle = BorderStyle.FixedSingle, Font = UiTheme.FontBody }; panel.Controls.Add(name);
             AddIconButtonGrid(panel,
                 ("Save", LocalizationManager.T("Profiles.SaveCurrentAsProfile"), (_, _) => { if (!string.IsNullOrWhiteSpace(name.Text)) { WorkspaceProfileService.Save(name.Text.Trim()); Refresh(); } }),
                 ("Restore", LocalizationManager.T("Profiles.LoadSelected"), (_, _) => { if (list.SelectedItem is string p && WorkspaceProfileService.Load(p)) { NavigateTo("Dashboard"); } }),
@@ -2934,12 +2934,12 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                 check.CheckedChanged += (_, _) => { rule.Enabled = check.Checked; AutomationService.Instance.Save(); };
                 row.Controls.Add(check);
 
-                var editBtn = new HoverButton { Text = LocalizationManager.T("Common.Edit"), Width = 70, Height = 26, FlatStyle = FlatStyle.Flat, ForeColor = UiTheme.TextPrimary, BackColor = UiTheme.Surface, Cursor = Cursors.Hand, Margin = new Padding(10, 0, 0, 0) };
+                var editBtn = new HoverButton { Text = LocalizationManager.T("Common.Edit"), AutoSize = true, MinimumSize = new Size(70, 26), Padding = new Padding(12, 2, 12, 2), FlatStyle = FlatStyle.Flat, ForeColor = UiTheme.TextPrimary, BackColor = UiTheme.Surface, Cursor = Cursors.Hand, Margin = new Padding(10, 0, 0, 0) };
                 editBtn.FlatAppearance.BorderSize = 0;
                 editBtn.Click += (_, _) => { if (PromptAutomationRule(rule)) { AutomationService.Instance.Save(); ShowAutomation(); } };
                 row.Controls.Add(editBtn);
 
-                var deleteBtn = new HoverButton { Text = LocalizationManager.T("Common.Delete"), Width = 70, Height = 26, FlatStyle = FlatStyle.Flat, ForeColor = Color.FromArgb(231, 76, 60), BackColor = UiTheme.Surface, Cursor = Cursors.Hand, Margin = new Padding(6, 0, 0, 0) };
+                var deleteBtn = new HoverButton { Text = LocalizationManager.T("Common.Delete"), AutoSize = true, MinimumSize = new Size(70, 26), Padding = new Padding(12, 2, 12, 2), FlatStyle = FlatStyle.Flat, ForeColor = Color.FromArgb(231, 76, 60), BackColor = UiTheme.Surface, Cursor = Cursors.Hand, Margin = new Padding(6, 0, 0, 0) };
                 deleteBtn.FlatAppearance.BorderSize = 0;
                 deleteBtn.Click += (_, _) => { AutomationService.Instance.Rules.Remove(rule); AutomationService.Instance.Save(); ShowAutomation(); };
                 row.Controls.Add(deleteBtn);
@@ -2966,7 +2966,7 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
 
         private static HoverButton NewHoverButton(string text, Action onClick)
         {
-            var btn = new HoverButton { Text = text, Width = 140, Height = 30, FlatStyle = FlatStyle.Flat, ForeColor = UiTheme.TextPrimary, BackColor = UiTheme.SurfaceHover, Cursor = Cursors.Hand, Margin = new Padding(0, 0, 8, 0) };
+            var btn = new HoverButton { Text = text, AutoSize = true, MinimumSize = new Size(140, 30), Padding = new Padding(14, 3, 14, 3), FlatStyle = FlatStyle.Flat, ForeColor = UiTheme.TextPrimary, BackColor = UiTheme.SurfaceHover, Cursor = Cursors.Hand, Margin = new Padding(0, 0, 8, 0) };
             btn.FlatAppearance.BorderSize = 0;
             btn.Click += (_, _) => onClick();
             return btn;
