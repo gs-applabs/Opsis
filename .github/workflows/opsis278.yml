@@ -8,6 +8,8 @@ jobs:
   native:
     runs-on: windows-2025
     timeout-minutes: 15
+    env:
+      DOTNET_CLI_TELEMETRY_OPTOUT: "1"
     defaults:
       run:
         shell: pwsh
@@ -105,4 +107,25 @@ jobs:
             Output/OpsisSetup-2.7.8.2403-crawler.exe
             native/OpsisExplorer.dll
           if-no-files-found: error
+          retention-days: 3
+  layout:
+    runs-on: windows-2025
+    timeout-minutes: 8
+    env:
+      DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '11.0.100'
+      - name: Render and test the restored desktop controls
+        run: dotnet run --project check-ui/UIFixture.csproj -c Release
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: opsis278-ui-fixture
+          path: layout-check
+          if-no-files-found: warn
           retention-days: 3
