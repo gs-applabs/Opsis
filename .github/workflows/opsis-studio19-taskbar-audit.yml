@@ -1,0 +1,20 @@
+name: Opsis Studio taskbar registry audit
+on:
+  push:
+    branches: [opsis-studio19-taskbar-audit]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  taskbar-registry:
+    runs-on: windows-2025
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '11.0.x'
+      - name: Apply and restore taskbar settings in Windows
+        run: dotnet run --project audit/TaskbarAudit.csproj -c Release
