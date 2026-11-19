@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<title>Opsis Studio.23 weather regression</title>
+<body>RUNNING
+<script src="landmarks.js"></script>
+<script src="city-landscape.js"></script>
+<script src="weather-atmosphere.js"></script>
+<script src="weather.js"></script>
+<script>
+(async () => {
+    const result = [];
+    const assert = (condition, message) => {
+        if (!condition) throw new Error(message);
+        result.push('PASS ' + message);
+    };
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    const source = document.createElement('canvas');
+    source.width = 512;
+    source.height = 288;
+    const photo = source.getContext('2d');
+    photo.fillStyle = '#ef8b76'; // Intentionally opaque sky.
+    photo.fillRect(0, 0, 512, 288);
+    photo.fillStyle = '#2c7829';
+    photo.fillRect(0, 147, 512, 141);
+    photo.fillStyle = '#f4d8a5';
+    for (let x = 25; x < 512; x += 47) photo.fillRect(x, 166 + x % 32, 25, 25);
+    const data = source.toDataURL('image/jpeg', .92);
+    const entries = [{ id: 'test-city', lat: 37.98, lon: 23.73, name: 'City', terrain: 'hill', file: data },
+        { id: 'test-island', name: 'Island', terrain: 'coast', file: data, manualOnly: true }];
+    OpsisLandmarks.setCities(entries);
+    const weather = WeatherWallpaper;
+    Date.now = () => Date.parse('2024-01-25T22:00:00Z');
+    let randomSeed = 12345;
+    Math.random = () => ((randomSeed = (Math.imul(randomSeed, 1664525) + 1013904223) >>> 0) / 4294967296);
+    weather.setWeather({ ok: true, utcOffsetSec: 7200, code: 0, cloud: 0, wind: 0 });
+    const set = (id, timeSim, realistic, weatherSim = 'Clear') =>
+        weather.setConfig({ landmarkId: id, timeSim, realistic, landmarks: true, lat: 37.98, lon: 23.73, glass: false, weatherSim });
+    const resize = (w, h) => {
+        canvas.width = w;
+        canvas.height = h;
+        weather.resize(w, h, 1);
+    };
+    const frames = (count = 1, profile = 'Balanced') => {
+        for (let i = 0; i < count; ++i) weather.draw(ctx, .10, { id: profile });
+    };
+    const px = (x, y) => ctx.getImageData(Math.round(x * canvas.width), Math.round(y * canvas.height), 1, 1).data;
+    const maxArea = (x, y, radius, score) => {
+        const image = ctx.getImageData(Math.round(x * canvas.width) - radius, Math.round(y * canvas.height) - radius, radius * 2 + 1, radius * 2 + 1).data;
+        let max = 0;
+        for (let i = 0; i < image.length; i += 4) max = Math.max(max, score(image[i], image[i+1], image[i+2]));
+        return max;
+    };
+    const waitForPhoto = async () => {
+        for (let i = 0; i < 120; ++i) {
+            frames(1);
+            const [r, g, b] = px(.5, .88);
+            if (g > r + 15 && g > b + 15) return;
+            await new Promise(resolve => setTimeout(resolve, 60));
+        }
+        throw new Error('Photograph did not load');
+    };
+    resize(800, 450);
+    set('test-city', 'Day', true);
+    await waitForPhoto();
+    frames(6);
+    let [r, , b] = px(.28, .14);
+    assert(b > r + 15, 'An opaque city photograph reveals the live daytime sky');
+    assert(maxArea(.50, .39 * .22, 7, (r,g,b) => Math.min(r,g,b)) > 215, 'The Sun is visible over the city');
+    set('test-city', 'Dusk', true);
+    frames(1);
+    let dusk = px(.5, .10);
+    assert(dusk[0] + dusk[1] + dusk[2] < r + b + 130, 'The live sky changes from daytime to dusk');
+    set('test-city', 'Day', true);
+    let birdSeen = false;
+    for (let i = 0; i < 160 && !birdSeen; i += 4) {
+        frames(4);
+        const image = ctx.getImageData(0, 29, 800, 99).data;
+        for (let j = 0; j < image.length; j += 4) {
+            if (image[j] < 53 && image[j+1] < 80 && image[j+2] < 130) { birdSeen = true; break; }
+        }
+    }
+    assert(birdSeen, 'A flock crosses the visible sky in clear daylight');
+    set('test-city', 'Day', true, 'Cloudy');
+    frames(70);
+    const previous = ctx.getImageData(24, 5, 750, 123).data;
+    frames(9);
+    const next = ctx.getImageData(24, 5, 750, 123).data;
+    let changed = 0;
+    for (let i = 0; i < next.length; i += 4) if (Math.abs(previous[i] - next[i]) + Math.abs(previous[i+1] - next[i+1]) + Math.abs(previous[i+2] - next[i+2]) > 11) changed++;
+    assert(changed > 160, 'Weather clouds animate over the opaque city image');
+    set('test-island', 'Day', false);
+    await waitForPhoto();
+    frames(50, 'Low Power');
+    [r, , b] = px(.15, .15);
+    assert(b > r + 15, 'Standard rendering shows the live sky over manually selected islands');
+    set('test-island', 'Night', false);
+    frames(12);
+    const { sun: { sr, ss } } = weather._state();
+    const night = 1440 - (ss - sr);
+    const phase = ((60 - ss + 1440) % 1440) / night;
+    const moonX = .12 + .76 * phase;
+    const moonY = .39 * (1 - .72 * Math.sin(Math.PI * phase)) + 6 / 450;
+    const moon = maxArea(moonX, moonY, 19, (r,g,b) => Math.min(r,g,b));
+    assert(moon > 115, 'The illuminated Moon is visible over an island at night (brightness ' + moon + ')');
+    assert(px(.08, .13)[2] < 80, 'Night compositing keeps the sky dark away from the Moon');
+    for (const [w, h] of [[360, 560], [1100, 440]]) {
+        resize(w, h);
+        set('test-city', 'Day', false);
+        await waitForPhoto();
+        frames(15, 'Battery');
+        for (const x of [.01, .5, .99]) {
+            const [r, g, b, a] = px(x, .9);
+            if (!(g > r + 15 && g > b + 15 && a === 255)) throw new Error('Photograph did not fill foreground ' + w + 'x' + h + ' at ' + x);
+            if (!(px(x, .13)[2] > px(x, .13)[0] + 15)) throw new Error('Opaque crop covered the sky ' + w + 'x' + h + ' at ' + x);
+        }
+        assert(true, 'Full photo foreground and visible sky at ' + w + 'x' + h);
+    }
+    document.body.textContent = 'WEATHER_PASS\n' + result.join('\n');
+})().catch(error => {document.body.textContent = 'WEATHER_FAIL ' + error.stack;});
+</script>
+</html>
