@@ -57,6 +57,8 @@ jobs:
           Copy-Item original\assets assets -Recurse
           Copy-Item original\installer\wizard installer\wizard -Recurse
           Copy-Item original\installer\*.isl installer
+          Copy-Item original\installer\Info-*.txt installer
+          Copy-Item original\LICENSE LICENSE
           foreach ($file in Get-Content payload-files.txt) {
             $dest = Join-Path 'publish' $file
             New-Item -Force -ItemType Directory (Split-Path $dest) | Out-Null

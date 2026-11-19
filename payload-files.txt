@@ -135,8 +135,11 @@ widgets/wallpaper/gallery/opal.preview.jpg
 widgets/wallpaper/gallery/petals.jpg
 widgets/wallpaper/gallery/petals.preview.jpg
 widgets/wallpaper/gallery/plates/alpine.webp
+widgets/wallpaper/gallery/plates/cedar.webp
 widgets/wallpaper/gallery/plates/city.webp
+widgets/wallpaper/gallery/plates/fjord.webp
 widgets/wallpaper/gallery/plates/forest.webp
+widgets/wallpaper/gallery/plates/reef.webp
 widgets/wallpaper/gallery/prism.jpg
 widgets/wallpaper/gallery/prism.preview.jpg
 widgets/wallpaper/gallery/reef.jpg
