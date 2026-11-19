@@ -1768,15 +1768,18 @@ namespace MotionDesk.UI
             var locLabel = new Label { Text = string.Format(LocalizationManager.T("Wallpaper.WeatherLocationCurrent"), cityShown) + PlaceSourceLine(settings.WeatherPlaceDetail, settings.WeatherPlaceSource), AutoSize = true, Font = UiTheme.FontBody, ForeColor = UiTheme.TextSecondary, Margin = new Padding(0, 0, 0, 4) };
             host.Controls.Add(locLabel);
             var locRow = new FlowLayoutPanel { AutoSize = true, WrapContents = false, Margin = new Padding(0, 0, 0, 10) };
-            var cityBox = new TextBox { Width = 240, Text = settings.WeatherCity, BackColor = UiTheme.Surface, ForeColor = UiTheme.TextPrimary, BorderStyle = BorderStyle.FixedSingle, Font = UiTheme.FontBody, Margin = new Padding(0, 5, 10, 0) };
-            var setBtn = new HoverButton { Text = LocalizationManager.T("Wallpaper.WeatherLocationSet"), AutoSize = true, Padding = new Padding(16, 6, 16, 6), FlatStyle = FlatStyle.Flat, ForeColor = Color.White, BackColor = UiTheme.AccentBlue, BaseColor = UiTheme.AccentBlue, HoverBackColor = ControlPaint.Light(UiTheme.AccentBlue, 0.15f), TabStop = false, Cursor = Cursors.Hand, Margin = new Padding(0, 2, 0, 0) };
+            var cityBox = new TextBox { Name = "weather-city", Width = 240, Text = settings.WeatherCity, BackColor = UiTheme.Surface, ForeColor = UiTheme.TextPrimary, BorderStyle = BorderStyle.FixedSingle, Font = UiTheme.FontBody, Margin = new Padding(0, 5, 10, 0) };
+            var setBtn = new HoverButton { Name = "weather-set", Text = LocalizationManager.T("Wallpaper.WeatherLocationSet"), AutoSize = true, Padding = new Padding(16, 6, 16, 6), FlatStyle = FlatStyle.Flat, ForeColor = Color.White, BackColor = UiTheme.AccentBlue, BaseColor = UiTheme.AccentBlue, HoverBackColor = ControlPaint.Light(UiTheme.AccentBlue, 0.15f), TabStop = false, Cursor = Cursors.Hand, Margin = new Padding(0, 2, 0, 0) };
             setBtn.FlatAppearance.BorderSize = 0;
 
             // Ζητήθηκε ρητά μετά από αναφορά χρήστη ότι η αναζήτηση "δεν βγάζει επιλογές πόλεων" όταν
             // υπάρχουν πολλές πόλεις με το ίδιο όνομα (π.χ. "Αθήνα, Ελλάδα" vs "Αθήνα, Ουκρανία") — πριν
             // επιλεγόταν σιωπηλά η πρώτη. Τώρα, όταν το GeocodeMultipleAsync βρει περισσότερα από ένα
             // αποτελέσματα, εμφανίζονται ως κλικαρίσμενες κάρτες εδώ αντί να μαντεύουμε.
-            var choicesPanel = new FlowLayoutPanel { FlowDirection = FlowDirection.TopDown, WrapContents = false, AutoSize = true, Margin = new Padding(0, 0, 0, 10), BackColor = Color.Transparent, Visible = false };
+            var choicesPanel = new FlowLayoutPanel { Name = "weather-choices", FlowDirection = FlowDirection.TopDown, WrapContents = false, AutoSize = true, Margin = new Padding(0, 0, 0, 10), BackColor = Color.Transparent, Visible = false };
+            // the card of this page was built from these controls (Cardify): a control that becomes visible (the city choices) or a label that grows is only placed by a new layout of the page
+            // (user test 2.6.0: the choices appeared BEHIND the text at the top of the card). The page is found through a live control, not through the discarded host panel.
+            void Relayout() { Control? p = locLabel; while (p != null && p is not SettingsPage) p = p.Parent; var pg = p as SettingsPage; if (pg == null) return; pg.DoLayoutPage(); pg.BeginInvoke(new Action(() => { pg.DoLayoutPage(); pg.BeginInvoke(new Action(() => { pg.DoLayoutPage(); pg.Invalidate(true); pg.Update(); })); })); /* auto-sized rows settle after a first pass */ }
 
             // Controls.Clear() αφαιρεί τα child controls από τη συλλογή αλλά ΔΕΝ τα κάνει Dispose —
             // ίδιο bug class με το SetPage() παραπάνω (βλ. σχόλιο εκεί). Χωρίς αυτό, κάθε νέα αναζήτηση
@@ -1795,6 +1798,7 @@ namespace MotionDesk.UI
                 cityBox.Text = m.Name;
                 ClearChoices();
                 _ = RefreshLiveWeatherLabelAsync(liveLabel, m.Lat, m.Lon);
+                Relayout();
             }
 
             async void ApplyCity()
@@ -1833,7 +1837,7 @@ namespace MotionDesk.UI
                     else locLabel.Text = LocalizationManager.T("Wallpaper.WeatherLocationNotFound");
                 }
                 catch (Exception) { locLabel.Text = LocalizationManager.T("Wallpaper.WeatherLocationNotFound"); }
-                finally { if (!setBtn.IsDisposed) setBtn.Enabled = true; }
+                finally { if (!setBtn.IsDisposed) { setBtn.Enabled = true; Relayout(); } }
             }
             setBtn.Click += (_, _) => ApplyCity();
             cityBox.KeyDown += (_, e) => { if (e.KeyCode == Keys.Enter) { e.SuppressKeyPress = true; ApplyCity(); } };
@@ -1843,8 +1847,10 @@ namespace MotionDesk.UI
 
             // Opt-in device location (explicit click + confirmation; rounded to ~1 km; only the rounded point is stored) and a way to delete it again.
             var reverseToggle = new FlatToggle { RowWidth = 700, Text = LocalizationManager.T("Wallpaper.WeatherReverseOn"), Checked = settings.WeatherReverseGeocode, BackColor = UiTheme.Surface, Margin = new Padding(0, 2, 0, 2) };
+            bool reverseSilently = false;
             reverseToggle.CheckedChanged += (_, _) =>
             {
+                if (reverseSilently) return;
                 if (reverseToggle.Checked && Opsis.UI.ThemedMessageBox.Show(this, LocalizationManager.T("Wallpaper.WeatherReverseConsent"), LocalizationManager.T("Wallpaper.WeatherReverseOn"), MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
                 { reverseToggle.Checked = false; return; }
                 WallpaperHostEngine.Instance.SetWeatherReverseGeocode(reverseToggle.Checked);
@@ -1863,6 +1869,14 @@ namespace MotionDesk.UI
                     if (here == null) { locLabel.Text = LocalizationManager.T("Wallpaper.WeatherLocationDenied"); return; }
                     // the name: the offline table of Greece first; the online lookup only if the person allowed it (one request, only now)
                     bool greek = LocalizationManager.CurrentLanguage == "el";
+                    // outside the offline table (Greece) and without the online lookup the text could only say "My location (approx.)": ask once, right here, whether the name may be looked up
+                    // (the same consent text as the switch; "No" keeps the generic name and nothing leaves the PC)
+                    if (!WallpaperSettings.Load().WeatherReverseGeocode && PlaceGazetteer.Default().Find(here.Value.Lat, here.Value.Lon) == null
+                        && Opsis.UI.ThemedMessageBox.Show(this, LocalizationManager.T("Wallpaper.WeatherReverseConsent"), LocalizationManager.T("Wallpaper.WeatherReverseOn"), MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
+                    {
+                        WallpaperHostEngine.Instance.SetWeatherReverseGeocode(true);
+                        reverseSilently = true; reverseToggle.Checked = true; reverseSilently = false;
+                    }
                     var placed = await PlaceNaming.ResolveAsync(here.Value.Lat, here.Value.Lon, greek, WallpaperSettings.Load().WeatherReverseGeocode, LocalizationManager.T("Wallpaper.WeatherMyLocation"));
                     string name = placed.Name;
                     WallpaperHostEngine.Instance.SetWeatherLocation(name, here.Value.Lat, here.Value.Lon, placed.Source, placed.Detail);
@@ -1870,13 +1884,14 @@ namespace MotionDesk.UI
                     cityBox.Text = "";
                     _ = RefreshLiveWeatherLabelAsync(liveLabel, here.Value.Lat, here.Value.Lon);
                 }
-                finally { if (!myLocBtn.IsDisposed) myLocBtn.Enabled = true; }
+                finally { if (!myLocBtn.IsDisposed) { myLocBtn.Enabled = true; Relayout(); } }
             };
             var clearLocBtn = NewHoverButton(LocalizationManager.T("Wallpaper.WeatherLocationClear"), () =>
             {
                 WallpaperHostEngine.Instance.SetWeatherLocation("", 37.9838, 23.7275);
                 cityBox.Text = "";
                 locLabel.Text = LocalizationManager.T("Wallpaper.WeatherLocationCleared");
+                Relayout();
                 _ = RefreshLiveWeatherLabelAsync(liveLabel, 37.9838, 23.7275);
             });
             clearLocBtn.Width = 240; clearLocBtn.Margin = new Padding(10, 0, 0, 0);

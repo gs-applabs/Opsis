@@ -147,6 +147,33 @@ namespace MotionDesk.Services
                 }
                 catch (Exception ex) { problems.Add($"[{key}] screenshot failed: {ex.Message}"); }
 
+                // OPSIS_AUDIT_LOC=<city>: types the city into the weather location box, presses "Set location" and screenshots the card (the choices must appear UNDER the button)
+                var locCity = Environment.GetEnvironmentVariable("OPSIS_AUDIT_LOC");
+                if (!string.IsNullOrEmpty(locCity) && key == "Wallpaper")
+                {
+                    try
+                    {
+                        Control? Find(Control c, string name) { foreach (Control ch in c.Controls) { if (ch.Name == name) return ch; var r = Find(ch, name); if (r != null) return r; } return null; }
+                        var box = Find(win, "weather-city") as TextBox; var btn = Find(win, "weather-set") as Button;
+                        if (box != null && btn != null)
+                        {
+                            box.Text = locCity; btn.PerformClick(); Pump(6000);
+                            if (Find(win, "weather-choices") is Control ch0)
+                                problems.Add($"[Wallpaper] INFO choices panel: visible={ch0.Visible} bounds={ch0.Bounds} parent={ch0.Parent?.GetType().Name} children={string.Join(";", ch0.Controls.Cast<Control>().Select(c => c.Bounds + (c.Visible ? "v" : "h")))}");
+                            Opsis.UI.StableScrollPanel? sp2 = null;
+                            void FindSp2(Control c) { foreach (Control ch in c.Controls) { if (sp2 == null && ch is Opsis.UI.StableScrollPanel s && s.Visible) sp2 = s; FindSp2(ch); } }
+                            FindSp2(win);
+                            if (sp2 != null) { var pt = box.PointToScreen(Point.Empty); var pp = sp2.PointToScreen(Point.Empty); sp2.ScrollTo(0, Math.Max(0, sp2.ScrollOffset.Y + (pt.Y - pp.Y) - 40)); Pump(500); }
+                            using var lb = new Bitmap(win.Width, win.Height);
+                            win.DrawToBitmap(lb, new Rectangle(0, 0, win.Width, win.Height));
+                            lb.Save(Path.Combine(folder, "page-Wallpaper-location.png"), System.Drawing.Imaging.ImageFormat.Png);
+                            try { win.Activate(); Pump(300); using var sb = new Bitmap(win.Width, win.Height); using (var sg = Graphics.FromImage(sb)) sg.CopyFromScreen(win.Location, Point.Empty, win.Size); sb.Save(Path.Combine(folder, "page-Wallpaper-location-screen.png"), System.Drawing.Imaging.ImageFormat.Png); } catch (Exception) { }
+                        }
+                        else problems.Add("[Wallpaper] location box not found (needs a mode that shows the weather section)");
+                    }
+                    catch (Exception ex) { problems.Add("[Wallpaper] location test failed: " + ex.Message); }
+                }
+
                 // OPSIS_AUDIT_ADV=1: open every "Advanced" group of the page and screenshot the page from the top down (page-<key>-adv<n>.png)
                 if (Environment.GetEnvironmentVariable("OPSIS_AUDIT_ADV") == "1")
                 {
