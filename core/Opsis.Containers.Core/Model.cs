@@ -119,6 +119,16 @@ public sealed class ContainersStore
 
     public ContainersStore AddMigration(int from, Action<JsonObject> step) { migrations[from] = step; return this; }
 
+    /// <summary>Reads the file; a sharing violation / lock (IOException) is retried for up to about 10 s before giving up.</summary>
+    internal string ReadWithRetry(int attempts = 40, int delayMs = 250)
+    {
+        for (int i = 1; ; i++)
+        {
+            try { return File.ReadAllText(Path); }
+            catch (IOException) when (i < attempts) { System.Threading.Thread.Sleep(delayMs); }
+        }
+    }
+
     public ContainersDocument Load()
     {
         lock (gate)
@@ -126,13 +136,18 @@ public sealed class ContainersStore
             if (!File.Exists(Path)) return new ContainersDocument();
             try
             {
-                var node = JsonNode.Parse(File.ReadAllText(Path)) as JsonObject ?? throw new JsonException("not an object");
+                var node = JsonNode.Parse(ReadWithRetry()) as JsonObject ?? throw new JsonException("not an object");
                 var v = node["schemaVersion"]?.GetValue<int>() ?? 0;
                 while (v < CurrentVersion) { if (migrations.TryGetValue(v, out var step)) step(node); v++; }
                 node["schemaVersion"] = Math.Max(v, node["schemaVersion"]?.GetValue<int>() ?? 0);
                 return node.Deserialize<ContainersDocument>(Json) ?? new ContainersDocument();
             }
-            catch (Exception ex) when (ex is JsonException or IOException or InvalidOperationException or FormatException)
+            catch (IOException)
+            {
+                // the file is only LOCKED (another process / an antivirus scan holds it for longer than the retry): it is not damaged, so it is never renamed to .corrupt
+                return new ContainersDocument();
+            }
+            catch (Exception ex) when (ex is JsonException or InvalidOperationException or FormatException)
             {
                 try { File.Move(Path, Path + ".corrupt", true); } catch (IOException) { }
                 return new ContainersDocument();

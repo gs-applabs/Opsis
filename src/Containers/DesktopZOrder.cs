@@ -16,14 +16,15 @@ namespace MotionDesk.Containers
         /// <paramref name="chainTopToBottom"/>: top-level windows from the top of the z-order to the bottom. <paramref name="desktopWindows"/>: Progman / WorkerW. Returns the window
         /// our window must be inserted AFTER (so that it ends up just above the highest desktop window), or null when it must go to the very top.
         /// </summary>
-        public static IntPtr? InsertAfter(IReadOnlyList<IntPtr> chainTopToBottom, ISet<IntPtr> desktopWindows, IntPtr self)
+        public static IntPtr? InsertAfter(IReadOnlyList<IntPtr> chainTopToBottom, ISet<IntPtr> desktopWindows, IntPtr self, Func<IntPtr, bool>? isTopmost = null)
         {
             IntPtr? before = null;
             foreach (var h in chainTopToBottom)
             {
                 if (h == self) continue;
                 if (desktopWindows.Contains(h)) return before;      // the first (highest) desktop window: stay right above it
-                before = h;
+                // a TOPMOST window (the taskbar, a pinned app) must never be the window we are inserted after: that would make OUR window topmost, above the taskbar and the user's work
+                if (isTopmost == null || !isTopmost(h)) before = h;
             }
             return null;        // no desktop window found: leave the window where it is (caller keeps the current position)
         }
@@ -75,11 +76,12 @@ namespace MotionDesk.Containers
             var sb = new StringBuilder(32);
             bool Ours(IntPtr h) { if (siblings != null && siblings.Contains(h)) return true; sb.Clear(); GetClassName(h, sb, 32); return sb.ToString() == "OpsisGlassPane"; }
             if (IsInPlace(chain, desktop, hwnd, Ours)) return true;
-            var after = InsertAfter(chain, desktop, hwnd);
+            var after = InsertAfter(chain, desktop, hwnd, h => (GetWindowLong(h, -20) & 0x8) != 0 /* WS_EX_TOPMOST */);
             const uint Flags = 0x0001 | 0x0002 | 0x0010 | 0x0200 | 0x0040;   // NOSIZE | NOMOVE | NOACTIVATE | NOOWNERZORDER | SHOWWINDOW
             return SetWindowPos(hwnd, after ?? HwndTop, 0, 0, 0, 0, Flags);
         }
 
+        [DllImport("user32.dll", EntryPoint = "GetWindowLongW")] private static extern int GetWindowLong(IntPtr h, int index);
         [DllImport("user32.dll")] private static extern IntPtr GetTopWindow(IntPtr h);
         [DllImport("user32.dll")] private static extern IntPtr GetWindow(IntPtr h, uint cmd);
         [DllImport("user32.dll", CharSet = CharSet.Unicode)] private static extern int GetClassName(IntPtr h, StringBuilder sb, int max);

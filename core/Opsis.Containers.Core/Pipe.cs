@@ -45,6 +45,7 @@ public sealed class PipeServer : IDisposable
 
     private async Task Accept(CancellationToken ct)
     {
+        bool first = true;      // the first instance must be the FIRST one of this name: another process that already listens on it (a squatter) makes Create fail instead of silently sharing the pipe
         while (!ct.IsCancellationRequested)
         {
             NamedPipeServerStream? server = null;
@@ -52,7 +53,8 @@ public sealed class PipeServer : IDisposable
             {
                 var security = new PipeSecurity();
                 security.AddAccessRule(new PipeAccessRule(WindowsIdentity.GetCurrent().User!, PipeAccessRights.ReadWrite | PipeAccessRights.CreateNewInstance, AccessControlType.Allow));   // this user only
-                server = NamedPipeServerStreamAcl.Create(name, PipeDirection.InOut, 8, PipeTransmissionMode.Byte, PipeOptions.Asynchronous, 4096, 4096, security);
+                server = NamedPipeServerStreamAcl.Create(name, PipeDirection.InOut, 8, PipeTransmissionMode.Byte, (first ? PipeOptions.Asynchronous | PipeOptions.FirstPipeInstance : PipeOptions.Asynchronous), 4096, 4096, security);
+                first = false;
                 await server.WaitForConnectionAsync(ct);
                 var s = server; server = null;
                 _ = Task.Run(() => Serve(s, ct), ct);       // one connection never blocks the next
