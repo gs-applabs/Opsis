@@ -41,8 +41,35 @@ Check(before.Select(x => (x.Key, x.Name, x.Kind, x.Text)).SequenceEqual(
     engine.Snapshot().Select(x => (x.Key, x.Name, x.Kind, x.Text))), "Full HKCU restore");
 Console.WriteLine("All taskbar registry assertions passed.");
 
+if (!DesktopShell.TryFindTaskbar())
+    Console.WriteLine("SKIP native auto-hide: the runner has no Explorer taskbar window.");
+else
+{
+    var taskbar = new RealTaskbar();
+    bool original = taskbar.IsAutoHide;
+    try
+    {
+        taskbar.SetAutoHide(!original);
+        Check(SpinWait.SpinUntil(() => taskbar.IsAutoHide != original, 3000), "Native Explorer auto-hide");
+    }
+    finally
+    {
+        taskbar.SetAutoHide(original);
+        Check(SpinWait.SpinUntil(() => taskbar.IsAutoHide == original, 3000), "Native Explorer auto-hide restore");
+    }
+}
+
+
 static void Check(bool condition, string message)
 {
     if (!condition) throw new InvalidOperationException(message);
     Console.WriteLine("PASS " + message);
+}
+
+internal static class DesktopShell
+{
+    [System.Runtime.InteropServices.DllImport("user32.dll", CharSet = System.Runtime.InteropServices.CharSet.Unicode)]
+    private static extern IntPtr FindWindow(string type, string? title);
+
+    public static bool TryFindTaskbar() => FindWindow("Shell_TrayWnd", null) != IntPtr.Zero;
 }
