@@ -988,6 +988,8 @@
   "Viz.MinLevel": "الحد الأدنى للمستوى",
   "Viz.LineWidth": "عرض الخط",
   "Viz.Intensity": "الشدة",
+  "Viz.LayerOpacity": "شفافية الطبقة (%)",
+  "Viz.LayerScale": "حجم الطبقة (%)",
   "Viz.AddLevel": "المستوى المضاف (كسب)",
   "Viz.RayAngle": "زاوية الشعاع (الوضع المستدير)",
   "Viz.Treble": "تعزيز الترددات العالية",

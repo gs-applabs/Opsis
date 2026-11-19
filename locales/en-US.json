@@ -1011,6 +1011,8 @@
   "Viz.MinLevel": "Minimum level",
   "Viz.LineWidth": "Line width",
   "Viz.Intensity": "Intensity",
+  "Viz.LayerOpacity": "Layer opacity (%)",
+  "Viz.LayerScale": "Layer size (%)",
   "Viz.AddLevel": "Added level (gain)",
   "Viz.RayAngle": "Ray angle (rounded mode)",
   "Viz.Treble": "Treble boost",

@@ -988,6 +988,8 @@
   "Viz.MinLevel": "最小レベル",
   "Viz.LineWidth": "線の太さ",
   "Viz.Intensity": "強度",
+  "Viz.LayerOpacity": "レイヤーの不透明度 (%)",
+  "Viz.LayerScale": "レイヤーのサイズ (%)",
   "Viz.AddLevel": "加算レベル（ゲイン）",
   "Viz.RayAngle": "レイの角度（丸型モード）",
   "Viz.Treble": "高音ブースト",

@@ -988,6 +988,8 @@
   "Viz.MinLevel": "Niveau minimal",
   "Viz.LineWidth": "Épaisseur de ligne",
   "Viz.Intensity": "Intensité",
+  "Viz.LayerOpacity": "Opacité du calque (%)",
+  "Viz.LayerScale": "Taille du calque (%)",
   "Viz.AddLevel": "Niveau ajouté (gain)",
   "Viz.RayAngle": "Angle du rayon (mode arrondi)",
   "Viz.Treble": "Renfort des aigus",

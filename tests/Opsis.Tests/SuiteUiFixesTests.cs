@@ -106,3 +106,15 @@ public sealed class GlobalSearchTests
         Assert.DoesNotContain("new HelpGlyphButton", File.ReadAllText(Path.Combine(root, "src", "UI", "MainWindow.cs")));
     }
 }
+
+public sealed class VisualizerLayerTests
+{
+    [Fact]
+    public void OpacityAndSizeAreClampedAndSentToThePage()
+    {
+        var d = new MotionDesk.Widgets.VisualizerConfig { LayerOpacity = 0, LayerScale = 9999 }.ToPageObject();
+        Assert.Equal(10, d["opacity"]); Assert.Equal(200, d["scale"]);
+        var n = new MotionDesk.Widgets.VisualizerConfig().ToPageObject();
+        Assert.Equal(100, n["opacity"]); Assert.Equal(100, n["scale"]);
+    }
+}

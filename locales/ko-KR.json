@@ -988,6 +988,8 @@
   "Viz.MinLevel": "최소 레벨",
   "Viz.LineWidth": "선 두께",
   "Viz.Intensity": "강도",
+  "Viz.LayerOpacity": "레이어 불투명도 (%)",
+  "Viz.LayerScale": "레이어 크기 (%)",
   "Viz.AddLevel": "추가 레벨(게인)",
   "Viz.RayAngle": "광선 각도(둥근 모드)",
   "Viz.Treble": "고음 강화",

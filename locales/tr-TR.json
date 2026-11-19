@@ -988,6 +988,8 @@
   "Viz.MinLevel": "En düşük seviye",
   "Viz.LineWidth": "Çizgi kalınlığı",
   "Viz.Intensity": "Yoğunluk",
+  "Viz.LayerOpacity": "Katman opaklığı (%)",
+  "Viz.LayerScale": "Katman boyutu (%)",
   "Viz.AddLevel": "Eklenen seviye (kazanç)",
   "Viz.RayAngle": "Işın açısı (yuvarlak mod)",
   "Viz.Treble": "Tiz artırma",

@@ -34,6 +34,8 @@ namespace MotionDesk.Widgets
         public int AddLevel { get; set; } = 45;                  // 0..500 (per mille)
         public int RayAngle { get; set; } = 40;                  // 0..100
         public int TrebleBoost { get; set; } = 0;                // 0..100
+        public int LayerOpacity { get; set; } = 100;             // 10..100 (%): the whole layer (rays, clock, date) over the wallpaper
+        public int LayerScale { get; set; } = 100;               // 50..200 (%): size of the rays
         public int PosX { get; set; } = 50;                      // % of the screen width
         public int PosY { get; set; } = 52;                      // % of the screen height, measured from the bottom
         public int IdleSeed { get; set; } = 1;                   // "regenerate" button: changes the pattern shown while nothing plays
@@ -99,7 +101,7 @@ namespace MotionDesk.Widgets
                 ["hideSilent"] = HideWhenSilent, ["reverse"] = Reverse,
                 ["minLevel"] = C(MinLevel, 0, 1000), ["lineWidth"] = C(LineWidth, 0, 100), ["intensity"] = C(Intensity, 0, 99),
                 ["addLevel"] = C(AddLevel, 0, 500), ["rayAngle"] = C(RayAngle, 0, 100), ["treble"] = C(TrebleBoost, 0, 100),
-                ["x"] = C(PosX, 0, 100), ["y"] = C(PosY, 0, 100), ["seed"] = IdleSeed,
+                ["x"] = C(PosX, 0, 100), ["y"] = C(PosY, 0, 100), ["seed"] = IdleSeed, ["opacity"] = C(LayerOpacity, 10, 100), ["scale"] = C(LayerScale, 50, 200),
                 ["font"] = SafeFont(Font), ["bold"] = Bold,
                 ["showClock"] = ShowClock, ["clockColor"] = SafeColor(ClockColor, "#FFFFFF"), ["clockSize"] = C(ClockSize, 0, 100),
                 ["clockX"] = C(ClockX, 0, 100), ["clockY"] = C(ClockY, 0, 100), ["seconds"] = ShowSeconds, ["h12"] = Hour12,

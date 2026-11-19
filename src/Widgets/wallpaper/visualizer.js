@@ -50,7 +50,7 @@
         rays = conf.interpolate ? 120 : 60;
         if (conf.layout === 'Linear') rays = conf.interpolate ? 96 : 48;
         if (conf.shadow && perf && perf.glow === false) rays = Math.min(rays, 60);
-        cx = W * conf.x / 100; cy = H * (1 - conf.y / 100); R = Math.min(W, H) * 0.17;
+        cx = W * conf.x / 100; cy = H * (1 - conf.y / 100); R = Math.min(W, H) * 0.17 * ((conf.scale || 100) / 100);
         // colours: rainbow around the circle (or along the line), or the user's two colours (symmetric, so the seam is invisible)
         colors = new Array(rays);
         for (let i = 0; i < rays; i++) {
@@ -223,7 +223,7 @@
             if (vid) vid.pause();
             return;
         }
-        conf = next; root.style.display = '';
+        conf = next; root.style.display = ''; root.style.opacity = String(Math.min(100, Math.max(10, conf.opacity || 100)) / 100);
         buildFormats(); styleText(); applyBackground(); rebuild(); syncClock();
         if (wantsRays()) startLoop(); else stopLoop();
     };

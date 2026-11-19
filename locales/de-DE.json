@@ -988,6 +988,8 @@
   "Viz.MinLevel": "Mindestpegel",
   "Viz.LineWidth": "Linienbreite",
   "Viz.Intensity": "Intensität",
+  "Viz.LayerOpacity": "Deckkraft der Ebene (%)",
+  "Viz.LayerScale": "Größe der Ebene (%)",
   "Viz.AddLevel": "Zusätzlicher Pegel (Gain)",
   "Viz.RayAngle": "Strahlwinkel (runder Modus)",
   "Viz.Treble": "Höhenanhebung",

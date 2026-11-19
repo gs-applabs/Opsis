@@ -988,6 +988,8 @@
   "Viz.MinLevel": "न्यूनतम स्तर",
   "Viz.LineWidth": "रेखा की चौड़ाई",
   "Viz.Intensity": "तीव्रता",
+  "Viz.LayerOpacity": "परत की अपारदर्शिता (%)",
+  "Viz.LayerScale": "परत का आकार (%)",
   "Viz.AddLevel": "जोड़ा गया स्तर (गेन)",
   "Viz.RayAngle": "किरण कोण (गोल मोड)",
   "Viz.Treble": "ट्रेबल बूस्ट",

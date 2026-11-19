@@ -988,6 +988,8 @@
   "Viz.MinLevel": "最小电平",
   "Viz.LineWidth": "线宽",
   "Viz.Intensity": "强度",
+  "Viz.LayerOpacity": "图层不透明度 (%)",
+  "Viz.LayerScale": "图层大小 (%)",
   "Viz.AddLevel": "附加电平（增益）",
   "Viz.RayAngle": "射线角度（圆角模式）",
   "Viz.Treble": "高音增强",

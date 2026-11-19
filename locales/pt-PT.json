@@ -988,6 +988,8 @@
   "Viz.MinLevel": "Nível mínimo",
   "Viz.LineWidth": "Espessura da linha",
   "Viz.Intensity": "Intensidade",
+  "Viz.LayerOpacity": "Opacidade da camada (%)",
+  "Viz.LayerScale": "Tamanho da camada (%)",
   "Viz.AddLevel": "Nível adicionado (ganho)",
   "Viz.RayAngle": "Ângulo do raio (modo arredondado)",
   "Viz.Treble": "Reforço de agudos",

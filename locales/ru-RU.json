@@ -988,6 +988,8 @@
   "Viz.MinLevel": "Минимальный уровень",
   "Viz.LineWidth": "Толщина линии",
   "Viz.Intensity": "Интенсивность",
+  "Viz.LayerOpacity": "Прозрачность слоя (%)",
+  "Viz.LayerScale": "Размер слоя (%)",
   "Viz.AddLevel": "Добавочный уровень (усиление)",
   "Viz.RayAngle": "Угол луча (скруглённый режим)",
   "Viz.Treble": "Усиление высоких",

@@ -97,6 +97,8 @@ namespace MotionDesk.UI
 
             AddText(panel, V("Note"));
             Toggle("Enable", cfg.Enabled, (c, v) => c.Enabled = v);
+            Slider("LayerOpacity", 10, 100, cfg.LayerOpacity, (c, v) => c.LayerOpacity = v);
+            Slider("LayerScale", 50, 200, cfg.LayerScale, (c, v) => c.LayerScale = v);
 
             AddSection(panel, Sub("HdrColors"));
             Toggle("UseBg", cfg.UseBackgroundColor, (c, v) => c.UseBackgroundColor = v);
