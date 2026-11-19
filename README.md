@@ -11,7 +11,7 @@
 
 <p align="center">
   <img alt="Platform" src="https://img.shields.io/badge/platform-Windows%2010%2F11-0078D6?logo=windows&logoColor=white" />
-  <img alt=".NET" src="https://img.shields.io/badge/.NET-10.0-512BD4?logo=dotnet&logoColor=white" />
+  <img alt=".NET" src="https://img.shields.io/badge/.NET-11.0-512BD4?logo=dotnet&logoColor=white" />
   <img alt="Version" src="https://img.shields.io/badge/version-2.6.0-00B4D8" />
   <img alt="License" src="https://img.shields.io/badge/license-MIT-green" />
   <img alt="Languages" src="https://img.shields.io/badge/localized-14%20languages-blue" />
@@ -93,7 +93,7 @@ OpsisSetup.exe /VERYSILENT /SUPPRESSMSGBOXES /NORESTART
 
 ### Χτίσιμο από τον πηγαίο κώδικα
 
-Απαιτείται: Windows 10/11, [.NET 10 SDK](https://dotnet.microsoft.com/download), [WebView2 Runtime](https://developer.microsoft.com/microsoft-edge/webview2/) (συνήθως ήδη εγκατεστημένο).
+Απαιτείται: Windows 10/11, [.NET 11 SDK](https://dotnet.microsoft.com/download), [WebView2 Runtime](https://developer.microsoft.com/microsoft-edge/webview2/) (συνήθως ήδη εγκατεστημένο).
 
 ```bash
 dotnet build MotionDeskStudio.csproj -c Release
@@ -163,7 +163,7 @@ OpsisSetup.exe /VERYSILENT /SUPPRESSMSGBOXES /NORESTART
 
 ### Build from source
 
-Requirements: Windows 10/11, [.NET 10 SDK](https://dotnet.microsoft.com/download), [WebView2 Runtime](https://developer.microsoft.com/microsoft-edge/webview2/) (usually already present).
+Requirements: Windows 10/11, [.NET 11 SDK](https://dotnet.microsoft.com/download), [WebView2 Runtime](https://developer.microsoft.com/microsoft-edge/webview2/) (usually already present).
 
 ```bash
 dotnet build MotionDeskStudio.csproj -c Release
