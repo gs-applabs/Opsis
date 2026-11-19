@@ -1597,6 +1597,7 @@ namespace MotionDesk.UI
             if (settings.Mode == "Application") BuildApplicationSection(panel, settings);
             BuildElementsSection(panel, settings);
             BuildVisualizerSection(panel, settings);
+            BuildMusicOverlaySection(panel);
             if (settings.Mode == "Weather") BuildWeatherWallpaperSection(panel, settings);
             if (settings.Mode == "Desktop") AddText(panel, LocalizationManager.T("Wallpaper.DesktopIntro"));
 
@@ -3837,6 +3838,14 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
             return panel;
         }
 
+        /// <summary>The nearest ancestor of <paramref name="c"/> that scrolls (AutoScroll), or <paramref name="fallback"/>. Internal: a test checks it.</summary>
+        internal static ScrollableControl LiveScrollHost(Control c, ScrollableControl fallback)
+        {
+            for (var p = c.Parent; p != null; p = p.Parent)
+                if (p is ScrollableControl s && s.AutoScroll) return s;
+            return fallback;
+        }
+
         private static void EnableWheelPassthrough(ScrollableControl scrollHost)
         {
             void Hook(Control c)
@@ -3845,12 +3854,16 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                     || (c is ScrollableControl inner && !ReferenceEquals(inner, scrollHost) && inner.AutoScroll);
                 if (!ReferenceEquals(c, scrollHost) && !hasOwnWheelMeaning)
                 {
+                    var owner = c;
                     c.MouseWheel += (_, e) =>
                     {
                         if (e is HandledMouseEventArgs hme) hme.Handled = true;
-                        var pos = scrollHost.AutoScrollPosition;
+                        // 2.6.0 (user test: "the Wallpaper tab sticks when I scroll"): Cardify moves these controls into a SettingsPage, so the scroll host is
+                        // the nearest LIVE scrolling ancestor, not the old flow panel (which is no longer on screen: the wheel scrolled nothing over any control).
+                        var host = LiveScrollHost(owner, scrollHost);
+                        var pos = host.AutoScrollPosition;
                         int newY = Math.Max(0, -pos.Y - e.Delta);
-                        scrollHost.AutoScrollPosition = new Point(-pos.X, newY);
+                        host.AutoScrollPosition = new Point(-pos.X, newY);
                     };
                 }
                 if (!hasOwnWheelMeaning)
@@ -4614,32 +4627,7 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                 appearanceAdvanced.AddControl(BuildDarkIntensityRow());
                 appearance.Add(appearanceAdvanced);
 
-                // ---- Music overlay (its own card since 2.6.0): on/off, position, auto-hide, click-through; all live
-                var music = NewCard(LocalizationManager.T("Settings.MusicOverlay"), () =>
-                {
-                    var d = new AppSettings(); var a = AppSettings.Load();
-                    a.MusicOverlayEnabled = d.MusicOverlayEnabled; a.MusicOverlayAnchor = d.MusicOverlayAnchor; a.MusicOverlayAutoHideSeconds = d.MusicOverlayAutoHideSeconds; a.MusicOverlayClickThrough = d.MusicOverlayClickThrough;
-                    a.Save(); MusicOverlay.Apply();
-                });
-                // music overlay (plan 2.1.6): live, no restart
-                music.AddControl(Checkbox(LocalizationManager.T("Settings.MusicOverlay"), AppSettings.Load().MusicOverlayEnabled,
-                    v => { var a = AppSettings.Load(); a.MusicOverlayEnabled = v; a.Save(); MusicOverlay.Apply(); }, LocalizationManager.T("Settings.MusicOverlayDesc")));
-                {
-                    var anchorRow = new FlowLayoutPanel { AutoSize = true, WrapContents = false, Margin = new Padding(0, 4, 0, 8) };
-                    anchorRow.Controls.Add(new Label { Text = LocalizationManager.T("Settings.MusicOverlayPosition"), AutoSize = false, Width = 300, Height = 28, TextAlign = ContentAlignment.MiddleLeft, Font = UiTheme.FontBody, ForeColor = UiTheme.TextSecondary });
-                    var anchorCombo = new FlatComboBox { Width = 200 };
-                    var anchors = Enum.GetValues<MotionDesk.Services.OverlayAnchor>();
-                    var anchorNames = anchors.Select(a => LocalizationManager.T("Anchor." + a)).ToArray();
-                    var curAnchor = Enum.TryParse<MotionDesk.Services.OverlayAnchor>(AppSettings.Load().MusicOverlayAnchor, true, out var ca) ? ca : MotionDesk.Services.OverlayAnchor.BottomRight;
-                    anchorCombo.SetItems(anchorNames, anchorNames[Array.IndexOf(anchors, curAnchor)]);
-                    anchorCombo.SelectedIndexChanged += (_, _) => { var a = AppSettings.Load(); a.MusicOverlayAnchor = anchors[Math.Clamp(anchorCombo.SelectedIndex, 0, anchors.Length - 1)].ToString(); a.Save(); MusicOverlay.Apply(); };
-                    anchorRow.Controls.Add(anchorCombo);
-                    music.AddControl(anchorRow);
-                }
-                music.AddControl(NumericRow(LocalizationManager.T("Settings.MusicOverlayAutoHide"), Math.Clamp(AppSettings.Load().MusicOverlayAutoHideSeconds, 0, 600), 0, 600,
-                    v => { var a = AppSettings.Load(); a.MusicOverlayAutoHideSeconds = v; a.Save(); MusicOverlay.Apply(); }, 0, "s"));
-                music.AddControl(Checkbox(LocalizationManager.T("Settings.MusicOverlayClickThrough"), AppSettings.Load().MusicOverlayClickThrough,
-                    v => { var a = AppSettings.Load(); a.MusicOverlayClickThrough = v; a.Save(); MusicOverlay.Apply(); }, LocalizationManager.T("Settings.MusicOverlayClickThroughDesc")));
+                // the Music overlay moved to the Wallpaper page in 2.6.0 (BuildMusicOverlaySection)
 
                 // ---- Snapping
                 var snapping = NewCard(LocalizationManager.T("Settings.SectionSnapping"), () =>

@@ -147,6 +147,55 @@ namespace MotionDesk.Services
                 }
                 catch (Exception ex) { problems.Add($"[{key}] screenshot failed: {ex.Message}"); }
 
+                // OPSIS_AUDIT_ADV=1: open every "Advanced" group of the page and screenshot the page from the top down (page-<key>-adv<n>.png)
+                if (Environment.GetEnvironmentVariable("OPSIS_AUDIT_ADV") == "1")
+                {
+                    try
+                    {
+                        var advs = new List<Opsis.UI.AdvancedSection>();
+                        void FindAdv(Control c) { foreach (Control ch in c.Controls) { if (ch is Opsis.UI.AdvancedSection a) advs.Add(a); FindAdv(ch); } }
+                        FindAdv(win);
+                        foreach (var a in advs) a.Expanded = true;
+                        Pump(900);
+                        Opsis.UI.StableScrollPanel? sp = null;
+                        void FindSp(Control c) { foreach (Control ch in c.Controls) { if (sp == null && ch is Opsis.UI.StableScrollPanel s && s.Visible) sp = s; FindSp(ch); } }
+                        FindSp(win);
+                        for (int n = 0; n < 6; n++)
+                        {
+                            if (n > 0) { if (sp == null) break; sp.ScrollTo(0, sp.ScrollOffset.Y + Math.Max(200, sp.ClientSize.Height - 40)); Pump(500); }
+                            using var ab = new Bitmap(win.Width, win.Height);
+                            win.DrawToBitmap(ab, new Rectangle(0, 0, win.Width, win.Height));
+                            ab.Save(Path.Combine(folder, "page-" + key.Replace(':', '_') + "-adv" + n + ".png"), System.Drawing.Imaging.ImageFormat.Png);
+                        }
+                        if (sp != null)
+                        {
+                            var swp = System.Diagnostics.Stopwatch.StartNew();
+                            int steps = 40;
+                            for (int n = 0; n < steps; n++) { sp.ScrollTo(0, (n * 60) % Math.Max(100, sp.VerticalScroll.Maximum)); win.Update(); Application.DoEvents(); }
+                            problems.Add($"[{key}] INFO scroll perf: {swp.ElapsedMilliseconds / steps} ms per 60px step ({sp.Controls.Count} cards, max {sp.VerticalScroll.Maximum})");
+                        }
+                        if (sp != null)
+                        {
+                            // the wheel over an ordinary control (a button / label inside a card) must scroll THE PAGE (user test: "the page sticks")
+                            sp.ScrollTo(0, 0);
+                            Control? target = null;
+                            void FindBtn(Control c) { foreach (Control ch in c.Controls) { if (target == null && ch.Visible && ch is Opsis.UI.FlatButton && ch.Parent is not Opsis.UI.AdvancedSection) target = ch; FindBtn(ch); } }
+                            FindBtn(sp);
+                            if (target != null)
+                            {
+                                int before = sp.ScrollOffset.Y;
+                                typeof(Control).GetMethod("OnMouseWheel", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!.Invoke(target, new object[] { new MouseEventArgs(MouseButtons.None, 0, 5, 5, -120) });
+                                Pump(200);
+                                int after = sp.ScrollOffset.Y;
+                                if (after <= before) problems.Add($"[{key}] wheel over '{target.GetType().Name}' did not scroll the page ({before} -> {after})");
+                                else problems.Add($"[{key}] INFO wheel over '{target.GetType().Name}' scrolled the page {before} -> {after}");
+                            }
+                        }
+                        sp?.ScrollTo(0, 0);
+                    }
+                    catch (Exception ex) { problems.Add($"[{key}] advanced screenshot failed: {ex.Message}"); }
+                }
+
                 var controls = new List<Control>();
                 void Collect(Control c)
                 {
@@ -207,7 +256,7 @@ namespace MotionDesk.Services
             File.WriteAllText(Path.Combine(folder, "ui-audit.md"), report.ToString());
             File.WriteAllText(Path.Combine(folder, "ui-audit.json"), System.Text.Json.JsonSerializer.Serialize(new { clicked = totalClicked, problems, pages }));
             try { win.Close(); } catch (Exception) { }
-            return problems.Count == 0 ? 0 : 1;
+            return problems.All(p => p.Contains(" INFO ")) ? 0 : 1;
         }
     }
 }

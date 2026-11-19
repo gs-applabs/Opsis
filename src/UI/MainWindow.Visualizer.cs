@@ -13,6 +13,36 @@ namespace MotionDesk.UI
     {
         private static string V(string key) => LocalizationManager.T("Viz." + key);
 
+        // 2.6.0: the music overlay (small now-playing card over the desktop) lives on the Wallpaper page next to the visualizer; all live, no restart
+        private void BuildMusicOverlaySection(FlowLayoutPanel panel)
+        {
+            AddSection(panel, LocalizationManager.T("Settings.MusicOverlay"), () =>
+            {
+                var d = new AppSettings(); var a = AppSettings.Load();
+                a.MusicOverlayEnabled = d.MusicOverlayEnabled; a.MusicOverlayAnchor = d.MusicOverlayAnchor; a.MusicOverlayAutoHideSeconds = d.MusicOverlayAutoHideSeconds; a.MusicOverlayClickThrough = d.MusicOverlayClickThrough;
+                a.Save(); MusicOverlay.Apply();
+            });
+            panel.Controls.Add(SettingsView.Checkbox(LocalizationManager.T("Settings.MusicOverlay"), AppSettings.Load().MusicOverlayEnabled,
+                v => { var a = AppSettings.Load(); a.MusicOverlayEnabled = v; a.Save(); MusicOverlay.Apply(); }, LocalizationManager.T("Settings.MusicOverlayDesc")));
+            {
+                var anchorRow = new FlowLayoutPanel { AutoSize = true, WrapContents = false, Margin = new Padding(0, 4, 0, 8) };
+                anchorRow.Controls.Add(new Label { Text = LocalizationManager.T("Settings.MusicOverlayPosition"), AutoSize = false, Width = 300, Height = 28, TextAlign = ContentAlignment.MiddleLeft, Font = UiTheme.FontBody, ForeColor = UiTheme.TextSecondary });
+                var anchorCombo = new FlatComboBox { Width = 200 };
+                var anchors = Enum.GetValues<MotionDesk.Services.OverlayAnchor>();
+                var anchorNames = anchors.Select(a => LocalizationManager.T("Anchor." + a)).ToArray();
+                var curAnchor = Enum.TryParse<MotionDesk.Services.OverlayAnchor>(AppSettings.Load().MusicOverlayAnchor, true, out var ca) ? ca : MotionDesk.Services.OverlayAnchor.BottomRight;
+                anchorCombo.SetItems(anchorNames, anchorNames[Array.IndexOf(anchors, curAnchor)]);
+                anchorCombo.SelectedIndexChanged += (_, _) => { var a = AppSettings.Load(); a.MusicOverlayAnchor = anchors[Math.Clamp(anchorCombo.SelectedIndex, 0, anchors.Length - 1)].ToString(); a.Save(); MusicOverlay.Apply(); };
+                anchorRow.Controls.Add(anchorCombo);
+                panel.Controls.Add(anchorRow);
+            }
+            panel.Controls.Add(AdvancedStart());
+            panel.Controls.Add(SettingsView.NumericRow(LocalizationManager.T("Settings.MusicOverlayAutoHide"), Math.Clamp(AppSettings.Load().MusicOverlayAutoHideSeconds, 0, 600), 0, 600,
+                v => { var a = AppSettings.Load(); a.MusicOverlayAutoHideSeconds = v; a.Save(); MusicOverlay.Apply(); }, 0, "s"));
+            panel.Controls.Add(SettingsView.Checkbox(LocalizationManager.T("Settings.MusicOverlayClickThrough"), AppSettings.Load().MusicOverlayClickThrough,
+                v => { var a = AppSettings.Load(); a.MusicOverlayClickThrough = v; a.Save(); MusicOverlay.Apply(); }, LocalizationManager.T("Settings.MusicOverlayClickThroughDesc")));
+        }
+
         private void BuildVisualizerSection(FlowLayoutPanel panel, WallpaperSettings settings)
         {
             var cfg = settings.Visualizer ?? new VisualizerConfig();
@@ -60,11 +90,15 @@ namespace MotionDesk.UI
                 };
                 r.Controls.Add(b);
             }
-            void Header(string key) => panel.Controls.Add(new Label { Text = V(key), AutoSize = true, Font = UiTheme.FontBody, ForeColor = UiTheme.TextPrimary, Margin = new Padding(0, 10, 0, 4) });
+            // 2.6.0: one card per function (user test: the settings were mixed without saying what they belong to). Each card shows the everyday rows;
+            // fine tuning (sizes, positions, fonts, thresholds) sits in the collapsed "Advanced" group of the same card.
+            string Sub(string hdrKey) => V("Section") + " · " + V(hdrKey);
+            void Adv() => panel.Controls.Add(AdvancedStart());
 
+            AddText(panel, V("Note"));
             Toggle("Enable", cfg.Enabled, (c, v) => c.Enabled = v);
 
-            Header("HdrColors");
+            AddSection(panel, Sub("HdrColors"));
             Toggle("UseBg", cfg.UseBackgroundColor, (c, v) => c.UseBackgroundColor = v);
             ColorPick("UseBg", cfg.BackgroundColor, (c, v) => c.BackgroundColor = v);
             Toggle("UseBgImage", cfg.UseBackgroundImage, (c, v) => c.UseBackgroundImage = v);
@@ -80,12 +114,13 @@ namespace MotionDesk.UI
                 };
                 r.Controls.Add(path); r.Controls.Add(pick);
             }
+            Adv();
             Toggle("Gradient", cfg.CustomGradient, (c, v) => c.CustomGradient = v);
             ColorPick("Color1", cfg.Color1, (c, v) => c.Color1 = v);
             ColorPick("Color2", cfg.Color2, (c, v) => c.Color2 = v);
             Toggle("WhiteInside", cfg.WhiteInside, (c, v) => c.WhiteInside = v);
 
-            Header("HdrRays");
+            AddSection(panel, Sub("HdrRays"));
             Toggle("ShowRays", cfg.ShowRays, (c, v) => c.ShowRays = v);
             {
                 var r = Row();
@@ -96,10 +131,11 @@ namespace MotionDesk.UI
                 combo.SelectedIndexChanged += (_, _) => { string v = combo.SelectedIndex == 1 ? "Linear" : "Radial"; Commit(c => c.Layout = v); };
                 r.Controls.Add(combo);
             }
+            Toggle("HideSilent", cfg.HideWhenSilent, (c, v) => c.HideWhenSilent = v);
+            Adv();
             Toggle("CleanEnd", cfg.CleanLineEnd, (c, v) => c.CleanLineEnd = v);
             Toggle("Interpolate", cfg.Interpolate, (c, v) => c.Interpolate = v);
             Toggle("Rounded", cfg.Rounded, (c, v) => c.Rounded = v);
-            Toggle("HideSilent", cfg.HideWhenSilent, (c, v) => c.HideWhenSilent = v);
             Toggle("Reverse", cfg.Reverse, (c, v) => c.Reverse = v);
             Slider("MinLevel", 0, 1000, cfg.MinLevel, (c, v) => c.MinLevel = v);
             Slider("LineWidth", 0, 100, cfg.LineWidth, (c, v) => c.LineWidth = v);
@@ -115,7 +151,12 @@ namespace MotionDesk.UI
                 panel.Controls.Add(regen);
             }
 
-            Header("HdrTime");
+            AddSection(panel, Sub("HdrTime"));
+            Toggle("Show", cfg.ShowClock, (c, v) => c.ShowClock = v);
+            ColorPick("Color", cfg.ClockColor, (c, v) => c.ClockColor = v);
+            Toggle("Seconds", cfg.ShowSeconds, (c, v) => c.ShowSeconds = v);
+            Toggle("Hour12", cfg.Hour12, (c, v) => c.Hour12 = v);
+            Adv();
             {
                 var r = Row();
                 r.Controls.Add(new Label { Text = V("Font"), AutoSize = false, Width = 250, Height = 26, TextAlign = ContentAlignment.MiddleLeft, Font = UiTheme.FontBody, ForeColor = UiTheme.TextSecondary });
@@ -126,30 +167,27 @@ namespace MotionDesk.UI
                 r.Controls.Add(fonts);
             }
             Toggle("Bold", cfg.Bold, (c, v) => c.Bold = v);
-            Toggle("Show", cfg.ShowClock, (c, v) => c.ShowClock = v);
-            ColorPick("Color", cfg.ClockColor, (c, v) => c.ClockColor = v);
             Slider("Size", 0, 100, cfg.ClockSize, (c, v) => c.ClockSize = v);
             Slider("PosX", 0, 100, cfg.ClockX, (c, v) => c.ClockX = v);
             Slider("PosY", 0, 100, cfg.ClockY, (c, v) => c.ClockY = v);
-            Toggle("Seconds", cfg.ShowSeconds, (c, v) => c.ShowSeconds = v);
-            Toggle("Hour12", cfg.Hour12, (c, v) => c.Hour12 = v);
 
-            Header("HdrDate");
+            AddSection(panel, Sub("HdrDate"));
             Toggle("Show", cfg.ShowDate, (c, v) => c.ShowDate = v);
-            ColorPick("Color", cfg.DateColor, (c, v) => c.DateColor = v);
-            Slider("Size", 0, 100, cfg.DateSize, (c, v) => c.DateSize = v);
-            Slider("PosX", 0, 100, cfg.DateX, (c, v) => c.DateX = v);
-            Slider("PosY", 0, 100, cfg.DateY, (c, v) => c.DateY = v);
             Toggle("DayName", cfg.ShowDayName, (c, v) => c.ShowDayName = v);
             Toggle("DayNumber", cfg.ShowDayNumber, (c, v) => c.ShowDayNumber = v);
             Toggle("Year", cfg.ShowYear, (c, v) => c.ShowYear = v);
             Toggle("Numeric", cfg.NumericDate, (c, v) => c.NumericDate = v);
+            Adv();
+            ColorPick("Color", cfg.DateColor, (c, v) => c.DateColor = v);
+            Slider("Size", 0, 100, cfg.DateSize, (c, v) => c.DateSize = v);
+            Slider("PosX", 0, 100, cfg.DateX, (c, v) => c.DateX = v);
+            Slider("PosY", 0, 100, cfg.DateY, (c, v) => c.DateY = v);
 
-            Header("HdrShadow");
+            AddSection(panel, Sub("HdrShadow"));
             Toggle("Shadow", cfg.Shadow, (c, v) => c.Shadow = v);
+            Adv();
             Slider("ShadowIntensity", 0, 500, cfg.ShadowIntensity, (c, v) => c.ShadowIntensity = v);
             Toggle("ShadowMusic", cfg.ShadowFollowsMusic, (c, v) => c.ShadowFollowsMusic = v);
-            AddText(panel, V("Note"));
         }
     }
 }
