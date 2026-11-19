@@ -1,5 +1,6 @@
 # PROJECT STATE
 ## 2.6.0 user-test fixes (2026-11-19, local commits on 2.6.0-beta): Help shortcuts = About ShortcutsCard, About history button removed, real family icons (assets/suite, embedded suite-icon-<id>.png), Wallpaper page: visualizer split in cards + Music overlay moved from Settings, wheel passthrough scrolls the live SettingsPage (was the discarded panel), weather-location relayout, DesktopZOrder.IsInPlace (container/glass-pane z-order ping-pong = flicker), WidgetCardPanel. UiAudit probes: OPSIS_AUDIT_ADV/LOC/WIDGETS. NOT VERIFIED: real mouse wheel, the flicker on a real desktop, wallpaper animation frames.
+## 2.6.0 later (2026-11-19): global search in the header (src/UI/GlobalSearch.cs, Ctrl+F; per-page search boxes removed), Help button in About (header "?" removed). Audit freeze root cause: --ui-audit had no SynchronizationContext (awaits continued on pool threads) + CopyFromScreen can block (now opt-in OPSIS_AUDIT_SCREEN=1); UI-freeze watchdog writes HANG.txt and exits 3.
 ## 2.6.0 (2026-11-18): Music visualizer wallpaper element (docs/VISUALIZER-FEATURES.md) and animated GIF lock screen (docs/LOCKSCREEN-GIF.md; core/Opsis.Lockscreen.Core, tools/OpsisLockHelper). Both unit tested only: real WebView2 rendering and the real lock screen are NOT VERIFIED.
 
 

@@ -113,6 +113,8 @@ namespace MotionDesk.Services
             void Mark(string s) { current = s; try { File.AppendAllText(progress, DateTime.UtcNow.ToString("HH:mm:ss.fff") + " " + s + nl); } catch (Exception) { } }
             StartDialogGuard(problems, () => current);
             StartWatchdog(folder, () => current);
+            // the audit pumps messages by hand (no Application.Run): without a WinForms synchronization context every `await` of a handler continues on a thread-pool thread and touches controls from there (that froze the audit)
+            System.Threading.SynchronizationContext.SetSynchronizationContext(new WindowsFormsSynchronizationContext());
             var win = new MotionDesk.UI.MainWindow { StartPosition = FormStartPosition.Manual, Location = new Point(40, 40) };
             win.Show();
             Pump(2500);
@@ -228,7 +230,7 @@ namespace MotionDesk.Services
                             Mark("loc: drawn");
                             
                             Mark("loc: saved");
-                            try { win.Activate(); Pump(300); using var sb = new Bitmap(win.Width, win.Height); using (var sg = Graphics.FromImage(sb)) sg.CopyFromScreen(win.Location, Point.Empty, win.Size); sb.Save(Path.Combine(folder, "page-Wallpaper-location-screen.png"), System.Drawing.Imaging.ImageFormat.Png); } catch (Exception) { }
+                            if (Environment.GetEnvironmentVariable("OPSIS_AUDIT_SCREEN") == "1") try { Pump(300); using var sb = new Bitmap(win.Width, win.Height); using (var sg = Graphics.FromImage(sb)) sg.CopyFromScreen(win.Location, Point.Empty, win.Size); sb.Save(Path.Combine(folder, "page-Wallpaper-location-screen.png"), System.Drawing.Imaging.ImageFormat.Png); } catch (Exception) { }
                         }
                         else problems.Add("[Wallpaper] location box not found (needs a mode that shows the weather section)");
                     }
