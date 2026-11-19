@@ -139,6 +139,7 @@ namespace MotionDesk.UI
             _pageBuilders["DeskContainers"] = () => SafeBuildPage("DeskContainers", ShowDeskContainers);
             _pageBuilders["DeskStrip"] = () => SafeBuildPage("DeskStrip", ShowDeskStrip);
             _pageBuilders["Wallpaper"] = () => SafeBuildPage("Wallpaper", ShowWallpaper);
+            _pageBuilders["Music"] = () => SafeBuildPage("Music", ShowMusic);
             _pageBuilders["Settings"] = () => SafeBuildPage("Settings", ShowSettings);
             _pageBuilders["Profiles"] = () => SafeBuildPage("Profiles", ShowProfiles);
             _pageBuilders["Performance"] = () => SafeBuildPage("Performance", ShowPerformance);
@@ -531,16 +532,22 @@ namespace MotionDesk.UI
             DisposeChildren(_nav);
             _navButtons.Clear();
             _activeButton = null;
+            _navGroups.Clear();
             AddNavButton(_nav, LocalizationManager.T("Nav.Dashboard"), "Dashboard", ShowDashboard, 1);
+            // 2.6.0 groups (a divider and a small heading each): the desktop surface, the appearance, the system
+            AddNavGroup(_nav, LocalizationManager.T("Nav.GroupDesktop"));
             AddNavButton(_nav, LocalizationManager.T("Nav.Widgets"), "Widgets", ShowWidgets, 2);
             AddNavButton(_nav, LocalizationManager.T("Nav.DeskZones"), "DeskZones", ShowDeskZones, 3);
             AddNavButton(_nav, LocalizationManager.T("DeskZones.SectionContainers"), "DeskContainers", ShowDeskContainers, (string?)null);
             AddNavButton(_nav, LocalizationManager.T("Personalization.SectionDeskStrip"), "DeskStrip", ShowDeskStrip, (string?)null);
+            AddNavGroup(_nav, LocalizationManager.T("Nav.GroupAppearance"));
             AddNavButton(_nav, LocalizationManager.T("Nav.Wallpaper"), "Wallpaper", ShowWallpaper, 4);
+            AddNavButton(_nav, LocalizationManager.T("Nav.Music"), "Music", ShowMusic, (string?)null);
+            AddNavButton(_nav, LocalizationManager.T("Nav.Personalization"), "Personalization", ShowPersonalization, 0);
+            AddNavGroup(_nav, LocalizationManager.T("Nav.GroupSystem"));
             AddNavButton(_nav, LocalizationManager.T("Nav.Performance"), "Performance", ShowPerformance, 5);
             AddNavButton(_nav, LocalizationManager.T("Nav.Settings"), "Settings", ShowSettings, 6);
             AddNavButton(_nav, LocalizationManager.T("Nav.Automation"), "Automation", ShowAutomation, 8);
-            AddNavButton(_nav, LocalizationManager.T("Nav.Personalization"), "Personalization", ShowPersonalization, 0);
             // Ζητήθηκε ρητά: αντί για απλό "Audio Visualizer", νέα καρτέλα "Διαχείριση Ήχου" με
             // presets ενίσχυσης + ζωντανό visualizer, εμπνευσμένη από τη λογική του FXSound.
             // "Audio management" (equalizer for all system audio) is an extra feature: offered only when Opsis Media Suite (the former Waveframe) is installed
@@ -556,7 +563,7 @@ namespace MotionDesk.UI
             // "Διαχείριση Ήχου" (πριν ήταν ανάποδα).
             AddNavButton(_nav, LocalizationManager.T("Nav.About"), "About", ShowAbout, 9);
 
-            if (_sidebarCollapsed) foreach (var btn in _navButtons.Values) btn.Collapsed = true;
+            if (_sidebarCollapsed) { foreach (var btn in _navButtons.Values) btn.Collapsed = true; foreach (var g in _navGroups) g.Collapsed = true; }
             if (_navButtons.TryGetValue(_currentPageKey, out var active)) SetActiveButton(active);
             EnsureSidebarFits();
         }
@@ -946,6 +953,7 @@ namespace MotionDesk.UI
             _brandSubLabel.Visible = !collapsed;
             _brandVersionLabel.Visible = !collapsed;
             foreach (var btn in _navButtons.Values) { btn.Collapsed = collapsed; btn.Refresh(); }
+            foreach (var g in _navGroups) g.Collapsed = collapsed;
             _nav.Refresh();
         }
 
@@ -979,7 +987,7 @@ namespace MotionDesk.UI
                 {
                     _sidebar.Width = w;
                     int usable = Math.Max(56, w - _sidebar.Padding.Horizontal);
-                    foreach (var btn in _navButtons.Values) btn.Width = Math.Clamp(usable, 56, 184);
+                    { foreach (var btn in _navButtons.Values) btn.Width = Math.Clamp(usable, 56, 184); foreach (var g in _navGroups) g.Width = Math.Clamp(usable, 56, 184); }
                 }
                 if (t >= 1.0)
                 {
@@ -1626,8 +1634,6 @@ namespace MotionDesk.UI
             if (settings.Mode is "Page" or "Image") BuildMediaWallpaperSection(panel, settings);
             if (settings.Mode == "Application") BuildApplicationSection(panel, settings);
             BuildElementsSection(panel, settings);
-            BuildVisualizerSection(panel, settings);
-            BuildMusicOverlaySection(panel);
             if (settings.Mode == "Weather") BuildWeatherWallpaperSection(panel, settings);
             if (settings.Mode == "Desktop") AddText(panel, LocalizationManager.T("Wallpaper.DesktopIntro"));
 

@@ -54,7 +54,8 @@ public sealed class WallpaperPageFixesTests
     {
         string root = SuiteUiFixesTests_Root();
         string main = File.ReadAllText(Path.Combine(root, "src", "UI", "MainWindow.cs"));
-        Assert.Contains("BuildMusicOverlaySection(panel);", main);
+        Assert.Contains("BuildMusicOverlaySection(panel);", File.ReadAllText(Path.Combine(root, "src", "UI", "MainWindow.Visualizer.cs")));
+        Assert.DoesNotContain("BuildVisualizerSection(panel, settings);", main);
         Assert.DoesNotContain("music.AddControl", main);
         string viz = File.ReadAllText(Path.Combine(root, "src", "UI", "MainWindow.Visualizer.cs"));
         foreach (var hdr in new[] { "HdrColors", "HdrRays", "HdrTime", "HdrDate", "HdrShadow" }) Assert.Contains("Sub(\"" + hdr + "\")", viz);
@@ -97,7 +98,8 @@ public sealed class GlobalSearchTests
     [Fact]
     public void KeyPrefixesMapToPagesAndPerPageSearchBoxesAreGone()
     {
-        Assert.Equal("Wallpaper", MotionDesk.UI.GlobalSearch.PageOf("Viz.Section"));
+        Assert.Equal("Music", MotionDesk.UI.GlobalSearch.PageOf("Viz.Section"));
+        Assert.Equal("Music", MotionDesk.UI.GlobalSearch.PageOf("Settings.MusicOverlay"));
         Assert.Equal("DeskContainers", MotionDesk.UI.GlobalSearch.PageOf("DeskZones.SectionContainers"));
         Assert.Null(MotionDesk.UI.GlobalSearch.PageOf("Common.Cancel"));
         string root = AppContext.BaseDirectory; while (!File.Exists(Path.Combine(root, "MotionDeskStudio.csproj"))) root = Path.GetDirectoryName(root)!;
@@ -116,5 +118,24 @@ public sealed class VisualizerLayerTests
         Assert.Equal(10, d["opacity"]); Assert.Equal(200, d["scale"]);
         var n = new MotionDesk.Widgets.VisualizerConfig().ToPageObject();
         Assert.Equal(100, n["opacity"]); Assert.Equal(100, n["scale"]);
+    }
+}
+
+public sealed class GreeklishSearchTests
+{
+    [Theory]
+    [InlineData("roloi")]
+    [InlineData("ρολόι")]
+    [InlineData("ROLOI")]
+    public void GreekSettingFoundWithLatinOrGreekLetters(string q)
+    {
+        var index = new[] { new MotionDesk.UI.SearchEntry("Widgets", "Widgets", "Ρολόι") };
+        Assert.Single(MotionDesk.UI.GlobalSearch.Search(index, q));
+    }
+
+    [Fact]
+    public void PhoneticSpellingsMeet()
+    {
+        Assert.Equal(MotionDesk.UI.GlobalSearch.Phonetic("Απόδοση"), MotionDesk.UI.GlobalSearch.Phonetic("apodosi"));
     }
 }

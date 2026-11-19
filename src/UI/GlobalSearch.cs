@@ -21,7 +21,7 @@ namespace MotionDesk.UI
         {
             ("DeskZones.SectionContainers", "DeskContainers"), ("DeskZones.ContainersIntro", "DeskContainers"), ("DeskContainer.", "DeskContainers"), ("DCM.", "DeskContainers"), ("DCX.", "DeskContainers"),
             ("Personalization.SectionDeskStrip", "DeskStrip"), ("Personalization.DeskStrip", "DeskStrip"),
-            ("Dashboard.", "Dashboard"), ("Widgets.", "Widgets"), ("WidgetText.", "Widgets"), ("DeskZones.", "DeskZones"), ("Wallpaper.", "Wallpaper"), ("Viz.", "Wallpaper"), ("Weather.", "Wallpaper"),
+            ("Settings.MusicOverlay", "Music"), ("Dashboard.", "Dashboard"), ("Widgets.", "Widgets"), ("WidgetText.", "Widgets"), ("DeskZones.", "DeskZones"), ("Wallpaper.", "Wallpaper"), ("Viz.", "Music"), ("Weather.", "Wallpaper"),
             ("Performance.", "Performance"), ("Perf.", "Performance"), ("Settings.", "Settings"), ("Automation.", "Automation"), ("Profiles.", "Automation"),
             ("Personalization.", "Personalization"), ("LockGif.", "Personalization"), ("Sounds.", "Personalization"), ("Cursors.", "Personalization"),
             ("AudioEnhancement.", "AudioEnhancement"), ("Apo.", "AudioEnhancement"), ("About.", "About"),
@@ -53,11 +53,33 @@ namespace MotionDesk.UI
 
         public static List<SearchEntry> Search(IReadOnlyList<SearchEntry> index, string? query, int max = 8)
         {
+            if (SearchPhonetic(index, query, max) is { Count: > 0 } ph && !index.Any(e => PageSearch.Matches(e.PageLabel + " " + e.Text, query))) return ph;
             var words = PageSearch.Normalize(query).Split(' ', StringSplitOptions.RemoveEmptyEntries);
             if (words.Length == 0) return new List<SearchEntry>();
             var hits = index.Where(e => PageSearch.Matches(e.PageLabel + " " + e.Text, query)).OrderBy(e => e.Text == e.PageLabel ? 0 : 1).ThenBy(e => e.Text.Length).Take(max).ToList();
             if (hits.Count > 0) return hits;
             return index.Select(e => (E: e, S: Fuzzy(words, PageSearch.Normalize(e.PageLabel + " " + e.Text)))).Where(x => x.S < int.MaxValue).OrderBy(x => x.S).Select(x => x.E).Take(max).ToList();
+        }
+
+        /// <summary>Greek and Greeklish meet in a common "sound" spelling: "rologi", "ρολόι", "roloï" all become the same letters, so a Greek setting is found with Latin letters.</summary>
+        internal static string Phonetic(string? s)
+        {
+            var t = PageSearch.Normalize(s);
+            var sb = new System.Text.StringBuilder();
+            foreach (var ch in t)
+                sb.Append(ch switch
+                {
+                    'α' => "a", 'β' => "v", 'γ' => "g", 'δ' => "d", 'ε' => "e", 'ζ' => "z", 'η' => "i", 'θ' => "th", 'ι' => "i", 'κ' => "k", 'λ' => "l", 'μ' => "m", 'ν' => "n", 'ξ' => "x", 'ο' => "o",
+                    'π' => "p", 'ρ' => "r", 'σ' or 'ς' => "s", 'τ' => "t", 'υ' => "i", 'φ' => "f", 'χ' => "ch", 'ψ' => "ps", 'ω' => "o", '8' => "th", 'w' => "o", 'y' => "i", 'u' => "u", 'j' => "i", _ => ch.ToString()
+                });
+            return sb.ToString().Replace("th", "0001").Replace("ch", "0002").Replace("h", "i").Replace("ou", "u").Replace("oi", "i").Replace("ei", "i").Replace("ai", "e").Replace("0001", "th").Replace("0002", "ch");
+        }
+
+        private static List<SearchEntry> SearchPhonetic(IReadOnlyList<SearchEntry> index, string? query, int max)
+        {
+            var words = Phonetic(query).Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            if (words.Length == 0) return new List<SearchEntry>();
+            return index.Where(e => { var t = Phonetic(e.PageLabel + " " + e.Text); return words.All(w => t.Contains(w)); }).OrderBy(e => e.Text.Length).Take(max).ToList();
         }
 
         private static int Fuzzy(string[] q, string label)

@@ -13,6 +13,48 @@ namespace MotionDesk.UI
     {
         private static string V(string key) => LocalizationManager.T("Viz." + key);
 
+        // ---- 2.6.0: "Music and visualization" page (the visualizer layer and the music overlay used to be at the bottom of the Wallpaper page) ----
+        private void ShowMusic()
+        {
+            _currentPageKey = "Music";
+            var panel = CreatePagePanel();
+            BuildVisualizerSection(panel, WallpaperSettings.Load());
+            BuildMusicOverlaySection(panel);
+            SetPage("Page.Music.Title", Cardify(panel, LocalizationManager.T("Nav.Music")));
+        }
+
+        // ---- 2.6.0: headings of the groups of the side menu ----
+        private readonly System.Collections.Generic.List<NavGroupHeader> _navGroups = new();
+
+        private void AddNavGroup(Control parent, string title)
+        {
+            var h = new NavGroupHeader(title) { Width = Math.Min(184, Math.Max(56, parent.ClientSize.Width)), Collapsed = _sidebarCollapsed };
+            parent.Controls.Add(h);
+            _navGroups.Add(h);
+        }
+
+        /// <summary>A thin divider with a small heading; collapsed (icon-only menu) it is the divider only.</summary>
+        private sealed class NavGroupHeader : Control
+        {
+            private readonly string _title;
+            public bool Collapsed { get => _c; set { _c = value; Height = value ? 12 : 30; Invalidate(); } }
+            private bool _c;
+            public NavGroupHeader(string title)
+            {
+                _title = UiTheme.UpperNoAccents(title);
+                SetStyle(ControlStyles.OptimizedDoubleBuffer | ControlStyles.UserPaint | ControlStyles.AllPaintingInWmPaint | ControlStyles.SupportsTransparentBackColor, true);
+                BackColor = Color.Transparent; Height = 30; Margin = new Padding(0, 4, 0, 0); TabStop = false;
+            }
+            protected override void OnPaint(PaintEventArgs e)
+            {
+                using var pen = new Pen(Color.FromArgb(70, UiTheme.TextMuted));
+                e.Graphics.DrawLine(pen, 14, 3, Width - 14, 3);
+                if (_c) return;
+                using var f = new Font("Segoe UI", 7.5f, FontStyle.Bold);
+                TextRenderer.DrawText(e.Graphics, _title, f, new Rectangle(16, 8, Width - 20, 20), UiTheme.TextMuted, TextFormatFlags.EndEllipsis | TextFormatFlags.NoPrefix | TextFormatFlags.Left);
+            }
+        }
+
         // 2.6.0: the music overlay (small now-playing card over the desktop) lives on the Wallpaper page next to the visualizer; all live, no restart
         private void BuildMusicOverlaySection(FlowLayoutPanel panel)
         {

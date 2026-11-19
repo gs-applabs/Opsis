@@ -35,7 +35,7 @@ namespace MotionDesk.UI
                 case "About": DrawInfo(g, pen, brush); break;
                 case "Clock": DrawClock(g, pen); break;
                 case "Network": DrawNetwork(g, pen, brush); break;
-                case "AudioVisualizer": case "AudioEnhancement": DrawAudio(g, pen); break;
+                case "AudioVisualizer": case "AudioEnhancement": case "Music": DrawAudio(g, pen); break;
                 case "Weather": DrawWeather(g, pen, brush); break;
                 case "SystemMonitor": DrawPulse(g, pen); break;
                 case "Disk": DrawDisk(g, pen, brush); break;
