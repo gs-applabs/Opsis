@@ -60,7 +60,7 @@ namespace MotionDesk.UI
             _currentPage = currentPage; _history = history;
             Text = LocalizationManager.T("Help.Title");
             StartPosition = FormStartPosition.CenterParent;
-            Size = new Size(760, 640); MinimumSize = new Size(520, 420);
+            Size = new Size(860, 640); MinimumSize = new Size(520, 420);
             ShowInTaskbar = false;
             KeyPreview = true;
             if (LocalizationManager.CurrentLanguage.StartsWith("ar", StringComparison.OrdinalIgnoreCase)) { RightToLeft = RightToLeft.Yes; RightToLeftLayout = true; }
@@ -161,13 +161,8 @@ namespace MotionDesk.UI
 
         private void BuildShortcuts(FlowLayoutPanel p)
         {
-            // "# Group" lines are headings, the others are "keys  description"
-            foreach (var raw in LocalizationManager.T("About.ShortcutsList").Split('\n', StringSplitOptions.RemoveEmptyEntries))
-            {
-                var line = raw.TrimEnd('\r');
-                if (line.StartsWith("# ")) { p.Controls.Add(Line(line[2..], heading: true)); continue; }
-                p.Controls.Add(Line(line));
-            }
+            // one source of truth: the same card (and About.ShortcutsList) as the About page
+            p.Controls.Add(new MainWindow.ShortcutsCard(LocalizationManager.T("About.ShortcutsList")) { Margin = new Padding(0, 0, 0, 14) });
         }
 
         private void BuildRestore(FlowLayoutPanel p)

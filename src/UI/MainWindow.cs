@@ -3287,7 +3287,6 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
             AddSection(panel, LocalizationManager.T("About.SectionCapabilities"));
             AddText(panel, LocalizationManager.T("About.CapabilitiesList"));
             AddText(panel, string.Format(LocalizationManager.T("About.RuntimeLine"), WidgetHostEngine.Instance.GetActiveWidgets().Count));
-            AddButton(panel, LocalizationManager.T("VersionHistory.Button"), (_, _) => ShowVersionHistory());
 
             // ---- plugins (π.χ. News Crawler): ιδιότητες, βοήθεια, οδηγίες, ιστορικό και άδεια ζουν ΕΔΩ, όχι στη σελίδα του plugin
             var pluginInfos = Services.PluginHost.Instance.GetAboutInfos();
@@ -4006,7 +4005,7 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
         // (ίδιας οικογένειας quirk με το NavButton), οπότε ζωγραφίζουμε το κείμενο απευθείας.
         // Συντομεύσεις πληκτρολογίου σε ΕΝΑ ενιαίο στοιχείο: ομάδες, "πλήκτρα" (keycaps) αριστερά και περιγραφή ευθυγραμμισμένη δεξιά.
         // Πηγή: το locale κλειδί About.ShortcutsList — γραμμή "# Τίτλος" = νέα ομάδα, αλλιώς "Πλήκτρα  Περιγραφή" (διπλό κενό ως διαχωριστικό).
-        private sealed class ShortcutsCard : Control
+        internal sealed class ShortcutsCard : Control
         {
             private readonly List<(bool IsHeader, string Left, string Right)> _rows = new();
             private const int CardWidth = 760, KeysX = 20, DescX = 330, RowH = 32, HeaderH = 36, PadTop = 12, PadBottom = 14;
