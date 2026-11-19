@@ -70,7 +70,7 @@ def map_files(metadata, folders, count):
                     continue
                 pos += 4
                 fields = []
-                for _ in range(15):
+                for _ in range(14):
                     length = get32(metadata, pos)
                     assert length < 16384 and pos+4+length<=len(metadata) and length%2==0
                     fields.append(metadata[pos+4:pos+4+length].decode('utf-16-le'))

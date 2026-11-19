@@ -126,7 +126,8 @@ public sealed class DeskFlipOverlay : Form
         if (_entries.Count == 0) yield break;
         int head = (int)MathF.Ceiling(_position);
         float fraction = head - _position;
-        for (int i = 0; i < _entries.Count; i++)
+        int cardCount = fraction > .001f ? _entries.Count - 1 : _entries.Count;
+        for (int i = 0; i < cardCount; i++)
         {
             float depth = fraction + i;
             if (depth > 8.8f) break;
