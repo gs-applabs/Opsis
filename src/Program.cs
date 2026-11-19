@@ -176,6 +176,12 @@ namespace MotionDesk
                 Environment.Exit(Services.DesktopDiagnostics.TestContainerBudget(args[1], int.Parse(args[2])));
                 return;
             }
+            if (args.Length == 2 && args[0] == "--test-wallpaper-js")
+            {
+                ApplicationConfiguration.Initialize();
+                Environment.Exit(Services.DesktopDiagnostics.TestWallpaperJs(args[1]));
+                return;
+            }
             if (args.Length == 3 && args[0] == "--shot-html")
             {
                 ApplicationConfiguration.Initialize();

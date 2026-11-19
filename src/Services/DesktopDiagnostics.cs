@@ -585,6 +585,50 @@ namespace MotionDesk.Services
         }
 
         /// <summary>Test helper: loads a local HTML page in WebView2 (same engine as the wallpaper), waits until its title becomes "done", saves a PNG of the page. Used to look at the landscapes without the desktop.</summary>
+
+        /// <summary>
+        /// `Opsis.exe --test-wallpaper-js &lt;report&gt;`: loads the REAL wallpaper page (widgets\wallpaper\index.html) in a hidden WebView2 and checks that it runs: no uncaught JS error / failed script,
+        /// and the frame loop keeps ticking (requestAnimationFrame counter grows). Isolated user data; touches nothing of the desktop. Exit 0 = ok.
+        /// </summary>
+        public static int TestWallpaperJs(string report)
+        {
+            int result = 1; var lines = new List<string>();
+            using var form = new Form { FormBorderStyle = FormBorderStyle.None, StartPosition = FormStartPosition.Manual, Location = new Point(-3000, 0), Size = new Size(1280, 720), ShowInTaskbar = false };
+            var web = new Microsoft.Web.WebView2.WinForms.WebView2 { Dock = DockStyle.Fill };
+            form.Controls.Add(web);
+            form.Shown += async (_, _) =>
+            {
+                try
+                {
+                    string page = Path.Combine(AppContext.BaseDirectory, "widgets", "wallpaper", "index.html");
+                    if (!File.Exists(page)) { lines.Add("FAIL page missing: " + page); return; }
+                    var env = await Microsoft.Web.WebView2.Core.CoreWebView2Environment.CreateAsync(null, Path.Combine(Path.GetTempPath(), "opsis-walljs-webview"));
+                    await web.EnsureCoreWebView2Async(env);
+                    // before any page script: collect errors (also failed <script src>) and count animation frames
+                    await web.CoreWebView2.AddScriptToExecuteOnDocumentCreatedAsync(
+                        "window.__errs=[];window.__frames=0;" +
+                        "window.addEventListener('error',function(e){window.__errs.push((e.message||'resource')+' @'+(e.filename||(e.target&&e.target.src)||'')+':'+(e.lineno||0));},true);" +
+                        "window.addEventListener('unhandledrejection',function(e){var rs=e.reason;window.__errs.push('promise: '+((rs&&(rs.stack||rs.message))||JSON.stringify(rs)));});" +
+                        "(function(){var r=window.requestAnimationFrame.bind(window);window.requestAnimationFrame=function(f){return r(function(t){window.__frames++;return f(t);});};})();");
+                    web.Source = new Uri(page);
+                    await System.Threading.Tasks.Task.Delay(4000);
+                    int f1 = int.Parse(await web.CoreWebView2.ExecuteScriptAsync("window.__frames"));
+                    await System.Threading.Tasks.Task.Delay(1500);
+                    int f2 = int.Parse(await web.CoreWebView2.ExecuteScriptAsync("window.__frames"));
+                    string errs = await web.CoreWebView2.ExecuteScriptAsync("JSON.stringify(window.__errs.filter(function(x){return x.indexOf(\"remoteObjectId\")<0;}))");
+                    bool noErr = errs == "\"[]\"";
+                    lines.Add((noErr ? "PASS " : "FAIL ") + "no JS errors " + (noErr ? "" : errs));
+                    lines.Add((f2 > f1 ? "PASS " : "FAIL ") + $"frame loop runs ({f1} -> {f2} frames in 1.5 s)");
+                    result = noErr && f2 > f1 ? 0 : 1;
+                }
+                catch (Exception ex) { lines.Add("FAIL " + ex.GetType().Name + ": " + ex.Message); result = 2; }
+                finally { form.Close(); }
+            };
+            Application.Run(form);
+            try { File.WriteAllLines(report, lines); } catch (Exception) { }
+            return result;
+        }
+
         public static int ShotHtml(string url, string png)
         {
             int result = 1;
