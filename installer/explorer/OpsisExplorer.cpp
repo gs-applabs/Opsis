@@ -175,7 +175,7 @@ namespace
     {
         if (!found || (count != 1 && !fetched)) return E_POINTER;
         if (fetched) *fetched = 0;
-        constexpr Command entries[] = {NewContainer, Header, Previous, Next, Pause, Stop};
+        constexpr Command entries[] = {NewContainer, Header, Previous, Command::Next, Pause, Stop};
         ULONG copied = 0;
         const auto start = position;
         while (copied < count && position < ARRAYSIZE(entries))
@@ -281,8 +281,9 @@ namespace
             if (!result) return E_POINTER;
             *result = nullptr;
             if (outer) return CLASS_E_NOAGGREGATION;
-            IUnknown* handler = modern ? static_cast<IExplorerCommand*>(new (std::nothrow) ExplorerCommand(Root))
-                : static_cast<IContextMenu*>(new (std::nothrow) LegacyMenu());
+            IUnknown* handler = nullptr;
+            if (modern) handler = new (std::nothrow) ExplorerCommand(Root);
+            else handler = static_cast<IContextMenu*>(new (std::nothrow) LegacyMenu());
             if (!handler) return E_OUTOFMEMORY;
             auto hr = handler->QueryInterface(iid, result);
             handler->Release();
@@ -292,7 +293,10 @@ namespace
     };
 }
 
-extern "C" __declspec(dllexport) HRESULT __stdcall DllGetClassObject(REFCLSID clsid, REFIID iid, void** result)
+#pragma comment(linker, "/EXPORT:DllGetClassObject")
+#pragma comment(linker, "/EXPORT:DllCanUnloadNow")
+
+STDAPI DllGetClassObject(REFCLSID clsid, REFIID iid, void** result)
 {
     if (!result) return E_POINTER;
     *result = nullptr;
@@ -304,7 +308,7 @@ extern "C" __declspec(dllexport) HRESULT __stdcall DllGetClassObject(REFCLSID cl
     return hr;
 }
 
-extern "C" __declspec(dllexport) HRESULT __stdcall DllCanUnloadNow()
+STDAPI DllCanUnloadNow()
 {
     return objects.load() == 0 ? S_OK : S_FALSE;
 }
