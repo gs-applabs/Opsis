@@ -1,7 +1,7 @@
-name: Opsis 2.7.7 native integration and installer
+name: Opsis 2.7.8 installation smoke test
 on:
   push:
-    branches: [opsis-277-explorer-check]
+    branches: [opsis-278-ui-check]
 permissions:
   contents: read
 jobs:
@@ -71,9 +71,11 @@ jobs:
           foreach ($f in @('Opsis.Studio.exe','Opsis.Studio.dll','Opsis.Studio.deps.json','Opsis.Studio.runtimeconfig.json')) {
             Copy-Item (Join-Path 'app-fixture' $f) (Join-Path 'publish' $f) -Force
           }
-          Set-Content -LiteralPath 'crawler-fixture.exe' -Value 'Crawler setup local staging fixture'
-          & $env:ISCC /DCrawlerSetup=crawler-fixture.exe installer.iss
+          & $env:ISCC installer.iss
           if ($LASTEXITCODE -ne 0) { throw 'Inno compilation failed' }
+          Set-Content -LiteralPath 'crawler-fixture.exe' -Value 'Crawler setup local staging fixture'
+          & $env:ISCC /DCrawlerSetup=crawler-fixture.exe /FOpsisSetup-2.7.8.2403-crawler installer.iss
+          if ($LASTEXITCODE -ne 0) { throw 'Inno compilation with optional Crawler failed' }
       - name: Repack a representative payload and test the single EXE
         if: success() || failure()
         run: |
@@ -81,25 +83,26 @@ jobs:
           $app = Join-Path $env:RUNNER_TEMP 'OpsisEmbeddedSmoke'
           $log = Join-Path $env:RUNNER_TEMP 'opsis-embedded.log'
           Add-Content -LiteralPath 'publish/widgets/wallpaper/index.html' -Value 'Changed after template compilation.'
-          python repack.py Output/OpsisSetup-2.7.7.2402.exe publish crawler-fixture.exe TestOutput/OpsisSetup-2.7.7.2402.exe
+          python repack.py Output/OpsisSetup-2.7.8.2403.exe publish - TestOutput/OpsisSetup-2.7.8.2403.exe
           if ($LASTEXITCODE -ne 0) { throw 'Embedded payload reprobe failed' }
           # The main executable is a no-op fixture. The crawler task stays off.
-          $setup = (Resolve-Path TestOutput/OpsisSetup-2.7.7.2402.exe).Path
+          $setup = (Resolve-Path TestOutput/OpsisSetup-2.7.8.2403.exe).Path
           $p = Start-Process $setup -ArgumentList '/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART','/DEPS=none','/TASKS=""',"/DIR=$app","/LOG=$log" -Wait -PassThru
           if ($p.ExitCode -ne 0 -or -not (Select-String -Path "$app\widgets\wallpaper\index.html" -SimpleMatch 'Changed after template compilation.' -Quiet)) {
             Get-Content $log | Select-Object -Last 50
             throw 'Payload did not install'
           }
           $entry = 'HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\{0F9363FA-64CB-45CF-8D70-E748B9C5BDA8}_is1'
-          if ((Get-ItemProperty $entry).DisplayVersion -ne '2.7.7.2402') { throw 'Version identity mismatch' }
+          if ((Get-ItemProperty $entry).DisplayVersion -ne '2.7.8.2403') { throw 'Version identity mismatch' }
           $uninstall = Start-Process "$app\unins000.exe" -ArgumentList '/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART' -PassThru -Wait
           if ($uninstall.ExitCode -ne 0 -or (Test-Path "$app\Opsis.Studio.dll") -or (Test-Path $entry)) { throw 'Fixture uninstall failed' }
       - uses: actions/upload-artifact@v4
         if: success() || failure()
         with:
-          name: opsis277-inno-template
+          name: opsis278-inno-template
           path: |
-            Output/OpsisSetup-2.7.7.2402.exe
+            Output/OpsisSetup-2.7.8.2403.exe
+            Output/OpsisSetup-2.7.8.2403-crawler.exe
             native/OpsisExplorer.dll
           if-no-files-found: error
           retention-days: 3

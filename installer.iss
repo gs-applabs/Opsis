@@ -2,7 +2,7 @@
   #error This installer requires Inno Setup 7 or newer.
 #endif
 #define MyAppName "Opsis Studio"
-#define MyAppVersion "2.7.7.2402"
+#define MyAppVersion "2.7.8.2403"
 #define MyAppExeName "Opsis.Studio.exe"
 #define MyAppPublisher "gs-applabs"
 #define MyAppURL "https://github.com/gs-applabs/Opsis"
@@ -21,8 +21,8 @@ AppPublisherURL={#MyAppURL}
 AppSupportURL={#MyAppURL}/issues
 AppUpdatesURL={#MyAppURL}/releases
 VersionInfoCompany={#MyAppPublisher}
-VersionInfoVersion=2.7.7.2402
-VersionInfoProductVersion=2.7.7.2402
+VersionInfoVersion=2.7.8.2403
+VersionInfoProductVersion=2.7.8.2403
 VersionInfoDescription=Opsis Studio Setup
 VersionInfoProductName={#MyAppName}
 DefaultDirName={autopf}\{#MyAppName}

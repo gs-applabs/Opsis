@@ -107,7 +107,8 @@ def repack(template, publish, crawler, output):
     targets = map_files(metadata, ('{app}\\', '{tmp}\\'), len(old_locations)//LOCATION.size)
     inputs = {'{app}\\'+str(path.relative_to(publish)).replace('/','\\'):path
               for path in publish.rglob('*') if path.is_file()}
-    inputs['{tmp}\\OpsisNewsCrawler-Setup.exe'] = crawler
+    if crawler != Path('-'):
+        inputs['{tmp}\\OpsisNewsCrawler-Setup.exe'] = crawler
     source = {name.casefold(): file for name,file in inputs.items()}
     assert {name.casefold() for name in targets.values()} == source.keys(), (sorted(set(source)-{x.casefold() for x in targets.values()}), sorted({x.casefold() for x in targets.values()}-set(source)))
     content = bytearray()
