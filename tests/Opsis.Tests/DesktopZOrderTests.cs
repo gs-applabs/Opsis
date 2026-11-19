@@ -75,17 +75,3 @@ public sealed class DesktopZOrderTopmostTests
         Assert.Null(MotionDesk.Containers.DesktopZOrder.InsertAfter(only, new HashSet<IntPtr> { H(10) }, H(99), h => h == H(5)));
     }
 }
-
-public sealed class DesktopZOrderTopmostTests
-{
-    private static IntPtr H(int n) => new(n);
-
-    [Fact]
-    public void NeverInsertedAfterATopmostWindow()
-    {
-        var chain = new List<IntPtr> { H(5), H(1), H(10), H(99) };       // taskbar(5, topmost) app(1) WorkerW(10) self(99)
-        Assert.Equal(H(1), MotionDesk.Containers.DesktopZOrder.InsertAfter(chain, new HashSet<IntPtr> { H(10) }, H(99), h => h == H(5)));
-        var only = new List<IntPtr> { H(5), H(10), H(99) };              // only a topmost window above the desktop: top of the normal band, never after the topmost one
-        Assert.Null(MotionDesk.Containers.DesktopZOrder.InsertAfter(only, new HashSet<IntPtr> { H(10) }, H(99), h => h == H(5)));
-    }
-}
