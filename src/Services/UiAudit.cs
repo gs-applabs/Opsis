@@ -56,10 +56,34 @@ namespace MotionDesk.Services
             t.Start();
         }
 
+        private static long _beat = Environment.TickCount64;
+        // watchdog: the UI thread pumps (Pump / DoEvents) regularly; if it does not for 10 s the app is hung (deadlock / blocking wait on the UI thread): write where, and exit 3 so a CI run fails instead of waiting for ever
+        private static void StartWatchdog(string folder, Func<string> where)
+        {
+            var t = new System.Threading.Thread(() =>
+            {
+                while (true)
+                {
+                    System.Threading.Thread.Sleep(2000);
+                    if (Environment.TickCount64 - System.Threading.Interlocked.Read(ref _beat) < 10000) continue;
+                    try
+                    {
+                        var p = System.Diagnostics.Process.GetCurrentProcess();
+                        File.WriteAllText(Path.Combine(folder, "HANG.txt"), "UI thread did not pump for 10 s near: " + where() + Environment.NewLine + "threads=" + p.Threads.Count + " cpu=" + p.TotalProcessorTime + Environment.NewLine
+                            + "Take a dump with: createdump " + p.Id + "   (in the .NET runtime folder) and open it with dotnet-dump analyze -> clrstack" + Environment.NewLine);
+                    }
+                    catch (Exception) { }
+                    Environment.Exit(3);
+                }
+            }) { IsBackground = true };
+            t.Start();
+        }
+
         private static void Pump(int ms)
         {
+            System.Threading.Interlocked.Exchange(ref _beat, Environment.TickCount64);
             var end = DateTime.UtcNow.AddMilliseconds(ms);
-            while (DateTime.UtcNow < end) { Application.DoEvents(); System.Threading.Thread.Sleep(10); }
+            while (DateTime.UtcNow < end) { Application.DoEvents(); System.Threading.Interlocked.Exchange(ref _beat, Environment.TickCount64); System.Threading.Thread.Sleep(10); }
         }
 
         private static MotionDesk.Containers.ContainerHost? auditHost;
@@ -88,6 +112,7 @@ namespace MotionDesk.Services
             string progress = Path.Combine(folder, "progress.txt"); string current = "start";
             void Mark(string s) { current = s; try { File.AppendAllText(progress, DateTime.UtcNow.ToString("HH:mm:ss.fff") + " " + s + nl); } catch (Exception) { } }
             StartDialogGuard(problems, () => current);
+            StartWatchdog(folder, () => current);
             var win = new MotionDesk.UI.MainWindow { StartPosition = FormStartPosition.Manual, Location = new Point(40, 40) };
             win.Show();
             Pump(2500);
@@ -130,6 +155,23 @@ namespace MotionDesk.Services
                 else problems.Add("the family window did not open");
             }
             catch (Exception ex) { problems.Add("Family window: " + ex.Message); }
+            // OPSIS_AUDIT_SEARCH=<text>: types into the global search of the header and screenshots the window with the results list open
+            var gs = Environment.GetEnvironmentVariable("OPSIS_AUDIT_SEARCH");
+            if (!string.IsNullOrEmpty(gs))
+            {
+                try
+                {
+                    win.NavigateTo("Wallpaper"); Pump(800);
+                    win.GlobalSearchBox.RebuildIndex(win.PageKeys);
+                    win.GlobalSearchBox.SetQueryForTest(gs); Pump(500);
+                    using var sb2 = new Bitmap(win.Width, win.Height);
+                    win.Activate(); win.GlobalSearchBox.Refresh(); win.GlobalSearchBox.ResultsList.Refresh(); Pump(400); using (var sg2 = Graphics.FromImage(sb2)) sg2.CopyFromScreen(win.Location, Point.Empty, win.Size);
+                    sb2.Save(Path.Combine(folder, "global-search.png"), System.Drawing.Imaging.ImageFormat.Png);
+                    problems.Add($"[search] INFO box={win.GlobalSearchBox.Bounds} vis={win.GlobalSearchBox.Visible} parent={win.GlobalSearchBox.Parent?.GetType().Name} list={win.GlobalSearchBox.ResultsList.Bounds} lvis={win.GlobalSearchBox.ResultsList.Visible} results for '{gs}': {win.GlobalSearchBox.ResultsList.Items.Count}");
+                    win.GlobalSearchBox.SetQueryForTest("");
+                }
+                catch (Exception ex) { problems.Add("global search: " + ex.Message); }
+            }
             // OPSIS_AUDIT_WIDGETS=1: opens a few native widgets (NOT through SpawnWidget: that one would register Opsis for Windows start-up), screenshots each one and closes it
             if (Environment.GetEnvironmentVariable("OPSIS_AUDIT_WIDGETS") == "1")
             {
@@ -174,16 +216,18 @@ namespace MotionDesk.Services
                         var box = Find(win, "weather-city") as TextBox; var btn = Find(win, "weather-set") as Button;
                         if (box != null && btn != null)
                         {
-                            box.Text = locCity; btn.PerformClick(); Pump(6000);
+                            Mark("loc: set text"); box.Text = locCity; Mark("loc: click"); btn.PerformClick(); Mark("loc: pump"); Pump(6000); Mark("loc: pumped");
                             if (Find(win, "weather-choices") is Control ch0)
                                 problems.Add($"[Wallpaper] INFO choices panel: visible={ch0.Visible} bounds={ch0.Bounds} parent={ch0.Parent?.GetType().Name} children={string.Join(";", ch0.Controls.Cast<Control>().Select(c => c.Bounds + (c.Visible ? "v" : "h")))}");
                             Opsis.UI.StableScrollPanel? sp2 = null;
                             void FindSp2(Control c) { foreach (Control ch in c.Controls) { if (sp2 == null && ch is Opsis.UI.StableScrollPanel s && s.Visible) sp2 = s; FindSp2(ch); } }
                             FindSp2(win);
                             if (sp2 != null) { var pt = box.PointToScreen(Point.Empty); var pp = sp2.PointToScreen(Point.Empty); sp2.ScrollTo(0, Math.Max(0, sp2.ScrollOffset.Y + (pt.Y - pp.Y) - 40)); Pump(500); }
-                            using var lb = new Bitmap(win.Width, win.Height);
-                            win.DrawToBitmap(lb, new Rectangle(0, 0, win.Width, win.Height));
-                            lb.Save(Path.Combine(folder, "page-Wallpaper-location.png"), System.Drawing.Imaging.ImageFormat.Png);
+                            Mark("loc: shot"); using var lb = new Bitmap(win.Width, win.Height);
+                            /* DrawToBitmap (WM_PRINT) of the freshly shown choice buttons hung the UI thread in 4 of 5 runs: only the screen copy below is used here */
+                            Mark("loc: drawn");
+                            
+                            Mark("loc: saved");
                             try { win.Activate(); Pump(300); using var sb = new Bitmap(win.Width, win.Height); using (var sg = Graphics.FromImage(sb)) sg.CopyFromScreen(win.Location, Point.Empty, win.Size); sb.Save(Path.Combine(folder, "page-Wallpaper-location-screen.png"), System.Drawing.Imaging.ImageFormat.Png); } catch (Exception) { }
                         }
                         else problems.Add("[Wallpaper] location box not found (needs a mode that shows the weather section)");
@@ -302,5 +346,15 @@ namespace MotionDesk.Services
             try { win.Close(); } catch (Exception) { }
             return problems.All(p => p.Contains(" INFO ")) ? 0 : 1;
         }
+    }
+}
+
+namespace MotionDesk.Services
+{
+    /// <summary>Hang hunting: with OPSIS_TRACE=&lt;file&gt; steps of suspicious code paths are appended to that file (the last line shows where the UI thread stopped).</summary>
+    internal static class HangTrace
+    {
+        private static readonly string? File_ = Environment.GetEnvironmentVariable("OPSIS_TRACE");
+        public static void Mark(string s) { if (File_ == null) return; try { System.IO.File.AppendAllText(File_, DateTime.UtcNow.ToString("HH:mm:ss.fff") + " [" + Environment.CurrentManagedThreadId + "] " + s + "\n"); } catch (Exception) { } }
     }
 }

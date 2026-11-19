@@ -437,9 +437,16 @@ namespace MotionDesk.UI
             _header = new HeaderWavePanel(() => _headerWaveT) { Dock = DockStyle.Top, Height = 64 };
             _pageTitle = new Label { Dock = DockStyle.Fill, Text = "Dashboard", Font = UiTheme.FontHeading, TextAlign = ContentAlignment.MiddleLeft, BackColor = Color.Transparent };
             _header.Controls.Add(_pageTitle);
-            var helpButton = new HelpGlyphButton { Dock = DockStyle.Right };
-            helpButton.Click += (_, _) => ShowHelp();
-            _header.Controls.Add(helpButton);
+            // 2.6.0: ONE search for the whole app in the header (where the "?" was; Help is a button in About and F1): replaces the search box of every page
+            _globalSearch = new HeaderSearchBox { Width = 300, Height = 34 };
+            _header.Controls.Add(_globalSearch);
+            _globalSearch.BringToFront();
+            void PlaceSearch() { _globalSearch.Location = new Point(Math.Max(0, _header.Width - _globalSearch.Width - 18), (_header.Height - _globalSearch.Height) / 2); }
+            _header.Resize += (_, _) => PlaceSearch(); PlaceSearch();
+            _globalSearch.AttachResults(this);
+            _globalSearch.Picked += OnGlobalSearchPicked;
+            Shown += (_, _) => _globalSearch.RebuildIndex(PageKeys);
+            LocalizationManager.Changed += () => { try { _globalSearch.RebuildIndex(PageKeys); } catch (Exception) { } };
             _headerRule = new Panel { Dock = DockStyle.Bottom, Height = 1 };
             _header.Controls.Add(_headerRule);
             _headerWaveTimer = new System.Windows.Forms.Timer { Interval = HardwareProfileService.ScaleDecorativeInterval(45) };
@@ -650,6 +657,26 @@ namespace MotionDesk.UI
         /// κύριο παράθυρο κατευθείαν σε συγκεκριμένη σελίδα αντί για το Dashboard.</summary>
         /// <summary>The keys of the pages in the side menu (plugin pages included), for the click audit.</summary>
         public IReadOnlyList<string> PageKeys => _navButtons.Keys.ToList();
+
+        private HeaderSearchBox _globalSearch = null!;
+        internal HeaderSearchBox GlobalSearchBox => _globalSearch;
+
+        /// <summary>A result of the global search: open its page, then scroll to the card that contains the text.</summary>
+        private void OnGlobalSearchPicked(SearchEntry e)
+        {
+            NavigateTo(e.Page);
+            BeginInvoke(new Action(() => ScrollToText(e.Text)));
+        }
+
+        private void ScrollToText(string text)
+        {
+            StableScrollPanel? sp = null;
+            void Find(Control c) { foreach (Control ch in c.Controls) { if (sp == null && ch is StableScrollPanel s && s.Visible) sp = s; if (sp == null) Find(ch); } }
+            Find(_content);
+            if (sp == null) return;
+            foreach (Control card in sp.Controls)
+                if (card.Visible && PageSearch.Matches(PageSearch.TextOf(card), text)) { sp.ScrollTo(0, Math.Max(0, card.Top - 8)); sp.Invalidate(true); return; }
+        }
 
         public void NavigateTo(string pageKey)
         {
@@ -1059,6 +1086,9 @@ namespace MotionDesk.UI
             {
                 case Keys.Control | Keys.D0:
                     NavigateTo("Personalization");
+                    return true;
+                case Keys.Control | Keys.F:
+                    _globalSearch.FocusBox();
                     return true;
                 case Keys.Control | Keys.K:
                     ShowCommandPalette();
@@ -1779,7 +1809,7 @@ namespace MotionDesk.UI
             var choicesPanel = new FlowLayoutPanel { Name = "weather-choices", FlowDirection = FlowDirection.TopDown, WrapContents = false, AutoSize = true, Margin = new Padding(0, 0, 0, 10), BackColor = Color.Transparent, Visible = false };
             // the card of this page was built from these controls (Cardify): a control that becomes visible (the city choices) or a label that grows is only placed by a new layout of the page
             // (user test 2.6.0: the choices appeared BEHIND the text at the top of the card). The page is found through a live control, not through the discarded host panel.
-            void Relayout() { Control? p = locLabel; while (p != null && p is not SettingsPage) p = p.Parent; var pg = p as SettingsPage; if (pg == null) return; pg.DoLayoutPage(); pg.BeginInvoke(new Action(() => { pg.DoLayoutPage(); pg.BeginInvoke(new Action(() => { pg.DoLayoutPage(); pg.Invalidate(true); pg.Update(); })); })); /* auto-sized rows settle after a first pass */ }
+            void Relayout() { if (Environment.GetEnvironmentVariable("OPSIS_NO_RELAYOUT") == "1") return; Control? p = locLabel; while (p != null && p is not SettingsPage) p = p.Parent; var pg = p as SettingsPage; if (pg == null) return; pg.DoLayoutPage(); pg.BeginInvoke(new Action(() => { pg.DoLayoutPage(); pg.BeginInvoke(new Action(() => { pg.DoLayoutPage(); pg.Invalidate(true); pg.Update(); })); })); /* auto-sized rows settle after a first pass */ }
 
             // Controls.Clear() αφαιρεί τα child controls από τη συλλογή αλλά ΔΕΝ τα κάνει Dispose —
             // ίδιο bug class με το SetPage() παραπάνω (βλ. σχόλιο εκεί). Χωρίς αυτό, κάθε νέα αναζήτηση
@@ -1804,12 +1834,14 @@ namespace MotionDesk.UI
             async void ApplyCity()
             {
                 var name = cityBox.Text.Trim();
+                HangTrace.Mark("ApplyCity start");
                 if (name.Length == 0) return;
                 setBtn.Enabled = false;
                 ClearChoices();
                 try
                 {
                     var found = await WeatherService.GeocodeMultipleAsync(name, 5);
+                    HangTrace.Mark("geocoded " + found.Count);
                     if (found.Count == 1)
                     {
                         ApplyMatch(found[0]);
@@ -1832,12 +1864,14 @@ namespace MotionDesk.UI
                             choiceBtn.Click += (_, _) => ApplyMatch(m);
                             choicesPanel.Controls.Add(choiceBtn);
                         }
+                        HangTrace.Mark("choices built");
                         choicesPanel.Visible = true;
+                        HangTrace.Mark("choices visible");
                     }
                     else locLabel.Text = LocalizationManager.T("Wallpaper.WeatherLocationNotFound");
                 }
                 catch (Exception) { locLabel.Text = LocalizationManager.T("Wallpaper.WeatherLocationNotFound"); }
-                finally { if (!setBtn.IsDisposed) { setBtn.Enabled = true; Relayout(); } }
+                finally { HangTrace.Mark("finally"); if (!setBtn.IsDisposed) { setBtn.Enabled = true; Relayout(); } HangTrace.Mark("done"); }
             }
             setBtn.Click += (_, _) => ApplyCity();
             cityBox.KeyDown += (_, e) => { if (e.KeyCode == Keys.Enter) { e.SuppressKeyPress = true; ApplyCity(); } };
@@ -3298,7 +3332,7 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
             AddSection(panel, LocalizationManager.T("Tray.Family"));
             foreach (var app in FamilyApp.Load().Where(a => a.Id != "opsis"))
                 AddText(panel, $"{app.Name}  {(app.InstalledPath != null ? "✓" : "")}\n{app.Tagline}");
-            AddButtonGrid(panel, (LocalizationManager.T("Tray.Family"), (_, _) => FamilyWindows.ShowFamily()));
+            AddButtonGrid(panel, (LocalizationManager.T("Tray.Family"), (_, _) => FamilyWindows.ShowFamily()), (LocalizationManager.T("Help.Title") + " (F1)", (_, _) => ShowHelp()));
 
             AddSection(panel, LocalizationManager.T("About.SectionCapabilities"));
             AddText(panel, LocalizationManager.T("About.CapabilitiesList"));
@@ -3849,7 +3883,6 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
             // στο scroll του page panel — εκτός από controls με δικό τους νόημα για το wheel
             // (TextBox/ComboBox/NumericUpDown, ή ήδη ξεχωριστά AutoScroll containers).
             EnableWheelPassthrough(panel);
-            PageSearch.Attach(panel);
             return panel;
         }
 
@@ -4591,10 +4624,8 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                 AutoScroll = false;
                 var page = new SettingsPage { Dock = DockStyle.Fill };
                 GlassBlur.ApplyScrollbarTheme(page, UiTheme.Background.GetBrightness() < 0.5f);
-                var top = new Panel { Dock = DockStyle.Top, Height = 78, BackColor = UiTheme.PageBackground };
+                var top = new Panel { Dock = DockStyle.Top, Height = 44, BackColor = UiTheme.PageBackground };
                 top.Controls.Add(new Label { Text = LocalizationManager.T("Settings.Intro"), Dock = DockStyle.Fill, Font = UiTheme.FontBody, ForeColor = UiTheme.TextSecondary, Padding = new Padding(8, 0, 8, 0), AutoEllipsis = true });
-                var search = new SettingsSearchBox { Dock = DockStyle.Bottom, Page = page, Font = UiTheme.FontBody, BackColor = UiTheme.Surface, ForeColor = UiTheme.TextPrimary };
-                top.Controls.Add(search);
                 Controls.Add(page);
                 Controls.Add(top);
                 Disposed += (_, _) => { };

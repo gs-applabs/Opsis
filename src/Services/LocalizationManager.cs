@@ -75,6 +75,14 @@ namespace MotionDesk.Services
             return new Dictionary<string, string>();
         }
 
+        /// <summary>Every string of the current language (missing ones filled from the fallback): the source of the global search index.</summary>
+        public static IReadOnlyDictionary<string, string> AllStrings()
+        {
+            var all = new Dictionary<string, string>(_fallback);
+            foreach (var kv in _strings) all[kv.Key] = kv.Value;
+            return all;
+        }
+
         public static string T(string key) =>
             _strings.TryGetValue(key, out var value) ? value : _fallback.TryGetValue(key, out var fb) ? fb : key;
     }

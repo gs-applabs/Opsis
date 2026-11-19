@@ -59,10 +59,9 @@ namespace MotionDesk.UI
                     card.Add(adv);
                 }
             }
-            var top = new Panel { Dock = DockStyle.Top, Height = string.IsNullOrEmpty(intro) ? 40 : 78, BackColor = UiTheme.PageBackground };
+            var top = new Panel { Dock = DockStyle.Top, Height = string.IsNullOrEmpty(intro) ? 8 : 44, BackColor = UiTheme.PageBackground };
             if (!string.IsNullOrEmpty(intro))
                 top.Controls.Add(new Label { Text = intro, Dock = DockStyle.Fill, Font = UiTheme.FontBody, ForeColor = UiTheme.TextSecondary, Padding = new Padding(8, 0, 8, 0), AutoEllipsis = true });
-            top.Controls.Add(new SettingsSearchBox { Dock = DockStyle.Bottom, Page = page, Font = UiTheme.FontBody, BackColor = UiTheme.Surface, ForeColor = UiTheme.TextPrimary });
             host.Controls.Add(page);
             host.Controls.Add(top);
             // timers etc. that the page builder hooked to panel.Disposed must still be released when the page goes away
