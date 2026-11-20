@@ -34,6 +34,12 @@ public sealed partial class MainWindow
                 section.Main.SequenceEqual([action]), "Card titles and actions");
         }
 
+        using var emptyPath = UiTheme.RoundedPath(new Rectangle(0, 0, 0, 4), 20);
+        Require(emptyPath.PointCount == 0, "Empty controls do not generate invalid arcs");
+        using var narrowPath = UiTheme.RoundedPath(new Rectangle(0, 0, 6, 55), 25);
+        var visualBounds = narrowPath.GetBounds();
+        Require(visualBounds.Left >= -0.01f && visualBounds.Right <= 6.01f, "The radius stays inside narrow bounds");
+
         Directory.CreateDirectory("layout-check");
         foreach (bool dark in new[] { true, false })
         {

@@ -127,6 +127,13 @@ public sealed partial class MainWindow : Form
             using var shape = UiTheme.RoundedPath(bounds, Math.Min(bounds.Width, bounds.Height) / 2);
             using var brush = new SolidBrush(fill);
             g.FillPath(brush, shape);
+            if (button.FlatAppearance.BorderSize > 0)
+            {
+                var border = Rectangle.Inflate(bounds, -1, -1);
+                using var edge = UiTheme.RoundedPath(border, Math.Min(border.Width, border.Height) / 2);
+                using var pen = new Pen(button.FlatAppearance.BorderColor, button.FlatAppearance.BorderSize);
+                g.DrawPath(pen, edge);
+            }
             if (button.Focused && button.TabStop)
             {
                 var inset = Rectangle.Inflate(bounds, -3, -3);
@@ -138,8 +145,14 @@ public sealed partial class MainWindow : Form
 
             int padding = Math.Max(button.Padding.Horizontal / 2, button.LogicalToDeviceUnits(14));
             var caption = Rectangle.Inflate(bounds, -Math.Min(padding, (bounds.Width - 1) / 2), -2);
+            var alignment = button.TextAlign switch
+            {
+                ContentAlignment.MiddleLeft => TextFormatFlags.Left,
+                ContentAlignment.MiddleRight => TextFormatFlags.Right,
+                _ => TextFormatFlags.HorizontalCenter
+            };
             TextRenderer.DrawText(g, button.Text, button.Font, caption, text, ActionCaptionFlags |
-                TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.PreserveGraphicsClipping);
+                alignment | TextFormatFlags.VerticalCenter | TextFormatFlags.PreserveGraphicsClipping);
         }
 
         private const TextFormatFlags ActionCaptionFlags = TextFormatFlags.NoPrefix | TextFormatFlags.NoPadding |

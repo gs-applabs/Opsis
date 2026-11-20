@@ -1,0 +1,28 @@
+name: 2.7.7 layout regression audit
+on:
+  push:
+    branches: [opsis-277-layout-audit]
+permissions:
+  contents: read
+jobs:
+  layout:
+    runs-on: windows-2025
+    timeout-minutes: 8
+    env:
+      DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '11.0.100'
+      - name: Test the audited WinForms controls
+        run: dotnet run --project check-ui/UIFixture.csproj -c Release
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: opsis-277-layout-regression
+          path: layout-check
+          if-no-files-found: warn
+          retention-days: 3
