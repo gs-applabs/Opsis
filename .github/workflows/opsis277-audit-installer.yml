@@ -1,13 +1,15 @@
-name: Opsis 2.7.7 native integration and installer
+name: Opsis 2.7.7 audited installer
 on:
   push:
-    branches: [opsis-277-explorer-check]
+    branches: [opsis-277-audit-installer]
 permissions:
   contents: read
 jobs:
   native:
     runs-on: windows-2025
     timeout-minutes: 15
+    env:
+      DOTNET_CLI_TELEMETRY_OPTOUT: "1"
     defaults:
       run:
         shell: pwsh
@@ -71,8 +73,7 @@ jobs:
           foreach ($f in @('Opsis.Studio.exe','Opsis.Studio.dll','Opsis.Studio.deps.json','Opsis.Studio.runtimeconfig.json')) {
             Copy-Item (Join-Path 'app-fixture' $f) (Join-Path 'publish' $f) -Force
           }
-          Set-Content -LiteralPath 'crawler-fixture.exe' -Value 'Crawler setup local staging fixture'
-          & $env:ISCC /DCrawlerSetup=crawler-fixture.exe installer.iss
+          & $env:ISCC installer.iss
           if ($LASTEXITCODE -ne 0) { throw 'Inno compilation failed' }
       - name: Repack a representative payload and test the single EXE
         if: success() || failure()
@@ -81,9 +82,9 @@ jobs:
           $app = Join-Path $env:RUNNER_TEMP 'OpsisEmbeddedSmoke'
           $log = Join-Path $env:RUNNER_TEMP 'opsis-embedded.log'
           Add-Content -LiteralPath 'publish/widgets/wallpaper/index.html' -Value 'Changed after template compilation.'
-          python repack.py Output/OpsisSetup-2.7.7.2402.exe publish crawler-fixture.exe TestOutput/OpsisSetup-2.7.7.2402.exe
+          python repack.py Output/OpsisSetup-2.7.7.2402.exe publish - TestOutput/OpsisSetup-2.7.7.2402.exe
           if ($LASTEXITCODE -ne 0) { throw 'Embedded payload reprobe failed' }
-          # The main executable is a no-op fixture. The crawler task stays off.
+          # Installation smoke test with a no-op application payload.
           $setup = (Resolve-Path TestOutput/OpsisSetup-2.7.7.2402.exe).Path
           $p = Start-Process $setup -ArgumentList '/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART','/DEPS=none','/TASKS=""',"/DIR=$app","/LOG=$log" -Wait -PassThru
           if ($p.ExitCode -ne 0 -or -not (Select-String -Path "$app\widgets\wallpaper\index.html" -SimpleMatch 'Changed after template compilation.' -Quiet)) {
@@ -97,7 +98,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: success() || failure()
         with:
-          name: opsis277-inno-template
+          name: opsis277-audit-inno-template
           path: |
             Output/OpsisSetup-2.7.7.2402.exe
             native/OpsisExplorer.dll
