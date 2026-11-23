@@ -506,7 +506,7 @@ namespace MotionDesk.Widgets
                 _webView = new WebView2 { Dock = DockStyle.Fill, DefaultBackgroundColor = Color.Transparent };
                 panel.Controls.Add(_webView);
                 _webView.BringToFront();
-                await WidgetSdkView.InitializeAsync(_webView, package);
+                await WidgetSdkView.InitializeAsync(_webView, package, () => RefreshPercent);
             }
             catch (Exception ex)
             {
@@ -685,7 +685,7 @@ namespace MotionDesk.Widgets
             }
             menu.Items.Add(opacityMenu);
 
-            if (_nativeMonitorTimer != null && _timerBaseMs > 0)
+            if ((_nativeMonitorTimer != null && _timerBaseMs > 0) || WidgetId.StartsWith("sdk-", StringComparison.OrdinalIgnoreCase))
             {
                 var refreshMenu = new ToolStripMenuItem(MainWindow.StudioText("Update frequency", "Συχνότητα ενημέρωσης"));
                 foreach (int percent in new[] { 25, 50, 100, 200, 400 })
@@ -694,7 +694,10 @@ namespace MotionDesk.Widgets
                     item.Click += (_, _) =>
                     {
                         RefreshPercent = percent;
-                        _nativeMonitorTimer.Interval = EffectiveMonitorInterval();
+                        if (_nativeMonitorTimer != null && _timerBaseMs > 0)
+                            _nativeMonitorTimer.Interval = EffectiveMonitorInterval();
+                        if (WidgetId.StartsWith("sdk-", StringComparison.OrdinalIgnoreCase))
+                            WidgetSdkView.NotifyRefresh(_webView, RefreshPercent);
                         SaveWidgetState();
                     };
                     refreshMenu.DropDownItems.Add(item);

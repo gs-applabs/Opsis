@@ -94,8 +94,23 @@ namespace MotionDesk.UI
                     {
                         var a = first.SelectedItem?.ToString() ?? "(None)";
                         var b = second.SelectedItem?.ToString() ?? "(None)";
-                        if (a != "(None)" && b != "(None)" && a == b)
-                        { MessageBox.Show(this, L("Select two different monitors.", "Επίλεξε δύο διαφορετικές οθόνες.")); return; }
+                        if ((a == "(None)") != (b == "(None)"))
+                        { MessageBox.Show(this, L("Select both monitors or disable panorama for both.", "Επίλεξε και τις δύο οθόνες ή απενεργοποίησε το πανόραμα.")); return; }
+                        if (a != "(None)" && b != "(None)")
+                        {
+                            if (a == b)
+                            { MessageBox.Show(this, L("Select two different monitors.", "Επίλεξε δύο διαφορετικές οθόνες.")); return; }
+                            var left = Screen.AllScreens.FirstOrDefault(m => m.DeviceName == a);
+                            var right = Screen.AllScreens.FirstOrDefault(m => m.DeviceName == b);
+                            if (left == null || right == null ||
+                                (Math.Abs(left.Bounds.Right - right.Bounds.Left) > 40 &&
+                                 Math.Abs(right.Bounds.Right - left.Bounds.Left) > 40))
+                            {
+                                MessageBox.Show(this, L("The selected monitors must be horizontally adjacent. Current configuration was not changed.",
+                                    "Οι επιλεγμένες οθόνες πρέπει να είναι οριζόντια γειτονικές. Δεν άλλαξαν οι ρυθμίσεις."));
+                                return;
+                            }
+                        }
                         var cfg = WallpaperSettings.Load();
                         cfg.PanoramaFirstMonitor = a == "(None)" ? string.Empty : a;
                         cfg.PanoramaSecondMonitor = b == "(None)" ? string.Empty : b;

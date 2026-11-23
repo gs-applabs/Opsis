@@ -7,6 +7,7 @@ namespace MotionDesk.UI;
 internal sealed class WeatherTriptychForm : Form
 {
     private readonly string[] names;
+    private readonly Bitmap? previewPhoto;
     internal WeatherTriptychForm()
     {
         Text = MainWindow.StudioText("Dawn · noon · night preview", "Προεπισκόπηση χαραυγής · μεσημεριού · νύχτας");
@@ -14,6 +15,24 @@ internal sealed class WeatherTriptychForm : Form
         BackColor = UiTheme.PageBackground;
         names = MainWindow.StudioGreek ? ["Χαραυγή", "Μεσημέρι", "Νύχτα"] : ["Dawn", "Noon", "Night"];
         DoubleBuffered = true;
+        try
+        {
+            var path = WallpaperSettings.Load().ImagePath; // user-selected real photo, when available
+            if (!string.IsNullOrWhiteSpace(path) && File.Exists(path) &&
+                new[] { ".jpg", ".jpeg", ".png", ".webp", ".bmp" }.Contains(Path.GetExtension(path), StringComparer.OrdinalIgnoreCase))
+            {
+                // Open only the active photo; don't synthesize or replace landmarks.
+                using var raw = Image.FromFile(path);
+                int width = Math.Min(1200, raw.Width);
+                int height = Math.Max(1, (int)Math.Round(raw.Height * (double)width / raw.Width));
+                previewPhoto = new Bitmap(width, height);
+                using var g = Graphics.FromImage(previewPhoto);
+                g.DrawImage(raw, new Rectangle(0, 0, width, height));
+            }
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException || ex is OutOfMemoryException)
+        { previewPhoto?.Dispose(); }
+        FormClosed += (_, _) => previewPhoto?.Dispose();
     }
     protected override void OnPaint(PaintEventArgs e)
     {
@@ -28,6 +47,20 @@ internal sealed class WeatherTriptychForm : Form
             var rect = new Rectangle(pad+i*(width+pad),pad,width,height);
             using var gradient = new LinearGradientBrush(rect, colorSets[i].Item1,colorSets[i].Item2,LinearGradientMode.Vertical);
             e.Graphics.FillRectangle(gradient,rect);
+            if (previewPhoto is { } photo)
+            {
+                float sourceAspect = (float)photo.Width / photo.Height;
+                float targetAspect = (float)rect.Width / rect.Height;
+                RectangleF source = sourceAspect > targetAspect
+                    ? new RectangleF((photo.Width - photo.Height * targetAspect) / 2, 0, photo.Height * targetAspect, photo.Height)
+                    : new RectangleF(0, (photo.Height - photo.Width / targetAspect) / 2, photo.Width, photo.Width / targetAspect);
+                e.Graphics.DrawImage(photo, rect, source.X, source.Y, source.Width, source.Height, GraphicsUnit.Pixel);
+                using var grade = new SolidBrush(Color.FromArgb(i == 0 ? 95 : i == 1 ? 20 : 175,
+                    i == 0 ? 226 : i == 1 ? 210 : 8,
+                    i == 0 ? 116 : i == 1 ? 222 : 14,
+                    i == 0 ? 87 : i == 1 ? 245 : 45));
+                e.Graphics.FillRectangle(grade, rect);
+            }
             var circleX = rect.Left+rect.Width*(i==0 ? .26f : i==1 ? .52f : .72f);
             var circleY = rect.Top+rect.Height*(i==0 ? .67f : i==1 ? .30f : .29f);
             using var circle = new SolidBrush(i==2 ? Color.FromArgb(229,232,246) : Color.FromArgb(255,236,184));
@@ -36,7 +69,7 @@ internal sealed class WeatherTriptychForm : Form
                 new Point(rect.Left+width/3,(int)(rect.Top+height*.79)),new Point(rect.Left+width*2/3,(int)(rect.Top+height*.86)),
                 new Point(rect.Right,(int)(rect.Top+height*.77)),new Point(rect.Right,rect.Bottom)};
             using var silhouette = new SolidBrush(Color.FromArgb(i==2 ? 9:37,i==2 ? 15:44,i==2 ? 32:70));
-            e.Graphics.FillPolygon(silhouette,pts);
+            if (previewPhoto == null) e.Graphics.FillPolygon(silhouette,pts);
             using var font = new Font("Segoe UI",12,FontStyle.Bold);
             using var ink = new SolidBrush(Color.White);
             e.Graphics.DrawString(names[i],font,ink,rect.Left+16,rect.Top+15);

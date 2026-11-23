@@ -19,6 +19,9 @@ namespace MotionDesk.Services
         private readonly float[] _samples = new float[FftLength];
         private bool _acquired;
         private bool _disposed;
+        // A manually selected microphone is PRIVATE to this spectrum consumer.
+        // Other widgets continue to use the shared system-output loopback.
+        private readonly VisualizerInputCapture? _privateInput;
         private static readonly double[] Hamming = Enumerable.Range(0, FftLength)
             .Select(i => 0.54 - 0.46 * Math.Cos(2 * Math.PI * i / (FftLength - 1))).ToArray();
         private readonly Complex[] _fftBuffer = new Complex[FftLength];
@@ -28,7 +31,8 @@ namespace MotionDesk.Services
         private int _captureGeneration = -1;
         private float _resumeFade = 1f;
         private readonly int[] _bandBinEdges;
-        public bool IsAvailable => _acquired && SharedLoopbackCapture.IsAvailable;
+        public bool IsAvailable => _acquired && (_privateInput?.IsAvailable ?? SharedLoopbackCapture.IsAvailable);
+        public bool HasRecentSignal => _acquired && (_privateInput?.HasRecentSignal ?? SharedLoopbackCapture.HasRecentSignal);
 
         // "Audio Enhancement" — ζητήθηκε ρητά, εμπνευσμένο από τη ΛΟΓΙΚΗ του FXSound (github.com/
         // fxsound2/fxsound-app), όχι αντιγραφή: το FXSound τρέχει σαν system-wide Audio Processing
@@ -50,7 +54,7 @@ namespace MotionDesk.Services
             ("Loudness", "Preset.Loudness.Desc"),
         };
 
-        public AudioSpectrumService(int bandCount = 20)
+        public AudioSpectrumService(int bandCount = 20, string? privateInputDeviceId = null)
         {
             BandCount = bandCount;
             _bands = new float[bandCount];
@@ -58,7 +62,10 @@ namespace MotionDesk.Services
             Array.Fill(BandGains, 1f);
             _bandBinEdges = BuildLogBandEdges(bandCount, FftLength / 2);
 
-            SharedLoopbackCapture.Acquire(); // κοινό capture — βλ. SharedLoopbackCapture
+            if (string.IsNullOrWhiteSpace(privateInputDeviceId))
+                SharedLoopbackCapture.Acquire(); // shared default OUTPUT for ordinary widgets
+            else
+                _privateInput = new VisualizerInputCapture(privateInputDeviceId); // isolated microphone
             _acquired = true;
         }
 
@@ -86,13 +93,13 @@ namespace MotionDesk.Services
 
             // Bluetooth/HDMI device reconnect: fade from silence into the new live
             // FFT stream, without a flash of full-height spectrum bars.
-            int generation = SharedLoopbackCapture.Generation;
+            int generation = _privateInput?.Generation ?? SharedLoopbackCapture.Generation;
             if (generation != _captureGeneration)
             {
                 _captureGeneration = generation;
                 _resumeFade = 0f;
             }
-            if (!SharedLoopbackCapture.CopyLatest(_samples))
+            if (!(_privateInput?.CopyLatest(_samples) ?? SharedLoopbackCapture.CopyLatest(_samples)))
             {
                 Array.Clear(_bands);
                 Array.Clear(_fftBuffer);
@@ -171,7 +178,8 @@ namespace MotionDesk.Services
         internal void SetActive(bool active)
         {
             if (_disposed || _acquired == active) return;
-            if (active) SharedLoopbackCapture.Acquire();
+            if (_privateInput != null) _privateInput.SetActive(active);
+            else if (active) SharedLoopbackCapture.Acquire();
             else SharedLoopbackCapture.Release();
             _acquired = active;
         }
@@ -179,6 +187,7 @@ namespace MotionDesk.Services
         public void Dispose()
         {
             SetActive(false);
+            _privateInput?.Dispose();
             _disposed = true;
         }
     }

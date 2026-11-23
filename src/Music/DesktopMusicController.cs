@@ -25,7 +25,7 @@ internal sealed class DesktopMusicController : IDisposable
 
     public DesktopMusicController()
     {
-        SharedLoopbackCapture.SelectInput(settings.InputDeviceId);
+        // The overlay selects an isolated input; never change the system loopback.
         SystemEvents.SessionSwitch += SessionSwitched;
         timer.Tick += Tick;
         if (settings.Enabled) timer.Start();
@@ -39,7 +39,8 @@ internal sealed class DesktopMusicController : IDisposable
         // Avoid silently switching to a microphone: the UI has a separate, explicit selector.
         if (deviceId != null && !SharedLoopbackCapture.AvailableInputs().Any(x => x.Id == deviceId))
             return;
-        SharedLoopbackCapture.SelectInput(deviceId);
+        StopAudio(); // recreate the overlay capture without interrupting system widgets
+        surface.Clear();
         settings = settings with { InputDeviceId = deviceId };
         SaveSettings();
     }
@@ -87,8 +88,8 @@ internal sealed class DesktopMusicController : IDisposable
             return;
         }
 
-        if (settings.Enabled) spectrum ??= new AudioSpectrumService(BandCount);
-        bool audible = settings.Enabled && SharedLoopbackCapture.HasRecentSignal;
+        if (settings.Enabled) spectrum ??= new AudioSpectrumService(BandCount, settings.InputDeviceId);
+        bool audible = settings.Enabled && (spectrum?.HasRecentSignal ?? false);
         if (preview || audible || snapshot != null)
         {
             drawing = true;

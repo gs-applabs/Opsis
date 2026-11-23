@@ -1,0 +1,1 @@
+Linux container; dotnet SDK: not installed; Inno Setup 7: not installed; Node.js suite: 39/39 PASS. Windows app/installer not built or run.

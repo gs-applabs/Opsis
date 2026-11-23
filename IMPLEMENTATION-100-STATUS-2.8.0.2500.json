@@ -3,9 +3,9 @@
   "pre_release": true,
   "tests_deferred_per_user": false,
   "counts": {
-    "new": 66,
+    "new": 73,
     "existing": 17,
-    "partial": 14,
+    "partial": 7,
     "pending": 3
   },
   "phases": {
@@ -209,9 +209,9 @@
       "id": 12,
       "title": "Δήλωση δικαιωμάτων ανά πρόσθετο για δίκτυο, ήχο και πρόσβαση σε τοπικά αρχεία.",
       "status": "partial",
-      "status_el": "ΜΕΡΙΚΟ · ΑΠΑΙΤΕΙ ΣΥΜΠΛΗΡΩΣΗ/ WINDOWS QA",
+      "status_el": "ΜΕΡΙΚΟ · ΑΠΑΙΤΕΙ ΠΕΡΑΙΤΕΡΩ ΕΡΓΑΣΙΑ Ή WINDOWS QA",
       "evidence": "src/Services/PluginCapabilityManifest.cs · src/Services/PluginTrust.cs · src/Services/PluginHost.cs · src/UI/MainWindow.cs",
-      "note": "Δήλωση και SHA-bound έγκριση δικαιωμάτων· ΔΕΝ αποτελεί λειτουργικό sandbox. Για πλήρη επιβολή χρειάζεται εκτέλεση εκτός διεργασίας."
+      "note": "In-process DLL capabilities are declarations only; OS access is not sandboxed. Real enforcement requires process isolation and an RPC capability broker."
     },
     {
       "id": 13,
@@ -224,10 +224,10 @@
     {
       "id": 14,
       "title": "Εμφάνιση εκδότη και κατάστασης υπογραφής στο παράθυρο εγκατάστασης πρόσθετου.",
-      "status": "partial",
-      "status_el": "ΜΕΡΙΚΟ · ΧΡΕΙΑΖΕΤΑΙ ΣΥΜΠΛΗΡΩΣΗ/QA",
-      "evidence": "src/Services/PluginTrust.cs · src/Services/PluginHost.cs · src/Widgets/TrayApplicationContext.cs",
-      "note": "Προβάλλεται δηλωμένος εκδότης και πιστοποιητικό όπου υπάρχει, με σαφή ένδειξη ότι η κρυπτογραφική εμπιστοσύνη ΔΕΝ επαληθεύτηκε."
+      "status": "new",
+      "status_el": "ΥΛΟΠΟΙΗΘΗΚΕ ΣΤΟΝ SOURCE R10 · WINDOWS BUILD/QA ΕΚΚΡΕΜΕΙ",
+      "evidence": "src/Services/PluginTrust.cs · src/Services/AuthenticodeVerifier.cs",
+      "note": "Windows Authenticode file/chain verification added (offline; revocation not checked). No Windows .NET build yet."
     },
     {
       "id": 15,
@@ -249,9 +249,9 @@
       "id": 17,
       "title": "Αναίρεση μαζικής μετακίνησης εικονιδίων με αποθήκευση της αρχικής θέσης.",
       "status": "partial",
-      "status_el": "ΜΕΡΙΚΟ · ΧΡΕΙΑΖΕΤΑΙ ΣΥΜΠΛΗΡΩΣΗ/QA",
+      "status_el": "ΜΕΡΙΚΟ · ΑΠΑΙΤΕΙ ΠΕΡΑΙΤΕΡΩ ΕΡΓΑΣΙΑ Ή WINDOWS QA",
       "evidence": "src/Widgets/DesktopIconVisibilityEngine.cs · src/Widgets/TrayApplicationContext.cs",
-      "note": "Υπάρχει ρητό στιγμιότυπο και αναίρεση θέσεων εικονιδίων από tray. Δεν υπάρχει αυτόματη λήψη πριν από κάθε μαζική μετακίνηση."
+      "note": "Explicit capture/undo works, but automatic pre-capture for arbitrary Explorer mass drags is not yet implemented."
     },
     {
       "id": 18,
@@ -273,9 +273,9 @@
       "id": 20,
       "title": "Έλεγχος επαναφοράς μετά από διακοπή ρεύματος την ώρα αποθήκευσης προφίλ.",
       "status": "partial",
-      "status_el": "ΜΕΡΙΚΟ · ΑΝΑΜΕΝΕΤΑΙ ΕΚΤΕΛΕΣΗ WINDOWS QA",
+      "status_el": "ΜΕΡΙΚΟ · ΑΠΑΙΤΕΙ ΠΕΡΑΙΤΕΡΩ ΕΡΓΑΣΙΑ Ή WINDOWS QA",
       "evidence": "src/Services/AtomicFile.cs · tests/AtomicWriteCrashHarness · tools/verify-atomic-powerloss.ps1",
-      "note": "FlushToDisk, ανθεκτική ατομική ενημέρωση και ανάκτηση προσωρινού πρώτης εγγραφής· ετοιμάστηκε χειροκίνητο crash harness, ΔΕΝ εκτελέστηκε· πραγματική διακοπή ρεύματος δεν έχει προσομοιωθεί."
+      "note": "Atomic write and crash harness exist; power-loss Windows scenario has not run."
     },
     {
       "id": 21,
@@ -305,9 +305,9 @@
       "id": 24,
       "title": "Ταυτόχρονη προεπισκόπηση χαραυγής, μεσημεριού και νύχτας.",
       "status": "partial",
-      "status_el": "ΜΕΡΙΚΟ · ΧΡΕΙΑΖΕΤΑΙ ΣΥΜΠΛΗΡΩΣΗ/QA",
+      "status_el": "ΜΕΡΙΚΟ · ΑΠΑΙΤΕΙ ΠΕΡΑΙΤΕΡΩ ΕΡΓΑΣΙΑ Ή WINDOWS QA",
       "evidence": "src/UI/WeatherTriptychForm.cs · src/UI/MainWindow.cs",
-      "note": "Τριπλή ταυτόχρονη προεπισκόπηση χρωματικής ατμόσφαιρας. Είναι ενδεικτική ζωγραφική προεπισκόπηση, όχι τρεις πλήρεις live weather simulations."
+      "note": "Static dawn/noon/night previews now use the actual user photo when possible; not three real simultaneous weather engines."
     },
     {
       "id": 25,
@@ -369,9 +369,9 @@
       "id": 32,
       "title": "Πανοραμικό φόντο μόνο σε επιλεγμένο ζεύγος οθονών.",
       "status": "partial",
-      "status_el": "ΜΕΡΙΚΟ · ΑΠΑΙΤΕΙ ΣΥΜΠΛΗΡΩΣΗ/ WINDOWS QA",
+      "status_el": "ΜΕΡΙΚΟ · ΑΠΑΙΤΕΙ ΠΕΡΑΙΤΕΡΩ ΕΡΓΑΣΙΑ Ή WINDOWS QA",
       "evidence": "src/Widgets/WallpaperWindow.cs · src/Widgets/wallpaper/index.html · src/UI/MainWindow.WallpaperMedia.cs",
-      "note": "Προαιρετική πανοραμική φωτογραφία σε δύο οθόνες. Χρειάζεται πραγματικός έλεγχος διαφορετικού DPI και προβολών βίντεο."
+      "note": "Panorama pairing now validates horizontal adjacency before saving; real dual-monitor geometry/DPI/hotplug has not been verified."
     },
     {
       "id": 33,
@@ -433,9 +433,9 @@
       "id": 40,
       "title": "Εξαίρεση οθόνης παρουσίασης από προσωπικές ειδοποιήσεις και στοιχεία πολυμέσων.",
       "status": "partial",
-      "status_el": "ΜΕΡΙΚΟ · ΧΡΕΙΑΖΕΤΑΙ ΣΥΜΠΛΗΡΩΣΗ/QA",
+      "status_el": "ΜΕΡΙΚΟ · ΑΠΑΙΤΕΙ ΠΕΡΑΙΤΕΡΩ ΕΡΓΑΣΙΑ Ή WINDOWS QA",
       "evidence": "src/Music/DesktopMusicController.cs · src/Widgets/WallpaperWindow.cs · src/Services/AppSettings.cs · src/UI/MainWindow.cs",
-      "note": "Επιλογή οθόνης παρουσίασης, απόκρυψη wallpaper info και μουσικού overlay. Δεν αποκρύπτονται όλες οι Windows/third-party notifications."
+      "note": "Opsis music, weather and private tray alerts are suppressed on active presentation monitors; third-party/Windows-wide notifications cannot be controlled by Opsis."
     },
     {
       "id": 41,
@@ -504,18 +504,18 @@
     {
       "id": 49,
       "title": "Εξαιρέσεις για διαλόγους, παλέτες εργαλείων και προσωρινά παράθυρα.",
-      "status": "partial",
-      "status_el": "ΜΕΡΙΚΟ · ΧΡΕΙΑΖΕΤΑΙ ΣΥΜΠΛΗΡΩΣΗ/QA",
+      "status": "new",
+      "status_el": "ΥΛΟΠΟΙΗΘΗΚΕ ΣΤΟΝ SOURCE R10 · WINDOWS BUILD/QA ΕΚΚΡΕΜΕΙ",
       "evidence": "src/Services/AutoTileService.cs",
-      "note": "Το χειροκίνητο auto-tile εξαιρεί διαλόγους/παλέτες, αλλά απαιτείται έλεγχος και στο πλήρες DeskZones workflow."
+      "note": "Owned windows, dialog class #32770, tool windows, no-activate popups and transient windows excluded before tiling."
     },
     {
       "id": 50,
       "title": "Προεπισκόπηση των παραθύρων που θα μετακινηθούν όταν αλλάξει προφίλ.",
-      "status": "partial",
-      "status_el": "ΜΕΡΙΚΟ · ΧΡΕΙΑΖΕΤΑΙ ΣΥΜΠΛΗΡΩΣΗ/QA",
+      "status": "new",
+      "status_el": "ΥΛΟΠΟΙΗΘΗΚΕ ΣΤΟΝ SOURCE R10 · WINDOWS BUILD/QA ΕΚΚΡΕΜΕΙ",
       "evidence": "src/Services/AutoTileService.cs · src/UI/MainWindow.cs",
-      "note": "Υπάρχει προεπισκόπηση παραθύρων για manual auto-tile, όχι ακόμη προεπισκόπηση όλων των μετακινήσεων κατά την αλλαγή προφίλ."
+      "note": "Exact approved immutable tile plan used; windows that moved or changed monitor are skipped; successful moves are undoable."
     },
     {
       "id": 51,
@@ -552,10 +552,10 @@
     {
       "id": 55,
       "title": "Άμεση αναζήτηση σε όλα τα containers με μετάβαση στο αποτέλεσμα.",
-      "status": "partial",
-      "status_el": "ΜΕΡΙΚΟ · ΧΡΕΙΑΖΕΤΑΙ ΣΥΜΠΛΗΡΩΣΗ/QA",
-      "evidence": "src/Containers/SpotSearch.cs · src/Containers/ContainerHost.cs",
-      "note": "Το Spot Search αναζητά όλα τα containers και προστέθηκε Shift+Enter για εστίαση μοναδικά προσδιορισμένου ορατού container· λείπει η αυτόματη εμφάνιση κρυφών containers."
+      "status": "new",
+      "status_el": "ΥΛΟΠΟΙΗΘΗΚΕ ΣΤΟΝ SOURCE R10 · WINDOWS BUILD/QA ΕΚΚΡΕΜΕΙ",
+      "evidence": "src/Containers/SpotSearch.cs",
+      "note": "Multiple matching containers are presented for explicit selection instead of silently failing."
     },
     {
       "id": 56,
@@ -696,10 +696,10 @@
     {
       "id": 73,
       "title": "Προσαρμογή συχνότητας ανανέωσης ανά widget.",
-      "status": "partial",
-      "status_el": "ΜΕΡΙΚΟ · ΧΡΕΙΑΖΕΤΑΙ ΣΥΜΠΛΗΡΩΣΗ/QA",
-      "evidence": "src/Widgets/WidgetEngine.cs",
-      "note": "Επιλογή 25–400% ανά native widget με periodic monitor timer, αλλά δεν έχει ενοποιηθεί για όλα τα web/media/notification widgets."
+      "status": "new",
+      "status_el": "ΥΛΟΠΟΙΗΘΗΚΕ ΣΤΟΝ SOURCE R10 · WINDOWS BUILD/QA ΕΚΚΡΕΜΕΙ",
+      "evidence": "src/Widgets/WidgetSdkView.cs · src/Widgets/WidgetEngine.cs · widget-sdk/catalog/{local-time,day-progress}/widget.js · tests/WidgetRefreshR10.test.cjs",
+      "note": "Native and packaged SDK web widgets now save and receive their own refresh scaling; two bundled JS widgets implement the policy."
     },
     {
       "id": 74,
@@ -736,10 +736,10 @@
     {
       "id": 78,
       "title": "Επιλογή συσκευής εισόδου του visualizer ξεχωριστά από την προεπιλεγμένη έξοδο.",
-      "status": "partial",
-      "status_el": "ΜΕΡΙΚΟ · ΑΠΑΙΤΕΙ ΣΥΜΠΛΗΡΩΣΗ/ WINDOWS QA",
-      "evidence": "src/Services/SharedLoopbackCapture.cs · src/Music/MusicOverlaySettings.cs · src/Music/MusicOverlayPage.cs",
-      "note": "Ρητή επιλογή μικροφώνου έναντι default output loopback. Η κοινή WASAPI υπηρεσία επηρεάζει και άλλους καταναλωτές· χρειάζεται πλήρης ανεξαρτητοποίηση και Windows QA."
+      "status": "new",
+      "status_el": "ΥΛΟΠΟΙΗΘΗΚΕ ΣΤΟΝ SOURCE R10 · WINDOWS BUILD/QA ΕΚΚΡΕΜΕΙ",
+      "evidence": "src/Services/VisualizerInputCapture.cs · src/Services/AudioSpectrumService.cs · src/Music/DesktopMusicController.cs",
+      "note": "Selected microphone/line-in uses an isolated WASAPI capture and FFT stream, not the shared system loopback; Windows audio QA pending."
     },
     {
       "id": 79,
@@ -792,10 +792,10 @@
     {
       "id": 85,
       "title": "Αναγγελία αλλαγής ενεργού προφίλ μέσω αναγνώστη οθόνης.",
-      "status": "partial",
-      "status_el": "ΜΕΡΙΚΟ · ΧΡΕΙΑΖΕΤΑΙ ΣΥΜΠΛΗΡΩΣΗ/QA",
-      "evidence": "src/Services/WorkspaceProfileService.cs · src/UI/MainWindow.cs",
-      "note": "Αποστέλλεται Accessibility DescriptionChange μετά από αλλαγή προφίλ, όμως η πραγματική αναγγελία από screen reader δεν έχει επαληθευτεί."
+      "status": "new",
+      "status_el": "ΥΛΟΠΟΙΗΘΗΚΕ ΣΤΟΝ SOURCE R10 · WINDOWS BUILD/QA ΕΚΚΡΕΜΕΙ",
+      "evidence": "src/UI/MainWindow.cs",
+      "note": "WinForms UI Automation polite live region reports profile activation; NVDA/Narrator user acceptance still pending."
     },
     {
       "id": 86,
@@ -889,9 +889,9 @@
       "id": 97,
       "title": "Κατάλογος συμβατότητας επεκτάσεων ανά branch. Πρώτα News Crawler και Appearance, που αναφέρονται στον παλιό installer, με έκδοση API και διαδρομή εγκατάστασης για κάθε πακέτο.",
       "status": "partial",
-      "status_el": "ΜΕΡΙΚΟ · ΑΝΑΜΕΝΕΤΑΙ ΕΚΤΕΛΕΣΗ WINDOWS QA",
+      "status_el": "ΜΕΡΙΚΟ · ΑΠΑΙΤΕΙ ΠΕΡΑΙΤΕΡΩ ΕΡΓΑΣΙΑ Ή WINDOWS QA",
       "evidence": "src/Services/PluginCompatibilityCatalog.cs · src/Services/PluginHost.cs · suite/plugin-compatibility.json",
-      "note": "Έλεγχος assembly identity χωρίς φόρτωση, αποκλεισμός ασύμβατων Crawler/Χρονικολογίου και κατάλογος branch/paths. Πλήρης Windows ABI + installer E2E απαιτείται αργότερα."
+      "note": "Metadata-based compatibility table exists; host integration of the 1.0.0.0 plugin DLLs requires Windows E2E."
     },
     {
       "id": 98,
@@ -920,7 +920,7 @@
   ],
   "revision": "R9 · Session 4/4 (code checkpoint, not release)",
   "last_changed_utc": "2026-11-23T18:00:00Z",
-  "checkpoint": "R9-S4",
+  "checkpoint": "R10 — partial implementation closure",
   "implementation_sessions": {
     "completed": 4,
     "planned": 4,
@@ -984,5 +984,11 @@
     "status": "NOT_VERIFIED",
     "reason": "No .NET 11 SDK, Windows runner or Inno Setup 7 in current container. New source not on remote GitHub branch.",
     "workflow": ".github/workflows/r9-release-qa.yml"
+  },
+  "node_tests": {
+    "passed": 39,
+    "total": 39,
+    "windows_build": "not_run_no_dotnet_sdk",
+    "inno_installer": "not_run_no_windows_inno_setup"
   }
 }

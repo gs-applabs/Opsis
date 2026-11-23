@@ -373,6 +373,18 @@ namespace MotionDesk.Widgets
             UpdatePluginApprovalItem();
         }
 
+        // Privacy boundary for our own Windows toast/balloon messages. Windows and
+        // third-party application notifications are outside Opsis' control.
+        private void ShowPrivateBalloon(int timeout, string title, string message, ToolTipIcon icon)
+        {
+            var ids = AppSettings.Peek().PresentationMonitorIds;
+            if (ids != null && Screen.AllScreens.Any(screen => ids.Any(id =>
+                    id.Equals(screen.DeviceName, StringComparison.OrdinalIgnoreCase) ||
+                    id.Equals(MonitorTopologyService.ForDevice(screen.DeviceName)?.Id, StringComparison.OrdinalIgnoreCase))))
+                return;
+            _trayIcon.ShowBalloonTip(timeout, title, message, icon);
+        }
+
         private void ShowMainWindow(string? page = null)
         {
             if (_mainWindow == null || _mainWindow.IsDisposed)
@@ -431,7 +443,7 @@ namespace MotionDesk.Widgets
         private void ApplyProfile(string name)
         {
             WorkspaceProfileService.Load(name);
-            _trayIcon.ShowBalloonTip(1500, "Opsis", string.Format(LocalizationManager.T("Tray.ProfileAppliedFormat"), name), ToolTipIcon.Info);
+            ShowPrivateBalloon(1500, "Opsis", string.Format(LocalizationManager.T("Tray.ProfileAppliedFormat"), name), ToolTipIcon.Info);
         }
 
         private void ToggleWallpaper()
@@ -513,12 +525,12 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                 {
                     _lastAlertUtc = DateTime.UtcNow; _ramHighTicks = 0;
                     var top = TopProcessesService.TopByMemory(1).FirstOrDefault();
-                    _trayIcon.ShowBalloonTip(8000, LocalizationManager.T("Alert.Title"), string.Format(LocalizationManager.T("Alert.RamHigh"), top.Name ?? "?"), ToolTipIcon.Warning);
+                    ShowPrivateBalloon(8000, LocalizationManager.T("Alert.Title"), string.Format(LocalizationManager.T("Alert.RamHigh"), top.Name ?? "?"), ToolTipIcon.Warning);
                 }
                 else if (_cpuHighTicks >= 12)
                 {
                     _lastAlertUtc = DateTime.UtcNow; _cpuHighTicks = 0;
-                    _trayIcon.ShowBalloonTip(8000, LocalizationManager.T("Alert.Title"), LocalizationManager.T("Alert.CpuHigh"), ToolTipIcon.Warning);
+                    ShowPrivateBalloon(8000, LocalizationManager.T("Alert.Title"), LocalizationManager.T("Alert.CpuHigh"), ToolTipIcon.Warning);
                 }
             }
             catch (Exception) { /* an alert must never break the tray */ }

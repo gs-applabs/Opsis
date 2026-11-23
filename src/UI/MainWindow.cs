@@ -42,6 +42,29 @@ namespace MotionDesk.UI
         // the ~20 call sites (`_statusLabel.Text = ...`) behave as before: a plain Text is the permanent text, overwritten by the next 5-second system-load update.
         private OpsisStatusBar _status = null!;
         private readonly StatusTextShim _statusLabel = new();
+        private readonly ProfileAnnouncementLabel _profileLive = new();
+
+        // Kept in the accessible tree even while visually unobtrusive.
+        // WinForms' LiveSetting tells UI Automation readers about changes to Text.
+        private sealed class ProfileAnnouncementLabel : Label
+        {
+            public ProfileAnnouncementLabel()
+            {
+                AccessibleRole = AccessibleRole.StaticText;
+                AccessibleName = "Active workspace profile / Ενεργό προφίλ";
+                LiveSetting = System.Windows.Forms.Automation.AutomationLiveSetting.Polite;
+                AutoSize = false;
+                Size = new Size(1, 1);
+                TabStop = false;
+            }
+            public void Announce(string text)
+            {
+                Text = text;
+                AccessibleDescription = text;
+                AccessibilityNotifyClients(AccessibleEvents.NameChange, -1);
+                AccessibilityNotifyClients(AccessibleEvents.DescriptionChange, -1);
+            }
+        }
 
         private sealed class StatusTextShim
         {
@@ -207,6 +230,8 @@ namespace MotionDesk.UI
             AnimationsSettingChanged += UpdateAnimationTimers;
             WorkspaceProfileService.ExitSaveDone = false;
             WorkspaceProfileService.ProfileActivated += AnnounceActiveProfile;
+            Controls.Add(_profileLive);
+            _profileLive.BringToFront();
             ThemeManager.Changed += OnThemeOrLanguageChanged;
             ThemeManager.Repainted += OnThemeRepainted;
             LocalizationManager.Changed += OnThemeOrLanguageChanged;
@@ -786,6 +811,7 @@ namespace MotionDesk.UI
             if (InvokeRequired) { BeginInvoke((Action)(() => AnnounceActiveProfile(profile))); return; }
             string announcement = StudioText("Active profile: ", "Ενεργό προφίλ: ") + profile;
             AccessibleDescription = announcement;
+            _profileLive.Announce(announcement);
             AccessibilityNotifyClients(AccessibleEvents.DescriptionChange, -1);
             ShowStatus(announcement, StatusKind.Info);
         }
@@ -1595,11 +1621,14 @@ namespace MotionDesk.UI
                     item.Title + " → " + item.Monitor + " / " + item.After.Width + "×" + item.After.Height));
                 if (plan.Count > 14) description += $"{Environment.NewLine}… +{plan.Count - 14}";
                 if (MessageBox.Show(this,
-                        StudioText("The following windows will be moved. Continue?", "Τα ακόλουθα παράθυρα θα μετακινηθούν. Συνέχεια?")
+                        StudioText("Apply exactly this preview? Windows that change before confirmation will be skipped.", "Εφαρμογή ακριβώς αυτής της προεπισκόπησης; Παράθυρα που άλλαξαν ενδιάμεσα θα παραλειφθούν.")
                         + Environment.NewLine + Environment.NewLine + description,
                         StudioText("Preview tiling", "Προεπισκόπηση διάταξης"),
                         MessageBoxButtons.YesNo, MessageBoxIcon.Question, MessageBoxDefaultButton.Button2) == DialogResult.Yes)
-                    AutoTileService.Apply(force: true);
+                {
+                    var moved = AutoTileService.ApplyApprovedPreview(plan);
+                    ShowStatus(StudioText($"{moved} windows arranged from the approved preview.", $"{moved} παράθυρα τακτοποιήθηκαν βάσει της εγκεκριμένης προεπισκόπησης."), StatusKind.Info);
+                }
             }, 240));
             tiling.Controls.Add(StudioButton(StudioText("Undo last manual tiling", "Αναίρεση τελευταίας διάταξης"), () =>
             {

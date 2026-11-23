@@ -61,10 +61,35 @@ namespace MotionDesk.Containers
                 string.Equals(container.Title, hit.ContainerTitle, StringComparison.OrdinalIgnoreCase) &&
                 container.Items.Concat(container.Tabs.SelectMany(tab => tab.Items))
                     .Any(item => string.Equals(item.Path, hit.Item.Path, StringComparison.OrdinalIgnoreCase)))
-                .Take(2).ToArray();
-            if (matches.Length != 1) return; // ambiguous titles/paths: never jump to the wrong container
+                .Take(32).ToArray();
+            if (matches.Length == 0) return;
+            string target;
+            if (matches.Length == 1) target = matches[0].Id;
+            else
+            {
+                // A file can be referenced by more than one container. Ask explicitly
+                // rather than guessing which similarly named container the user wants.
+                using var picker = new Form
+                {
+                    Text = "Select container / Επιλογή container", StartPosition = FormStartPosition.CenterParent,
+                    FormBorderStyle = FormBorderStyle.FixedDialog, MinimizeBox = false,
+                    MaximizeBox = false, ClientSize = new Size(460, 270)
+                };
+                var choices = new ListBox { Dock = DockStyle.Fill, IntegralHeight = false };
+                foreach (var container in matches)
+                    choices.Items.Add($"{container.Title}  [{container.Id}]");
+                choices.SelectedIndex = 0;
+                var footer = new FlowLayoutPanel { Dock = DockStyle.Bottom, FlowDirection = FlowDirection.RightToLeft, Height = 46 };
+                var ok = new Button { Text = "Open / Άνοιγμα", DialogResult = DialogResult.OK, Width = 130 };
+                var cancel = new Button { Text = "Cancel / Άκυρο", DialogResult = DialogResult.Cancel, Width = 110 };
+                footer.Controls.Add(ok); footer.Controls.Add(cancel);
+                picker.Controls.Add(choices); picker.Controls.Add(footer);
+                picker.AcceptButton = ok; picker.CancelButton = cancel;
+                if (picker.ShowDialog(this) != DialogResult.OK) return;
+                target = matches[choices.SelectedIndex].Id;
+            }
             Close();
-            host.Focus(matches[0].Id);
+            host.Focus(target);
         }
 
         private void PinSearch()

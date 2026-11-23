@@ -16,9 +16,19 @@ internal static class AutoTileService
         if (!IsWindow(hwnd) || IsIconic(hwnd) || IsZoomed(hwnd)) return false;
         long style = GetWindowLongPtr(hwnd, -16).ToInt64();
         long extended = GetWindowLongPtr(hwnd, -20).ToInt64();
-        // Never resize menus, transient popups, fixed dialog boxes or tool palettes.
-        return (style & 0x00040000L) != 0 && (style & 0x40000000L) == 0 &&
-            (extended & (0x00000080L | 0x00000001L)) == 0;
+        // Dialogs (including resizable dialogs), owned windows, tool palettes and
+        // temporary popups must never be tiled with their parent application.
+        if (GetWindow(hwnd, 4) != IntPtr.Zero) return false; // GW_OWNER
+        var cls = new System.Text.StringBuilder(128);
+        if (GetClassName(hwnd, cls, cls.Capacity) > 0 &&
+            (cls.ToString().Equals("#32770", StringComparison.OrdinalIgnoreCase) ||
+             cls.ToString().Equals("tooltips_class32", StringComparison.OrdinalIgnoreCase))) return false;
+        const long WS_THICKFRAME = 0x00040000L, WS_CHILD = 0x40000000L, WS_POPUP = 0x80000000L;
+        const long WS_EX_TOOLWINDOW = 0x00000080L, WS_EX_DLGMODALFRAME = 0x00000001L;
+        const long WS_EX_NOACTIVATE = 0x08000000L;
+        return (style & WS_THICKFRAME) != 0 && (style & WS_CHILD) == 0 &&
+            (extended & (WS_EX_TOOLWINDOW | WS_EX_DLGMODALFRAME | WS_EX_NOACTIVATE)) == 0 &&
+            ((style & WS_POPUP) == 0 || (style & 0x00C00000L) != 0); // allow only captioned popups
     }
 
     private static Rectangle ResolveRuleRect(WinApi.AppWindow window, Screen screen, Rectangle fallback, AppSettings settings)
@@ -117,6 +127,37 @@ internal static class AutoTileService
         return result;
     }
 
+    /// <summary>
+    /// Apply the EXACT positions that the user approved in Preview(). Never enumerate
+    /// windows again or substitute a different tiling plan after the confirmation.
+    /// A window closed, moved to a different display, changed size or turned into a
+    /// dialog meanwhile is skipped. Only successfully moved windows enter Undo.
+    /// </summary>
+    internal static int ApplyApprovedPreview(IReadOnlyList<TilePreview> approved)
+    {
+        if (approved == null || approved.Count == 0) return 0;
+        var screens = Screen.AllScreens.ToDictionary(x => x.DeviceName, StringComparer.OrdinalIgnoreCase);
+        var restore = new Dictionary<IntPtr, Rectangle>();
+        foreach (var tile in approved.Take(48))
+        {
+            if (!screens.TryGetValue(tile.Monitor, out var screen) ||
+                !IsTilingCandidate(tile.Window) ||
+                Screen.FromHandle(tile.Window).DeviceName != screen.DeviceName ||
+                !GetWindowRect(tile.Window, out var current)) continue;
+            var before = Rectangle.FromLTRB(current.Left, current.Top, current.Right, current.Bottom);
+            if (before != tile.Before || tile.After.Width < 120 || tile.After.Height < 90) continue;
+            var work = DesktopToolbar.WorkAreaForTiling(screen);
+            if (!work.IntersectsWith(tile.After) ||
+                tile.After.Left < work.Left || tile.After.Top < work.Top ||
+                tile.After.Right > work.Right || tile.After.Bottom > work.Bottom) continue;
+            if (SetWindowPos(tile.Window, IntPtr.Zero, tile.After.X, tile.After.Y,
+                    tile.After.Width, tile.After.Height, 0x0010 | 0x0004 | 0x0200 | 0x4000))
+                restore.TryAdd(tile.Window, before);
+        }
+        if (restore.Count > 0) { _undoManual = restore; Previous.Clear(); }
+        return restore.Count;
+    }
+
     /// <summary>Restore the original rectangles of the last manual tile action.</summary>
     internal static bool UndoLastManual()
     {
@@ -189,6 +230,8 @@ internal static class AutoTileService
             Previous.Remove(removed);
     }
 
+    [DllImport("user32.dll", SetLastError = true)] private static extern IntPtr GetWindow(IntPtr hwnd, uint command);
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)] private static extern int GetClassName(IntPtr hwnd, System.Text.StringBuilder name, int maxCount);
     [DllImport("user32.dll")] private static extern bool IsWindow(IntPtr hwnd);
     [DllImport("user32.dll", EntryPoint = "GetWindowLongPtrW")] private static extern IntPtr GetWindowLongPtr(IntPtr hwnd, int index);
     [StructLayout(LayoutKind.Sequential)]

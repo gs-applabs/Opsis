@@ -116,6 +116,12 @@ namespace MotionDesk.Services
     public sealed record PluginTrustRequest(string Name, string Folder, string Sha256,
         string Publisher = "Unknown / Άγνωστος", string SignatureStatus = "Unknown / Άγνωστη", string Capabilities = "Not declared / Δεν δηλώθηκαν");
 
+    /// <summary>
+    /// Inspect both publisher certificate METADATA and Windows Authenticode
+    /// verification. An embedded certificate alone is not proof of trust.
+    /// Offline verification avoids unexpected network traffic in the approval UI;
+    /// certificate revocation is therefore not verified and is reported as such.
+    /// </summary>
     internal static class PluginPublisherInfo
     {
         internal static (string Publisher, string SignatureStatus) Inspect(string folder)
@@ -125,13 +131,18 @@ namespace MotionDesk.Services
                 var dll = Directory.EnumerateFiles(folder, "*Plugin.dll", SearchOption.TopDirectoryOnly)
                     .FirstOrDefault(path => (File.GetAttributes(path) & FileAttributes.ReparsePoint) == 0);
                 if (dll == null) return ("Unknown", "No plugin entry DLL found");
+                string publisher = "Unknown / Άγνωστος";
                 try
                 {
-                    using var certificate = System.Security.Cryptography.X509Certificates.X509Certificate.CreateFromSignedFile(dll);
-                    return (certificate.Subject, "Embedded certificate found; signature trust NOT verified");
+                    using var cert = System.Security.Cryptography.X509Certificates.X509Certificate.CreateFromSignedFile(dll);
+                    publisher = cert.Subject;
                 }
                 catch (System.Security.Cryptography.CryptographicException)
-                { return ("Unsigned / Χωρίς υπογραφή", "No embedded Authenticode certificate"); }
+                {
+                    // An unsigned DLL has no embedded publisher certificate.
+                }
+                var signature = AuthenticodeVerifier.VerifyOffline(dll);
+                return (publisher, signature);
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException)
             { return ("Unknown", "Could not inspect: " + ex.GetType().Name); }

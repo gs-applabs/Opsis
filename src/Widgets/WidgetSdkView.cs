@@ -8,7 +8,7 @@ namespace MotionDesk.Widgets;
 
 internal static class WidgetSdkView
 {
-    internal static async Task InitializeAsync(WebView2 view, WidgetCatalog.Package package)
+    internal static async Task InitializeAsync(WebView2 view, WidgetCatalog.Package package, Func<int> refreshPercent)
     {
         await view.EnsureCoreWebView2Async(await WebView2Support.CreateEnvironmentAsync());
         if (view.IsDisposed || view.CoreWebView2 is not { } core) return;
@@ -68,7 +68,7 @@ internal static class WidgetSdkView
                 return;
             }
             // A widget cannot force 60Hz sensor polling through postMessage.
-            if (Environment.TickCount64 - lastSystemPush < 1000) return;
+            if (Environment.TickCount64 - lastSystemPush < Math.Clamp(1000 * refreshPercent() / 100, 250, 4000)) return;
             lastSystemPush = Environment.TickCount64;
             var metrics = SystemMonitorService.Instance.GetSnapshot();
             core.PostWebMessageAsJson(JsonSerializer.Serialize(new
@@ -82,7 +82,7 @@ internal static class WidgetSdkView
             if (view.IsDisposed || !OwnUrl(core.Source ?? "")) return;
             core.PostWebMessageAsJson(JsonSerializer.Serialize(new
             {
-                type = "opsis:state", api = 1, language = LocalizationManager.CurrentLanguage,
+                type = "opsis:state", api = 1, refreshPercent = Math.Clamp(refreshPercent(), 25, 400), language = LocalizationManager.CurrentLanguage,
                 dark = ThemeManager.Current.Background.GetBrightness() < .5,
                 accent = ColorTranslator.ToHtml(ThemeManager.Current.AccentCyan),
                 now = DateTimeOffset.Now.ToString("O")
@@ -119,5 +119,14 @@ internal static class WidgetSdkView
         LocalizationManager.Changed += Publish;
         view.Disposed += (_, _) => { ThemeManager.Changed -= Publish; LocalizationManager.Changed -= Publish; };
         core.Navigate(origin + string.Join('/', package.Manifest.Entry.Split('/').Select(Uri.EscapeDataString)));
+    }
+
+    internal static void NotifyRefresh(WebView2? view, int refreshPercent)
+    {
+        if (view?.IsDisposed != false || view.CoreWebView2 == null) return;
+        view.CoreWebView2.PostWebMessageAsJson(JsonSerializer.Serialize(new
+        {
+            type = "opsis:refresh", refreshPercent = Math.Clamp(refreshPercent, 25, 400)
+        }));
     }
 }
