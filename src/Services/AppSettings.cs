@@ -146,11 +146,16 @@ namespace MotionDesk.Services
         public bool QuickHideKeepRecycleBin { get; set; } = true;
         public List<string> QuickHideExtraKept { get; set; } = new();
 
+        /// <summary>Last version whose first-run update notice was processed. Null on older profiles.</summary>
+        public string? LastSeenAppVersion { get; set; }
+
         /// <summary>2.6.0: size and position of the main window remembered per screen (Opsis.UI.WindowMemory); a missing screen falls back to a safe place.</summary>
         public WindowMemoryData WindowMemory { get; set; } = new();
 
         /// <summary>2.6.0: UI scale / text size of the main window in percent (100, 125, 150).</summary>
         public int UiScalePercent { get; set; } = 100;
+        /// <summary>Text on cards only; independent of the main window's UI scale.</summary>
+        public int CardFontScalePercent { get; set; } = 100;
 
         /// <summary>2.6.0: pause the live wallpaper on a monitor whose desktop is fully covered by an opaque window (nothing to see, nothing to render). No quality loss.</summary>
         public bool PauseWhenDesktopCovered { get; set; } = true;

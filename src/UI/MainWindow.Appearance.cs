@@ -121,7 +121,26 @@ namespace MotionDesk.UI
             }
             theme.Controls.Add(sw);
             var accRow = Row(theme);
-            Bt(accRow, "Win.CustomColor", () => { if (PickColor() is int c) Do(() => svc.Engine.Apply(new Look { AccentRgb = c })); }, 190);
+            Bt(accRow, "Win.CustomColor", () =>
+            {
+                if (PickColor() is not int c) return;
+                Color proposed = Color.FromArgb(255, Color.FromArgb(c));
+                Color surface = UiTheme.PageBackground;
+                double ratio = TextContrast.Ratio(proposed, surface);
+                if (ratio < 4.5)
+                {
+                    Color accessible = TextContrast.Readable(proposed, surface);
+                    bool applyAccessible = MessageBox.Show(this, MainWindow.StudioText(
+                        $"The selected accent has only {ratio:F1}:1 text contrast on the current theme. Use the closest accessible colour ({accessible.R:X2}{accessible.G:X2}{accessible.B:X2}) instead?",
+                        $"Το επιλεγμένο accent έχει αντίθεση κειμένου μόλις {ratio:F1}:1 με το τρέχον θέμα. Να χρησιμοποιηθεί το πλησιέστερο προσβάσιμο χρώμα (#{accessible.R:X2}{accessible.G:X2}{accessible.B:X2});"),
+                        "Opsis · WCAG 4.5:1", MessageBoxButtons.YesNo, MessageBoxIcon.Question,
+                        MessageBoxDefaultButton.Button1) == DialogResult.Yes;
+                    if (!applyAccessible) return;
+                    c = Rgb(accessible);
+                }
+                int selected = c;
+                Do(() => svc.Engine.Apply(new Look { AccentRgb = selected }));
+            }, 190);
             Bt(accRow, "Win.FromWallpaper", () =>
             {
                 int? c = null; try { c = svc.Engine.WallpaperAccent(); } catch (Exception) { }

@@ -45,6 +45,18 @@ namespace MotionDesk.UI
         public static Font FontBody { get; private set; } = new("Segoe UI Variable Text", BaseBody);
         public static Font FontIcon16 { get; private set; } = new("Segoe Fluent Icons", BaseIcon);
         public static int ScalePercent { get; private set; } = 100;
+        public static int CardFontScalePercent { get; private set; } = 100;
+        public static Font FontCard { get; private set; } = new("Segoe UI Variable Text", BaseBody);
+
+        public static void ApplyCardFontScale(int percent)
+        {
+            percent = Math.Clamp(percent, 85, 150);
+            if (percent == CardFontScalePercent) return;
+            CardFontScalePercent = percent;
+            // As with the main font scale, controls already displaying the old font
+            // are allowed to finish painting before the next page refresh.
+            FontCard = new Font("Segoe UI Variable Text", BaseBody * percent / 100f);
+        }
 
         public static void ApplyScale(int percent)
         {

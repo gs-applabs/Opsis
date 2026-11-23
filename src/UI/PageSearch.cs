@@ -10,24 +10,10 @@ namespace MotionDesk.UI
     // The matching is accent- and case-insensitive (Greek tonos, German umlauts...) and pure, so it is unit-tested.
     internal static class PageSearch
     {
-        public static string Normalize(string? s)
-        {
-            if (string.IsNullOrEmpty(s)) return "";
-            var d = s.Normalize(NormalizationForm.FormD);
-            var sb = new StringBuilder(d.Length);
-            foreach (var c in d) if (CharUnicodeInfo.GetUnicodeCategory(c) != UnicodeCategory.NonSpacingMark) sb.Append(char.ToLowerInvariant(c));
-            return sb.ToString().Replace("&", "");
-        }
+        public static string Normalize(string? s) => SearchLanguage.Normalize(s);
 
-        /// <summary>True when every word of the query occurs in the text.</summary>
-        public static bool Matches(string? text, string? query)
-        {
-            var q = Normalize(query).Split(' ', StringSplitOptions.RemoveEmptyEntries);
-            if (q.Length == 0) return true;
-            var t = Normalize(text);
-            foreach (var w in q) if (!t.Contains(w)) return false;
-            return true;
-        }
+        /// <summary>Accent-, case-, Greeklish- and synonym-aware local matching.</summary>
+        public static bool Matches(string? text, string? query) => SearchLanguage.Matches(text, query);
 
         private static void Collect(Control c, StringBuilder sb)
         {

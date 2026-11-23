@@ -156,16 +156,7 @@ internal sealed class DesktopLauncher : Form
         finally { _results.EndUpdate(); }
     }
 
-    internal static int Score(string label, string term)
-    {
-        if (term.Length == 0) return 0;
-        int match = label.IndexOf(term, StringComparison.CurrentCultureIgnoreCase);
-        if (match >= 0) return Math.Max(30, 100 - match);
-        int at = 0;
-        foreach (char c in label)
-            if (char.ToUpperInvariant(c) == char.ToUpperInvariant(term[at]) && ++at == term.Length) return 10;
-        return -100_000;
-    }
+    internal static int Score(string label, string term) => SearchLanguage.Score(label, term);
 
     private void LaunchSelection()
     {

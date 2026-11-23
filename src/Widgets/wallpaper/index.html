@@ -21,6 +21,8 @@ html,body{margin:0;padding:0;width:100vw;height:100vh;overflow:hidden;background
 #wxSource:empty{display:none}
 #wxCity{font-size:calc(var(--s)*2.4vh);font-weight:300;letter-spacing:.12em;margin-top:calc(var(--s)*.6vh);opacity:.75;text-transform:uppercase;min-height:1.25em;line-height:1.25}
 #pulse{position:fixed;inset:0;pointer-events:none;background:radial-gradient(circle at 50% 50%,rgba(255,255,255,.14),transparent 65%);opacity:0;transition:opacity 120ms linear}
+body.reduced-motion *,body.reduced-motion *::before,body.reduced-motion *::after{animation-duration:0.001ms!important;animation-iteration-count:1!important;transition-duration:0.001ms!important}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:0.001ms!important;transition-duration:0.001ms!important}}
 </style>
 </head>
 <body>
@@ -58,6 +60,15 @@ const nextVideo = () => videoLayers[1 - activeLayerIdx];
 const pulse = document.getElementById('pulse');
 
 let cfg = { mode: 'Waves', waveStyle: 'Ribbons', background: '#05070d', wave: '#0b3d91', peak: '#00d2ff', glow: '#00e5ff', highlight: '#ffffff', speed: 1, glowIntensity: 1, lineThickness: 1, performanceMode: 'Balanced', audioEnabled: false, audioVolume: 0.8, audioBassGain: 0, audioMidGain: 0, audioTrebleGain: 0 };
+const reducedMotionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+function reduceWallpaperMotion() { return !!cfg.perf?.reducedMotion || reducedMotionQuery.matches; }
+function applyReducedMotion() {
+    const reduced = reduceWallpaperMotion();
+    document.body.classList.toggle('reduced-motion', reduced);
+    if (reduced) videoLayers.forEach(v => { if (!v.paused) v.pause(); });
+}
+reducedMotionQuery.addEventListener?.('change', () => { applyReducedMotion(); cancelWaveLoop(); if (!isPaused && canvas.style.display !== 'none') waveLoopHandle = requestAnimationFrame(waveLoop); });
+videoLayers.forEach(v => v.addEventListener('play', () => { if (reduceWallpaperMotion()) v.pause(); }));
 
 // Πραγματικό DSP (όχι μόνο ανάλυση/visualizer) πάνω στον ΔΙΚΟ ΜΑΣ ήχο του wallpaper video, μέσω
 // Web Audio API — ζητήθηκε ρητά ως εναλλακτική στο system-wide Equalizer APO (εκείνο αλλάζει τον
@@ -159,7 +170,7 @@ window.addEventListener('resize', () => { resizeCanvas(); lastFrameTime = 0; });
 resizeCanvas();
 
 // 2.4.0: the C# side sends ONE profile (cfg.perf, from PerformanceProfile) that follows the hardware tier and the dynamic scaling; it is updated live by opsisSetPerf.
-window.opsisSetPerf = p => { cfg.perf = p; adaptiveScale = 1; resetFrameStats(); resizeCanvas(); };
+window.opsisSetPerf = p => { cfg.perf = p; adaptiveScale = 1; resetFrameStats(); applyReducedMotion(); resizeCanvas(); };
 function perfProfile() {
     if (cfg.perf && cfg.perf.targetFps && cfg.performanceMode !== 'Battery') return cfg.perf;
     switch (cfg.performanceMode) {
@@ -710,18 +721,19 @@ function renderFrame(dt) {
 
 function waveLoop(now) {
     const profile = perfProfile();
-    const minFrameMs = 1000 / profile.targetFps;
+    const reduced = reduceWallpaperMotion();
+    const minFrameMs = reduced ? 10000 : 1000 / Math.max(1, profile.targetFps);
 
     if (now - lastFrameTime >= minFrameMs) {
         const dt = Math.min(0.1, (now - lastFrameTime) / 1000 || 0.016);
         const gap = now - lastFrameTime;
         const started = performance.now();
-        renderFrame(dt);
+        renderFrame(reduced ? 0 : dt);
         if (lastFrameTime) {
             frameIntervals[frameIndex] = gap;
             frameIndex = (frameIndex + 1) % frameIntervals.length;
             frameCount = Math.min(frameCount + 1, frameIntervals.length);
-            if (cfg.perf?.adaptive && cfg.mode !== 'Ancient Athens') {
+            if (!reduced && cfg.perf?.adaptive && cfg.mode !== 'Ancient Athens') {
                 const cost = performance.now() - started;
                 slowMs = cost > minFrameMs * .9 || gap > minFrameMs * 1.8 ? slowMs + Math.min(gap, 250) : 0;
                 fastMs = cost < minFrameMs * .45 && gap < minFrameMs * 1.5 ? fastMs + Math.min(gap, 250) : 0;
@@ -956,6 +968,7 @@ async function doRefresh() {
     const wasAthens = previousMode === 'Ancient Athens';
     const previousScale = cfg.perf?.renderScale;
     try { cfg = JSON.parse(await b.GetWaveConfigJson()); } catch (e) { /* keep previous cfg */ }
+    applyReducedMotion();
     if (previousMode !== cfg.mode) studioTime = 0;
     const scaleReset = !cfg.perf?.adaptive && adaptiveScale !== 1;
     if (previousMode !== cfg.mode || scaleReset) { adaptiveScale = 1; resetFrameStats(); }

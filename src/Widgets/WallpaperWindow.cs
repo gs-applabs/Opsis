@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
@@ -1455,7 +1455,9 @@ namespace MotionDesk.Widgets
         internal static object PerfObject()
         {
             var p = MotionDesk.Services.PerformanceProfile.ForFeature(MotionDesk.Services.PerfFeature.Wallpaper);
-            return new { adaptive = PerformanceGovernor.Enabled && PerformanceProfile.FeatureOverride(PerfFeature.Wallpaper) == null, tier = p.Tier.ToString(), fps = p.WallpaperFps, renderScale = p.RenderScale, layers = p.WaveLayers, glowBlur = p.GlowBlur, glow = p.GlowBlur > 0, shading = p.Shading, targetFps = p.WallpaperFps };
+            bool reduced = MotionDesk.Services.AppSettings.Peek().Glass?.ReducedEffects == true ||
+                !System.Windows.Forms.SystemInformation.UIEffectsEnabled || System.Windows.Forms.SystemInformation.HighContrast;
+            return new { adaptive = PerformanceGovernor.Enabled && !reduced && PerformanceProfile.FeatureOverride(PerfFeature.Wallpaper) == null, tier = p.Tier.ToString(), fps = p.WallpaperFps, renderScale = p.RenderScale, layers = p.WaveLayers, glowBlur = p.GlowBlur, glow = p.GlowBlur > 0, shading = p.Shading, targetFps = p.WallpaperFps, reducedMotion = reduced };
         }
 
         /// <summary>Dynamic scaling: pushes the new profile to the running pages without reloading them.</summary>

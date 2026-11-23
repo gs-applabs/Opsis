@@ -23,6 +23,7 @@ namespace MotionDesk.Widgets
         public DockPosition Position { get; set; } = DockPosition.Bottom;
         public bool AutoHide { get; set; } = false;
         public int IconSize { get; set; } = 44;               // 28..72
+        public int LabelFontScalePercent { get; set; } = 100; // dock tooltip and window titles, independent from cards
         public bool Magnify { get; set; } = true;
         public bool ShowRunning { get; set; } = true;          // τρέχουσες (μη καρφιτσωμένες) εφαρμογές στο dock
         public string? Monitor { get; set; }
@@ -158,6 +159,8 @@ namespace MotionDesk.Widgets
             var oldPos = _s.Position;
             change(_s);
             _s.IconSize = Math.Clamp(_s.IconSize, 28, 72);
+            _s.LabelFontScalePercent = Math.Clamp(_s.LabelFontScalePercent, 85, 150);
+            _popup?.HidePopup(); _popup?.Dispose(); _popup = null; // re-create with new font size on next hover
             _s.Paths = _s.Paths.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
             ApplySharedSettings(animate: oldPos == _s.Position);
             QueueSave();
@@ -746,7 +749,7 @@ namespace MotionDesk.Widgets
         {
             if (_hoverIndex < 0 || _hoverIndex >= _items.Count || _dragActive || _contextOpen) return;
             var it = _items[_hoverIndex];
-            _popup ??= new DockPopup();
+            _popup ??= new DockPopup(_s.LabelFontScalePercent);
             var windows = it.Windows.Take(_s.ShowPreviews && !Low ? 3 : 0).ToList();
             _popup.ShowFor(it.Windows.Count == 1 && it.Title.Length > 0 ? it.Title : it.Display, windows, ItemScreenRect(_hoverIndex), _s.Position);
         }
@@ -928,6 +931,7 @@ namespace MotionDesk.Widgets
                 _s.Paths = state.Paths.Where(p => File.Exists(p) || Directory.Exists(p)).ToList();
                 _s.Position = Enum.IsDefined(state.Position) ? state.Position : DockPosition.Bottom;
                 _s.AutoHide = state.AutoHide; _s.IconSize = Math.Clamp(state.IconSize == 0 ? 44 : state.IconSize, 28, 72);
+                _s.LabelFontScalePercent = Math.Clamp(state.LabelFontScalePercent == 0 ? 100 : state.LabelFontScalePercent, 85, 150);
                 _s.StartEnabled = state.StartEnabled;
                 _s.Monitor = state.Monitor;
                 _s.OnlyLocalWindows = state.OnlyLocalWindows;
@@ -951,10 +955,11 @@ namespace MotionDesk.Widgets
         private readonly List<IntPtr> _thumbs = new();
         private string _title = "";
         private const int ThumbW = 220, ThumbH = 140;
-        private readonly Font _font = new("Segoe UI Semibold", 9.5f);
+        private readonly Font _font;
 
-        public DockPopup()
+        public DockPopup(int fontScalePercent = 100)
         {
+            _font = new Font("Segoe UI Semibold", 9.5f * Math.Clamp(fontScalePercent, 85, 150) / 100f);
             FormBorderStyle = FormBorderStyle.None; ShowInTaskbar = false; TopMost = true; StartPosition = FormStartPosition.Manual;
             BackColor = Color.FromArgb(30, 32, 40); DoubleBuffered = true;
         }
@@ -969,7 +974,8 @@ namespace MotionDesk.Widgets
             int thumbs = windows.Count;
             var textSize = TextRenderer.MeasureText(title, _font);
             int w = Math.Max(textSize.Width + 24, thumbs > 0 ? thumbs * (ThumbW + 8) + 8 : 0);
-            int h = 30 + (thumbs > 0 ? ThumbH + 10 : 0);
+            int headerH = Math.Max(30, textSize.Height + 10);
+            int h = headerH + (thumbs > 0 ? ThumbH + 10 : 0);
             Size = new Size(w, h);
             var loc = position switch
             {
@@ -983,7 +989,7 @@ namespace MotionDesk.Widgets
             try { using var p = MotionDesk.UI.UiTheme.RoundedPath(new Rectangle(0, 0, w, h), 12); Region = new Region(p); } catch (Exception) { }
             if (!Visible) Show();
             Invalidate();
-            for (int i = 0; i < thumbs; i++) AddThumb(windows[i], new Rectangle(8 + i * (ThumbW + 8), 30, ThumbW, ThumbH));
+            for (int i = 0; i < thumbs; i++) AddThumb(windows[i], new Rectangle(8 + i * (ThumbW + 8), headerH, ThumbW, ThumbH));
         }
 
         public void HidePopup() { ClearThumbs(); if (Visible) Hide(); }
@@ -1014,7 +1020,7 @@ namespace MotionDesk.Widgets
             var g = e.Graphics;
             using var pen = new Pen(Color.FromArgb(70, 255, 255, 255));
             g.DrawRectangle(pen, 0, 0, Width - 1, Height - 1);
-            TextRenderer.DrawText(g, _title, _font, new Rectangle(10, 5, Width - 20, 22), Color.White, TextFormatFlags.Left | TextFormatFlags.EndEllipsis | TextFormatFlags.VerticalCenter);
+            TextRenderer.DrawText(g, _title, _font, new Rectangle(10, 5, Width - 20, Math.Max(22, _font.Height + 4)), Color.White, TextFormatFlags.Left | TextFormatFlags.EndEllipsis | TextFormatFlags.VerticalCenter);
         }
 
         protected override void Dispose(bool disposing) { if (disposing) { ClearThumbs(); _font.Dispose(); } base.Dispose(disposing); }

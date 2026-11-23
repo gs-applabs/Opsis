@@ -1002,5 +1002,6 @@
   "Personalization.LockGifFrame": "Use a frame of a GIF as the lock screen picture…",
   "Personalization.LockGifFrameInfo": "Windows cannot play an animation on the lock screen. Opsis checks the GIF (type, size, frames) and uses its first frame as the picture, through the normal lock-screen setting. Reset restores the original.",
   "Personalization.LockGifWarn": "This changes a Windows setting (the lock screen picture, with an administrator prompt). The original setting can be restored with the Reset button. Continue?",
-  "Win.ImportBackup": "A safety copy of your old settings was saved to: {0}"
+  "Win.ImportBackup": "A safety copy of your old settings was saved to: {0}",
+  "VersionNotes.2.8.0.2500": "2.8.0.2500 development preview: plugin integration, Greeklish search, opt-in local diagnostics and accessible accent contrast. Not a final release; outstanding enhancements and verification remain."
 }

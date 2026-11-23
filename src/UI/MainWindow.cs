@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.IO;
@@ -121,7 +121,33 @@ namespace MotionDesk.UI
             DoubleBuffered = true;
             Flicker.Attach(this);   // κάθε container/παιδί (τωρινό και μελλοντικό) με double buffering
             var appSettings = AppSettings.Load();
+            // Release roadmap #94. Show exactly once after a version change, not
+            // at every launch; a fresh profile has no previous version, so the
+            // welcome guide remains its only introduction.
+            string? previousVersion = appSettings.LastSeenAppVersion;
+            string currentVersion = Services.AppVersion.Short;
+            bool announceUpgrade = !string.IsNullOrWhiteSpace(previousVersion) &&
+                !string.Equals(previousVersion, currentVersion, StringComparison.Ordinal);
+            if (!string.Equals(previousVersion, currentVersion, StringComparison.Ordinal))
+            {
+                appSettings.LastSeenAppVersion = currentVersion;
+                appSettings.Save();
+            }
+            if (announceUpgrade)
+            {
+                Shown += (_, _) => BeginInvoke((Action)(() =>
+                {
+                    if (IsDisposed) return;
+                    string notesKey = "VersionNotes." + currentVersion;
+                    string notes = LocalizationManager.T(notesKey);
+                    if (notes == notesKey) notes = StudioText("Release notes are available in Help → History.", "Οι αλλαγές βρίσκονται στη Βοήθεια → Ιστορικό.");
+                    string intro = StudioText($"Opsis upgraded to {currentVersion}.", $"Το Opsis αναβαθμίστηκε στην {currentVersion}.");
+                    MessageBox.Show(this, intro + Environment.NewLine + Environment.NewLine + notes,
+                        "Opsis · " + currentVersion, MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }));
+            }
             UiTheme.ApplyScale(appSettings.UiScalePercent);
+            UiTheme.ApplyCardFontScale(appSettings.CardFontScalePercent);
             WidgetSnapEngine.EnableGridSnap = appSettings.GridSnap;
             WidgetSnapEngine.SnapThreshold = Math.Clamp(appSettings.SnapThreshold, 5, 50);
             WidgetSnapEngine.GridSize = Math.Clamp(appSettings.GridSize, 5, 100);
@@ -1138,7 +1164,7 @@ namespace MotionDesk.UI
                     NavigateTo("Settings");
                     return true;
                 case Keys.F1:
-                    HelpForm.ShowSingle(this, VersionHistory);
+                    HelpForm.ShowSingle(this, VersionHistory, HelpSection.Instructions, _currentPageKey);
                     return true;
                 case Keys.F5:
                     if (_pageBuilders.TryGetValue(_currentPageKey, out var builder)) builder();
@@ -2682,6 +2708,21 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
             };
             panel.Disposed += (_, _) => { ApplyIconSize(); iconSizeTimer.Dispose(); };
             deskStripCard.Controls.Add(sizeSlider);
+            var fontRow = new FlowLayoutPanel { AutoSize = true, WrapContents = false, Margin = new Padding(0, 0, 0, 10) };
+            fontRow.Controls.Add(new Label
+            {
+                AutoSize = true, Text = Ld("Μέγεθος τίτλων dock:", "Dock label size:"),
+                ForeColor = UiTheme.TextSecondary, Font = UiTheme.FontBody, Padding = new Padding(0, 6, 12, 0)
+            });
+            var fontPresets = new[] { 85, 100, 110, 125, 150 };
+            var fontLabels = fontPresets.Select(n => n + "%").ToArray();
+            var dockFontScale = new FlatComboBox { Width = 142 };
+            int fontIndex = Array.IndexOf(fontPresets, dockCfg.LabelFontScalePercent);
+            dockFontScale.SetItems(fontLabels, fontLabels[fontIndex < 0 ? 1 : fontIndex]);
+            dockFontScale.SelectedIndexChanged += (_, _) =>
+                DeskStripHostEngine.Instance.UpdateSettings(c => c.LabelFontScalePercent = fontPresets[Math.Max(0, dockFontScale.SelectedIndex)]);
+            fontRow.Controls.Add(dockFontScale);
+            deskStripCard.Controls.Add(fontRow);
 
             var pinnedList = new FlowLayoutPanel { AutoSize = true, FlowDirection = FlowDirection.TopDown, WrapContents = false };
             deskStripCard.Controls.Add(pinnedList);
@@ -2931,14 +2972,54 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
             }
             catch (Exception) { }
             foreach (var appLabel in appByLabel.Keys) commandList.Add(("app:" + appLabel, appLabel));
-            var idByLabel = commandList.GroupBy(c => c.Label, StringComparer.OrdinalIgnoreCase).ToDictionary(g => g.Key, g => g.First().Id, StringComparer.OrdinalIgnoreCase);
-            var allLabels = commandList.Select(c => c.Label).ToArray();
+            // Roadmap #62/#63: display the actual keyboard shortcut and keep an
+            // editable, bounded LOCAL recent-command list (no filenames/arguments).
+            var shortcutHints = new Dictionary<string, string>
+            {
+                ["Dashboard"] = "Ctrl+1", ["WidgetGallery"] = "Ctrl+2",
+                ["DeskZones"] = "Ctrl+3", ["WallpaperStudio"] = "Ctrl+4",
+                ["Performance"] = "Ctrl+5", ["Settings"] = "Ctrl+6",
+                ["Profiles"] = "Ctrl+7", ["Automation"] = "Ctrl+8",
+                ["About"] = "Ctrl+9", ["Personalization"] = "Ctrl+0"
+            };
+            var displayCommands = commandList.Select(c => (c.Id,
+                Label: c.Label + (shortcutHints.TryGetValue(c.Id, out string? hint) ? "    ·    " + hint : ""))).ToArray();
+            var idByLabel = displayCommands.GroupBy(c => c.Label, StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(g => g.Key, g => g.First().Id, StringComparer.OrdinalIgnoreCase);
+            var recentIds = CommandHistoryStore.RecentIds();
+            string[] OrderLabels() => displayCommands.OrderBy(c =>
+            {
+                int index = Array.IndexOf(recentIds.ToArray(), c.Id);
+                return index < 0 ? int.MaxValue : index;
+            }).Select(c => c.Label).ToArray();
+            var allLabels = OrderLabels();
             list.Items.AddRange(allLabels);
             if (list.Items.Count > 0) list.SelectedIndex = 0;
+
+            var historyMenu = new ContextMenuStrip();
+            var removeHistory = new ToolStripMenuItem(StudioText("Remove command from history", "Αφαίρεση εντολής από το ιστορικό"));
+            historyMenu.Items.Add(removeHistory);
+            historyMenu.Opening += (_, args) =>
+            {
+                if (list.SelectedItem is not string text || !idByLabel.TryGetValue(text, out string? id) || !recentIds.Contains(id))
+                    args.Cancel = true;
+            };
+            removeHistory.Click += (_, _) =>
+            {
+                if (list.SelectedItem is not string selected || !idByLabel.TryGetValue(selected, out string? id)) return;
+                CommandHistoryStore.Remove(id);
+                recentIds = CommandHistoryStore.RecentIds();
+                allLabels = OrderLabels();
+                list.Items.Clear(); list.Items.AddRange(allLabels.Where(c => PageSearch.Matches(c, box.Text)).ToArray());
+                if (list.Items.Count > 0) list.SelectedIndex = 0;
+            };
+            list.ContextMenuStrip = historyMenu;
+            dialog.FormClosed += (_, _) => historyMenu.Dispose();
 
             void Execute()
             {
                 if (list.SelectedItem is not string label || !idByLabel.TryGetValue(label, out var id)) return;
+                try { CommandHistoryStore.RecordUse(id); } catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { RotatingLogger.Write("Command history not saved: " + ex.GetType().Name); }
                 switch (id) {
                     case "Dashboard": NavigateTo("Dashboard"); break; case "WidgetGallery": NavigateTo("Widgets"); break; case "DeskZones": NavigateTo("DeskZones"); break; case "DeskContainers": NavigateTo("DeskContainers"); break; case "DeskStrip": NavigateTo("DeskStrip"); break;
                     case "DeskMusicVisualizer": NavigateTo("DeskMusicVisualizer"); break;
@@ -3188,11 +3269,17 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
         // ΥΠΕΝΘΥΜΙΣΗ για κάθε μελλοντικό version bump: αυτός ο πίνακας ΔΕΝ ενημερώνεται αυτόματα από
         // το VersionNotes.* κλειδί — ξεχάστηκε 3 φορές στη σειρά (1.9.1/1.9.2/1.9.3), ο χρήστης το
         // έπιασε ζωντανά ("το ιστορικό μένει στην 1.9.0"). Πρόσθεσε ΚΑΙ εδώ τη νέα έκδοση.
-        private static readonly (string Version, string Date)[] VersionHistory =
+        private static readonly (string Version, string Date)[] HistoricalVersions =
         {
             ("2.7.7.2402", "2026-11"), ("2.7.6.2401", "2026-11"), ("2.7.5.2400", "2026-11"), ("2.6.0-studio.23", "2026-11"), ("2.6.0-studio.22", "2026-11"), ("2.6.0-studio.21", "2026-11"), ("2.6.0-studio.20", "2026-11"), ("2.6.0-studio.19", "2026-11"), ("2.6.0", "2026-11"), ("2.4.6.1", "2026-11"), ("2.4.6", "2026-11"), ("2.4.5", "2026-11"), ("2.4.4", "2026-11"), ("2.4.3", "2026-11"), ("2.4.2", "2026-11"), ("2.4.1", "2026-11"), ("2.4.0", "2026-11"), ("2.3.1", "2026-10"), ("2.3.0", "2026-10"), ("2.2.6", "2026-10"), ("2.2.5", "2026-10"), ("2.2.0", "2026-10"), ("2.1.3", "2026-10"), ("2.1.2", "2026-10"), ("2.1.1", "2026-10"), ("2.1.0", "2026-10"), ("2.0.0", "2026-10"), ("1.9.12", "2026-10"), ("1.9.11", "2026-10"), ("1.9.10", "2026-10"), ("1.9.9", "2026-10"), ("1.9.8", "2026-10"), ("1.9.7", "2026-10"), ("1.9.6", "2026-10"), ("1.9.5", "2026-10"), ("1.9.4", "2026-10"), ("1.9.3", "2026-10"), ("1.9.2", "2026-10"), ("1.9.1", "2026-10"), ("1.9.0", "2026-10"), ("1.8.9", "2026-10"), ("1.8.8", "2026-10"), ("1.8.7", "2026-10"), ("1.8.6", "2026-10"), ("1.8.5", "2026-10"), ("1.7.8", "2026-10"), ("1.7.6", "2026-10"), ("1.7.5", "2026-10"), ("1.6.8", "2026-10"), ("1.6.2", "2026-10"), ("1.6.1", "2026-10"), ("1.6.0", "2026-09"), ("1.5.0", "2026-09"), ("1.4.1", "2026-09"), ("1.4.0", "2026-09"), ("1.3.0", "2026-09"), ("1.2.9", "2026-09"), ("1.2.8", "2026-09"), ("1.2.7", "2026-09"), ("1.2.6", "2026-09"), ("1.2.5", "2026-09"), ("1.2.4", "2026-09"), ("1.2.3", "2026-09"), ("1.2.2", "2026-09"), ("1.2.1", "2026-09"), ("1.2.0", "2026-09"), ("1.1.2", "2026-09"), ("1.1.1", "2026-09"), ("1.1.0", "2026-09"), ("1.0.0", "2026-09")
         };
 
+
+        // VersionHistory follows the compiled version automatically; no separate
+        // manually maintained current-version entry or beta label is required.
+        private static IReadOnlyList<(string Version, string Date)> VersionHistory =>
+            new[] { (Services.AppVersion.Short, DateTime.UtcNow.ToString("yyyy-MM", System.Globalization.CultureInfo.InvariantCulture)) }
+            .Concat(HistoricalVersions.Where(v => v.Version != Services.AppVersion.Short)).ToArray();
 
         // "Audio Enhancement" — ζητήθηκε ρητά, εμπνευσμένο από τη ΛΟΓΙΚΗ του FXSound (github.com/
         // fxsound2/fxsound-app), όχι αντιγραφή του κώδικά του. Έρευνα στο ίδιο το repo (WebFetch)
@@ -3502,6 +3589,16 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                 AddText(panel, $"{app.Name}  {(app.InstalledPath != null ? "✓" : "")}\n{app.Tagline}");
             AddButtonGrid(panel, (LocalizationManager.T("Tray.Family"), (_, _) => FamilyWindows.ShowFamily()));
 
+            // #97: source-controlled compatibility matrix, with honest validation status.
+            // Showing a branch name or intended ABI here must never imply an E2E pass.
+            AddSection(panel, StudioText("Plugin compatibility for 2.8.0.2500 (planned)",
+                "Συμβατότητα plugins για 2.8.0.2500 (σχεδιαζόμενη)"));
+            foreach (var plugin in PluginCompatibilityCatalog.Read())
+                AddText(panel, $"{plugin.Name} · {plugin.Integration}\n" +
+                    $"{plugin.Repository} [{plugin.Branch}]\n" +
+                    $"{(plugin.Dll == null ? "standalone" : plugin.Dll + " · ABI " + (plugin.AssemblyVersion ?? "pending"))}\n" +
+                    plugin.Validation);
+
             AddSection(panel, LocalizationManager.T("About.SectionCapabilities"));
             AddText(panel, LocalizationManager.T("About.CapabilitiesList"));
             AddText(panel, string.Format(LocalizationManager.T("About.RuntimeLine"), WidgetHostEngine.Instance.GetActiveWidgets().Count));
@@ -3716,7 +3813,7 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                 AutoSize = true,
                 MaximumSize = new Size(parent is FixedWidthFlowPanel fw ? fw.FixedWidth - 4 : 780, 0),
                 Text = text,
-                Font = UiTheme.FontBody,
+                Font = parent is FixedWidthFlowPanel ? UiTheme.FontCard : UiTheme.FontBody,
                 ForeColor = UiTheme.TextSecondary,
                 Margin = new Padding(0, 0, 0, 14)
             };
@@ -4607,6 +4704,7 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                     v => ThemeManager.SetFollowWindowsAccent(v)));
                 appearance.Controls.Add(BuildLanguageRow());
                 appearance.Controls.Add(BuildUiScaleRow());
+                appearance.Controls.Add(BuildCardFontScaleRow());
                 appearance.Controls.Add(Checkbox(LocalizationManager.T("Settings.UiSoundCues"), AppSettings.Load().UiSoundsEnabled,
                     v => { var a = AppSettings.Load(); a.UiSoundsEnabled = v; a.Save(); }));
                 appearance.Controls.Add(BuildOpacityRow());
@@ -4817,6 +4915,32 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                 {
                     var percent = UiScale.Presets[Math.Max(0, combo.SelectedIndex)];
                     ApplySetting(OpsisStrings.T("ui.uiScale"), () => { var a = AppSettings.Load(); a.UiScalePercent = percent; a.Save(); UiTheme.ApplyScale(percent); ThemeManager.NotifyChanged(); });
+                };
+                row.Controls.Add(combo);
+                return row;
+            }
+
+            // #87: separate text size for card descriptions, while the sidebar and
+            // main window keep the regular UI scale.
+            private static Panel BuildCardFontScaleRow()
+            {
+                var row = new FlowLayoutPanel { AutoSize = true, WrapContents = false, Margin = new Padding(0, 2, 0, 10) };
+                row.Controls.Add(new Label { Text = MainWindow.StudioText("Settings card text size:", "Μέγεθος κειμένου καρτών:"),
+                    AutoSize = true, ForeColor = UiTheme.TextSecondary, Font = UiTheme.FontBody, Padding = new Padding(0, 6, 12, 0) });
+                var combo = new FlatComboBox { Width = 145 };
+                var presets = new[] { 85, 100, 110, 125, 150 };
+                var labels = presets.Select(n => n + "%").ToArray();
+                int current = Array.IndexOf(presets, Math.Clamp(AppSettings.Load().CardFontScalePercent, 85, 150));
+                combo.SetItems(labels, labels[current < 0 ? 1 : current]);
+                combo.SelectedIndexChanged += (_, _) =>
+                {
+                    int scale = presets[Math.Max(0, combo.SelectedIndex)];
+                    ApplySetting(MainWindow.StudioText("Card text", "Κείμενο καρτών"), () =>
+                    {
+                        var a = AppSettings.Load(); a.CardFontScalePercent = scale; a.Save();
+                        UiTheme.ApplyCardFontScale(scale);
+                        ThemeManager.NotifyChanged();
+                    });
                 };
                 row.Controls.Add(combo);
                 return row;

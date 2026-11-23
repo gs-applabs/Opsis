@@ -19,20 +19,24 @@ internal sealed class HelpForm : OpsisWindow
         Name = "HistoryVersionPicker", Dock = DockStyle.Fill, BorderStyle = BorderStyle.FixedSingle, IntegralHeight = false
     };
     private readonly RichTextBox _notes;
+    private readonly TextBox _search = new() { Name = "HelpSearch", Width = 320, MaxLength = 100 };
+    private readonly Label _searchHint = new() { AutoSize = true, Padding = new Padding(8, 6, 0, 0) };
     private bool _licenseLoaded;
 
     internal static void ShowSingle(IWin32Window? owner, IReadOnlyList<(string Version, string Date)> history,
-        HelpSection section = HelpSection.Instructions)
+        HelpSection section = HelpSection.Instructions, string? query = null)
     {
         if (_open is { IsDisposed: false } existing)
         {
             existing._tabs.SelectedIndex = (int)section;
+            existing.Search(query);
             if (existing.WindowState == FormWindowState.Minimized) existing.WindowState = FormWindowState.Normal;
             existing.Activate();
             return;
         }
         var form = new HelpForm(history, section);
         _open = form;
+        if (!string.IsNullOrWhiteSpace(query)) form._search.Text = query;
         form.FormClosed += (_, _) => _open = null;
         if (owner == null) form.Show();
         else form.Show(owner);
@@ -62,11 +66,34 @@ internal sealed class HelpForm : OpsisWindow
         ClientSize = new Size(810, 660);
         MinimumSize = new Size(735, 410);
         KeyPreview = true;
-        KeyDown += (_, e) => { if (e.KeyCode == Keys.Escape) Close(); };
+        KeyDown += (_, e) =>
+        {
+            if (e.KeyCode == Keys.Escape) Close();
+            if (e.KeyCode == Keys.F3) { Search(_search.Text); e.Handled = true; }
+        };
 
         _instructions = CreateReader("HelpInstructions");
         _instructions.Text = (LocalizationManager.T("Welcome.Body") + "\n\n" + LocalizationManager.T("About.InstructionsList") + "\n\n" +
             LocalizationManager.T("About.ShortcutsList")).Replace("\\n", "\n");
+        // Each section has both translated guidance and searchable feature keys.
+        // F1 from the host jumps straight to the topic for the active page.
+        _instructions.AppendText("\n\n" + string.Join("\n\n", new[]
+        {
+            "Dashboard · Overview / Αρχική: system information and quick actions · σύστημα και γρήγορες ενέργειες.",
+            "Wallpaper · Weather / Φόντο: configure weather, animated wallpaper and scene selection · καιρός, κινούμενο φόντο και τοπία.",
+            "DeskZones · Windows / Ζώνες: pick a template, export or import JSON after preview · διάταξη παραθύρων, εξαγωγή και εισαγωγή JSON.",
+            "DeskContainers · Files / Αρχεία: group desktop items into containers · ομαδοποίηση εικονιδίων σε containers.",
+            "Widgets · Ρολόι και καιρός: add and arrange desktop widgets · προσθήκη και στοίχιση widget.",
+            "Theme · Appearance / Θέμα: change palette and preview high contrast · ρύθμιση χρωμάτων και αντίθεσης.",
+            "Settings · Ρυθμίσεις: language, scale, permissions and application options · γλώσσα, κλίμακα και άδειες.",
+            "Performance · Απόδοση: tune effects and use optional local diagnostics · ρύθμιση εφέ και τοπικά διαγνωστικά.",
+            "Automation · Αυτοματισμός: define profiles and triggers · ορισμός προφίλ και κανόνων.",
+            "Profiles · Προφίλ: save and restore personal desktop profiles · αποθήκευση και ανάκτηση.",
+            "DeskStrip · Dock / Γραμμή: pin commands and organise the strip · οργάνωση γραμμής εφαρμογών.",
+            "DeskMusicVisualizer · Audio / Ήχος: configure audio visualisations · ρύθμιση οπτικοποίησης μουσικής.",
+            "Personalization · Εξατομίκευση: lock screen and cursor effects · κλείδωμα και δείκτες.",
+            "About · Information / Πληροφορίες: version, licences and updates · εκδόσεις και ενημερώσεις."
+        }));
         _license = CreateReader("HelpLicense");
         _notes = CreateReader("HistoryNotes");
         _notes.AccessibleName = LocalizationManager.T("Help.TabHistory");
@@ -94,12 +121,54 @@ internal sealed class HelpForm : OpsisWindow
         _tabs.DrawItem += (_, e) => DrawTab(e);
         _tabs.TabPages.AddRange([instructionsPage, _licensePage, _historyPage]);
         _tabs.SelectedIndexChanged += (_, _) => LoadActivePage();
-        Controls.Add(_tabs);
+        var root = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 2 };
+        root.RowStyles.Add(new RowStyle(SizeType.Absolute, 46));
+        root.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+        var findRow = new FlowLayoutPanel { Dock = DockStyle.Fill, WrapContents = false, Padding = new Padding(12, 7, 6, 2) };
+        _search.PlaceholderText = MainWindow.StudioText("Search help (Greeklish supported)", "Αναζήτηση βοήθειας (και Greeklish)");
+        _search.AccessibleName = _search.PlaceholderText;
+        _search.Font = UiTheme.FontBody;
+        _search.TextChanged += (_, _) => Search(_search.Text);
+        _searchHint.Text = MainWindow.StudioText("Enter a topic or word; F3 finds again", "Γράψε θέμα ή λέξη· F3 για νέα αναζήτηση");
+        _searchHint.Font = UiTheme.FontBody;
+        findRow.Controls.Add(_search);
+        findRow.Controls.Add(_searchHint);
+        root.Controls.Add(findRow, 0, 0);
+        root.Controls.Add(_tabs, 0, 1);
+        Controls.Add(root);
         _tabs.SelectedIndex = (int)section;
         LoadActivePage();
         Recolour();
         OpsisTheme.Changed += Recolour;
         Disposed += (_, _) => OpsisTheme.Changed -= Recolour;
+    }
+
+    private void Search(string? query)
+    {
+        if (string.IsNullOrWhiteSpace(query)) return;
+        // SearchLanguage has accent-insensitive Greek, transliteration and synonyms.
+        // Use whole lines rather than a raw IndexOf, so Greeklish also finds Greek.
+        var readers = new[] { (_instructions, 0), (_notes, 2), (_license, 1) };
+        foreach (var (reader, tabIndex) in readers)
+        {
+            if (tabIndex == 1 && !_licenseLoaded) _license.Text = ReadLegalText();
+            if (tabIndex == 2 && _versionPicker.Items.Count == 0) continue;
+            int start = 0;
+            foreach (var line in reader.Lines)
+            {
+                if (SearchLanguage.Matches(line, query))
+                {
+                    _tabs.SelectedIndex = tabIndex;
+                    reader.SelectionStart = start;
+                    reader.SelectionLength = Math.Min(line.Length, reader.TextLength - start);
+                    reader.ScrollToCaret();
+                    _searchHint.Text = MainWindow.StudioText("Found", "Βρέθηκε");
+                    return;
+                }
+                start += line.Length + 1;
+            }
+        }
+        _searchHint.Text = MainWindow.StudioText("No matching help topic", "Δεν βρέθηκε αντίστοιχο θέμα");
     }
 
     private static TabPage CreatePage(string titleKey, Control content)

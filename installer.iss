@@ -2,7 +2,6 @@
   #error This installer requires Inno Setup 7 or newer.
 #endif
 #define MyAppName "Opsis Desktop Customization"
-#define MyAppVersion "2.8.0.2500"
 #define MyAppExeName "Opsis.Studio.exe"
 #define MyAppPublisher "gs-applabs"
 #define MyAppURL "https://github.com/gs-applabs/Opsis"
@@ -10,6 +9,9 @@
 #ifndef PublishDir
   #define PublishDir "publish"
 #endif
+; Release version is derived from the built EXE, not entered a second time.
+; A source-only Inno compilation without `dotnet publish` must fail explicitly.
+#define MyAppVersion GetFileVersion(PublishDir + "\" + MyAppExeName)
 #include "installer\dependencies.iss"
 
 [Setup]
@@ -21,8 +23,8 @@ AppPublisherURL={#MyAppURL}
 AppSupportURL={#MyAppURL}/issues
 AppUpdatesURL={#MyAppURL}/releases
 VersionInfoCompany={#MyAppPublisher}
-VersionInfoVersion=2.8.0.2500
-VersionInfoProductVersion=2.8.0.2500
+VersionInfoVersion={#MyAppVersion}
+VersionInfoProductVersion={#MyAppVersion}
 VersionInfoDescription=Opsis Desktop Customization Setup
 VersionInfoProductName={#MyAppName}
 DefaultDirName={autopf}\{#MyAppName}

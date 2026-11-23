@@ -135,6 +135,53 @@ internal static class DesktopFiles
     private static bool NeedsShortcuts(IEnumerable<JsonElement> conditions) =>
         conditions.Any(condition => String(condition, "cond") is "shortcutTarget" or "type");
 
+    /// <summary>
+    /// Read-only, bounded preview of overlapping file rules. Routing intentionally uses the
+    /// highest-priority rule; this audit makes competing destinations visible *before* Save.
+    /// This never modifies a user's files or container assignments.
+    /// </summary>
+    internal sealed record RuleConflict(string Name, string Path, string Winner,
+        IReadOnlyList<string> CompetingRules);
+
+    internal static IReadOnlyList<RuleConflict> PreviewRuleConflicts(
+        DesktopOrganization package, IReadOnlyList<Container> containers,
+        string userDesktop, string publicDesktop, CancellationToken cancel, int maxResults = 200)
+    {
+        maxResults = Math.Clamp(maxResults, 1, 500);
+        var targets = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        bool inboxExists = false;
+        foreach (var container in containers.Where(c => c.Kind == ContainerKind.Data && !HasSmart(c)))
+        {
+            targets.Add(container.Id);
+            inboxExists |= container.Extra?.ContainsKey(InboxKey) == true;
+            foreach (var tab in container.Tabs)
+                if (TabTarget(tab) is { } id) targets.Add(id);
+        }
+        var rules = package.Rules.Where(rule => rule.Enabled &&
+                (targets.Contains(rule.Target) || rule.Target == "inbox" && inboxExists))
+            .OrderByDescending(rule => rule.Priority).ToArray();
+        if (rules.Length < 2) return [];
+        var assigned = new HashSet<string>(containers.SelectMany(c => c.Items.Concat(c.Tabs.SelectMany(tab => tab.Items)))
+            .Select(item => item.Path), StringComparer.OrdinalIgnoreCase);
+        var visited = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        bool shortcuts = NeedsShortcuts(rules.SelectMany(rule => rule.Conditions));
+        var now = DateTime.UtcNow;
+        var conflicts = new List<RuleConflict>();
+        foreach (var entry in Enumerate(userDesktop, false, "userDesktop", shortcuts, cancel)
+            .Concat(Enumerate(publicDesktop, false, "publicDesktop", shortcuts, cancel)))
+        {
+            cancel.ThrowIfCancellationRequested();
+            if (assigned.Contains(entry.Path) || !visited.Add(entry.Path)) continue;
+            var match = rules.Where(rule => rule.Conditions.All(c => Matches(c, entry, now))).ToArray();
+            if (match.Length < 2 || match.Select(rule => rule.Target).Distinct(StringComparer.OrdinalIgnoreCase).Count() < 2)
+                continue;
+            conflicts.Add(new RuleConflict(entry.Name, entry.Path, match[0].Name,
+                match.Select(rule => rule.Name + " → " + rule.Target).ToArray()));
+            if (conflicts.Count >= maxResults) break;
+        }
+        return conflicts;
+    }
+
     internal static Dictionary<string, List<ContainerItem>> Route(DesktopOrganization package, IReadOnlyList<Container> containers,
         string userDesktop, string publicDesktop, CancellationToken cancel,
         IReadOnlyDictionary<string, string>? prior = null)

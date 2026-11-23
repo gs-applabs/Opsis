@@ -144,6 +144,19 @@ public sealed partial class MainWindow
         }, 135);
         add.Enabled = validDestinations.Length > 0;
         edits.Controls.Add(add);
+        if (!add.Enabled)
+        {
+            edits.Controls.Add(new Label
+            {
+                AutoSize = true,
+                MaximumSize = new Size(345, 0),
+                ForeColor = UiTheme.TextSecondary,
+                Font = UiTheme.FontBody,
+                Text = StudioText("New rule unavailable: create a data container first.",
+                    "Ο νέος κανόνας είναι ανενεργός: δημιουργήστε πρώτα container δεδομένων."),
+                AccessibleRole = AccessibleRole.StaticText
+            });
+        }
         edits.Controls.Add(StudioButton(StudioText("Edit", "Επεξεργασία"), () =>
         {
             int at = list.SelectedIndex;
@@ -193,15 +206,33 @@ public sealed partial class MainWindow
                     Environment.GetFolderPath(Environment.SpecialFolder.CommonDesktopDirectory),
                     previewToken), previewToken);
                 if (dialog.IsDisposed || previewToken.IsCancellationRequested) return;
+                // Separate read-only audit: competing enabled rules targeting different
+                // containers can silently shadow one another without this warning.
+                var conflicts = await Task.Run(() => DesktopFiles.PreviewRuleConflicts(draft, models,
+                    Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory),
+                    Environment.GetFolderPath(Environment.SpecialFolder.CommonDesktopDirectory),
+                    previewToken), previewToken);
+                if (dialog.IsDisposed || previewToken.IsCancellationRequested) return;
                 var rows = matches.SelectMany(target => target.Value.Select(item =>
                     item.DisplayName + "  →  " + (destinations.FirstOrDefault(d => d.Id == target.Key)?.Name ?? target.Key))).Take(500);
+                var conflictLines = conflicts.Select(item =>
+                    "⚠ " + item.Name + ": " + string.Join(" · ", item.CompetingRules)
+                    + " (" + StudioText("winner", "επικρατεί") + ": " + item.Winner + ")");
+                string summary = StudioText("Rule conflicts", "Συγκρούσεις κανόνων") + ": " + conflicts.Count;
+                string previewText = summary + Environment.NewLine + Environment.NewLine
+                    + (conflicts.Count > 0 ? string.Join(Environment.NewLine, conflictLines)
+                        : StudioText("No competing destinations detected", "Δεν εντοπίστηκαν ανταγωνιστικοί προορισμοί"))
+                    + Environment.NewLine + Environment.NewLine
+                    + StudioText("Matched files", "Αρχεία με αντιστοίχιση") + ":" + Environment.NewLine
+                    + (matches.Count == 0 ? StudioText("No files matched.", "Κανένα αρχείο δεν ταίριαξε.")
+                        : string.Join(Environment.NewLine, rows));
                 using var report = new MotionDesk.UI.AppDialog
                 {
                     Text = StudioText("Preview matches", "Προεπισκόπηση αντιστοιχίσεων"),
                     StartPosition = FormStartPosition.CenterParent, ClientSize = new Size(580, 410), ShowInTaskbar = false
                 };
                 report.Controls.Add(new TextBox { ReadOnly = true, Multiline = true, Dock = DockStyle.Fill, ScrollBars = ScrollBars.Both,
-                    Text = matches.Count == 0 ? StudioText("No files matched.", "Κανένα αρχείο δεν ταίριαξε.") : string.Join(Environment.NewLine, rows) });
+                    Text = previewText });
                 StyleStudioDialog(report);
                 report.ShowDialog(dialog);
             }

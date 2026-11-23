@@ -15,12 +15,14 @@ namespace MotionDesk.Widgets
     {
         // Templates που έχουν ρυθμιζόμενο πλήθος στηλών/σειρών — ζητήθηκε ρητά: δεν υπήρχε τρόπος
         // να διαλέξεις π.χ. 2 στήλες/σειρές αντί για το hardcoded 3, ούτε κάποιο "Custom".
-        private static readonly string[] Templates = { "No layout", "Focus", "Columns", "Rows", "Grid", "Priority Grid", "Custom" };
+        private static readonly string[] Templates = { "No layout", "Focus", "Columns", "Rows", "Grid", "Priority Grid", "Code & Docs", "Custom" };
 
         private Screen _selectedScreen;
         private string _selectedTemplate;
         private int _cols = 3;
         private int _rows = 2;
+        // Imported layouts are preview-only until the user explicitly clicks Apply.
+        private ZoneLayoutData? _importedLayout;
         private readonly FlowLayoutPanel _cardGrid;
         private readonly ZonePreviewPanel _bigPreview;
         private readonly Label _colsLabel;
@@ -46,6 +48,16 @@ namespace MotionDesk.Widgets
             BackColor = UiTheme.Background;
             ForeColor = UiTheme.TextPrimary;
             HandleCreated += (_, _) => GlassBlur.ApplyWindowDropShadow(Handle);
+            KeyPreview = true;
+            KeyDown += (_, e) =>
+            {
+                if (e.KeyCode != Keys.F1) return;
+                e.Handled = true;
+                MessageBox.Show(this,
+                    MainWindow.StudioText("Choose a template with Tab and Enter, adjust columns and rows, then Apply. Import previews a JSON layout without changing the desktop until Apply. Export saves only zones, never private monitor names.",
+                        "Επίλεξε διάταξη με Tab και Enter, ρύθμισε στήλες/σειρές και πάτησε Εφαρμογή. Η εισαγωγή JSON προεπισκοπείται χωρίς να μεταβάλει την επιφάνεια εργασίας μέχρι την εφαρμογή. Η εξαγωγή δεν περιέχει ονόματα οθονών."),
+                    "Opsis · DeskZones", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            };
 
             var root = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 2, RowCount = 4, Padding = new Padding(20) };
             root.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 53));
@@ -65,6 +77,7 @@ namespace MotionDesk.Widgets
                     var tile = new ScreenTile(screen, screen.DeviceName == _selectedScreen.DeviceName);
                     tile.Click += (_, _) =>
                     {
+                        _importedLayout = null;
                         _selectedScreen = screen;
                         _selectedTemplate = ZoneLayoutStore.GetLayout(screen.DeviceName).Template;
                         LoadStepperValuesFromLayout();
@@ -92,10 +105,10 @@ namespace MotionDesk.Widgets
             var stepperRow = new FlowLayoutPanel { AutoSize = true, WrapContents = false, Margin = new Padding(0, 0, 0, 10) };
             _colsLabel = new Label { Text = LocalizationManager.T("DeskZones.EditorColumns") + ":", AutoSize = true, ForeColor = UiTheme.TextSecondary, Font = UiTheme.FontBody, Padding = new Padding(0, 6, 6, 0) };
             _colsStepper = new NumericUpDown { Minimum = 1, Maximum = 6, Value = _cols, Width = 56 };
-            _colsStepper.ValueChanged += (_, _) => { _cols = (int)_colsStepper.Value; RefreshBigPreview(); };
+            _colsStepper.ValueChanged += (_, _) => { _cols = (int)_colsStepper.Value; _importedLayout = null; RefreshBigPreview(); };
             _rowsLabel = new Label { Text = LocalizationManager.T("DeskZones.EditorRows") + ":", AutoSize = true, ForeColor = UiTheme.TextSecondary, Font = UiTheme.FontBody, Padding = new Padding(16, 6, 6, 0) };
             _rowsStepper = new NumericUpDown { Minimum = 1, Maximum = 4, Value = _rows, Width = 56 };
-            _rowsStepper.ValueChanged += (_, _) => { _rows = (int)_rowsStepper.Value; RefreshBigPreview(); };
+            _rowsStepper.ValueChanged += (_, _) => { _rows = (int)_rowsStepper.Value; _importedLayout = null; RefreshBigPreview(); };
             stepperRow.Controls.Add(_colsLabel);
             stepperRow.Controls.Add(_colsStepper);
             stepperRow.Controls.Add(_rowsLabel);
@@ -105,11 +118,13 @@ namespace MotionDesk.Widgets
             // ---- Template gallery ----
             _cardGrid = new FlowLayoutPanel { Dock = DockStyle.Fill, AutoScroll = true, WrapContents = true, FlowDirection = FlowDirection.LeftToRight };
             GlassBlur.ApplyScrollbarTheme(_cardGrid, UiTheme.Background.GetBrightness() < 0.5f);
+            int templateTabOrder = 20;
             foreach (var t in Templates)
             {
-                var card = new TemplateCard(t, t == _selectedTemplate);
+                var card = new TemplateCard(t, t == _selectedTemplate) { TabIndex = templateTabOrder++ };
                 card.Click += (_, _) =>
                 {
+                    _importedLayout = null;
                     _selectedTemplate = t;
                     RefreshCardSelection();
                     RefreshBigPreview();
@@ -133,6 +148,56 @@ namespace MotionDesk.Widgets
             cancelBtn.Click += (_, _) => { DialogResult = DialogResult.Cancel; Close(); };
             buttonRow.Controls.Add(applyBtn);
             buttonRow.Controls.Add(cancelBtn);
+
+            // Roadmap #47: explicit JSON export / preview import, never silently
+            // applies imported window positions to the user's live desktop.
+            var exportBtn = new PillButton
+            {
+                Text = MainWindow.StudioText("Export JSON…", "Εξαγωγή JSON…"),
+                Width = 138, Height = 34, BackColor = UiTheme.SurfaceHover, ForeColor = UiTheme.TextPrimary,
+                AccessibleName = MainWindow.StudioText("Export zone layout", "Εξαγωγή διάταξης ζωνών")
+            };
+            exportBtn.Click += (_, _) =>
+            {
+                using var save = new SaveFileDialog
+                {
+                    Filter = "JSON (*.json)|*.json", DefaultExt = "json", AddExtension = true,
+                    FileName = "opsis-deskzones.json"
+                };
+                if (save.ShowDialog(this) != DialogResult.OK) return;
+                try { File.WriteAllText(save.FileName, ZoneLayoutStore.ExportLayoutJson(BuildSelected())); }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException)
+                { MessageBox.Show(this, ex.Message, "Opsis", MessageBoxButtons.OK, MessageBoxIcon.Warning); }
+            };
+            var importBtn = new PillButton
+            {
+                Text = MainWindow.StudioText("Import JSON…", "Εισαγωγή JSON…"),
+                Width = 138, Height = 34, BackColor = UiTheme.SurfaceHover, ForeColor = UiTheme.TextPrimary,
+                AccessibleName = MainWindow.StudioText("Preview imported zone layout", "Προεπισκόπηση εισαγόμενης διάταξης ζωνών")
+            };
+            importBtn.Click += (_, _) =>
+            {
+                using var open = new OpenFileDialog { Filter = "JSON (*.json)|*.json", CheckFileExists = true };
+                if (open.ShowDialog(this) != DialogResult.OK) return;
+                try
+                {
+                    var info = new FileInfo(open.FileName);
+                    if (info.Length > 65536) throw new InvalidDataException("Layout file exceeds 64 KiB.");
+                    if (!ZoneLayoutStore.TryImportLayoutJson(File.ReadAllText(open.FileName), out var imported, out var problem))
+                        throw new InvalidDataException(problem);
+                    _selectedTemplate = imported.Template;
+                    _importedLayout = imported;
+                    RefreshCardSelection(); RefreshBigPreview(); RefreshStepperVisibility();
+                    MessageBox.Show(this,
+                        MainWindow.StudioText("Imported layout is shown in the preview. Click Apply to use it on this monitor, or select another template to discard it.",
+                            "Η εισαγόμενη διάταξη εμφανίζεται στην προεπισκόπηση. Πάτησε Εφαρμογή για αυτή την οθόνη ή επίλεξε άλλο πρότυπο για ακύρωση."),
+                        "Opsis", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException or ArgumentException)
+                { MessageBox.Show(this, ex.Message, "Opsis", MessageBoxButtons.OK, MessageBoxIcon.Warning); }
+            };
+            buttonRow.Controls.Add(exportBtn);
+            buttonRow.Controls.Add(importBtn);
             root.Controls.Add(buttonRow, 0, 3);
             root.SetColumnSpan(buttonRow, 2);
 
@@ -185,9 +250,9 @@ namespace MotionDesk.Widgets
             }
         }
 
-        private ZoneLayoutData BuildSelected() => _selectedTemplate is "Columns" or "Rows" or "Grid" or "Custom"
+        private ZoneLayoutData BuildSelected() => _importedLayout ?? (_selectedTemplate is "Columns" or "Rows" or "Grid" or "Custom"
             ? ZoneLayoutStore.BuildTemplate(_selectedTemplate, _cols, _rows)
-            : ZoneLayoutStore.BuildTemplate(_selectedTemplate);
+            : ZoneLayoutStore.BuildTemplate(_selectedTemplate));
 
         private void RefreshBigPreview() => _bigPreview.SetLayout(BuildSelected());
 
@@ -240,12 +305,27 @@ namespace MotionDesk.Widgets
                 Margin = new Padding(6);
                 Cursor = Cursors.Hand;
                 BackColor = Color.Transparent;
+                AccessibleRole = AccessibleRole.RadioButton;
+                AccessibleName = template == "Code & Docs" ? MainWindow.StudioText("Code and documentation layout", "Διάταξη κώδικα και τεκμηρίωσης") : template;
+                TabStop = true;
+                SetStyle(ControlStyles.Selectable, true);
+                KeyDown += (_, e) =>
+                {
+                    if (e.KeyCode is not (Keys.Space or Keys.Enter)) return;
+                    e.SuppressKeyPress = true;
+                    OnClick(EventArgs.Empty);
+                };
+                GotFocus += (_, _) => Invalidate();
+                LostFocus += (_, _) => Invalidate();
+                MouseDown += (_, _) => Focus();
 
                 _mini = new ZonePreviewPanel { Location = new Point(8, 8), Size = new Size(160, 76), Enabled = false };
                 _mini.SetLayout(ZoneLayoutStore.BuildTemplate(template));
                 Controls.Add(_mini);
 
-                _label = new Label { Text = LocalizationManager.T("DeskZones.Template." + template.Replace(" ", "")), AutoSize = false, Size = new Size(176, 34), Location = new Point(0, 86), TextAlign = ContentAlignment.MiddleCenter, ForeColor = UiTheme.TextSecondary, Font = UiTheme.FontBody };
+                _label = new Label { Text = template == "Code & Docs"
+                    ? MainWindow.StudioText("Code & documentation", "Κώδικας & τεκμηρίωση")
+                    : LocalizationManager.T("DeskZones.Template." + template.Replace(" ", "")), AutoSize = false, Size = new Size(176, 34), Location = new Point(0, 86), TextAlign = ContentAlignment.MiddleCenter, ForeColor = UiTheme.TextSecondary, Font = UiTheme.FontBody };
                 Controls.Add(_label);
 
                 // ΚΡΙΣΙΜΟ bug fix: "this" ΔΕΝ πρέπει να είναι σε αυτή τη λίστα — το card παίρνει
@@ -275,8 +355,9 @@ namespace MotionDesk.Widgets
                 var g = e.Graphics; g.SmoothingMode = SmoothingMode.AntiAlias;
                 using var path = UiTheme.RoundedPath(new Rectangle(0, 0, Width - 1, Height - 1), 10);
                 using var fill = new SolidBrush(_selected ? UiTheme.AccentSoft : UiTheme.Surface);
-                using var border = new Pen(_selected ? UiTheme.AccentCyan : UiTheme.Border, _selected ? 2f : 1f);
+                using var border = new Pen(_selected || Focused ? UiTheme.AccentCyan : UiTheme.Border, _selected || Focused ? 2.5f : 1f);
                 g.FillPath(fill, path); g.DrawPath(border, path);
+                if (Focused) ControlPaint.DrawFocusRectangle(g, new Rectangle(4, 4, Width - 8, Height - 8));
             }
         }
 
