@@ -62,6 +62,32 @@ public sealed class PluginWidgetContractTests
     }
 
     [Fact]
+    public void AdditivePluginWidgetsCanBeEnumeratedAndOpenedWithoutReplacingCalendar()
+    {
+        var host = new PluginHost();
+        host.AddForTest(new StubPlugin("extra", null), started: true);
+        host.AddForTest(new StubPlugin("stopped", null), started: false);
+        host.AddForTest(new StubPlugin("calendar", "calendar"), started: true);
+        var all = host.GetAdditionalWidgets();
+        var added = Assert.Single(all);
+        Assert.Equal("w-extra", added.Key);
+        Assert.NotNull(host.FindAdditionalWidget("W-EXTRA"));
+        Assert.Null(host.FindAdditionalWidget("calendar"));
+        Assert.Null(host.FindAdditionalWidget("w-stopped"));
+        using var content = added.CreateContent();
+        Assert.IsType<Label>(content);
+    }
+
+    [Fact]
+    public void AdditiveWidgetProviderExceptionsAreIsolated()
+    {
+        var host = new PluginHost();
+        host.AddForTest(new StubPlugin("broken", null, throws: true), started: true);
+        host.AddForTest(new StubPlugin("good", null), started: true);
+        Assert.Equal("w-good", Assert.Single(host.GetAdditionalWidgets()).Key);
+    }
+
+    [Fact]
     public void AStoppedPluginOrOneThatDoesNotReplaceAnythingIsIgnored()
     {
         var host = new PluginHost();
