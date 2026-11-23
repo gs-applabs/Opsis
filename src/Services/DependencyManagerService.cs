@@ -101,10 +101,13 @@ namespace MotionDesk.Services
         // Τρέχει ένα "winget install" σιωπηλά για το δοσμένο package id. Επιστρέφει true μόνο αν
         // η διεργασία τερμάτισε με ExitCode 0. Ζητά αυτόματα αποδοχή των συμφωνιών πηγής/πακέτου
         // ώστε να μην κολλήσει περιμένοντας διαδραστική επιβεβαίωση.
-        public static async Task<(bool Success, string Output)> InstallViaWingetAsync(string wingetId)
+        public static async Task<(bool Success, string Output)> InstallViaWingetAsync(string wingetId, CancellationToken cancellationToken = default)
         {
-            if (!await Task.Run(IsWingetAvailable))
+            if (cancellationToken.IsCancellationRequested) return (false, "Cancelled by user");
+            if (!await Task.Run(IsWingetAvailable, cancellationToken))
                 return (false, LocalizationManager.T("Dependency.WingetMissing"));
+            if (!All.Any(d => d.WingetId == wingetId))
+                return (false, "Unknown package identifier");
 
             var psi = new ProcessStartInfo("winget")
             {
@@ -123,12 +126,22 @@ namespace MotionDesk.Services
                 // Ταυτόχρονη ανάγνωση: η διαδοχική (πρώτα stdout, μετά stderr) μπλόκαρε αν γέμιζε πρώτα το stderr.
                 var stdoutTask = proc.StandardOutput.ReadToEndAsync();
                 var stderrTask = proc.StandardError.ReadToEndAsync();
-                string stdout = await stdoutTask;
-                string stderr = await stderrTask;
-                await proc.WaitForExitAsync();
-                WmvConversionService.ResetDetection();
-                return (proc.ExitCode == 0, string.IsNullOrWhiteSpace(stderr) ? stdout : stderr);
+                try
+                {
+                    await proc.WaitForExitAsync(cancellationToken);
+                    string stdout = await stdoutTask;
+                    string stderr = await stderrTask;
+                    WmvConversionService.ResetDetection();
+                    return (proc.ExitCode == 0, string.IsNullOrWhiteSpace(stderr) ? stdout : stderr);
+                }
+                catch (OperationCanceledException)
+                {
+                    try { if (!proc.HasExited) proc.Kill(entireProcessTree: true); } catch { }
+                    try { await proc.WaitForExitAsync(new CancellationTokenSource(TimeSpan.FromSeconds(5)).Token); } catch { }
+                    return (false, "Cancelled by user");
+                }
             }
+            catch (OperationCanceledException) { return (false, "Cancelled by user"); }
             catch (Exception ex) { return (false, ex.Message); }
         }
     }

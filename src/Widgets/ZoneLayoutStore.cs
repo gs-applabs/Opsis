@@ -138,6 +138,50 @@ namespace MotionDesk.Widgets
             catch (IOException) { }
         }
 
+        /// <summary>Find an exact shared vertical/horizontal boundary (does not resize diagonal or non-touching zones).</summary>
+        public static bool TryJoinAdjacent(ZoneRect a, ZoneRect b, out ZoneRect union)
+        {
+            union = new ZoneRect();
+            const double eps = 0.00001;
+            bool vertical = Math.Abs(a.Y - b.Y) < eps && Math.Abs(a.Height - b.Height) < eps &&
+                (Math.Abs(a.X + a.Width - b.X) < eps || Math.Abs(b.X + b.Width - a.X) < eps);
+            bool horizontal = Math.Abs(a.X - b.X) < eps && Math.Abs(a.Width - b.Width) < eps &&
+                (Math.Abs(a.Y + a.Height - b.Y) < eps || Math.Abs(b.Y + b.Height - a.Y) < eps);
+            if (!vertical && !horizontal) return false;
+            double x = Math.Min(a.X,b.X), y = Math.Min(a.Y,b.Y);
+            union = new ZoneRect { X = x, Y = y,
+                Width = Math.Max(a.X+a.Width,b.X+b.Width) - x,
+                Height = Math.Max(a.Y+a.Height,b.Y+b.Height) - y };
+            return true;
+        }
+
+        /// <summary>Move a shared border by a bounded percentage while preserving the outer edges.
+        /// Operates on an isolated clone; the caller explicitly applies it via SetLayout.</summary>
+        public static bool TryResizeSharedBorder(ZoneLayoutData source, int a, int b, double delta, out ZoneLayoutData updated)
+        {
+            updated = source;
+            if (a < 0 || b < 0 || a == b || a >= source.Zones.Count || b >= source.Zones.Count ||
+                !double.IsFinite(delta) || Math.Abs(delta) > 0.30) return false;
+            var zones = source.Zones.Select(z => new ZoneRect { X=z.X, Y=z.Y, Width=z.Width, Height=z.Height }).ToList();
+            var left = zones[a]; var right = zones[b];
+            if (!TryJoinAdjacent(left,right,out _)) return false;
+            const double eps = 0.00001, minSize = 0.07;
+            if (Math.Abs(left.Y-right.Y)<eps && Math.Abs(left.Height-right.Height)<eps)
+            {
+                if (left.X > right.X) (left,right) = (right,left);
+                if (left.Width + delta < minSize || right.Width - delta < minSize) return false;
+                left.Width += delta; right.X += delta; right.Width -= delta;
+            }
+            else
+            {
+                if (left.Y > right.Y) (left,right) = (right,left);
+                if (left.Height + delta < minSize || right.Height - delta < minSize) return false;
+                left.Height += delta; right.Y += delta; right.Height -= delta;
+            }
+            updated = new ZoneLayoutData { Template = "Custom", Zones = zones, Resolution = source.Resolution };
+            return IsValidPortableLayout(updated);
+        }
+
         public static ZoneLayoutData GetLayout(string screenDeviceName)
         {
             var map = Load();

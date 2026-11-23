@@ -25,12 +25,24 @@ internal sealed class DesktopMusicController : IDisposable
 
     public DesktopMusicController()
     {
+        SharedLoopbackCapture.SelectInput(settings.InputDeviceId);
         SystemEvents.SessionSwitch += SessionSwitched;
         timer.Tick += Tick;
         if (settings.Enabled) timer.Start();
     }
 
     public MusicOverlaySettings Settings => settings;
+
+    public void SetAudioInput(string? deviceId)
+    {
+        if (settings.InputDeviceId == deviceId) return;
+        // Avoid silently switching to a microphone: the UI has a separate, explicit selector.
+        if (deviceId != null && !SharedLoopbackCapture.AvailableInputs().Any(x => x.Id == deviceId))
+            return;
+        SharedLoopbackCapture.SelectInput(deviceId);
+        settings = settings with { InputDeviceId = deviceId };
+        SaveSettings();
+    }
 
     public void SetTrackPrivacy(bool enabled)
     {

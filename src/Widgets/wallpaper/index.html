@@ -853,6 +853,18 @@ async function startMedia() {
     if (isImg) {
         mediaFrame.style.display = 'none'; mediaFrame.removeAttribute('src');
         mediaImg.style.objectFit = cfg.imageFit === 'Contain' ? 'contain' : 'cover';
+        // A panoramic photo is cropped independently by the two selected displays.
+        // Bezel pixels are skipped in the second crop, preserving straight horizons.
+        if (cfg.panorama && Number.isFinite(cfg.panorama.width)) {
+            const p = cfg.panorama;
+            mediaImg.style.width = p.width + 'px';
+            mediaImg.style.height = p.height + 'px';
+            mediaImg.style.left = -p.offsetX + 'px';
+            mediaImg.style.top = -p.offsetY + 'px';
+        } else {
+            mediaImg.style.width = '100vw'; mediaImg.style.height = '100vh';
+            mediaImg.style.left = '0'; mediaImg.style.top = '0';
+        }
         if (mediaSrc !== src) { mediaImg.src = src; mediaSrc = src; try { await mediaImg.decode(); } catch (e) { /* shown anyway */ } }
         mediaImg.style.display = 'block';
     } else {

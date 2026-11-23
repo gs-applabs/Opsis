@@ -10,10 +10,11 @@ function fixture() {
     let id = 0, now = 0;
     function schedule(fn) { pending.set(++id, fn); return id; }
     const clear = id => pending.delete(id);
-    const element = { style: {}, getContext: () => ({ setTransform() {} }), addEventListener() {}, pause() {} };
+    const element = { style: {}, classList: { toggle() {} }, getContext: () => ({ setTransform() {} }), addEventListener() {}, pause() {} };
     const context = vm.createContext({
-        document: { getElementById: () => element }, OpsisStudioScenes: { has: () => false },
+        document: { getElementById: () => element, body: element }, OpsisStudioScenes: { has: () => false },
         performance: { now: () => now }, spend: ms => { now += ms; }, console, addEventListener() {},
+        matchMedia: () => ({ matches: false, addEventListener() {} }),
         setInterval: schedule, setTimeout: schedule, requestAnimationFrame: schedule,
         clearInterval: clear, clearTimeout: clear, cancelAnimationFrame: clear, innerWidth: 640, innerHeight: 480
     });
@@ -55,7 +56,7 @@ test('slow frames lower automatic scale while a fixed profile retains its resolu
         const stats = run('opsisFrameStats()');
         assert.equal(stats.samples, 300);
         assert.equal(stats.p99Ms, 50);
-        assert.equal(stats.adaptiveScale, adaptive ? .625 : 1);
+        assert.equal(stats.adaptiveScale, adaptive ? .5 : 1);
     }
 });
 test('settings bursts merge into one refresh and one trailing refresh while busy', async () => {

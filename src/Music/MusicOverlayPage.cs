@@ -1,3 +1,5 @@
+using MotionDesk.Services;
+
 namespace OpsisMusicOverlay;
 
 internal sealed class MusicOverlayPage : TableLayoutPanel
@@ -9,6 +11,7 @@ internal sealed class MusicOverlayPage : TableLayoutPanel
     private readonly ComboBox typefaces;
     private readonly string[] fonts;
     private readonly ComboBox display;
+    private readonly ComboBox audioInput;
     private readonly NumericUpDown horizontal;
     private readonly NumericUpDown vertical;
     private readonly NumericUpDown width;
@@ -126,6 +129,11 @@ internal sealed class MusicOverlayPage : TableLayoutPanel
         Add(new Label { Text = L("Οθόνη", "Monitor"), AutoSize = true });
         display = Picker();
         Add(display);
+        Add(new Label { Text = L("Πηγή ήχου visualizer", "Visualizer audio source"), AutoSize = true });
+        audioInput = Picker();
+        Add(audioInput);
+        Add(new Label { Text = L("Προεπιλογή: έξοδος συστήματος. Επίλεξε ρητά μικρόφωνο για λήψη εισόδου.",
+            "Default: system output. Explicitly choose a microphone to capture input."), AutoSize = true });
 
         horizontal = Coordinate();
         vertical = Coordinate();
@@ -187,6 +195,18 @@ internal sealed class MusicOverlayPage : TableLayoutPanel
         {
             if (!loading && typefaces.SelectedIndex >= 0)
                 getController()?.SetTypeface(typefaces.SelectedIndex == 0 ? null : fonts[typefaces.SelectedIndex - 1]);
+        };
+        audioInput.SelectedIndexChanged += (_, _) =>
+        {
+            if (loading || audioInput.SelectedIndex < 0) return;
+            string? selected = audioInput.SelectedIndex == 0 ? null :
+                (audioInput.SelectedItem as InputDeviceItem)?.Id;
+            if (selected != null && MessageBox.Show(FindForm(),
+                L("Το μικρόφωνο μπορεί να καταγράψει ιδιωτικούς ήχους. Να χρησιμοποιηθεί μόνο τοπικά για οπτικοποίηση;",
+                  "A microphone can capture private sound. Use it locally for visualization?"),
+                "Opsis", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes)
+            { UpdateFromSettings(); return; }
+            getController()?.SetAudioInput(selected);
         };
         display.SelectedIndexChanged += (_, _) => SavePosition();
         horizontal.ValueChanged += (_, _) => SavePosition();
@@ -265,6 +285,9 @@ internal sealed class MusicOverlayPage : TableLayoutPanel
         };
     }
 
+    private sealed record InputDeviceItem(string Id, string Name)
+    { public override string ToString() => Name; }
+
     private void UpdateFromSettings()
     {
         var settings = getController()?.Settings;
@@ -289,6 +312,13 @@ internal sealed class MusicOverlayPage : TableLayoutPanel
             horizontal.Value = (decimal)Math.Round(Math.Clamp(settings?.X ?? 0, 0, 1) * 100);
             vertical.Value = (decimal)Math.Round(Math.Clamp(settings?.Y ?? 0, 0, 1) * 100);
             display.Enabled = horizontal.Enabled = vertical.Enabled = settings != null;
+            var sources = SharedLoopbackCapture.AvailableInputs();
+            audioInput.Items.Clear();
+            audioInput.Items.Add(defaultDisplay + " · output loopback");
+            foreach (var item in sources) audioInput.Items.Add(new InputDeviceItem(item.Id, item.Name));
+            audioInput.SelectedIndex = Math.Max(0, audioInput.Items.Cast<object>().ToList().FindIndex(item =>
+                item is InputDeviceItem device && device.Id == settings?.InputDeviceId));
+            audioInput.Enabled = settings != null;
             width.Value = settings?.WidthPercent ?? 100;
             height.Value = settings?.HeightPercent ?? 100;
             width.Enabled = height.Enabled = resetPalette.Enabled = customColor.Enabled = hueBar.Enabled = settings != null;

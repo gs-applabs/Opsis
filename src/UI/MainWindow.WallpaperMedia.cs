@@ -72,6 +72,38 @@ namespace MotionDesk.UI
                     WallpaperHostEngine.Instance.RefreshAll();
                 };
                 panel.Controls.Add(fit);
+                // #32/#33: opt-in panoramic photo on exactly two monitors.
+                if (Screen.AllScreens.Length >= 2)
+                {
+                    AddText(panel, L("Panoramic photo: select two adjacent monitors; others remain independent.",
+                        "Πανοραμική φωτογραφία: επίλεξε δύο γειτονικές οθόνες. Οι υπόλοιπες παραμένουν ανεξάρτητες."));
+                    var first = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 200 };
+                    var second = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 200 };
+                    var monitorIds = new[] { "(None)" }.Concat(Screen.AllScreens.Select(x => x.DeviceName)).ToArray();
+                    first.Items.AddRange(monitorIds); second.Items.AddRange(monitorIds);
+                    first.SelectedItem = monitorIds.Contains(settings.PanoramaFirstMonitor) ? settings.PanoramaFirstMonitor : "(None)";
+                    second.SelectedItem = monitorIds.Contains(settings.PanoramaSecondMonitor) ? settings.PanoramaSecondMonitor : "(None)";
+                    var gap = new NumericUpDown { Minimum = 0, Maximum = 400, Width = 78,
+                        Value = Math.Clamp(settings.PanoramaBezelGapPx, 0, 400) };
+                    var pair = new FlowLayoutPanel { AutoSize = true, WrapContents = true };
+                    pair.Controls.Add(first); pair.Controls.Add(second);
+                    pair.Controls.Add(new Label { AutoSize = true, Text = L("Bezel gap (px)", "Κενό πλαισίων (px)") });
+                    pair.Controls.Add(gap);
+                    var usePanorama = MediaButton(L("Apply panorama", "Εφαρμογή πανοράματος"));
+                    usePanorama.Click += (_, _) =>
+                    {
+                        var a = first.SelectedItem?.ToString() ?? "(None)";
+                        var b = second.SelectedItem?.ToString() ?? "(None)";
+                        if (a != "(None)" && b != "(None)" && a == b)
+                        { MessageBox.Show(this, L("Select two different monitors.", "Επίλεξε δύο διαφορετικές οθόνες.")); return; }
+                        var cfg = WallpaperSettings.Load();
+                        cfg.PanoramaFirstMonitor = a == "(None)" ? string.Empty : a;
+                        cfg.PanoramaSecondMonitor = b == "(None)" ? string.Empty : b;
+                        cfg.PanoramaBezelGapPx = (int)gap.Value;
+                        cfg.Save(); WallpaperHostEngine.Instance.RefreshAll();
+                    };
+                    pair.Controls.Add(usePanorama); panel.Controls.Add(pair);
+                }
                 return;
             }
 

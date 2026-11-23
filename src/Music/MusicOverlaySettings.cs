@@ -34,6 +34,7 @@ internal sealed record MusicOverlaySettings(
     string? Typeface = null,
     bool Enabled = false,
     bool HideTrackMetadata = false, // privacy toggle during screen sharing; persists until restored
+    string? InputDeviceId = null,   // null=default output loopback, otherwise explicit microphone/line-in device
     int WidthPercent = 100,
     int HeightPercent = 100,
     string[]? RadialColors = null,

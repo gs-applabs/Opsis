@@ -176,6 +176,31 @@ namespace MotionDesk.Widgets
             return result;
         }
 
+        // The image spans two side-by-side monitors only. Each WebView renders
+        // its own crop of one continuous virtual image, accounting for bezel gap.
+        internal static object? PanoramaInfo(WallpaperSettings cfg, string? monitorName)
+        {
+            if (string.IsNullOrWhiteSpace(cfg.PanoramaFirstMonitor) ||
+                string.IsNullOrWhiteSpace(cfg.PanoramaSecondMonitor) ||
+                string.Equals(cfg.PanoramaFirstMonitor, cfg.PanoramaSecondMonitor, StringComparison.OrdinalIgnoreCase)) return null;
+            var first = Screen.AllScreens.FirstOrDefault(s => s.DeviceName == cfg.PanoramaFirstMonitor);
+            var second = Screen.AllScreens.FirstOrDefault(s => s.DeviceName == cfg.PanoramaSecondMonitor);
+            if (first == null || second == null || monitorName == null ||
+                !new[] { first.DeviceName, second.DeviceName }.Contains(monitorName, StringComparer.OrdinalIgnoreCase)) return null;
+            // Only horizontally adjacent screens with no overlap or large gaps.
+            var left = first.Bounds.Left < second.Bounds.Left ? first : second;
+            var right = left == first ? second : first;
+            if (Math.Abs(left.Bounds.Right - right.Bounds.Left) > 40) return null;
+            int bezel = Math.Clamp(cfg.PanoramaBezelGapPx, 0, 400);
+            int top = Math.Min(first.Bounds.Top, second.Bounds.Top);
+            int bottom = Math.Max(first.Bounds.Bottom, second.Bounds.Bottom);
+            int totalWidth = Math.Max(1, left.Bounds.Width + right.Bounds.Width + bezel);
+            var current = string.Equals(monitorName, left.DeviceName, StringComparison.OrdinalIgnoreCase) ? left : right;
+            int x = current == left ? 0 : left.Bounds.Width + bezel;
+            return new { width = totalWidth, height = Math.Max(1, bottom - top),
+                offsetX = x, offsetY = current.Bounds.Top - top, bezelPx = bezel };
+        }
+
         public string GetWaveConfigJson()
         {
             var settings = WallpaperSettings.Load();
@@ -210,6 +235,7 @@ namespace MotionDesk.Widgets
                 rotateFirstMs = firstMs,
                 imageUri = effectiveMode == "Image" ? MediaSource.ImageUri(settings.ImagePath) : "",
                 imageFit = settings.ImageFit,
+                panorama = PanoramaInfo(settings, _screenDeviceName),
                 background = palette.Background,
                 wave = palette.WaveColor,
                 peak = palette.PeakColor,
@@ -450,6 +476,10 @@ namespace MotionDesk.Widgets
         public string PageSource { get; set; } = string.Empty;
         public string ImagePath { get; set; } = string.Empty;
         public string ImageFit { get; set; } = "Cover";   // Cover | Contain
+        // #32/#33: explicit pair only; other displays stay independent.
+        public string PanoramaFirstMonitor { get; set; } = string.Empty;
+        public string PanoramaSecondMonitor { get; set; } = string.Empty;
+        public int PanoramaBezelGapPx { get; set; } = 0; // extra image pixels hidden between the two screens (0..400)
         // Wallpaper elements: the widget pieces (clock, CPU, memory, ...) the user shows on top of ANY wallpaper mode, see wallpaper/elements.js.
         public List<WallpaperElement> Elements { get; set; } = new();
         public string ElementsAccent { get; set; } = "#00d2ff";

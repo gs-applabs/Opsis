@@ -46,6 +46,50 @@ internal static class AutoTileService
         return fallback;
     }
 
+    // #44: one-shot temporary span; automatic tile enforcement is suspended while
+    // a span is active, then the user can restore the original rectangle explicitly.
+    private static readonly Dictionary<IntPtr, Rectangle> SpanUndo = new();
+    private static bool RestoreAutoTileAfterSpans;
+
+    internal static bool TrySpanWindow(IntPtr window, Screen monitor, ZoneLayoutData layout, int a, int b)
+    {
+        if (!IsTilingCandidate(window) || a < 0 || b < 0 || a >= layout.Zones.Count || b >= layout.Zones.Count ||
+            !ZoneLayoutStore.TryJoinAdjacent(layout.Zones[a], layout.Zones[b], out var merged) ||
+            Screen.FromHandle(window).DeviceName != monitor.DeviceName || !GetWindowRect(window, out var before)) return false;
+        var bounds = merged.ToAbsolute(DesktopToolbar.WorkAreaForTiling(monitor));
+        if (bounds.Width < 120 || bounds.Height < 90) return false;
+        // Keep the FIRST position for Undo, even if the user changes the joined zones.
+        bool firstSpan = SpanUndo.Count == 0;
+        var s = AppSettings.Load();
+        if (firstSpan) RestoreAutoTileAfterSpans = s.AutoTileEnabled;
+        if (s.AutoTileEnabled) { s.AutoTileEnabled = false; s.Save(); RefreshSettings(); }
+        bool moved = SetWindowPos(window, IntPtr.Zero,bounds.X,bounds.Y,bounds.Width,bounds.Height,
+            0x0010 | 0x0004 | 0x0200 | 0x4000);
+        if (moved)
+            SpanUndo.TryAdd(window, Rectangle.FromLTRB(before.Left,before.Top,before.Right,before.Bottom));
+        else if (firstSpan) ResumeAutomaticTilingAfterSpans();
+        return moved;
+    }
+
+    internal static bool RestoreSpan(IntPtr hwnd)
+    {
+        if (!SpanUndo.Remove(hwnd, out var before)) return false;
+        bool restored = IsWindow(hwnd) && SetWindowPos(hwnd,IntPtr.Zero,before.X,before.Y,before.Width,before.Height,
+            0x0010 | 0x0004 | 0x0200 | 0x4000);
+        if (SpanUndo.Count == 0) ResumeAutomaticTilingAfterSpans();
+        return restored;
+    }
+
+    private static void ResumeAutomaticTilingAfterSpans()
+    {
+        if (!RestoreAutoTileAfterSpans) return;
+        RestoreAutoTileAfterSpans = false;
+        var settings = AppSettings.Load();
+        settings.AutoTileEnabled = true;
+        settings.Save();
+        RefreshSettings();
+    }
+
     internal static IReadOnlyList<TilePreview> Preview()
     {
         var settings = AppSettings.Peek();

@@ -1,0 +1,5 @@
+COMMAND: dotnet publish Opsis.Studio.csproj -c Release -r win-x64 --self-contained false
+bash: line 14: dotnet: command not found
+COMMAND: ISCC.exe installer.iss
+bash: line 14: ISCC.exe: command not found
+platform=Linux

@@ -211,6 +211,62 @@ namespace MotionDesk.Widgets
             };
             buttonRow.Controls.Add(exportBtn);
             buttonRow.Controls.Add(importBtn);
+            var borderButton = new PillButton { Text = MainWindow.StudioText("Move shared border…", "Μετακίνηση κοινού ορίου…"),
+                Width = 172, Height = 34, BackColor = UiTheme.SurfaceHover, ForeColor = UiTheme.TextPrimary };
+            borderButton.Click += (_, _) =>
+            {
+                using var dlg = new Form { Text = borderButton.Text, Size = new Size(430, 205), StartPosition = FormStartPosition.CenterParent };
+                var a = new NumericUpDown { Minimum = 1, Maximum = 48, Width = 55, Value = 1 };
+                var b = new NumericUpDown { Minimum = 1, Maximum = 48, Width = 55, Value = 2 };
+                var delta = new NumericUpDown { Minimum = -30, Maximum = 30, Value = 5, Width = 80 };
+                var row = new FlowLayoutPanel { Dock = DockStyle.Fill, WrapContents = true };
+                row.Controls.Add(new Label { Text = "Zone A", AutoSize = true }); row.Controls.Add(a);
+                row.Controls.Add(new Label { Text = "Zone B", AutoSize = true }); row.Controls.Add(b);
+                row.Controls.Add(new Label { Text = "Δ border (%)", AutoSize = true }); row.Controls.Add(delta);
+                var applyBorder = new Button { Text = MainWindow.StudioText("Preview border", "Προεπισκόπηση ορίου"), AutoSize = true };
+                applyBorder.Click += (_, _) =>
+                {
+                    if (!ZoneLayoutStore.TryResizeSharedBorder(BuildSelected(), (int)a.Value-1, (int)b.Value-1,
+                        (double)delta.Value/100, out var resized))
+                    { MessageBox.Show(dlg, MainWindow.StudioText("The zones must share a complete border.",
+                        "Οι ζώνες πρέπει να έχουν κοινό πλήρες όριο.")); return; }
+                    _importedLayout = resized; _selectedTemplate = "Custom";
+                    RefreshBigPreview(); RefreshCardSelection(); dlg.Close();
+                };
+                row.Controls.Add(applyBorder); dlg.Controls.Add(row); dlg.ShowDialog(this);
+            };
+            buttonRow.Controls.Add(borderButton);
+            var spanButton = new PillButton { Text = MainWindow.StudioText("Temporary window span…", "Προσωρινή επέκταση…"),
+                Width = 185, Height = 34, BackColor = UiTheme.SurfaceHover, ForeColor = UiTheme.TextPrimary };
+            spanButton.Click += (_, _) =>
+            {
+                // Span only a user-selected window and two explicitly chosen zones.
+                var candidates = WinApi.EnumerateAppWindows().Where(x =>
+                    Screen.FromHandle(x.Handle).DeviceName == _selectedScreen.DeviceName &&
+                    !string.Equals(x.ExePath, Environment.ProcessPath,StringComparison.OrdinalIgnoreCase)).ToArray();
+                if (candidates.Length == 0) { MessageBox.Show(this, "No eligible windows."); return; }
+                using var dialog = new Form { Text = spanButton.Text, Size = new Size(560, 230), StartPosition = FormStartPosition.CenterParent };
+                var windows = new ComboBox { Width = 510, DropDownStyle = ComboBoxStyle.DropDownList };
+                windows.Items.AddRange(candidates.Select(x => x.Title).ToArray()); windows.SelectedIndex = 0;
+                var a = new NumericUpDown { Minimum=1,Maximum=48,Value=1,Width=60 };
+                var b = new NumericUpDown { Minimum=1,Maximum=48,Value=2,Width=60 };
+                var row = new FlowLayoutPanel { Dock = DockStyle.Fill, WrapContents = true };
+                row.Controls.Add(windows); row.Controls.Add(a); row.Controls.Add(b);
+                var use = new Button { Text = MainWindow.StudioText("Expand once", "Επέκταση"), AutoSize = true };
+                use.Click += (_, _) =>
+                {
+                    if (!AutoTileService.TrySpanWindow(candidates[windows.SelectedIndex].Handle,_selectedScreen,
+                        BuildSelected(),(int)a.Value-1,(int)b.Value-1))
+                        MessageBox.Show(dialog, MainWindow.StudioText("The selected zones or window are not eligible.",
+                            "Οι επιλεγμένες ζώνες ή το παράθυρο δεν επιτρέπουν επέκταση."));
+                    else dialog.Close();
+                };
+                row.Controls.Add(use);
+                var restore = new Button { Text = MainWindow.StudioText("Restore", "Επαναφορά"), AutoSize = true };
+                restore.Click += (_, _) => AutoTileService.RestoreSpan(candidates[windows.SelectedIndex].Handle);
+                row.Controls.Add(restore); dialog.Controls.Add(row); dialog.ShowDialog(this);
+            };
+            buttonRow.Controls.Add(spanButton);
             root.Controls.Add(buttonRow, 0, 3);
             root.SetColumnSpan(buttonRow, 2);
 

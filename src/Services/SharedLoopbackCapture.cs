@@ -1,5 +1,6 @@
 using System.Buffers.Binary;
 using NAudio.Wave;
+using NAudio.CoreAudioApi;
 
 namespace MotionDesk.Services;
 
@@ -20,7 +21,36 @@ internal static class SharedLoopbackCapture
     private static long _lastSignalTick;
     private static readonly Guid FloatFormat = new("00000003-0000-0010-8000-00AA00389B71");
     private static int _refCount;
-    private static WasapiLoopbackCapture? _capture;
+    private static WasapiCapture? _capture;
+    private static string? _inputDeviceId; // null = default OUTPUT loopback (backwards compatible)
+
+    internal static string? InputDeviceId { get { lock (Sync) return _inputDeviceId; } }
+
+    internal static IReadOnlyList<(string Id, string Name)> AvailableInputs()
+    {
+        try
+        {
+            using var devices = new MMDeviceEnumerator();
+            return devices.EnumerateAudioEndPoints(DataFlow.Capture, DeviceState.Active)
+                .Select(d => (d.ID, d.FriendlyName)).ToArray();
+        }
+        catch { return Array.Empty<(string, string)>(); }
+    }
+
+    internal static void SelectInput(string? deviceId)
+    {
+        WasapiCapture? old;
+        lock (Sync)
+        {
+            if (string.Equals(_inputDeviceId, deviceId, StringComparison.Ordinal)) return;
+            _inputDeviceId = deviceId;
+            old = DetachLocked();
+            Array.Clear(Ring);
+            _ringPos = 0;
+        }
+        CloseCapture(old);
+        lock (Sync) { if (_refCount > 0 && _capture == null) StartLocked(); }
+    }
     private static int _generation;
     /// <summary>Changes whenever a working audio capture replaces an old one.</summary>
     internal static int Generation { get { lock (Sync) return _generation; } }
@@ -40,7 +70,7 @@ internal static class SharedLoopbackCapture
 
     public static void Release()
     {
-        WasapiLoopbackCapture? capture;
+        WasapiCapture? capture;
         lock (Sync)
         {
             if (_refCount == 0 || --_refCount != 0) return;
@@ -69,10 +99,19 @@ internal static class SharedLoopbackCapture
 
     private static void StartLocked()
     {
-        WasapiLoopbackCapture? capture = null;
+        WasapiCapture? capture = null;
         try
         {
-            capture = new WasapiLoopbackCapture();
+            if (string.IsNullOrEmpty(_inputDeviceId)) capture = new WasapiLoopbackCapture();
+            else
+            {
+                using var enumerator = new MMDeviceEnumerator();
+                // Deliberate microphone/line-in access only after explicit user selection.
+                var device = enumerator.GetDevice(_inputDeviceId);
+                if (device.State != DeviceState.Active || device.DataFlow != DataFlow.Capture)
+                    throw new InvalidOperationException("Audio input device is no longer available.");
+                capture = new WasapiCapture(device);
+            }
             capture.DataAvailable += OnData;
             capture.RecordingStopped += OnStopped;
             capture.StartRecording();
@@ -92,7 +131,7 @@ internal static class SharedLoopbackCapture
         }
     }
 
-    private static WasapiLoopbackCapture? DetachLocked()
+    private static WasapiCapture? DetachLocked()
     {
         _restartTimer?.Dispose(); _restartTimer = null;
         _lastSignalTick = _lastDataTick = 0;
@@ -103,7 +142,7 @@ internal static class SharedLoopbackCapture
         return c;
     }
 
-    private static void CloseCapture(WasapiLoopbackCapture? c)
+    private static void CloseCapture(WasapiCapture? c)
     {
         if (c == null) return;
         try { c.StopRecording(); } catch { }
@@ -113,7 +152,7 @@ internal static class SharedLoopbackCapture
     // Η συσκευή άλλαξε/αφαιρέθηκε (ή σφάλμα): ξαναδοκιμάζουμε σε λίγο στη νέα προεπιλεγμένη.
     private static void OnStopped(object? sender, StoppedEventArgs e)
     {
-        WasapiLoopbackCapture? stopped;
+        WasapiCapture? stopped;
         lock (Sync)
         {
             if (_refCount == 0 || !ReferenceEquals(sender, _capture)) return;
@@ -138,7 +177,7 @@ internal static class SharedLoopbackCapture
 
     private static void OnData(object? sender, WaveInEventArgs e)
     {
-        var capture = sender as WasapiLoopbackCapture;
+        var capture = sender as WasapiCapture;
         if (capture == null) return;
         var format = capture.WaveFormat;
         int bytesPerSample = format.BitsPerSample / 8;

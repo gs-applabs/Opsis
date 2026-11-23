@@ -52,6 +52,31 @@ internal static class WidgetSdkView
             }
             e.Response = core.Environment.CreateWebResourceResponse(null, 404, "Not found", "Cache-Control: no-store");
         };
+        // Local system data is NEVER part of the initial state. Only an explicit
+        // user-approved, revokeable, origin-checked SDK message can request it.
+        string digest;
+        try { digest = WidgetConsentStore.Fingerprint(package.Directory, package.Manifest.Entry); }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException)
+        { digest = string.Empty; }
+        long lastSystemPush = 0;
+        void PublishSystem()
+        {
+            if (digest.Length == 0 || !WidgetConsentStore.Allowed(package.Manifest.Id, digest) ||
+                !OwnUrl(core.Source ?? ""))
+            {
+                core.PostWebMessageAsJson(JsonSerializer.Serialize(new { type = "opsis:system-denied" }));
+                return;
+            }
+            // A widget cannot force 60Hz sensor polling through postMessage.
+            if (Environment.TickCount64 - lastSystemPush < 1000) return;
+            lastSystemPush = Environment.TickCount64;
+            var metrics = SystemMonitorService.Instance.GetSnapshot();
+            core.PostWebMessageAsJson(JsonSerializer.Serialize(new
+            {
+                type = "opsis:system", cpu = metrics.CpuPercent,
+                ramAvailableMb = metrics.AvailableMemoryMb, ramTotalMb = metrics.TotalMemoryMb
+            }));
+        }
         void Publish()
         {
             if (view.IsDisposed || !OwnUrl(core.Source ?? "")) return;
@@ -65,13 +90,27 @@ internal static class WidgetSdkView
         }
         core.WebMessageReceived += (_, e) =>
         {
-            if (!OwnUrl(e.Source) || e.WebMessageAsJson.Length > 128) return;
+            if (!OwnUrl(e.Source) || e.WebMessageAsJson.Length > 512) return;
             try
             {
                 using var message = JsonDocument.Parse(e.WebMessageAsJson);
                 if (message.RootElement.ValueKind == JsonValueKind.Object &&
                     message.RootElement.TryGetProperty("type", out var type) && type.ValueKind == JsonValueKind.String &&
                     type.GetString() == "opsis:ready") Publish();
+                else if (message.RootElement.ValueKind == JsonValueKind.Object &&
+                    message.RootElement.TryGetProperty("type", out var capability) &&
+                    capability.ValueKind == JsonValueKind.String && capability.GetString() == "opsis:request-system")
+                {
+                    if (!WidgetConsentStore.Allowed(package.Manifest.Id, digest) && digest.Length > 0)
+                    {
+                        var answer = MessageBox.Show(view.FindForm(),
+                            MainWindow.StudioText($"Allow '{package.Manifest.Name}' to read CPU/RAM statistics? This can be revoked from its context menu.",
+                                $"Επιτρέπεις στο '{package.Manifest.Name}' να διαβάζει CPU/RAM; Μπορείς να ανακαλέσεις τη συναίνεση από το μενού του widget."),
+                            "Opsis", MessageBoxButtons.YesNo, MessageBoxIcon.Question, MessageBoxDefaultButton.Button2);
+                        if (answer == DialogResult.Yes) WidgetConsentStore.Grant(package.Manifest.Id, digest);
+                    }
+                    PublishSystem();
+                }
             }
             catch (JsonException) { }
         };

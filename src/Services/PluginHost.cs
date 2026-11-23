@@ -73,6 +73,22 @@ namespace MotionDesk.Services
         // στοιχεία πλοήγησης/tray όσο είναι απενεργοποιημένο.
         public bool IsPluginEnabled(string id) => !AppSettings.Load().DisabledPluginIds.Contains(id);
 
+        /// <summary>Revoke a SHA-bound approval and stop plugin callbacks. The DLL stays resident until restart.</summary>
+        public bool RevokePluginTrust(string id)
+        {
+            var found = Snap().FirstOrDefault(p => p.Plugin.Id == id);
+            if (found == null) return false;
+            SetPluginEnabled(id, false);
+            TrustStore.Revoke(Path.GetFileName(found.Folder));
+            return true;
+        }
+
+        public string PluginPermissions(string id)
+        {
+            var found = Snap().FirstOrDefault(p => p.Plugin.Id == id);
+            return found == null ? "Unknown" : PluginCapabilityManifest.Summary(found.Folder);
+        }
+
         public void SetPluginEnabled(string id, bool enabled)
         {
             var settings = AppSettings.Load();
@@ -361,7 +377,7 @@ namespace MotionDesk.Services
                 if (!TrustStore.IsApproved(name, hash))
                 {
                     var (publisher, signature) = PluginPublisherInfo.Inspect(folder);
-                    lock (_pending) { _pending.RemoveAll(p => string.Equals(p.Folder, folder, StringComparison.OrdinalIgnoreCase)); _pending.Add(new PluginTrustRequest(name, folder, hash, publisher, signature)); }
+                    lock (_pending) { _pending.RemoveAll(p => string.Equals(p.Folder, folder, StringComparison.OrdinalIgnoreCase)); _pending.Add(new PluginTrustRequest(name, folder, hash, publisher, signature, PluginCapabilityManifest.Summary(folder))); }
                     Log($"Plugin '{name}' in '{folder}' is waiting for approval (sha256 {hash}); it is not loaded until the user approves it.");
                     return false;
                 }

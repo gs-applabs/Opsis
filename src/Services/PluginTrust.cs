@@ -43,7 +43,7 @@ namespace MotionDesk.Services
         {
             using var total = SHA256.Create();
             var files = PluginFiles(folder)
-                .Where(f => f.EndsWith(".dll", StringComparison.OrdinalIgnoreCase) || f.EndsWith(".deps.json", StringComparison.OrdinalIgnoreCase))
+                .Where(f => f.EndsWith(".dll", StringComparison.OrdinalIgnoreCase) || (f.EndsWith(".deps.json", StringComparison.OrdinalIgnoreCase) || f.EndsWith("opsis-permissions.json", StringComparison.OrdinalIgnoreCase)))
                 .OrderBy(f => f, StringComparer.OrdinalIgnoreCase).ToList();
             var sb = new StringBuilder();
             foreach (var f in files)
@@ -96,6 +96,13 @@ namespace MotionDesk.Services
             public bool IsApproved(string name, string sha256) =>
                 _entries.Any(e => string.Equals(e.Name, name, StringComparison.OrdinalIgnoreCase) && string.Equals(e.Sha256, sha256, StringComparison.OrdinalIgnoreCase));
 
+            public void Revoke(string name)
+            {
+                _entries.RemoveAll(e => string.Equals(e.Name, name, StringComparison.OrdinalIgnoreCase));
+                Directory.CreateDirectory(Path.GetDirectoryName(_path)!);
+                AtomicFile.WriteAllText(_path, JsonSerializer.Serialize(_entries));
+            }
+
             public void Approve(string name, string sha256)
             {
                 _entries.RemoveAll(e => string.Equals(e.Name, name, StringComparison.OrdinalIgnoreCase));      // one approved content per plugin name
@@ -107,7 +114,7 @@ namespace MotionDesk.Services
     }
 
     public sealed record PluginTrustRequest(string Name, string Folder, string Sha256,
-        string Publisher = "Unknown / Άγνωστος", string SignatureStatus = "Unknown / Άγνωστη");
+        string Publisher = "Unknown / Άγνωστος", string SignatureStatus = "Unknown / Άγνωστη", string Capabilities = "Not declared / Δεν δηλώθηκαν");
 
     internal static class PluginPublisherInfo
     {

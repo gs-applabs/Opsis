@@ -366,6 +366,7 @@ namespace MotionDesk.Widgets
                 + Environment.NewLine + Environment.NewLine
                 + "Publisher / Εκδότης: " + req.Publisher
                 + Environment.NewLine + "Signature / Υπογραφή: " + req.SignatureStatus
+                + Environment.NewLine + "Requested capabilities / Δηλωμένες δυνατότητες: " + req.Capabilities
                 + Environment.NewLine + Environment.NewLine
                 + "⚠ In-process plugins are not sandboxed. / Τα DLL plugins εκτελούνται χωρίς sandbox.",
                 LocalizationManager.T("Plugin.TrustTitle"), MessageBoxButtons.YesNo, MessageBoxIcon.Warning, MessageBoxDefaultButton.Button2) == DialogResult.Yes);

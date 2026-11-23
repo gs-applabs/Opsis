@@ -545,6 +545,15 @@ namespace MotionDesk.Widgets
             // Dispose-άρει αμέσως μετά το Show() -> flash-and-vanish πριν προλάβει κλικ ο χρήστης.
             var menu = new ContextMenuStrip();
             menu.Items.Add(LocalizationManager.T("DCM.WidgetSettings"), null, (_, _) => TrayApplicationContext.OpenPage?.Invoke("Widgets"));
+            if (WidgetId.StartsWith("sdk-", StringComparison.OrdinalIgnoreCase) && WidgetCatalog.Find(WidgetId) is { } sdk)
+            {
+                menu.Items.Add(MainWindow.StudioText("Revoke system-data consent", "Ανάκληση πρόσβασης σε δεδομένα συστήματος"), null, (_, _) =>
+                {
+                    WidgetConsentStore.Revoke(sdk.Manifest.Id);
+                    MessageBox.Show(this, MainWindow.StudioText("Consent revoked. Reload this widget to discard in-flight data.",
+                        "Η συναίνεση ανακλήθηκε. Φόρτωσε ξανά το widget για διαγραφή προσωρινών δεδομένων."), "Opsis");
+                });
+            }
             menu.Items.Add(new ToolStripSeparator());
 
             if (string.Equals(WidgetId, "clock", StringComparison.OrdinalIgnoreCase))

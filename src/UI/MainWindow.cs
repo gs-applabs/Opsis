@@ -4006,6 +4006,18 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                     };
                     enableToggle.CheckedChanged += (_, _) => Services.PluginHost.Instance.SetPluginEnabled(capturedId, enableToggle.Checked);
                     panel.Controls.Add(enableToggle);
+                    AddText(panel, StudioText("Declared plugin capabilities: ", "Δηλωμένες δυνατότητες plugin: ")
+                        + Services.PluginHost.Instance.PluginPermissions(capturedId));
+                    var revokeBtn = NewHoverButton(StudioText("Revoke plugin approval", "Ανάκληση έγκρισης plugin"), () =>
+                    {
+                        if (MessageBox.Show(this, StudioText(
+                            "Stop this plugin and revoke its approval? Restart Opsis to unload the DLL completely.",
+                            "Να σταματήσει το plugin και να ανακληθεί η έγκριση; Απαιτείται επανεκκίνηση του Opsis για πλήρη αποφόρτωση του DLL."),
+                            "Opsis", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes) return;
+                        Services.PluginHost.Instance.RevokePluginTrust(capturedId);
+                        ShowAbout();
+                    });
+                    panel.Controls.Add(revokeBtn);
 
                     // Ζητήθηκε (σύγκριση με τον μηχανισμό plugin του Kombos): αφαίρεση plugin από
                     // μέσα στο Opsis, όχι μόνο ενεργό/ανενεργό. Ο φάκελος διαγράφεται αμέσως αν
@@ -5174,6 +5186,8 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                 row.Controls.Add(statusLabel);
 
                 HoverButton? installBtn = null;
+                CancellationTokenSource? installCancellation = null;
+                row.Disposed += (_, _) => installCancellation?.Cancel();
                 void ShowStatus(bool installed)
                 {
                     if (row.IsDisposed) return;
@@ -5190,14 +5204,24 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                     installBtn.FlatAppearance.BorderSize = 0;
                     installBtn.Click += async (_, _) =>
                     {
-                        installBtn.Enabled = false;
+                        if (installCancellation != null)
+                        {
+                            installCancellation.Cancel();
+                            installBtn.Enabled = false;
+                            return;
+                        }
+                        using var current = new CancellationTokenSource();
+                        installCancellation = current;
+                        installBtn.Text = StudioText("Cancel", "Ακύρωση");
+                        installBtn.Enabled = true;
                         statusLabel.Text = LocalizationManager.T("Settings.DependencyInstalling");
                         statusLabel.ForeColor = UiTheme.TextMuted;
-                        var (success, output) = await DependencyManagerService.InstallViaWingetAsync(wingetId);
+                        var (success, output) = await DependencyManagerService.InstallViaWingetAsync(wingetId, current.Token);
+                        installCancellation = null;
                         bool nowInstalled = await dep.CheckInstalledAsync();
                         if (row.IsDisposed) return;
                         ShowStatus(nowInstalled);
-                        if (!success && !nowInstalled)
+                        if (!success && !nowInstalled && !current.IsCancellationRequested)
                             MessageBox.Show(string.Format(LocalizationManager.T("Settings.DependencyInstallFailedFormat"), dep.Name, output), "Opsis", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                     };
                     row.Controls.Add(installBtn);

@@ -1,7 +1,13 @@
 [CmdletBinding()]
-param([Parameter(Mandatory)] [string] $OutputDirectory, [switch] $AllowClassicMenu)
+param([Parameter(Mandatory)] [string] $OutputDirectory, [switch] $AllowClassicMenu, [switch] $ForceClassicMenu)
 $ErrorActionPreference = 'Stop'
 $out = (New-Item -ItemType Directory -Force $OutputDirectory).FullName
+if ($ForceClassicMenu) {
+    $oldDll = Join-Path $out 'OpsisExplorer.dll'
+    if (Test-Path -LiteralPath $oldDll) { Remove-Item -LiteralPath $oldDll -Force }
+    Write-Host 'Classic Explorer fallback explicitly selected for isolated QA.'
+    return
+}
 $compiler = Get-Command cl.exe -ErrorAction SilentlyContinue
 if ($env:VSCMD_ARG_TGT_ARCH -and $env:VSCMD_ARG_TGT_ARCH -ne 'x64') { $compiler = $null }
 if (!$compiler) {

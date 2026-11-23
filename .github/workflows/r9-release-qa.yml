@@ -1,0 +1,61 @@
+name: R9 Windows build, UI regression, installer verification
+on:
+  workflow_dispatch:
+    inputs:
+      skip_ui_audit:
+        type: boolean
+        required: false
+        default: false
+        description: 'Emergency diagnostics only; does NOT validate the release'
+  push:
+    branches: [release/opsis-2.8.0.2500-r9]
+permissions:
+  contents: read
+jobs:
+  windows-release-gate:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-2022, windows-2025]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 65
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '11.0.x'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install the required Inno Setup 7 compiler
+        shell: pwsh
+        run: |
+          winget install --id JRSoftware.InnoSetup.7 --exact --silent --accept-package-agreements --accept-source-agreements
+          if ($LASTEXITCODE -ne 0) { throw "Inno Setup 7 install failed ($LASTEXITCODE)" }
+      - name: Build, test and verify the SAME checked-out source tree
+        id: release
+        shell: pwsh
+        run: |
+          $compiler = @("${env:ProgramFiles}\Inno Setup 7\ISCC.exe", "${env:ProgramFiles(x86)}\Inno Setup 7\ISCC.exe", "$env:LOCALAPPDATA\Programs\Inno Setup 7\ISCC.exe") | Where-Object { Test-Path $_ } | Select-Object -First 1
+          if (!$compiler) { throw 'Inno Setup 7 compiler not found' }
+          $skip = '${{ inputs.skip_ui_audit }}' -eq 'true'
+          ./tools/qa-r9-windows.ps1 -Compiler $compiler -SkipUiAudit:$skip
+          if ($skip) { throw 'UI audit was skipped: installer MUST NOT be published as validated.' }
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: Opsis-R9-Windows-QA-${{ matrix.os }}
+          path: |
+            qa-results/**
+            Output/build-report.json
+          if-no-files-found: warn
+      - uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: Opsis-2.8.0.2500-R9-UNRELEASED-validated-${{ matrix.os }}
+          path: |
+            Output/OpsisSetup-2.8.0.2500.exe
+            Output/release-identity.json
+          if-no-files-found: error

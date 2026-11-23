@@ -1,12 +1,12 @@
 {
   "version": "2.8.0.2500",
   "pre_release": true,
-  "tests_deferred_per_user": true,
+  "tests_deferred_per_user": false,
   "counts": {
-    "new": 62,
+    "new": 66,
     "existing": 17,
-    "partial": 11,
-    "pending": 10
+    "partial": 14,
+    "pending": 3
   },
   "phases": {
     "Α — Γρήγορες, τοπικές αλλαγές": [
@@ -208,18 +208,18 @@
     {
       "id": 12,
       "title": "Δήλωση δικαιωμάτων ανά πρόσθετο για δίκτυο, ήχο και πρόσβαση σε τοπικά αρχεία.",
-      "status": "pending",
-      "status_el": "ΕΚΚΡΕΜΕΙ ΥΛΟΠΟΙΗΣΗ",
-      "evidence": "—",
-      "note": "Δεν έχει τεκμηριωθεί ολοκλήρωση στον παρόντα κύκλο"
+      "status": "partial",
+      "status_el": "ΜΕΡΙΚΟ · ΑΠΑΙΤΕΙ ΣΥΜΠΛΗΡΩΣΗ/ WINDOWS QA",
+      "evidence": "src/Services/PluginCapabilityManifest.cs · src/Services/PluginTrust.cs · src/Services/PluginHost.cs · src/UI/MainWindow.cs",
+      "note": "Δήλωση και SHA-bound έγκριση δικαιωμάτων· ΔΕΝ αποτελεί λειτουργικό sandbox. Για πλήρη επιβολή χρειάζεται εκτέλεση εκτός διεργασίας."
     },
     {
       "id": 13,
       "title": "Ανακλητή συναίνεση ανά τοπικό web widget για τη λήψη στοιχείων συστήματος.",
-      "status": "pending",
-      "status_el": "ΕΚΚΡΕΜΕΙ ΥΛΟΠΟΙΗΣΗ",
-      "evidence": "—",
-      "note": "Δεν έχει τεκμηριωθεί ολοκλήρωση στον παρόντα κύκλο"
+      "status": "new",
+      "status_el": "ΥΛΟΠΟΙΗΘΗΚΕ ΣΤΟΝ SOURCE · ΧΩΡΙΣ .NET BUILD",
+      "evidence": "src/Services/WidgetConsentStore.cs · src/Widgets/WidgetSdkView.cs · src/Widgets/WidgetEngine.cs",
+      "note": "Ανακλητή ρητή συναίνεση για CPU/RAM ανά web widget, δεμένη με SHA-256 κώδικα."
     },
     {
       "id": 14,
@@ -368,18 +368,18 @@
     {
       "id": 32,
       "title": "Πανοραμικό φόντο μόνο σε επιλεγμένο ζεύγος οθονών.",
-      "status": "pending",
-      "status_el": "ΕΚΚΡΕΜΕΙ ΥΛΟΠΟΙΗΣΗ",
-      "evidence": "—",
-      "note": "Δεν έχει τεκμηριωθεί ολοκλήρωση στον παρόντα κύκλο"
+      "status": "partial",
+      "status_el": "ΜΕΡΙΚΟ · ΑΠΑΙΤΕΙ ΣΥΜΠΛΗΡΩΣΗ/ WINDOWS QA",
+      "evidence": "src/Widgets/WallpaperWindow.cs · src/Widgets/wallpaper/index.html · src/UI/MainWindow.WallpaperMedia.cs",
+      "note": "Προαιρετική πανοραμική φωτογραφία σε δύο οθόνες. Χρειάζεται πραγματικός έλεγχος διαφορετικού DPI και προβολών βίντεο."
     },
     {
       "id": 33,
       "title": "Αντιστάθμιση πλαισίων για πανοραμικές εικόνες.",
-      "status": "pending",
-      "status_el": "ΕΚΚΡΕΜΕΙ ΥΛΟΠΟΙΗΣΗ",
-      "evidence": "—",
-      "note": "Δεν έχει τεκμηριωθεί ολοκλήρωση στον παρόντα κύκλο"
+      "status": "new",
+      "status_el": "ΥΛΟΠΟΙΗΘΗΚΕ ΣΤΟΝ SOURCE · ΧΩΡΙΣ .NET BUILD",
+      "evidence": "src/Widgets/WallpaperWindow.cs · src/UI/MainWindow.WallpaperMedia.cs",
+      "note": "Παράκαμψη πλάτους πλαισίων (0–400 px), υπολογισμός crop ανά γειτονική οθόνη."
     },
     {
       "id": 34,
@@ -464,18 +464,18 @@
     {
       "id": 44,
       "title": "Προσωρινή επέκταση παραθύρου σε δύο γειτονικές ζώνες.",
-      "status": "pending",
-      "status_el": "ΕΚΚΡΕΜΕΙ ΥΛΟΠΟΙΗΣΗ",
-      "evidence": "—",
-      "note": "Δεν έχει τεκμηριωθεί ολοκλήρωση στον παρόντα κύκλο"
+      "status": "new",
+      "status_el": "ΥΛΟΠΟΙΗΘΗΚΕ ΣΤΟΝ SOURCE · ΧΩΡΙΣ .NET BUILD",
+      "evidence": "src/Services/AutoTileService.cs · src/Widgets/ZoneLayoutStore.cs · src/Widgets/ZoneLayoutEditorForm.cs",
+      "note": "Προσωρινή επέκταση παραθύρου σε γειτονικές ζώνες, undo αρχικής θέσης και αποκατάσταση auto-tiling."
     },
     {
       "id": 45,
       "title": "Αλλαγή μεγέθους δύο γειτονικών ζωνών από κοινό όριο.",
-      "status": "pending",
-      "status_el": "ΕΚΚΡΕΜΕΙ ΥΛΟΠΟΙΗΣΗ",
-      "evidence": "—",
-      "note": "Δεν έχει τεκμηριωθεί ολοκλήρωση στον παρόντα κύκλο"
+      "status": "new",
+      "status_el": "ΥΛΟΠΟΙΗΘΗΚΕ ΣΤΟΝ SOURCE · ΧΩΡΙΣ .NET BUILD",
+      "evidence": "src/Widgets/ZoneLayoutStore.cs · src/Widgets/ZoneLayoutEditorForm.cs",
+      "note": "Μετατόπιση κοινού ορίου γειτονικών ζωνών με όρια και προεπισκόπηση."
     },
     {
       "id": 46,
@@ -736,10 +736,10 @@
     {
       "id": 78,
       "title": "Επιλογή συσκευής εισόδου του visualizer ξεχωριστά από την προεπιλεγμένη έξοδο.",
-      "status": "pending",
-      "status_el": "ΕΚΚΡΕΜΕΙ ΥΛΟΠΟΙΗΣΗ",
-      "evidence": "—",
-      "note": "Δεν έχει τεκμηριωθεί ολοκλήρωση στον παρόντα κύκλο"
+      "status": "partial",
+      "status_el": "ΜΕΡΙΚΟ · ΑΠΑΙΤΕΙ ΣΥΜΠΛΗΡΩΣΗ/ WINDOWS QA",
+      "evidence": "src/Services/SharedLoopbackCapture.cs · src/Music/MusicOverlaySettings.cs · src/Music/MusicOverlayPage.cs",
+      "note": "Ρητή επιλογή μικροφώνου έναντι default output loopback. Η κοινή WASAPI υπηρεσία επηρεάζει και άλλους καταναλωτές· χρειάζεται πλήρης ανεξαρτητοποίηση και Windows QA."
     },
     {
       "id": 79,
@@ -849,17 +849,17 @@
       "id": 92,
       "title": "Δοκιμή της υπάρχουσας σελίδας εξαρτήσεων σε Windows με μόνο .NET 10, με .NET 11, χωρίς WebView2 και με ακύρωση λήψης. Και τα δύο branches έχουν έλεγχο runtime.",
       "status": "pending",
-      "status_el": "ΕΚΚΡΕΜΕΙ ΥΛΟΠΟΙΗΣΗ",
-      "evidence": "—",
-      "note": "Δεν έχει τεκμηριωθεί ολοκλήρωση στον παρόντα κύκλο"
+      "status_el": "ΕΤΟΙΜΟ QA ΣΕΝΑΡΙΟ · WINDOWS ΕΠΑΛΗΘΕΥΣΗ ΕΚΚΡΕΜΕΙ",
+      "evidence": "installer/dependencies.iss · tools/qa-r9-windows.ps1 · .github/workflows/r9-release-qa.yml",
+      "note": "Έτοιμο Windows test gate με καταγραφή .NET 11 / WebView2 / DEPS=none· λείπουν πραγματικά σενάρια καθαρών VM με μόνο .NET10/χωρίς WebView2."
     },
     {
       "id": 93,
       "title": "Επαλήθευση του νέου εναλλακτικού κλασικού μενού σε Windows χωρίς Visual C++ Build Tools. Δοκιμή και των πέντε εντολών και της μετάβασης στο εγγενές μενού μετά από πλήρες build.",
       "status": "pending",
-      "status_el": "ΕΚΚΡΕΜΕΙ ΥΛΟΠΟΙΗΣΗ",
-      "evidence": "—",
-      "note": "Δεν έχει τεκμηριωθεί ολοκλήρωση στον παρόντα κύκλο"
+      "status_el": "ΕΤΟΙΜΟ QA ΣΕΝΑΡΙΟ · WINDOWS ΕΠΑΛΗΘΕΥΣΗ ΕΚΚΡΕΜΕΙ",
+      "evidence": "src/Services/DesktopMenu.cs · installer/explorer/Build-Explorer.ps1 · tools/qa-r9-windows.ps1",
+      "note": "ForceClassicMenu + δοκιμή 5 verbs. Δεν εκτελέστηκε σε Windows χωρίς VC++ ούτε δοκιμή του native μενού."
     },
     {
       "id": 94,
@@ -905,9 +905,9 @@
       "id": 99,
       "title": "Δύο δοκιμές με αποθηκευμένες ρυθμίσεις: αναβάθμιση εντός του τρέχοντος branch και χωριστή εγκατάσταση δίπλα στην 2.4.6.1. Έλεγχος καταλόγου, autostart, απεγκατάστασης και εκκίνησης όσο τρέχει το άλλο branch.",
       "status": "pending",
-      "status_el": "ΕΚΚΡΕΜΕΙ ΥΛΟΠΟΙΗΣΗ",
-      "evidence": "—",
-      "note": "Δεν έχει τεκμηριωθεί ολοκλήρωση στον παρόντα κύκλο"
+      "status_el": "ΕΤΟΙΜΟ QA ΣΕΝΑΡΙΟ · WINDOWS ΕΠΑΛΗΘΕΥΣΗ ΕΚΚΡΕΜΕΙ",
+      "evidence": "installer.iss · tools/qa-r9-windows.ps1 · .github/workflows/r9-release-qa.yml",
+      "note": "Σενάρια εγκατάστασης/αναβάθμισης/απεγκατάστασης και προαιρετική side-by-side δοκιμή με SHA-ελεγμένο legacy installer· μη εκτελεσμένα."
     },
     {
       "id": 100,
@@ -918,15 +918,11 @@
       "note": "Προαιρετικό και χρονικά περιορισμένο session diagnostics"
     }
   ],
-  "revision": "R8",
-  "last_changed_utc": "2026-11-23",
-  "checkpoint": "R8-S3",
+  "revision": "R9 · Session 4/4 (code checkpoint, not release)",
+  "last_changed_utc": "2026-11-23T18:00:00Z",
+  "checkpoint": "R9-S4",
   "implementation_sessions": {
-    "completed": [
-      1,
-      2,
-      3
-    ],
+    "completed": 4,
     "planned": 4,
     "session1_ids": [
       21,
@@ -963,6 +959,30 @@
       39,
       40,
       43
+    ],
+    "session4_ids": [
+      12,
+      13,
+      32,
+      33,
+      44,
+      45,
+      78,
+      92,
+      93,
+      99
     ]
+  },
+  "linux_node_tests": {
+    "passed": 37,
+    "failed": 0,
+    "command": "node --test",
+    "platform": "Linux Node 22.16.0",
+    "coverage": "JS and source wiring checks; NOT .NET or Windows GUI tests"
+  },
+  "windows_release_validation": {
+    "status": "NOT_VERIFIED",
+    "reason": "No .NET 11 SDK, Windows runner or Inno Setup 7 in current container. New source not on remote GitHub branch.",
+    "workflow": ".github/workflows/r9-release-qa.yml"
   }
 }

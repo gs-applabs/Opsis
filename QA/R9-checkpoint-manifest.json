@@ -1,0 +1,37 @@
+{
+  "product": "OPSIS Desktop Customization",
+  "version": "2.8.0.2500",
+  "checkpoint": "R9 Session 4/4",
+  "release_ready": false,
+  "platform_used": "Linux",
+  "node_tests": {
+    "passed": 37,
+    "failed": 0,
+    "log": "Opsis-Desktop-Customization-2.8.0.2500-R9-S4/QA/node-test-r9.txt"
+  },
+  "dotnet_publish": {
+    "status": "NOT_RUN",
+    "reason": "dotnet executable not available in Linux runtime"
+  },
+  "windows_ui_e2e": {
+    "status": "NOT_RUN",
+    "reason": "Windows runner for exact R9 source not accessible"
+  },
+  "inno_setup": {
+    "status": "NOT_RUN",
+    "reason": "ISCC.exe not installed; no Windows installer generated"
+  },
+  "workflow_included": ".github/workflows/r9-release-qa.yml",
+  "qa_command": "./tools/qa-r9-windows.ps1 -Compiler 'C:\\Program Files\\Inno Setup 7\\ISCC.exe' -AllowLocalDisposableVm",
+  "counts": {
+    "new_source": 66,
+    "pre_existing": 17,
+    "partial_or_unverified": 14,
+    "windows_qa_remaining": 3
+  },
+  "notes": [
+    "The static Node.js checks do not prove .NET or WinForms compilation.",
+    "Plugin DLL 1.0.0.0 belongs to separately staged Crawler and Chronikologio packages; shared Opsis.UI and Plugin.Abstractions have independent ABI versions.",
+    "No unsigned installer is supplied as if it were verified."
+  ]
+}
