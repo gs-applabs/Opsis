@@ -1,0 +1,59 @@
+name: Opsis P1 staged Crawler contract compatibility
+on:
+  push:
+    paths:
+      - '.github/workflows/p1-crawler-staged-host.yml'
+      - 'src/Services/PluginHost.cs'
+      - 'src/Widgets/WidgetEngine.cs'
+      - 'src/UI/MainWindow.cs'
+  pull_request:
+    paths:
+      - '.github/workflows/p1-crawler-staged-host.yml'
+      - 'src/Services/PluginHost.cs'
+      - 'src/Widgets/WidgetEngine.cs'
+      - 'src/UI/MainWindow.cs'
+
+permissions:
+  contents: read
+
+jobs:
+  compatible-bridge:
+    runs-on: windows-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: host
+      - uses: actions/checkout@v4
+        with:
+          repository: gs-applabs/OpsisNewsCrawler
+          ref: feat/p1-opsis-integration-live-video-20261123
+          path: crawler
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Compile shared contract and P1 Crawler in isolated runner
+        shell: pwsh
+        run: |
+          dotnet build crawler/src/OpsisNewsCrawler.Plugin.Abstractions/OpsisNewsCrawler.Plugin.Abstractions.csproj -c Release
+          dotnet build crawler/src/OpsisNewsCrawler.OpsisPlugin/OpsisNewsCrawler.OpsisPlugin.csproj -c Release
+      - name: Stage single shared contract binary without committing or deploying
+        shell: pwsh
+        run: |
+          $dll = 'crawler/src/OpsisNewsCrawler.Plugin.Abstractions/bin/Release/net10.0-windows/OpsisNewsCrawler.Plugin.Abstractions.dll'
+          Copy-Item $dll host/libs/OpsisNewsCrawler.Plugin.Abstractions.dll -Force
+          $expected = [System.Reflection.AssemblyName]::GetAssemblyName((Resolve-Path $dll)).Version.ToString()
+          if ($expected -ne '0.8.0.0') { throw "Breaking contract version $expected" }
+      - name: Host and plugin tests against identical new contract
+        shell: pwsh
+        working-directory: host
+        run: |
+          dotnet build MotionDeskStudio.csproj -c Release -m:1 -p:SkipContainers=true
+          dotnet test tests/Opsis.Tests/Opsis.Tests.csproj -c Release -m:1 --filter "FullyQualifiedName~PluginWidgetContractTests"
+      - name: Verify Crawler plugin version and additive host capability
+        shell: pwsh
+        run: |
+          $dll = 'crawler/src/OpsisNewsCrawler.OpsisPlugin/bin/Release/net10.0-windows10.0.19041.0/OpsisNewsCrawler.OpsisPlugin.dll'
+          $v = [System.Reflection.AssemblyName]::GetAssemblyName((Resolve-Path $dll)).Version.ToString()
+          if ($v -ne '1.0.0.0') { throw "Wrong Crawler plugin identity $v" }
+          Write-Host "Crawler plugin $v shares 0.8.0.0 contract with Opsis host."
