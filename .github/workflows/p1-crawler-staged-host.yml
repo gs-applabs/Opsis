@@ -49,6 +49,7 @@ jobs:
         working-directory: host
         run: |
           dotnet build MotionDeskStudio.csproj -c Release -m:1 -p:SkipContainers=true
+          $env:OPSIS_P3_CONTRACT_TEST = '1'
           dotnet test tests/Opsis.Tests/Opsis.Tests.csproj -c Release -m:1 --filter "FullyQualifiedName~PluginWidgetContractTests"
       - name: Verify Crawler plugin version and additive host capability
         shell: pwsh

@@ -6,7 +6,7 @@ using Xunit;
 namespace Opsis.Tests;
 
 // The 2026-11 contract additions (IPluginWidgetProvider, PluginWidget, PluginFeed, PluginFeeds): a plugin can replace a built-in desktop widget (e.g. "calendar")
-// and publish text feeds for the News Crawler bars. They are optional: the assembly version stays 0.8.0.0.
+// and publish text feeds for the News Crawler bars. They are optional: the assembly identity is selected by the staged host build.
 public sealed class PluginWidgetContractTests
 {
     private sealed class StubPlugin : IOpsisNewsCrawlerPlugin, IPluginWidgetProvider
@@ -129,7 +129,9 @@ public sealed class PluginWidgetContractTests
     public void TheContractAssemblyKeepsItsVersionAndHasTheNewTypes()
     {
         var asm = typeof(IOpsisNewsCrawlerPlugin).Assembly;
-        Assert.Equal(new Version(0, 8, 0, 0), asm.GetName().Version);
+        var expected = Environment.GetEnvironmentVariable("OPSIS_P3_CONTRACT_TEST") == "1"
+            ? new Version(1, 0, 0, 0) : new Version(0, 8, 0, 0);
+        Assert.Equal(expected, asm.GetName().Version);
         var names = asm.GetExportedTypes().Select(t => t.Name).ToHashSet();
         foreach (var n in new[] { "IOpsisNewsCrawlerPlugin", "PluginNavigationItem", "IPluginProfileAware", "IPluginWidgetProvider", "PluginWidget", "PluginFeed", "PluginFeedItem", "PluginFeeds" })
             Assert.Contains(n, names);
