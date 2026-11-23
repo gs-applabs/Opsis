@@ -192,4 +192,40 @@ public sealed class PluginWidgetContractTests
         Assert.NotEmpty(plugin.GetTrayMenuItems());
         Assert.NotNull(plugin.GetAboutInfo());
     }
+
+    [Fact]
+    public void P3CrawlerAndChronikologioCanLoadSimultaneouslyWithoutContractCollisions()
+    {
+        var crawler = Environment.GetEnvironmentVariable("OPSIS_REAL_CRAWLER_PLUGIN_DIR");
+        var calendar = Environment.GetEnvironmentVariable("OPSIS_REAL_CHRONIKOLOGIO_PLUGIN_DIR");
+        var required = Environment.GetEnvironmentVariable("OPSIS_P3_INTEGRATION_REQUIRED") == "1";
+        if (string.IsNullOrWhiteSpace(crawler) || string.IsNullOrWhiteSpace(calendar))
+        {
+            Assert.False(required, "Staged Windows CI must publish both Crawler and Chronikologio plugins");
+            return;
+        }
+        Assert.True(Directory.Exists(crawler));
+        Assert.True(Directory.Exists(calendar));
+
+        var host = new PluginHost();
+        host.LoadFolder(crawler);
+        host.LoadFolder(calendar);
+        Assert.Equal(2, host.Plugins.Select(x => x.Id).Distinct(StringComparer.OrdinalIgnoreCase).Count());
+
+        var news = Assert.Single(host.Plugins, x => x.Id == "giorstergiopoulos.opsisnewscrawler");
+        var chrono = Assert.Single(host.Plugins, x => x.Id == "chronikologio");
+        Assert.Equal(new Version(1, 0, 0, 0), typeof(IOpsisNewsCrawlerPlugin).Assembly.GetName().Version);
+        foreach (var p in new[] { news, chrono })
+        {
+            var contract = p.GetType().GetInterfaces()
+                .Single(i => i.FullName == typeof(IOpsisNewsCrawlerPlugin).FullName).Assembly;
+            Assert.Same(typeof(IOpsisNewsCrawlerPlugin).Assembly, contract);
+            var referenced = Assert.Single(p.GetType().Assembly.GetReferencedAssemblies(),
+                a => a.Name == typeof(IOpsisNewsCrawlerPlugin).Assembly.GetName().Name);
+            Assert.Equal(new Version(1, 0, 0, 0), referenced.Version);
+        }
+        Assert.Equal(5, Assert.IsAssignableFrom<IPluginWidgetProvider>(news).GetWidgets().Count);
+        var replacements = Assert.IsAssignableFrom<IPluginWidgetProvider>(chrono).GetWidgets();
+        Assert.Contains(replacements, w => w.ReplacesBuiltIn == "calendar");
+    }
 }
