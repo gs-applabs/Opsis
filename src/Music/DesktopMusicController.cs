@@ -32,6 +32,15 @@ internal sealed class DesktopMusicController : IDisposable
 
     public MusicOverlaySettings Settings => settings;
 
+    public void SetTrackPrivacy(bool enabled)
+    {
+        if (settings.HideTrackMetadata == enabled) return;
+        settings = settings with { HideTrackMetadata = enabled };
+        SaveSettings();
+        // Clear cached album cover on the next frame, not only when the song changes.
+        surface.Clear();
+    }
+
     public void SetEnabled(bool enabled)
     {
         if (settings.Enabled == enabled) return;

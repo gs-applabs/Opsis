@@ -2011,6 +2011,22 @@ namespace MotionDesk.UI
             }
             AddRainSlider("Rain in landscape", "Βροχή στο τοπίο", false, settings.RainLandscapeIntensity);
             AddRainSlider("Rain on window glass", "Βροχή στο τζάμι", true, settings.RainGlassIntensity);
+            var focusLabel = new Label { Text = StudioText("Portrait crop focus (horizontal)", "Σημείο ενδιαφέροντος σε κατακόρυφη οθόνη"),
+                AutoSize = true, ForeColor = UiTheme.TextSecondary, Font = UiTheme.FontBody,
+                Margin = new Padding(0, 8, 0, 4) };
+            host.Controls.Add(focusLabel);
+            var focusSlider = new FlatSlider { Minimum = 0, Maximum = 100,
+                Value = Math.Clamp(settings.WeatherPhotoFocusX, 0, 100), Width = 300, Height = 28 };
+            focusSlider.MouseUp += (_, _) => WallpaperHostEngine.Instance.SetWeatherPhotoFocus(focusSlider.Value);
+            focusSlider.KeyUp += (_, _) => WallpaperHostEngine.Instance.SetWeatherPhotoFocus(focusSlider.Value);
+            host.Controls.Add(focusSlider);
+            var skyline = new FlatToggle { RowWidth = 700,
+                Text = StudioText("Show detected skyline over the photo (preview)",
+                    "Εμφάνιση ανιχνευμένης γραμμής ουρανού πάνω στη φωτογραφία (προεπισκόπηση)"),
+                Checked = settings.WeatherSkylinePreview, BackColor = UiTheme.PageBackground,
+                Margin = new Padding(0, 6, 0, 8) };
+            skyline.CheckedChanged += (_, _) => WallpaperHostEngine.Instance.SetWeatherSkylinePreview(skyline.Checked);
+            host.Controls.Add(skyline);
 
             var selectedLandscape = settings.WeatherLandmarks && LandmarkCatalog.IsValid(settings.WeatherLandmarkId)
                 ? settings.WeatherLandmarkId : settings.WeatherLandmarks ? LandmarkCatalog.Auto : LandmarkCatalog.Off;
@@ -2876,6 +2892,8 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
             DockCheck(Ld("Απόκρυψη σε πλήρη οθόνη", "Hide over fullscreen windows"),
                 dockCfg.HideOnFullscreen, (c, v) => c.HideOnFullscreen = v);
             DockCheck(Ld("Προεπισκόπηση παραθύρου στο hover", "Window preview on hover"), dockCfg.ShowPreviews, (c, v) => c.ShowPreviews = v);
+            DockCheck(Ld("Ένδειξη τρέχοντος workspace στο DeskStrip", "Show active workspace in DeskStrip"),
+                dockCfg.ShowWorkspaceLabel, (c, v) => c.ShowWorkspaceLabel = v);
             var sizeLabel = new Label { AutoSize = true, ForeColor = UiTheme.TextMuted, Font = UiTheme.FontBody, Margin = new Padding(0, 6, 0, 2) };
             void ShowSize(int v) => sizeLabel.Text = Ld($"Μέγεθος εικονιδίων: {v}px", $"Icon size: {v}px");
             ShowSize(dockCfg.IconSize);

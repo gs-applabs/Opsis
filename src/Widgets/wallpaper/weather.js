@@ -902,7 +902,7 @@ function drawScenePhoto(c2, sky, graded) {
     if (!iw || !ih) return;
     const atmosphere = window.OpsisWeatherAtmosphere;
     const fittingHorizon = !photoState.skyMask || photoState.landscape ? H * .18 : H * .48;
-    const bounds = atmosphere?.photoBounds(W, H, fittingHorizon, iw, ih);
+    const bounds = atmosphere?.photoBounds(W, H, fittingHorizon, iw, ih, cfg.photoFocusX ?? .5);
     const w = bounds?.width ?? W, h = bounds?.height ?? Math.round(ih * Math.max(W / iw, .1));
     const x = bounds?.x ?? 0, y = bounds?.y ?? H - h;
     const amb = clamp(sky.amb, 0, 1), night = clamp(1 - amb / 0.35, 0, 1), fog = clamp(S.fog, 0, 1), glow = clamp(sky.glow || 0, 0, 1);
@@ -943,6 +943,8 @@ function drawScenePhoto(c2, sky, graded) {
         o.globalCompositeOperation = 'source-over'; photoState.key = key;
     }
     c2.drawImage(photoState.canvas, x, y, w, h);
+    if (cfg.skylinePreview && photoState.skyMask)
+        window.OpsisSkyMask?.outline(c2, photoState.skyMask, { x, y, width: w, height: h });
     if (night > 0.05 && photoState.lightsReady) { c2.save(); c2.globalAlpha = Math.min(1, night * 0.95); c2.globalCompositeOperation = 'lighter'; c2.drawImage(photoState.lights, x, y, w, h); c2.restore(); }
 }
 

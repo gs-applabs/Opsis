@@ -3,10 +3,10 @@
   "pre_release": true,
   "tests_deferred_per_user": true,
   "counts": {
-    "new": 35,
+    "new": 45,
     "existing": 17,
     "partial": 8,
-    "pending": 40
+    "pending": 30
   },
   "phases": {
     "Α — Γρήγορες, τοπικές αλλαγές": [
@@ -280,10 +280,10 @@
     {
       "id": 21,
       "title": "Επικάλυψη της ανιχνευμένης γραμμής ουρανού στην προεπισκόπηση.",
-      "status": "pending",
-      "status_el": "ΕΚΚΡΕΜΕΙ ΥΛΟΠΟΙΗΣΗ",
-      "evidence": "—",
-      "note": "Δεν έχει τεκμηριωθεί ολοκλήρωση στον παρόντα κύκλο"
+      "status": "new",
+      "status_el": "ΥΛΟΠΟΙΗΘΗΚΕ ΣΤΟΝ SOURCE · ΧΩΡΙΣ BUILD",
+      "evidence": "src/Widgets/wallpaper/sky-mask.js; src/Widgets/wallpaper/weather.js; src/UI/MainWindow.cs",
+      "note": "Ενεργοποιούμενη διακεκομμένη επικάλυψη της ανιχνευμένης γραμμής ουρανού πάνω στην πραγματική φωτογραφία του Weather Wallpaper."
     },
     {
       "id": 22,
@@ -296,10 +296,10 @@
     {
       "id": 23,
       "title": "Αποθήκευση της μάσκας με αποτύπωμα εικόνας ώστε να μην εφαρμόζεται σε άλλη λήψη.",
-      "status": "pending",
-      "status_el": "ΕΚΚΡΕΜΕΙ ΥΛΟΠΟΙΗΣΗ",
-      "evidence": "—",
-      "note": "Δεν έχει τεκμηριωθεί ολοκλήρωση στον παρόντα κύκλο"
+      "status": "new",
+      "status_el": "ΥΛΟΠΟΙΗΘΗΚΕ ΣΤΟΝ SOURCE · ΧΩΡΙΣ BUILD",
+      "evidence": "src/Widgets/wallpaper/sky-mask.js",
+      "note": "Η μάσκα αποθηκεύεται μία φορά ανά εικόνα σε localStorage με αποτύπωμα βασισμένο σε εικονοστοιχεία/διαστάσεις· απόρριψη σε αλλαγμένο περιεχόμενο. Το αποτύπωμα δεν είναι κρυπτογραφικό."
     },
     {
       "id": 24,
@@ -312,10 +312,10 @@
     {
       "id": 25,
       "title": "Επιλογή σημείου ενδιαφέροντος για την περικοπή σε κατακόρυφη οθόνη.",
-      "status": "pending",
-      "status_el": "ΕΚΚΡΕΜΕΙ ΥΛΟΠΟΙΗΣΗ",
-      "evidence": "—",
-      "note": "Δεν έχει τεκμηριωθεί ολοκλήρωση στον παρόντα κύκλο"
+      "status": "new",
+      "status_el": "ΥΛΟΠΟΙΗΘΗΚΕ ΣΤΟΝ SOURCE · ΧΩΡΙΣ BUILD",
+      "evidence": "src/Widgets/WallpaperWindow.cs; src/UI/MainWindow.cs; src/Widgets/wallpaper/weather-atmosphere.js",
+      "note": "Αποθηκευόμενο ρυθμιστικό οριζόντιας εστίασης φωτογραφίας 0–100% για crop σε portrait monitor, με άμεσο refresh μετά τη δέσμευση."
     },
     {
       "id": 26,
@@ -352,10 +352,10 @@
     {
       "id": 30,
       "title": "Έλεγχος αναγνωσιμότητας ρολογιού στην πραγματική θέση του πάνω στη φωτογραφία.",
-      "status": "pending",
-      "status_el": "ΕΚΚΡΕΜΕΙ ΥΛΟΠΟΙΗΣΗ",
-      "evidence": "—",
-      "note": "Δεν έχει τεκμηριωθεί ολοκλήρωση στον παρόντα κύκλο"
+      "status": "new",
+      "status_el": "ΥΛΟΠΟΙΗΘΗΚΕ ΣΤΟΝ SOURCE · ΧΩΡΙΣ BUILD",
+      "evidence": "src/Widgets/wallpaper/index.html",
+      "note": "Δειγματοληψία pixels στο πραγματικό πλαίσιο ώρας του Weather canvas, αυτόματη επιλογή ανοιχτού/σκούρου κειμένου και σκιάς· contrast ratio στο data-contrast."
     },
     {
       "id": 31,
@@ -544,10 +544,10 @@
     {
       "id": 54,
       "title": "Φίλτρο καρτέλας κατά τύπο, ημερομηνία ή ετικέτα.",
-      "status": "pending",
-      "status_el": "ΕΚΚΡΕΜΕΙ ΥΛΟΠΟΙΗΣΗ",
-      "evidence": "—",
-      "note": "Δεν έχει τεκμηριωθεί ολοκλήρωση στον παρόντα κύκλο"
+      "status": "new",
+      "status_el": "ΥΛΟΠΟΙΗΘΗΚΕ ΣΤΟΝ SOURCE · ΧΩΡΙΣ BUILD",
+      "evidence": "src/Containers/ContainerWindow.cs; src/Containers/ContainerWindow.Interaction.cs",
+      "note": "Φίλτρα φακέλων/εικόνων/εγγράφων/πρόσφατων/με ετικέτα σε context menu, χωρίς μετακίνηση ή διαγραφή αρχείων, με cached results."
     },
     {
       "id": 55,
@@ -592,10 +592,10 @@
     {
       "id": 60,
       "title": "Ένδειξη διαδρομής πριν από σύρσιμο μεταξύ τοπικού και δικτυακού φακέλου.",
-      "status": "pending",
-      "status_el": "ΕΚΚΡΕΜΕΙ ΥΛΟΠΟΙΗΣΗ",
-      "evidence": "—",
-      "note": "Δεν έχει τεκμηριωθεί ολοκλήρωση στον παρόντα κύκλο"
+      "status": "new",
+      "status_el": "ΥΛΟΠΟΙΗΘΗΚΕ ΣΤΟΝ SOURCE · ΧΩΡΙΣ BUILD",
+      "evidence": "src/Containers/ContainerWindow.Interaction.cs",
+      "note": "Επιβεβαίωση με πλήρη διαδρομή προέλευσης/στόχου όταν μεταφορά ή αντιγραφή περνά τοπικό↔δίκτυο (UNC και mapped drives)."
     },
     {
       "id": 61,
@@ -656,10 +656,10 @@
     {
       "id": 68,
       "title": "Ένδειξη ενεργού workspace δίπλα στο dock.",
-      "status": "pending",
-      "status_el": "ΕΚΚΡΕΜΕΙ ΥΛΟΠΟΙΗΣΗ",
-      "evidence": "—",
-      "note": "Δεν έχει τεκμηριωθεί ολοκλήρωση στον παρόντα κύκλο"
+      "status": "new",
+      "status_el": "ΥΛΟΠΟΙΗΘΗΚΕ ΣΤΟΝ SOURCE · ΧΩΡΙΣ BUILD",
+      "evidence": "src/Widgets/DeskStripWindow.cs; src/UI/MainWindow.cs",
+      "note": "Προαιρετικό badge ενεργού Windows virtual desktop δίπλα στα εικονίδια dock, με ζωντανή ενημέρωση."
     },
     {
       "id": 69,
@@ -720,10 +720,10 @@
     {
       "id": 76,
       "title": "Απεικόνιση τάσης θερμοκρασίας σε κυλιόμενο διάστημα.",
-      "status": "pending",
-      "status_el": "ΕΚΚΡΕΜΕΙ ΥΛΟΠΟΙΗΣΗ",
-      "evidence": "—",
-      "note": "Δεν έχει τεκμηριωθεί ολοκλήρωση στον παρόντα κύκλο"
+      "status": "new",
+      "status_el": "ΥΛΟΠΟΙΗΘΗΚΕ ΣΤΟΝ SOURCE · ΧΩΡΙΣ BUILD",
+      "evidence": "src/Widgets/WidgetEngine.cs",
+      "note": "Δεύτερη γραμμή ιστορικού GPU θερμοκρασίας σε 60 δείγματα ~2 λεπτών, με οπτική τάση και ένδειξη °C."
     },
     {
       "id": 77,
@@ -744,10 +744,10 @@
     {
       "id": 79,
       "title": "Προσωρινή απόκρυψη τίτλου τραγουδιού σε κοινή χρήση οθόνης.",
-      "status": "pending",
-      "status_el": "ΕΚΚΡΕΜΕΙ ΥΛΟΠΟΙΗΣΗ",
-      "evidence": "—",
-      "note": "Δεν έχει τεκμηριωθεί ολοκλήρωση στον παρόντα κύκλο"
+      "status": "new",
+      "status_el": "ΥΛΟΠΟΙΗΘΗΚΕ ΣΤΟΝ SOURCE · ΧΩΡΙΣ BUILD",
+      "evidence": "src/Music/MusicOverlaySettings.cs; src/Music/MusicOverlayPage.cs; src/Music/WallpaperMusicSurface.cs",
+      "note": "Ενεργοποιούμενη απόκρυψη τίτλου/καλλιτέχνη/album/cover στο wallpaper painter για παρουσιάσεις· επαναφορά με αποεπιλογή."
     },
     {
       "id": 80,
@@ -816,10 +816,10 @@
     {
       "id": 88,
       "title": "Αυτόματη επιλογή accent από το φόντο με προεπισκόπηση πριν από εφαρμογή.",
-      "status": "pending",
-      "status_el": "ΕΚΚΡΕΜΕΙ ΥΛΟΠΟΙΗΣΗ",
-      "evidence": "—",
-      "note": "Δεν έχει τεκμηριωθεί ολοκλήρωση στον παρόντα κύκλο"
+      "status": "new",
+      "status_el": "ΥΛΟΠΟΙΗΘΗΚΕ ΣΤΟΝ SOURCE · ΧΩΡΙΣ BUILD",
+      "evidence": "src/UI/MainWindow.Appearance.cs",
+      "note": "Δειγματοληψία χρώματος wallpaper με αυτόνομο παράθυρο προεπισκόπησης, πληροφορίες αντίθεσης και ρητή αποδοχή πριν από Windows accent αλλαγή."
     },
     {
       "id": 89,
@@ -919,5 +919,24 @@
     }
   ],
   "revision": "R5",
-  "last_changed_utc": "2026-11-23T12:45:00Z"
+  "last_changed_utc": "2026-11-23T12:45:00Z",
+  "checkpoint": "R6-S1",
+  "implementation_sessions": {
+    "completed": [
+      1
+    ],
+    "planned": 4,
+    "session1_ids": [
+      21,
+      23,
+      25,
+      30,
+      54,
+      60,
+      68,
+      76,
+      79,
+      88
+    ]
+  }
 }

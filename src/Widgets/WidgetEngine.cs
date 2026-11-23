@@ -1366,7 +1366,7 @@ namespace MotionDesk.Widgets
                 if (rows.GpuCount < 2) return;
                 rows.GpuIndex = ((rows.GpuIndex + step) % rows.GpuCount + rows.GpuCount) % rows.GpuCount;
                 try { var a = AppSettings.Load(); a.SystemMonitorGpuIndex = rows.GpuIndex; a.Save(); } catch { }
-                if (gpuMonitor.HasSample) { var s = gpuMonitor.GetSnapshot(rows.GpuIndex); rows.SetGpu(s.Available ? s.LoadPercent : null, s.Available ? (s.TemperatureC.HasValue ? $"{s.TemperatureC:0}°C" : "—") : LocalizationManager.T("WidgetText.GpuNA"), s.Available ? s.Name : null); }
+                if (gpuMonitor.HasSample) { var s = gpuMonitor.GetSnapshot(rows.GpuIndex); rows.SetGpu(s.Available ? s.LoadPercent : null, s.Available ? (s.TemperatureC.HasValue ? $"{s.TemperatureC:0}°C" : "—") : LocalizationManager.T("WidgetText.GpuNA"), s.Available ? s.Name : null, s.Available ? s.TemperatureC : null); }
             };
             panel.Controls.Add(rows);
             rows.BringToFront();
@@ -1385,7 +1385,7 @@ namespace MotionDesk.Widgets
                     rows.GpuCount = gpu.Count;
                     rows.SetGpu(gpu.Available ? gpu.LoadPercent : null,
                         gpu.Available ? $"{(gpu.TemperatureC.HasValue ? $"{gpu.TemperatureC:0}°C" : "—")}" : LocalizationManager.T("WidgetText.GpuNA"),
-                        gpu.Available ? gpu.Name : null);
+                        gpu.Available ? gpu.Name : null, gpu.Available ? gpu.TemperatureC : null);
                 }
                 else rows.SetGpu(null, LocalizationManager.T("WidgetText.GpuLoading"));
             }
@@ -2284,6 +2284,8 @@ namespace MotionDesk.Widgets
         private string _ramSub = "", _gpuSub = "";
         private double? _gpuPct;
         private readonly Series _cpuH = new(), _ramH = new(), _netH = new(), _gpuH = new();
+        private readonly Queue<double> _temperatureC = new();
+        private string _temperatureTrend = "";
 
         public SystemMonitorRowsControl()
         {
@@ -2304,7 +2306,21 @@ namespace MotionDesk.Widgets
         public int GpuIndex { get; set; }
         public int GpuCount { get; set; }
         public event Action<int>? GpuStep;
-        public void SetGpu(double? pct, string sub, string? name = null) { _gpuPct = pct; _gpuSub = sub; _gpuName = name; _gpuH.Push((pct ?? 0) / 100.0); Invalidate(); }
+        public void SetGpu(double? pct, string sub, string? name = null, double? temperatureC = null)
+        {
+            _gpuPct = pct; _gpuSub = sub; _gpuName = name;
+            _gpuH.Push((pct ?? 0) / 100.0);
+            if (temperatureC is >= -30 and <= 150)
+            {
+                _temperatureC.Enqueue(temperatureC.Value);
+                while (_temperatureC.Count > HistoryLength) _temperatureC.Dequeue();
+                double delta = temperatureC.Value - _temperatureC.Peek();
+                _temperatureTrend = _temperatureC.Count < 2 ? "" :
+                    delta >= 1 ? " ↑" : delta <= -1 ? " ↓" : " →";
+            }
+            else { _temperatureC.Clear(); _temperatureTrend = ""; }
+            Invalidate();
+        }
 
         protected override void OnMouseDown(MouseEventArgs e)
         {
@@ -2365,6 +2381,29 @@ namespace MotionDesk.Widgets
                     g.DrawString("▶", af, ab, _gpuNextRect, sf);
                 }
                 else if (i == 3) { _gpuPrevRect = _gpuNextRect = RectangleF.Empty; }
+                if (i == 3 && _temperatureC.Count > 1 && r.Width >= 94 && r.Height >= 42)
+                    DrawTemperatureLine(g, r);
+            }
+        }
+
+        // Render temperature independently of GPU-load history; finite 60-sample buffer.
+        private void DrawTemperatureLine(Graphics g, RectangleF tile)
+        {
+            var samples = _temperatureC.ToArray();
+            double lo = samples.Min(), hi = samples.Max();
+            double span = Math.Max(2, hi - lo);
+            float width = Math.Max(12, tile.Width - 36), height = Math.Min(13f, tile.Height * .18f);
+            var points = samples.Select((t, i) => new PointF(
+                tile.X + 16 + i * width / (samples.Length - 1),
+                tile.Bottom - 3 - height * (float)((t - lo) / span))).ToArray();
+            using var pen = new Pen(Color.FromArgb(245, 247, 171, 79), 1.8f);
+            g.DrawLines(pen, points);
+            if (tile.Height >= 68)
+            {
+                using var font = new Font("Segoe UI", 7f);
+                TextRenderer.DrawText(g, $"{samples[^1]:0}°C{_temperatureTrend}", font,
+                    Rectangle.Round(new RectangleF(tile.Right - 75, tile.Y + 1, 70, 16)), Color.FromArgb(245, 247, 171, 79),
+                    TextFormatFlags.Right | TextFormatFlags.EndEllipsis);
             }
         }
 

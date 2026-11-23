@@ -369,6 +369,7 @@ namespace MotionDesk.Containers
         {
             bool modeChanged = Model.Appearance.HoverRollUp != stored.Appearance.HoverRollUp;
             Model.Extra = stored.Extra;
+            _filteredInput = null;
             Model.Title = stored.Title;
             Model.Locked = stored.Locked;
             Model.ExcludeFromQuickHide = stored.ExcludeFromQuickHide;
@@ -449,7 +450,7 @@ namespace MotionDesk.Containers
             _ => TabsOn ? Model.Tabs[Math.Clamp(Model.CurrentTab, 0, Model.Tabs.Count - 1)].Items : Model.Items
         };
 
-        public List<ContainerItem> Items => Sorted(UnsortedItems);
+        public List<ContainerItem> Items => FilterItems(Sorted(UnsortedItems));
         private List<ContainerItem> UnsortedItems
         {
             get
@@ -487,7 +488,7 @@ namespace MotionDesk.Containers
             _organizationSmart = smart;
             if (!IsSmartFolder && !hadRoutes && !relevantRoutes) return;
             _organizationMerged.Clear();
-            _sortCache = null;
+            _sortCache = null; _filteredInput = null;
             _selected = Math.Min(_selected, Items.Count - 1);
             _hover = Math.Min(_hover, Items.Count - 1);
             if (AutoHeightOf(Model)) LayoutHeight();
@@ -532,7 +533,7 @@ namespace MotionDesk.Containers
                 string? previous = Items.ElementAtOrDefault(_selected)?.Path;
                 _portalItems.Clear();
                 _portalItems.AddRange(result.Items);
-                _sortCache = null;
+                _sortCache = null; _filteredInput = null;
                 if (!string.Equals(requested, result.Directory, StringComparison.OrdinalIgnoreCase)) _portalDirectory = result.Directory;
                 RestoreFocus(previous);
                 if (_watch == null || !string.Equals(_watch.Path, result.Directory, StringComparison.OrdinalIgnoreCase))
@@ -1127,6 +1128,19 @@ namespace MotionDesk.Containers
                 })
                     sort.DropDownItems.Add(new ToolStripMenuItem(title, null, (_, _) => ChooseSort(key)) { Checked = ItemSort == key });
                 menu.Items.Add(sort);
+                var filter = new ToolStripMenuItem(Local("Filter view", "Φιλτράρισμα προβολής"));
+                foreach (var (key, title) in new[]
+                {
+                    ("all", Local("Show all", "Όλα")),
+                    ("folders", Local("Folders", "Φάκελοι")),
+                    ("images", Local("Images", "Εικόνες")),
+                    ("documents", Local("Documents", "Έγγραφα")),
+                    ("recent", Local("Modified in last 7 days", "Τροποποίηση τελευταίων 7 ημερών")),
+                    ("tag", Local("Tagged (# in name)", "Ετικέτα (# στο όνομα"))
+                })
+                    filter.DropDownItems.Add(new ToolStripMenuItem(title, null, (_, _) => ChooseFilter(key))
+                    { Checked = ItemFilter == key });
+                menu.Items.Add(filter);
             }
             Add(LocalizationManager.T("DCM.RenameContainer"), RenameContainer);
             Add(MotionDesk.Services.LocalizationManager.T("DCM.ContainerSettings"), () => SettingsRequested?.Invoke(Model.Id));
@@ -1163,7 +1177,7 @@ namespace MotionDesk.Containers
             string Name(ContainerItem i) => string.IsNullOrEmpty(i.DisplayName) ? System.IO.Path.GetFileNameWithoutExtension(i.Path) : i.DisplayName;
             var sorted = (byType ? BaseItems.OrderByDescending(i => i.IsFolder).ThenBy(i => System.IO.Path.GetExtension(i.Path), StringComparer.OrdinalIgnoreCase).ThenBy(Name, StringComparer.CurrentCultureIgnoreCase)
                                  : BaseItems.OrderBy(Name, StringComparer.CurrentCultureIgnoreCase)).ToList();
-            BaseItems.Clear(); BaseItems.AddRange(sorted); _organizationMerged.Clear(); _sortCache = null; ClearSelection(); Dirty(); Changed?.Invoke(Model);
+            BaseItems.Clear(); BaseItems.AddRange(sorted); _organizationMerged.Clear(); _sortCache = null; _filteredInput = null; ClearSelection(); Dirty(); Changed?.Invoke(Model);
         }
 
         /// <summary>Removes the REFERENCE only; the file on disk is never touched.</summary>
@@ -1188,7 +1202,7 @@ namespace MotionDesk.Containers
             if (!CanEditItems) return;
             var at = ItemLayout.DropIndex(clientPoint, Items.Count, _scroll);
             var list = DropRules.Reorder(BaseItems, from, Math.Min(at, BaseItems.Count));
-            BaseItems.Clear(); BaseItems.AddRange(list); _organizationMerged.Clear(); _sortCache = null; ClearSelection(); Dirty(); Changed?.Invoke(Model);
+            BaseItems.Clear(); BaseItems.AddRange(list); _organizationMerged.Clear(); _sortCache = null; _filteredInput = null; ClearSelection(); Dirty(); Changed?.Invoke(Model);
         }
 
         /// <summary>Last drag events seen by any container (diagnostics for the real-input test).</summary>

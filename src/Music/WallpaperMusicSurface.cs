@@ -50,10 +50,11 @@ internal sealed class WallpaperMusicSurface : IDisposable
             }
 
             var track = snapshot?.Track;
-            bool sendCover = !ReferenceEquals(track?.Cover, coverSource);
+            var visibleCover = settings.HideTrackMetadata ? null : track?.Cover;
+            bool sendCover = !ReferenceEquals(visibleCover, coverSource);
             if (sendCover)
             {
-                coverSource = track?.Cover;
+                coverSource = visibleCover;
                 cover = AlbumCoverData(coverSource);
             }
             var elapsed = snapshot?.Timeline?.GetPosition(DateTimeOffset.UtcNow).TotalSeconds ?? 0;
@@ -62,7 +63,9 @@ internal sealed class WallpaperMusicSurface : IDisposable
                 x = settings.X, y = settings.Y,
                 width = settings.WidthPercent, height = settings.HeightPercent, colors = settings.Palette,
                 font = settings.Typeface, bars = settings.Preset == VisualPreset.MirrorBars,
-                title = track?.Title, artist = track?.Artist, album = track?.Album,
+                title = settings.HideTrackMetadata ? null : track?.Title,
+                artist = settings.HideTrackMetadata ? null : track?.Artist,
+                album = settings.HideTrackMetadata ? null : track?.Album,
                 duration = snapshot?.Timeline?.Duration.TotalSeconds ?? 0,
                 elapsed, bands, preview, frequency, waveform, preset = VisualPresets.ModeOf(settings.Preset),
                 updateCover = sendCover,

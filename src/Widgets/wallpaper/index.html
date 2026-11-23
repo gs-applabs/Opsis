@@ -678,6 +678,35 @@ function updateWeatherInfo() {
     box.style.top = (cfg.infoY ?? 34) + '%';
     box.style.setProperty('--s', ((cfg.infoScale ?? 100) / 100).toFixed(2));
     box.style.display = 'block';
+    // Sample the actual composited weather canvas at the current clock location.
+    // Browser/video fallback keeps the existing shadow (never read an unrelated frame).
+    if (isWeatherMode(cfg.mode) && canvas.style.display !== 'none') {
+        try {
+            const r = box.getBoundingClientRect();
+            let samples = 0, sum = 0;
+            const linear = value => { const s = value / 255; return s <= .04045 ? s / 12.92 : ((s + .055) / 1.055) ** 2.4; };
+            const canvasRect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / Math.max(1, canvasRect.width);
+            const scaleY = canvas.height / Math.max(1, canvasRect.height);
+            for (const ox of [-.25, 0, .25]) for (const oy of [-.18, 0, .18]) {
+                const x = Math.max(0, Math.min(canvas.width - 1,
+                    Math.round((r.left - canvasRect.left + r.width * (.5 + ox)) * scaleX)));
+                const y = Math.max(0, Math.min(canvas.height - 1,
+                    Math.round((r.top - canvasRect.top + r.height * (.5 + oy)) * scaleY)));
+                const data = ctx.getImageData(x, y, 1, 1).data;
+                sum += .2126 * linear(data[0]) + .7152 * linear(data[1]) + .0722 * linear(data[2]);
+                samples++;
+            }
+            const luminosity = sum / Math.max(samples, 1);
+            const whiteRatio = 1.05 / (luminosity + .05), blackRatio = (luminosity + .05) / .05;
+            const useWhite = whiteRatio >= blackRatio;
+            box.style.color = useWhite ? '#fff' : '#111';
+            box.style.textShadow = useWhite
+                ? '0 2px 18px rgba(0,0,0,.82),0 1px 3px #000'
+                : '0 2px 18px rgba(255,255,255,.82),0 1px 3px #fff';
+            box.dataset.contrast = Math.max(whiteRatio, blackRatio).toFixed(1);
+        } catch { /* canvas unavailable/tainted: preserve high-contrast default */ }
+    }
     // fade in once the temperature is known (or after 3.5 s without data) — no half-empty block that jumps when the data arrives
     box.style.opacity = (typeof i.temp === 'number' || performance.now() > 3500) ? '1' : '0';
 }
@@ -1008,7 +1037,7 @@ async function doRefresh() {
     if (window.WeatherWallpaper) {
         const wx = isWeatherMode(cfg.mode);
         if (wx) window.OpsisLandmarks?.setCities(cfg.cityScenes);   // οι προσομοιώσεις (καιρός/ώρα/άνεμος) ισχύουν μόνο στο Weather mode — τα υπόλοιπα modes δείχνουν την πραγματική ώρα/θερμοκρασία
-        WeatherWallpaper.setConfig({ realistic: wx, weatherSim: wx ? (cfg.weatherSim || 'Auto') : 'Auto', timeSim: wx ? (cfg.timeSim || 'Auto') : 'Auto', windSim: wx ? (cfg.windSim || 'Auto') : 'Auto', glass: cfg.weatherGlass !== false, rainGlassIntensity: cfg.rainGlassIntensity, rainLandscapeIntensity: cfg.rainLandscapeIntensity, landmarks: cfg.weatherLandmarks !== false, landmarkId: cfg.weatherLandmarkId || 'Auto', lat: cfg.weatherLat, lon: cfg.weatherLon });
+        WeatherWallpaper.setConfig({ realistic: wx, weatherSim: wx ? (cfg.weatherSim || 'Auto') : 'Auto', timeSim: wx ? (cfg.timeSim || 'Auto') : 'Auto', windSim: wx ? (cfg.windSim || 'Auto') : 'Auto', glass: cfg.weatherGlass !== false, rainGlassIntensity: cfg.rainGlassIntensity, rainLandscapeIntensity: cfg.rainLandscapeIntensity, photoFocusX: cfg.weatherPhotoFocusX, skylinePreview: cfg.weatherSkylinePreview === true, landmarks: cfg.weatherLandmarks !== false, landmarkId: cfg.weatherLandmarkId || 'Auto', lat: cfg.weatherLat, lon: cfg.weatherLon });
     }
     stopPolling();
     if (!isPaused && (isWeatherMode(cfg.mode) || cfg.weatherInfo))

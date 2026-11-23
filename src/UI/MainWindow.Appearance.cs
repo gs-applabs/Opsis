@@ -145,7 +145,44 @@ namespace MotionDesk.UI
             {
                 int? c = null; try { c = svc.Engine.WallpaperAccent(); } catch (Exception) { }
                 if (c == null) { MessageBox.Show(this, T("Win.NoWallpaperColor"), T("Nav.Personalization")); return; }
-                Do(() => svc.Engine.Apply(new Look { AccentRgb = c }));
+                // Roadmap #88: sample the wallpaper but do not change the Windows accent
+                // until the user has actually seen the colour and confirmed.
+                var sampled = Color.FromArgb(255, Color.FromArgb(c.Value));
+                var background = UiTheme.PageBackground;
+                var contrast = TextContrast.Ratio(sampled, background);
+                using var preview = new Form
+                {
+                    Text = MainWindow.StudioText("Accent from wallpaper — preview", "Accent από wallpaper — προεπισκόπηση"),
+                    Size = new Size(430, 300), FormBorderStyle = FormBorderStyle.FixedDialog,
+                    MaximizeBox = false, MinimizeBox = false, StartPosition = FormStartPosition.CenterParent,
+                    BackColor = UiTheme.PageBackground, ForeColor = UiTheme.TextPrimary
+                };
+                var sample = new Panel { Dock = DockStyle.Top, Height = 105, BackColor = sampled,
+                    Padding = new Padding(15) };
+                sample.Controls.Add(new Label { Dock = DockStyle.Fill,
+                    Text = $"#{sampled.R:X2}{sampled.G:X2}{sampled.B:X2}",
+                    Font = new Font("Segoe UI Semibold", 20f),
+                    TextAlign = ContentAlignment.MiddleCenter,
+                    ForeColor = TextContrast.Readable(Color.White, sampled) });
+                preview.Controls.Add(sample);
+                var details = new Label { Dock = DockStyle.Top, Height = 62,
+                    Text = MainWindow.StudioText($"Contrast with current background: {contrast:F1}:1",
+                        $"Αντίθεση με το ενεργό φόντο: {contrast:F1}:1"),
+                    TextAlign = ContentAlignment.MiddleCenter, ForeColor = UiTheme.TextPrimary };
+                preview.Controls.Add(details);
+                var buttons = new FlowLayoutPanel { Dock = DockStyle.Bottom, Height = 55,
+                    FlowDirection = FlowDirection.RightToLeft, Padding = new Padding(10) };
+                var apply = new Button { Text = MainWindow.StudioText("Apply", "Εφαρμογή"),
+                    Width = 112, Height = 30, DialogResult = DialogResult.OK };
+                var cancel = new Button { Text = MainWindow.StudioText("Cancel", "Άκυρο"),
+                    Width = 112, Height = 30, DialogResult = DialogResult.Cancel };
+                buttons.Controls.Add(apply); buttons.Controls.Add(cancel);
+                preview.Controls.Add(buttons);
+                preview.AcceptButton = apply; preview.CancelButton = cancel;
+                if (preview.ShowDialog(this) != DialogResult.OK) return;
+                int selected = c.Value;
+                // Preserves the existing backup/undo behaviour of the appearance engine.
+                Do(() => svc.Engine.Apply(new Look { AccentRgb = selected }));
             }, 190);
             ResetButton(theme, 0);
 

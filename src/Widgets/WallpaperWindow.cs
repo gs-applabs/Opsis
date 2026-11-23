@@ -206,6 +206,8 @@ namespace MotionDesk.Widgets
                 weatherGlass = settings.WeatherGlass,
                 rainLandscapeIntensity = Math.Clamp(settings.RainLandscapeIntensity, 0, 200) / 100.0,
                 rainGlassIntensity = Math.Clamp(settings.RainGlassIntensity, 0, 200) / 100.0,
+                weatherPhotoFocusX = Math.Clamp(settings.WeatherPhotoFocusX, 0, 100) / 100.0,
+                weatherSkylinePreview = settings.WeatherSkylinePreview,
                 weatherLandmarks = settings.WeatherLandmarks,
                 weatherLandmarkId = settings.WeatherLandmarkId,
                 cityScenes = WallpaperSettings.IsWeatherMode(effectiveMode) ? LandmarkCatalog.Scenes.Select(city => new
@@ -455,6 +457,8 @@ namespace MotionDesk.Widgets
         public bool WeatherGlass { get; set; } = true;   // raindrops on a window pane while it rains
         public int RainLandscapeIntensity { get; set; } = 100; // 0..200 percent, independent of actual weather data
         public int RainGlassIntensity { get; set; } = 100;     // 0..200 percent; 0 disables window droplets
+        public int WeatherPhotoFocusX { get; set; } = 50;     // 0..100, subject placement in portrait photo crop
+        public bool WeatherSkylinePreview { get; set; } = false; // temporary visualisation while adjusting a photo
         public string WeatherLandmarkId { get; set; } = "Auto";   // Auto (nearest to the weather location) | Off | a landmark id, independent of the location
         public bool WeatherLandmarks { get; set; } = true;   // the best-known landmark of the weather location on the horizon (landmarks.js)
 
@@ -1757,6 +1761,25 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Count);
                 if (settings.RainLandscapeIntensity == percent) return;
                 settings.RainLandscapeIntensity = percent;
             }
+            settings.Save();
+            _ = RefreshAllAsync();
+        }
+
+        public void SetWeatherSkylinePreview(bool enabled)
+        {
+            var settings = WallpaperSettings.Load();
+            if (settings.WeatherSkylinePreview == enabled) return;
+            settings.WeatherSkylinePreview = enabled;
+            settings.Save();
+            _ = RefreshAllAsync();
+        }
+
+        public void SetWeatherPhotoFocus(int percentage)
+        {
+            var settings = WallpaperSettings.Load();
+            percentage = Math.Clamp(percentage, 0, 100);
+            if (settings.WeatherPhotoFocusX == percentage) return;
+            settings.WeatherPhotoFocusX = percentage;
             settings.Save();
             _ = RefreshAllAsync();
         }

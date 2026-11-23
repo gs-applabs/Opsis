@@ -3,12 +3,15 @@
     const rgb = (channels, alpha = 1) => `rgba(${channels.map(value => Math.round(clamp(value, 0, 255))).join(',')},${clamp(alpha)})`;
 
     // Camera-style framing. Extra zoom on narrow displays covers the ground below the sky.
-    function photoBounds(width, height, horizon, imageWidth, imageHeight) {
+    function photoBounds(width, height, horizon, imageWidth, imageHeight, focusX = .5) {
         const coverage = height - horizon + height * .18;
         const zoom = Math.max(width / imageWidth, coverage / imageHeight);
         const photoWidth = Math.ceil(imageWidth * zoom);
         const photoHeight = Math.ceil(imageHeight * zoom);
-        return { x: Math.round((width - photoWidth) / 2), y: height - photoHeight, width: photoWidth, height: photoHeight };
+        // Portrait displays cut more from a landscape source: keep the user's subject visible.
+        // Clamp so the final canvas is always fully covered (no black bars).
+        const x = Math.round((width - photoWidth) * clamp(focusX));
+        return { x, y: height - photoHeight, width: photoWidth, height: photoHeight };
     }
 
     function photoGrade(ambient, glow, weather) {

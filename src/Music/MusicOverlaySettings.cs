@@ -33,6 +33,7 @@ internal sealed record MusicOverlaySettings(
     VisualPreset Preset = VisualPreset.Radial,
     string? Typeface = null,
     bool Enabled = false,
+    bool HideTrackMetadata = false, // privacy toggle during screen sharing; persists until restored
     int WidthPercent = 100,
     int HeightPercent = 100,
     string[]? RadialColors = null,

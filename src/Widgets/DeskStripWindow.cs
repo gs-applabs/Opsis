@@ -30,7 +30,8 @@ namespace MotionDesk.Widgets
         public bool OnlyLocalWindows { get; set; }
         public bool AllMonitors { get; set; }
         public bool HideOnFullscreen { get; set; } = true;
-        public bool ShowPreviews { get; set; } = true;         // προεπισκόπηση παραθύρου στο hover
+        public bool ShowPreviews { get; set; } = true;
+        public bool ShowWorkspaceLabel { get; set; } = false; // small live badge after the icons         // προεπισκόπηση παραθύρου στο hover
     }
 
     // "DeskStrip" — dock εφαρμογών του Opsis: καρφιτσωμένες + ΤΡΕΧΟΥΣΕΣ εφαρμογές με ένδειξη
@@ -58,6 +59,7 @@ namespace MotionDesk.Widgets
         private readonly DeskStripSettings _s;
         private readonly string? _screenOverride;
         private int _displayIconSize;
+        private string _workspaceLabel = "";
         internal event Action<DeskStripWindow>? SettingsChanged;
         private readonly List<Item> _items = new();
         private readonly Dictionary<string, string?> _lnkCache = new(StringComparer.OrdinalIgnoreCase);
@@ -120,7 +122,7 @@ namespace MotionDesk.Widgets
             _animTimer.Interval = Low ? 33 : 16;
             _animTimer.Tick += (_, _) => AnimateStep();
             _pollTimer = new System.Windows.Forms.Timer { Interval = Low ? 3500 : 1500 };
-            _pollTimer.Tick += (_, _) => PollTick();
+            _pollTimer.Tick += (_, _) => { PollTick(); UpdateWorkspaceLabel(); };
             _hideTimer.Tick += (_, _) => AutoHideTick();
             _hoverTimer.Tick += (_, _) => { _hoverTimer.Stop(); ShowPopupForHover(); };
 
@@ -128,6 +130,7 @@ namespace MotionDesk.Widgets
             _hiddenByAutoHide = _s.AutoHide;
             _displayIconSize = _s.IconSize;
             SyncItems();
+            UpdateWorkspaceLabel();
             ApplyLayout(animate: false);
             _pollTimer.Start();
             if (_s.AutoHide) _hideTimer.Start();
@@ -186,6 +189,7 @@ namespace MotionDesk.Widgets
                 _hiddenByAutoHide = false;
             }
             SyncItems();
+            UpdateWorkspaceLabel();
             ApplyLayout(animate);
             UpdateDockVisibility();
         }
@@ -391,7 +395,22 @@ namespace MotionDesk.Widgets
         private int SeparatorIndex() => _items.FindLastIndex(i => i.Pinned) + 1;      // πρώτο μη καρφιτσωμένο
         private bool HasSeparator => _items.Any(i => i.Pinned) && _items.Any(i => !i.Pinned);
 
-        private double AxisLength() => Pad * 2 + _items.Count * Cell + (HasSeparator ? Gap : 0);
+        private const int WorkspaceBadgeWidth = 112;
+        private double AxisLength() => Pad * 2 + _items.Count * Cell + (HasSeparator ? Gap : 0)
+            + (_s.ShowWorkspaceLabel ? WorkspaceBadgeWidth : 0);
+
+        private void UpdateWorkspaceLabel()
+        {
+            if (!_s.ShowWorkspaceLabel) { _workspaceLabel = ""; return; }
+            var current = VirtualWorkspaces.CurrentDesktop();
+            var ids = VirtualWorkspaces.DesktopIds();
+            var index = Array.IndexOf(ids, current);
+            string label = current == Guid.Empty ? "Workspace" :
+                VirtualWorkspaces.Name(current) ?? $"Desktop {(index >= 0 ? index + 1 : 1)}";
+            if (string.Equals(label, _workspaceLabel, StringComparison.Ordinal)) return;
+            _workspaceLabel = label;
+            if (IsHandleCreated && !IsDisposed) Invalidate();
+        }
         private double Thickness() => Pad + _s.IconSize * MaxScale + IndicatorSpace + Pad;
 
         private double CenterOf(int i)
@@ -638,6 +657,21 @@ namespace MotionDesk.Widgets
                         g.DrawString(it.Windows.Count.ToString(), cf, cb, rect);
                     }
                 }
+            }
+
+            if (_s.ShowWorkspaceLabel)
+            {
+                var badgeOrigin = (float)(Pad + _items.Count * Cell + (HasSeparator ? Gap : 0));
+                var rect = Vertical
+                    ? new Rectangle(3, (int)badgeOrigin + 4, Width - 6, WorkspaceBadgeWidth - 8)
+                    : new Rectangle((int)badgeOrigin + 4, 3, WorkspaceBadgeWidth - 8, Height - 6);
+                using var badgeFill = new SolidBrush(Color.FromArgb(glass ? 115 : 65, accent));
+                using var outline = MotionDesk.UI.UiTheme.RoundedPath(rect, 9);
+                g.FillPath(badgeFill, outline);
+                using var font = new Font("Segoe UI", Math.Max(8, _s.IconSize / 6f), FontStyle.Regular);
+                TextRenderer.DrawText(g, _workspaceLabel, font, rect, Color.White,
+                    TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter |
+                    TextFormatFlags.EndEllipsis | TextFormatFlags.SingleLine);
             }
 
             if (_dropIndex >= 0)   // δείκτης σημείου απόθεσης κατά το σύρσιμο

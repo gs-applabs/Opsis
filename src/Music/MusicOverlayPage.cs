@@ -4,6 +4,7 @@ internal sealed class MusicOverlayPage : TableLayoutPanel
 {
     private readonly Func<DesktopMusicController?> getController;
     private readonly CheckBox enabled;
+    private readonly CheckBox hideTrackMetadata;
     private readonly ComboBox presets;
     private readonly ComboBox typefaces;
     private readonly string[] fonts;
@@ -54,6 +55,16 @@ internal sealed class MusicOverlayPage : TableLayoutPanel
             Margin = new Padding(3, 0, 3, 15)
         };
         Add(enabled);
+        hideTrackMetadata = new CheckBox
+        {
+            Text = L("Απόκρυψη τίτλου, καλλιτέχνη και εξωφύλλου κατά την κοινή χρήση οθόνης",
+                "Hide song details and cover while sharing your screen"),
+            AutoSize = true,
+            Margin = new Padding(3, 0, 3, 10),
+            AccessibleDescription = L("Ενεργοποίησέ το πριν παρουσιάσεις την οθόνη. Επαναφορά με αποεπιλογή.",
+                "Enable before screen sharing and uncheck to reveal song details again.")
+        };
+        Add(hideTrackMetadata);
         Add(new Label
         {
             Text = L("Το visualizer σχεδιάζεται στο wallpaper όταν παίζει μουσική.",
@@ -155,6 +166,11 @@ internal sealed class MusicOverlayPage : TableLayoutPanel
             Margin = new Padding(3, 3, 3, 10)
         });
 
+        hideTrackMetadata.CheckedChanged += (_, _) =>
+        {
+            if (loading) return;
+            getController()?.SetTrackPrivacy(hideTrackMetadata.Checked);
+        };
         enabled.CheckedChanged += (_, _) =>
         {
             if (loading) return;
@@ -257,6 +273,8 @@ internal sealed class MusicOverlayPage : TableLayoutPanel
         {
             enabled.Enabled = settings != null;
             enabled.Checked = settings?.Enabled == true;
+            hideTrackMetadata.Enabled = settings != null;
+            hideTrackMetadata.Checked = settings?.HideTrackMetadata == true;
             presets.SelectedIndex = Math.Max(0, Array.FindIndex(VisualPresets.All, preset => preset.Preset == (settings?.Preset ?? VisualPreset.Radial)));
             typefaces.SelectedIndex = settings?.Typeface is { } font ? Array.IndexOf(fonts, font) + 1 : 0;
             presets.Enabled = settings != null;

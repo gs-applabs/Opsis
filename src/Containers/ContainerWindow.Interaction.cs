@@ -71,7 +71,7 @@ internal sealed partial class ContainerWindow
         if (removed.Length == 0) return;
         source.RemoveAll(item => requested.Contains(item.Path));
         _organizationMerged.Clear();
-        _sortCache = null;
+        _sortCache = null; _filteredInput = null;
         ClearSelection();
         if (restoreOriginal) foreach (var path in removed) ItemRemoved?.Invoke(path);
         _scroll = ItemLayout.ClampScroll(_scroll, Items.Count);
@@ -123,9 +123,41 @@ internal sealed partial class ContainerWindow
 
     private static readonly FileTransferJournal Transfers = new();
 
+    private static bool IsNetworkPath(string path)
+    {
+        if (path.StartsWith(@"\\", StringComparison.Ordinal)) return true;
+        try
+        {
+            var root = Path.GetPathRoot(Path.GetFullPath(path));
+            return !string.IsNullOrWhiteSpace(root) && new DriveInfo(root).DriveType == DriveType.Network;
+        }
+        catch (Exception ex) when (ex is IOException or ArgumentException or NotSupportedException or UnauthorizedAccessException)
+        { return false; }
+    }
+
     private async void TransferFiles(string[] paths, bool move)
     {
         if (!CanWritePortal || PortalDirectory is not { } folder) return;
+        // Network boundaries are intentional: show the actual source and destination
+        // BEFORE writing. Never resolve symlinks or touch an unc path just for a preview.
+        bool remoteTarget = IsNetworkPath(folder);
+        bool crossingBoundary = paths.Any(source => IsNetworkPath(source) != remoteTarget);
+        if (crossingBoundary)
+        {
+            string direction = move ? MainWindow.StudioText("Move", "Μετακίνηση") :
+                MainWindow.StudioText("Copy", "Αντιγραφή");
+            string shown = string.Join(Environment.NewLine, paths.Take(8));
+            if (paths.Length > 8) shown += Environment.NewLine + $"… +{paths.Length - 8}";
+            var prompt = direction + Environment.NewLine + Environment.NewLine +
+                MainWindow.StudioText("From:", "Από:") + Environment.NewLine + shown +
+                Environment.NewLine + Environment.NewLine +
+                MainWindow.StudioText("To:", "Προς:") + Environment.NewLine + Path.GetFullPath(folder) +
+                Environment.NewLine + Environment.NewLine +
+                MainWindow.StudioText("This crosses a local/network boundary. Continue?",
+                    "Η ενέργεια περνά μεταξύ τοπικού και δικτυακού δίσκου. Συνέχεια;");
+            if (MessageBox.Show(this, prompt, MainWindow.StudioText("Confirm paths", "Επιβεβαίωση διαδρομών"),
+                MessageBoxButtons.YesNo, MessageBoxIcon.Warning, MessageBoxDefaultButton.Button2) != DialogResult.Yes) return;
+        }
         var result = await Transfers.TransferAsync(paths, folder, move);
         if (IsDisposed) return;
         if (result.Warnings.Length > 0 || result.WithoutUndo > 0)
@@ -187,7 +219,7 @@ internal sealed partial class ContainerWindow
         if (plan.Effect != DropEffect.AddReference) return [];
         destination.InsertRange(plan.InsertAt, plan.Add);
         _organizationMerged.Clear();
-        _sortCache = null;
+        _sortCache = null; _filteredInput = null;
         var added = plan.Add.Select(item => item.Path).ToArray();
         ItemsAdded?.Invoke(added);
         _scroll = ItemLayout.ClampScroll(_scroll, Items.Count);
@@ -225,7 +257,7 @@ internal sealed partial class ContainerWindow
         if (Model.Kind == ContainerKind.Note) return;
         string? focused = Items.ElementAtOrDefault(_selected)?.Path;
         (Model.Extra ??= new())[SortKey] = System.Text.Json.JsonSerializer.SerializeToElement(order);
-        _sortCache = null;
+        _sortCache = null; _filteredInput = null;
         RestoreFocus(focused);
         Dirty();
         Changed?.Invoke(Model);
@@ -250,6 +282,55 @@ internal sealed partial class ContainerWindow
             _sortCache = (order.EndsWith("-desc", StringComparison.Ordinal) ? ordered.Reverse() : ordered).ToList();
         }
         return _sortCache;
+    }
+
+    // A display-only filter: it never removes items from the underlying container or portal.
+    // The cached snapshot avoids filesystem I/O on the render/animation hot path.
+    private const string FilterKey = "opsisContainerViewFilter";
+    private string ItemFilter => Model.Extra?.TryGetValue(FilterKey, out var value) == true &&
+        value.ValueKind == System.Text.Json.JsonValueKind.String ? value.GetString() ?? "all" : "all";
+    private List<ContainerItem>? _filteredInput, _filteredItems;
+    private int _filterCount;
+    private string? _cachedFilter;
+
+    private void ChooseFilter(string mode)
+    {
+        (Model.Extra ??= new())[FilterKey] = System.Text.Json.JsonSerializer.SerializeToElement(mode);
+        _filteredInput = _filteredItems = null;
+        _filterCount = 0;
+        _scroll = 0;
+        ClearSelection(); Dirty(); Changed?.Invoke(Model);
+    }
+
+    private List<ContainerItem> FilterItems(List<ContainerItem> source)
+    {
+        var mode = ItemFilter;
+        if (mode == "all") return source;
+        if (ReferenceEquals(source, _filteredInput) && _filterCount == source.Count &&
+            mode == _cachedFilter && _filteredItems != null) return _filteredItems;
+        _filteredInput = source;
+        _filterCount = source.Count;
+        _cachedFilter = mode;
+        var cutoff = DateTime.UtcNow.AddDays(-7);
+        _filteredItems = source.Where(item => mode switch
+        {
+            "folders" => item.IsFolder,
+            "images" => !item.IsFolder && new[] { ".png", ".jpg", ".jpeg", ".webp", ".gif", ".bmp" }
+                .Contains(Path.GetExtension(item.Path), StringComparer.OrdinalIgnoreCase),
+            "documents" => !item.IsFolder && new[] { ".pdf", ".doc", ".docx", ".txt", ".odt", ".rtf", ".xls", ".xlsx" }
+                .Contains(Path.GetExtension(item.Path), StringComparer.OrdinalIgnoreCase),
+            "tag" => (item.DisplayName ?? Path.GetFileName(item.Path)).Contains('#'),
+            "recent" => SafeRecentlyModified(item.Path, cutoff),
+            _ => true
+        }).ToList();
+        return _filteredItems;
+    }
+
+    private static bool SafeRecentlyModified(string path, DateTime cutoff)
+    {
+        try { return (File.Exists(path) ? File.GetLastWriteTimeUtc(path) :
+            Directory.Exists(path) ? Directory.GetLastWriteTimeUtc(path) : DateTime.MinValue) >= cutoff; }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { return false; }
     }
 
     private void SelectAllItems()
