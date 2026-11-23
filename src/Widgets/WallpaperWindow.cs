@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
@@ -204,6 +204,8 @@ namespace MotionDesk.Widgets
                 weatherSim = settings.WeatherSimulation,
                 timeSim = settings.TimeSimulation,
                 weatherGlass = settings.WeatherGlass,
+                rainLandscapeIntensity = Math.Clamp(settings.RainLandscapeIntensity, 0, 200) / 100.0,
+                rainGlassIntensity = Math.Clamp(settings.RainGlassIntensity, 0, 200) / 100.0,
                 weatherLandmarks = settings.WeatherLandmarks,
                 weatherLandmarkId = settings.WeatherLandmarkId,
                 cityScenes = WallpaperSettings.IsWeatherMode(effectiveMode) ? LandmarkCatalog.Scenes.Select(city => new
@@ -451,6 +453,8 @@ namespace MotionDesk.Widgets
         // "Auto" = live wind. Otherwise Calm|LightBreeze|FreshBreeze|Strong|Gale (Beaufort 1/3/5/7/9) — drives waves and cloud speed
         public string WindSimulation { get; set; } = "Auto";
         public bool WeatherGlass { get; set; } = true;   // raindrops on a window pane while it rains
+        public int RainLandscapeIntensity { get; set; } = 100; // 0..200 percent, independent of actual weather data
+        public int RainGlassIntensity { get; set; } = 100;     // 0..200 percent; 0 disables window droplets
         public string WeatherLandmarkId { get; set; } = "Auto";   // Auto (nearest to the weather location) | Off | a landmark id, independent of the location
         public bool WeatherLandmarks { get; set; } = true;   // the best-known landmark of the weather location on the horizon (landmarks.js)
 
@@ -1735,6 +1739,24 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Count);
         {
             var settings = WallpaperSettings.Load();
             settings.InfoFont = family;
+            settings.Save();
+            _ = RefreshAllAsync();
+        }
+
+        public void SetRainIntensity(bool glass, int percent)
+        {
+            var settings = WallpaperSettings.Load();
+            percent = Math.Clamp(percent, 0, 200);
+            if (glass)
+            {
+                if (settings.RainGlassIntensity == percent) return;
+                settings.RainGlassIntensity = percent;
+            }
+            else
+            {
+                if (settings.RainLandscapeIntensity == percent) return;
+                settings.RainLandscapeIntensity = percent;
+            }
             settings.Save();
             _ = RefreshAllAsync();
         }

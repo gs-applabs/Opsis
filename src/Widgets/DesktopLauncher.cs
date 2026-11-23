@@ -81,6 +81,27 @@ internal sealed class DesktopLauncher : Form
             layout.Controls.Add(shortcuts, 0, 2);
         }
         Controls.Add(layout);
+        // Quick Look from the launcher: F3/Space shows file contents without executing a handler.
+        // Files with reparse points or larger than 64 MiB are not previewed.
+        int nextRow = layout.RowCount;
+        layout.RowCount++;
+        layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        var preview = new Button
+        {
+            Text = MainWindow.StudioText("Preview selected file (F3)", "Προεπισκόπηση αρχείου (F3)"),
+            Dock = DockStyle.Fill, Height = 32, AccessibleName = "Preview selected file"
+        };
+        preview.Click += (_, _) => PreviewSelection();
+        var launcherTools = new FlowLayoutPanel { Dock = DockStyle.Fill, AutoSize = true, WrapContents = true };
+        launcherTools.Controls.Add(preview);
+        var conflicts = new Button
+        {
+            Text = MainWindow.StudioText("Shortcut conflicts", "Συγκρούσεις συντομεύσεων"),
+            AutoSize = true
+        };
+        conflicts.Click += (_, _) => HotkeyDiagnosticDialog.Open(this);
+        launcherTools.Controls.Add(conflicts);
+        layout.Controls.Add(launcherTools, 0, nextRow);
         _query.TextChanged += (_, _) => Filter();
         _results.DoubleClick += (_, _) => LaunchSelection();
         KeyDown += (_, e) =>
@@ -89,6 +110,7 @@ internal sealed class DesktopLauncher : Form
             {
                 case Keys.Escape: Close(); break;
                 case Keys.Enter: LaunchSelection(); break;
+                case Keys.F3: PreviewSelection(); break;
                 case Keys.Up when _results.Items.Count > 0: _results.SelectedIndex = Math.Max(0, _results.SelectedIndex - 1); break;
                 case Keys.Down when _results.Items.Count > 0: _results.SelectedIndex = Math.Min(_results.Items.Count - 1, _results.SelectedIndex + 1); break;
                 default: return;
@@ -157,6 +179,19 @@ internal sealed class DesktopLauncher : Form
     }
 
     internal static int Score(string label, string term) => SearchLanguage.Score(label, term);
+
+    private void PreviewSelection()
+    {
+        if (_results.SelectedItem is not Entry item || item.Window != IntPtr.Zero) return;
+        try
+        {
+            if (!Path.IsPathFullyQualified(item.Target) || !File.Exists(item.Target)) return;
+            var file = new FileInfo(item.Target);
+            if ((file.Attributes & FileAttributes.ReparsePoint) != 0 || file.Length > 64L * 1024 * 1024) return;
+            QuickLookPreview.Show(item.Target);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException) { }
+    }
 
     private void LaunchSelection()
     {

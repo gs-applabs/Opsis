@@ -348,7 +348,12 @@ namespace MotionDesk.Widgets
             using var owner = new Form { TopMost = true, ShowInTaskbar = false, FormBorderStyle = FormBorderStyle.None, Opacity = 0, Size = new System.Drawing.Size(1, 1), StartPosition = FormStartPosition.CenterScreen };
             owner.Show();
             PluginHost.Instance.ResolvePending(req => MessageBox.Show(owner,
-                string.Format(LocalizationManager.T("Plugin.TrustBody"), req.Name, req.Folder, req.Sha256.Substring(0, 16)),
+                string.Format(LocalizationManager.T("Plugin.TrustBody"), req.Name, req.Folder, req.Sha256.Substring(0, 16))
+                + Environment.NewLine + Environment.NewLine
+                + "Publisher / Εκδότης: " + req.Publisher
+                + Environment.NewLine + "Signature / Υπογραφή: " + req.SignatureStatus
+                + Environment.NewLine + Environment.NewLine
+                + "⚠ In-process plugins are not sandboxed. / Τα DLL plugins εκτελούνται χωρίς sandbox.",
                 LocalizationManager.T("Plugin.TrustTitle"), MessageBoxButtons.YesNo, MessageBoxIcon.Warning, MessageBoxDefaultButton.Button2) == DialogResult.Yes);
             UpdatePluginApprovalItem();
         }

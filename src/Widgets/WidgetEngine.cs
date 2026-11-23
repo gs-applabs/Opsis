@@ -65,7 +65,7 @@ namespace MotionDesk.Widgets
 
         public void StartDrag()
         {
-            if (!_window.IsLocked) _window.BeginNativeDrag();
+            if (_window.CanMove) _window.BeginNativeDrag();
         }
 
         public bool ToggleLock()
@@ -228,13 +228,16 @@ namespace MotionDesk.Widgets
         private int _timerBaseMs;
         private PerfFeature _timerFeature = PerfFeature.Widgets;
         private bool _perfHooked;
+        public int RefreshPercent { get; private set; } = 100;
+        private int EffectiveMonitorInterval() => Math.Clamp(
+            (int)(PerformanceProfile.Interval(_timerFeature, _timerBaseMs) * RefreshPercent / 100.0), 250, 3600000);
 
         // The refresh timer of a widget follows the performance profile: slower on weaker tiers and while the machine is under pressure (dynamic scaling).
         private System.Windows.Forms.Timer MonitorTimer(int baseMs, PerfFeature feature = PerfFeature.Widgets)
         {
             _timerBaseMs = baseMs; _timerFeature = feature;
             if (!_perfHooked) { _perfHooked = true; PerformanceGovernor.EffectiveChanged += OnPerfChanged; }
-            return new System.Windows.Forms.Timer { Interval = PerformanceProfile.Interval(feature, baseMs) };
+            return new System.Windows.Forms.Timer { Interval = EffectiveMonitorInterval() };
         }
 
         private void OnPerfChanged(HardwareTier _)
@@ -242,12 +245,13 @@ namespace MotionDesk.Widgets
             try
             {
                 if (IsDisposed || !IsHandleCreated) return;
-                BeginInvoke(new Action(() => { if (_nativeMonitorTimer != null && _timerBaseMs > 0) _nativeMonitorTimer.Interval = PerformanceProfile.Interval(_timerFeature, _timerBaseMs); }));
+                BeginInvoke(new Action(() => { if (_nativeMonitorTimer != null && _timerBaseMs > 0) _nativeMonitorTimer.Interval = EffectiveMonitorInterval(); }));
             }
             catch (Exception) { }
         }
         public string WidgetId { get; }
         public bool IsLocked { get; set; } = false;
+        internal bool CanMove => !IsLocked || WidgetHostEngine.Instance.TemporarilyUnlocked;
         public string Variant { get; set; } = "Digital";
         public bool Clock24Hour { get; set; } = true;
         public bool ClockShowSeconds { get; set; } = true;
@@ -405,7 +409,7 @@ namespace MotionDesk.Widgets
 
         protected override void WndProc(ref Message m)
         {
-            if (m.Msg == WM_MOVING && !IsLocked)
+            if (m.Msg == WM_MOVING && CanMove)
             {
                 RECT rect = Marshal.PtrToStructure<RECT>(m.LParam);
                 WidgetSnapEngine.ApplySnap(this, ref rect, WidgetHostEngine.Instance.GetActiveWidgets());
@@ -434,6 +438,7 @@ namespace MotionDesk.Widgets
                     Clock24Hour = Clock24Hour, ClockShowSeconds = ClockShowSeconds, AudioStyle = AudioStyle,
                     Opacity = _backgroundOpacity, NetworkStyle = NetworkStyle,
                     CustomTintArgb = _customTintArgb, CustomRadius = _customRadius,
+                    RefreshPercent = RefreshPercent,
                     AnalogTheme = AnalogTheme, DigitalFontFamily = DigitalFontFamily, DigitalColorArgb = DigitalColorArgb
                 };
                 MotionDesk.Services.AtomicFile.WriteAllText(configPath, JsonSerializer.Serialize(state));
@@ -454,6 +459,7 @@ namespace MotionDesk.Widgets
                         if (state.Width > 120 && state.Height > 80) Size = new Size(Math.Clamp(state.Width, 160, 1200), Math.Clamp(state.Height, 100, 900));
                         Location = ClampToAvailableScreen(new Point(state.X, state.Y));
                         IsLocked = state.IsLocked;
+                        RefreshPercent = state.RefreshPercent is >= 25 and <= 400 ? state.RefreshPercent : 100;
                         Variant = string.IsNullOrWhiteSpace(state.Variant) ? "Digital" : state.Variant;
                         Latitude = state.Latitude;
                         Longitude = state.Longitude;
@@ -670,6 +676,23 @@ namespace MotionDesk.Widgets
             }
             menu.Items.Add(opacityMenu);
 
+            if (_nativeMonitorTimer != null && _timerBaseMs > 0)
+            {
+                var refreshMenu = new ToolStripMenuItem(MainWindow.StudioText("Update frequency", "Συχνότητα ενημέρωσης"));
+                foreach (int percent in new[] { 25, 50, 100, 200, 400 })
+                {
+                    var item = new ToolStripMenuItem($"{percent}%") { Checked = RefreshPercent == percent };
+                    item.Click += (_, _) =>
+                    {
+                        RefreshPercent = percent;
+                        _nativeMonitorTimer.Interval = EffectiveMonitorInterval();
+                        SaveWidgetState();
+                    };
+                    refreshMenu.DropDownItems.Add(item);
+                }
+                menu.Items.Add(refreshMenu);
+            }
+
             if (_themedPanel != null)
             {
                 var style = new ToolStripMenuItem(MainWindow.StudioText("Widget appearance", "Εμφάνιση widget"));
@@ -813,7 +836,7 @@ namespace MotionDesk.Widgets
             _titleLabelRef = titleLabel;
             titleLabel.MouseDown += (_, e) =>
             {
-                if (e.Button == MouseButtons.Left && !IsLocked) BeginNativeDrag();
+                if (e.Button == MouseButtons.Left && CanMove) BeginNativeDrag();
                 else if (e.Button == MouseButtons.Right) ShowWidgetMenu(titleLabel);
             };
 
@@ -822,7 +845,7 @@ namespace MotionDesk.Widgets
             titleBar.Controls.Add(closeLabel);
             titleBar.Controls.Add(menuLabel);
 
-            panel.MouseDown += (_, e) => { if (e.Button == MouseButtons.Left && !IsLocked) BeginNativeDrag(); };
+            panel.MouseDown += (_, e) => { if (e.Button == MouseButtons.Left && CanMove) BeginNativeDrag(); };
             values = new GlassLabel { Dock = DockStyle.Top, Height = 52, TextAlign = ContentAlignment.MiddleLeft, Font = new Font("Segoe UI", 10.5f), ForeColor = UiTheme.TextPrimary, BackColor = Color.Transparent };
             var valuesRef = values;
             panel.Controls.Add(values); panel.Controls.Add(titleBar);
@@ -844,7 +867,7 @@ namespace MotionDesk.Widgets
                 Anchor = AnchorStyles.Bottom | AnchorStyles.Right,
                 Location = new Point(Width - 16, Height - 16)
             };
-            resizeGrip.MouseDown += (_, e) => { if (e.Button == MouseButtons.Left && !IsLocked) BeginNativeResize(); };
+            resizeGrip.MouseDown += (_, e) => { if (e.Button == MouseButtons.Left && CanMove) BeginNativeResize(); };
             Controls.Add(resizeGrip);
             resizeGrip.BringToFront();
 
@@ -2486,6 +2509,7 @@ namespace MotionDesk.Widgets
         public int Width { get; set; }
         public int Height { get; set; }
         public bool IsLocked { get; set; }
+        public int RefreshPercent { get; set; } = 100;
 
         // Clock: "Digital" | "Analog".
         public string Variant { get; set; } = "Digital";
@@ -2528,6 +2552,18 @@ namespace MotionDesk.Widgets
         public static WidgetHostEngine Instance => _instance ??= new WidgetHostEngine();
 
         private readonly List<WidgetWindow> _activeWidgets = new();
+        private DateTime _temporaryUnlockUntilUtc;
+        public bool TemporarilyUnlocked => DateTime.UtcNow < _temporaryUnlockUntilUtc;
+        public TimeSpan RemainingTemporaryUnlock => _temporaryUnlockUntilUtc > DateTime.UtcNow
+            ? _temporaryUnlockUntilUtc - DateTime.UtcNow : TimeSpan.Zero;
+
+        /// <summary>Temporarily ignores the drag lock, retaining every widget's persisted IsLocked bit.</summary>
+        public void UnlockTemporarily(TimeSpan duration)
+        {
+            if (duration <= TimeSpan.Zero) { _temporaryUnlockUntilUtc = DateTime.MinValue; return; }
+            _temporaryUnlockUntilUtc = DateTime.UtcNow + TimeSpan.FromSeconds(Math.Clamp(duration.TotalSeconds, 5, 600));
+        }
+
         public IReadOnlyCollection<WidgetWindow> GetActiveWidgets() => _activeWidgets;
 
         public IReadOnlyList<WidgetSnapshot> GetSnapshots() => _activeWidgets

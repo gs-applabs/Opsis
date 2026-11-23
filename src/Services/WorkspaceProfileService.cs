@@ -20,6 +20,8 @@ public sealed class WallpaperSettingsSnapshot
 
 public static class WorkspaceProfileService
 {
+    /// <summary>Raised only after the full transaction (including widgets and wallpaper) succeeded.</summary>
+    public static event Action<string>? ProfileActivated;
     private static string Root => Path.Combine(AppPaths.AppDataFolder, "profiles");
 
     public static IReadOnlyList<string> ListProfiles()
@@ -126,6 +128,9 @@ public static class WorkspaceProfileService
             WallpaperHostEngine.Instance.SetPerformanceMode(wallpaper.PerformanceMode);
             if (profile.Wallpaper.Enabled) WallpaperHostEngine.Instance.Enable();
             else WallpaperHostEngine.Instance.Disable();
+            UiResourceAudit.Mark("profile-activated", name);
+            try { ProfileActivated?.Invoke(name); }
+            catch (Exception ex) { AttachLog.Write("Profile accessibility announcement failed: " + ex.GetType().Name); }
             return true;
         }
         catch (Exception ex)

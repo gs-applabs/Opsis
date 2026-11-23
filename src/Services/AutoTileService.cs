@@ -7,6 +7,66 @@ internal static class AutoTileService
 {
     private static System.Windows.Forms.Timer? _timer;
     private static readonly Dictionary<string, string> Previous = new(StringComparer.OrdinalIgnoreCase);
+    private static Dictionary<IntPtr, Rectangle>? _undoManual;
+
+    internal sealed record TilePreview(string Title, IntPtr Window, Rectangle Before, Rectangle After, string Monitor);
+
+    private static bool IsTilingCandidate(IntPtr hwnd)
+    {
+        if (!IsWindow(hwnd) || IsIconic(hwnd) || IsZoomed(hwnd)) return false;
+        long style = GetWindowLongPtr(hwnd, -16).ToInt64();
+        long extended = GetWindowLongPtr(hwnd, -20).ToInt64();
+        // Never resize menus, transient popups, fixed dialog boxes or tool palettes.
+        return (style & 0x00040000L) != 0 && (style & 0x40000000L) == 0 &&
+            (extended & (0x00000080L | 0x00000001L)) == 0;
+    }
+
+    internal static IReadOnlyList<TilePreview> Preview()
+    {
+        var settings = AppSettings.Peek();
+        var exclusions = new HashSet<string>(settings.ZoneExcludedApps, StringComparer.OrdinalIgnoreCase);
+        var windows = WinApi.EnumerateAppWindows().Where(window =>
+            !string.Equals(window.ExePath, Environment.ProcessPath, StringComparison.OrdinalIgnoreCase) &&
+            !exclusions.Contains(Path.GetFileNameWithoutExtension(window.ExePath)) &&
+            IsTilingCandidate(window.Handle)).ToArray();
+        var result = new List<TilePreview>();
+        foreach (var screen in Screen.AllScreens)
+        {
+            if (AppActivity.IsFullscreenOn(screen)) continue;
+            var area = DesktopToolbar.WorkAreaForTiling(screen);
+            var selected = windows.Where(window => Screen.FromHandle(window.Handle).DeviceName == screen.DeviceName)
+                .OrderBy(window => window.Handle.ToInt64()).Take(12).ToArray();
+            var slots = AutoTileLayout.Arrange(area, selected.Length, settings.AutoTileMode, settings.AutoTileGap);
+            for (int i = 0; i < slots.Length; i++)
+            {
+                if (!GetWindowRect(selected[i].Handle, out var original)) continue;
+                result.Add(new TilePreview(selected[i].Title, selected[i].Handle,
+                    Rectangle.FromLTRB(original.Left, original.Top, original.Right, original.Bottom),
+                    slots[i], screen.DeviceName));
+            }
+        }
+        return result;
+    }
+
+    /// <summary>Restore the original rectangles of the last manual tile action.</summary>
+    internal static bool UndoLastManual()
+    {
+        if (_undoManual is not { Count: > 0 } undo) return false;
+        _undoManual = null;
+        // Disable the automatic 1.3-second enforcement: otherwise the undo is immediately undone.
+        var settings = AppSettings.Load();
+        if (settings.AutoTileEnabled)
+        {
+            settings.AutoTileEnabled = false; settings.Save(); RefreshSettings();
+        }
+        bool restored = false;
+        foreach (var (hwnd, rectangle) in undo)
+            if (IsWindow(hwnd) && rectangle.Width >= 1 && rectangle.Height >= 1)
+                restored |= SetWindowPos(hwnd, IntPtr.Zero, rectangle.X, rectangle.Y, rectangle.Width, rectangle.Height,
+                    0x0010 | 0x0004 | 0x0200 | 0x4000);
+        Previous.Clear();
+        return restored;
+    }
 
     internal static void RefreshSettings()
     {
@@ -28,13 +88,18 @@ internal static class AutoTileService
 
     internal static void Apply(bool force = false)
     {
+        if (force)
+        {
+            // One undo stack per explicit user action; automatic tiling is never stacked.
+            _undoManual = Preview().GroupBy(x => x.Window).ToDictionary(g => g.Key, g => g.First().Before);
+        }
         var settings = AppSettings.Peek();
         var exclusions = new HashSet<string>(settings.ZoneExcludedApps, StringComparer.OrdinalIgnoreCase);
         var monitors = Screen.AllScreens;
         var windows = WinApi.EnumerateAppWindows().Where(window =>
             !string.Equals(window.ExePath, Environment.ProcessPath, StringComparison.OrdinalIgnoreCase) &&
             !exclusions.Contains(Path.GetFileNameWithoutExtension(window.ExePath)) &&
-            !IsIconic(window.Handle) && !IsZoomed(window.Handle)).ToArray();
+            IsTilingCandidate(window.Handle)).ToArray();
         foreach (var screen in monitors)
         {
             if (AppActivity.IsFullscreenOn(screen)) { Previous.Remove(screen.DeviceName); continue; }
@@ -55,6 +120,11 @@ internal static class AutoTileService
             Previous.Remove(removed);
     }
 
+    [DllImport("user32.dll")] private static extern bool IsWindow(IntPtr hwnd);
+    [DllImport("user32.dll", EntryPoint = "GetWindowLongPtrW")] private static extern IntPtr GetWindowLongPtr(IntPtr hwnd, int index);
+    [StructLayout(LayoutKind.Sequential)]
+    private struct RECT { public int Left, Top, Right, Bottom; }
+    [DllImport("user32.dll")] private static extern bool GetWindowRect(IntPtr hwnd, out RECT bounds);
     [DllImport("user32.dll")] private static extern bool IsIconic(IntPtr hwnd);
     [DllImport("user32.dll")] private static extern bool IsZoomed(IntPtr hwnd);
     [DllImport("user32.dll")] private static extern bool SetWindowPos(IntPtr hwnd, IntPtr after, int x, int y, int w, int h, uint flags);

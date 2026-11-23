@@ -505,7 +505,8 @@ namespace MotionDesk.Containers
         /// <summary>Reads a bounded folder listing off the UI thread and ignores results for a previous folder.</summary>
         public async void RefreshPortal()
         {
-            if (Model.Kind != ContainerKind.Portal) return;
+            // #53: a hidden folder container must not watch or enumerate disk contents.
+            if (Model.Kind != ContainerKind.Portal || !Visible) return;
             int revision = ++_portalRefreshRevision;
             string? requested = PortalDirectory;
             string? root = Model.Source;
@@ -545,13 +546,13 @@ namespace MotionDesk.Containers
                         {
                             try
                             {
-                                if (IsHandleCreated && !IsDisposed)
-                                    BeginInvoke(() => { if (!IsDisposed) { _portalTimer.Stop(); _portalTimer.Start(); } });
+                                if (Visible && IsHandleCreated && !IsDisposed)
+                                    BeginInvoke(() => { if (Visible && !IsDisposed) { _portalTimer.Stop(); _portalTimer.Start(); } });
                             }
                             catch (InvalidOperationException) { }
                         }
                         _watch.Created += Kick; _watch.Deleted += Kick; _watch.Renamed += Kick; _watch.Error += Kick;
-                        _watch.EnableRaisingEvents = true;
+                        _watch.EnableRaisingEvents = Visible;
                     }
                 }
             }
@@ -644,6 +645,18 @@ namespace MotionDesk.Containers
             base.OnVisibleChanged(e);
             UpdateAutoHideTimer();
             if (Visible) UpdateAutoHide();
+            if (Model.Kind == ContainerKind.Portal)
+            {
+                if (_watch != null) _watch.EnableRaisingEvents = Visible;
+                if (Visible) RefreshPortal();
+                else { _portalRefreshRevision++; _portalTimer.Stop(); }
+            }
+            if (Model.Kind == ContainerKind.Portal)
+            {
+                if (_watch != null) _watch.EnableRaisingEvents = Visible;
+                if (Visible) RefreshPortal();
+                else { _portalRefreshRevision++; _portalTimer.Stop(); }
+            }
             if (Visible) Dirty(); else _repaint.Stop();
         }
         protected override void OnSizeChanged(EventArgs e) { base.OnSizeChanged(e); if (!IsCollapsed) _scroll = ItemLayout.ClampScroll(_scroll, Items.Count); Dirty(); }
@@ -801,7 +814,29 @@ namespace MotionDesk.Containers
         private readonly ContainerHoverDelay _hoverDelay = new();
         private Rectangle _expandedBounds;
         private bool _autoCollapsed, _waitForPointerExit, _dropActive;
+        private bool _expandedForExternalDrop;
         private int _menuInteractions;
+
+        // #56: expand a collapsed container only while it is a valid drop target.
+        // Do not persist the temporary roll-up state into the model.
+        private void ExpandForDrop()
+        {
+            if (_expandedForExternalDrop || !IsCollapsed) return;
+            _expandedForExternalDrop = true;
+            if (Model.Appearance.HoverRollUp) _autoCollapsed = false;
+            else Model.RolledUp = false;
+            _hoverDelay.Reset();
+            LayoutHeight();
+        }
+
+        private void EndDropExpansion()
+        {
+            if (!_expandedForExternalDrop) return;
+            _expandedForExternalDrop = false;
+            if (Model.Appearance.HoverRollUp) _autoCollapsed = true;
+            else Model.RolledUp = true;
+            LayoutHeight();
+        }
 
         internal bool IsCollapsed => Model.Appearance.HoverRollUp ? _autoCollapsed : Model.RolledUp;
 
@@ -1158,18 +1193,30 @@ namespace MotionDesk.Containers
 
         /// <summary>Last drag events seen by any container (diagnostics for the real-input test).</summary>
         public static readonly List<string> DragLog = new();
-        protected override void OnDragEnter(DragEventArgs e) { base.OnDragEnter(e); _dropActive = true; if (DragLog.Count < 400) DragLog.Add("enter allowed=" + e.AllowedEffect + " formats=" + string.Join(",", e.Data?.GetFormats() ?? Array.Empty<string>())); DropEffectFor(e); }
+        protected override void OnDragEnter(DragEventArgs e)
+        {
+            base.OnDragEnter(e);
+            _dropActive = true;
+            if (DragLog.Count < 400) DragLog.Add("enter allowed=" + e.AllowedEffect + " formats=" + string.Join(",", e.Data?.GetFormats() ?? Array.Empty<string>()));
+            DropEffectFor(e);
+            if (e.Effect != DragDropEffects.None) ExpandForDrop();
+        }
         protected override void OnDragOver(DragEventArgs e) { base.OnDragOver(e); DropEffectFor(e); }
         protected override void OnDragLeave(EventArgs e)
         {
             base.OnDragLeave(e);
             _dropActive = false;
+            EndDropExpansion();
         }
 
         protected override void OnDragDrop(DragEventArgs e)
         {
             base.OnDragDrop(e);
             _dropActive = false;
+            // End on the next message turn, after the drag/drop operation has finished.
+            // This also covers a successful drop (which need not raise DragLeave).
+            if (_expandedForExternalDrop && IsHandleCreated && !IsDisposed)
+                BeginInvoke(new Action(EndDropExpansion));
             if (e.Effect == DragDropEffects.None) return;
             if (e.Data?.GetData(DataFormats.FileDrop) is not string[] files) return;
             if (CanWritePortal) { TransferFiles(files, e.Effect == DragDropEffects.Move); return; }

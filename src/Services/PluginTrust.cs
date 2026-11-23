@@ -106,5 +106,28 @@ namespace MotionDesk.Services
         }
     }
 
-    public sealed record PluginTrustRequest(string Name, string Folder, string Sha256);
+    public sealed record PluginTrustRequest(string Name, string Folder, string Sha256,
+        string Publisher = "Unknown / Άγνωστος", string SignatureStatus = "Unknown / Άγνωστη");
+
+    internal static class PluginPublisherInfo
+    {
+        internal static (string Publisher, string SignatureStatus) Inspect(string folder)
+        {
+            try
+            {
+                var dll = Directory.EnumerateFiles(folder, "*Plugin.dll", SearchOption.TopDirectoryOnly)
+                    .FirstOrDefault(path => (File.GetAttributes(path) & FileAttributes.ReparsePoint) == 0);
+                if (dll == null) return ("Unknown", "No plugin entry DLL found");
+                try
+                {
+                    using var certificate = System.Security.Cryptography.X509Certificates.X509Certificate.CreateFromSignedFile(dll);
+                    return (certificate.Subject, "Embedded certificate found; signature trust NOT verified");
+                }
+                catch (System.Security.Cryptography.CryptographicException)
+                { return ("Unsigned / Χωρίς υπογραφή", "No embedded Authenticode certificate"); }
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException)
+            { return ("Unknown", "Could not inspect: " + ex.GetType().Name); }
+        }
+    }
 }

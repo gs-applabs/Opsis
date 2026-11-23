@@ -14,7 +14,7 @@ internal static class UiResourceAudit
     private sealed record Sample(string Phase, double ElapsedMs, double CpuMs, double CpuCorePercent,
         long ManagedBytes, long PrivateBytes, long WorkingSetBytes, int Handles, uint GdiObjects, uint UserObjects, List<BrowserSample> Browsers);
 
-    private sealed record BrowserSample(int Pid, string Kind, double CpuMs, long PrivateBytes);
+    private sealed record BrowserSample(int Pid, string Kind, double CpuMs, long PrivateBytes, double CpuCorePercent);
 
     internal static event Action<string, string>? Activity;
     internal static void Mark(string kind, string value) => Activity?.Invoke(kind, value);
@@ -27,11 +27,12 @@ internal static class UiResourceAudit
         using var process = Process.GetCurrentProcess();
         var elapsed = Stopwatch.StartNew();
         var samples = new List<Sample>();
-        var events = new List<object>();
+        var events = new List<(double AtMs, string Kind, string Value)>();
+        var browserCounters = new Dictionary<int, (double CpuMs, double AtMs)>();
         void RecordEvent(string kind, string value)
         {
             lock (events)
-                if (events.Count < 2048) events.Add(new { elapsedMs = elapsed.Elapsed.TotalMilliseconds, kind, value });
+                if (events.Count < 2048) events.Add((elapsed.Elapsed.TotalMilliseconds, kind, value));
         }
         Activity += RecordEvent;
         try
@@ -49,7 +50,11 @@ internal static class UiResourceAudit
                     try
                     {
                         using var child = Process.GetProcessById(pid);
-                        browsers.Add(new(pid, kind, child.TotalProcessorTime.TotalMilliseconds, child.PrivateMemorySize64));
+                        double browserCpu = child.TotalProcessorTime.TotalMilliseconds;
+                        double browserPercent = browserCounters.TryGetValue(pid, out var previous)
+                            ? Math.Max(0, (browserCpu - previous.CpuMs) / Math.Max(1, at - previous.AtMs) * 100) : 0;
+                        browsers.Add(new(pid, kind, browserCpu, child.PrivateMemorySize64, Math.Round(browserPercent, 2)));
+                        browserCounters[pid] = (browserCpu, at);
                     }
                     catch (Exception ex) when (ex is ArgumentException or InvalidOperationException or System.ComponentModel.Win32Exception) { }
                 }
@@ -131,12 +136,45 @@ internal static class UiResourceAudit
 
             var first = samples[0];
             var last = samples.Last(s => s.Phase == "idle-after");
+            // Counter differences are measured after a real widget close / skin change,
+            // not inferred from GC totals. The audit reports numbers without asserting a leak.
+            var widgetDeltas = samples.Where(s => s.Phase.Contains("/widget/") && s.Phase.EndsWith("/closed"))
+                .Select(after =>
+                {
+                    var before = samples.LastOrDefault(s => s.Phase == after.Phase.Replace("/closed", "/before"));
+                    return new
+                    {
+                        widget = after.Phase.Split('/')[^2],
+                        cycle = after.Phase.Split('/')[0],
+                        privateBytesDelta = after.PrivateBytes - (before?.PrivateBytes ?? after.PrivateBytes),
+                        gdiDelta = (long)after.GdiObjects - (before?.GdiObjects ?? after.GdiObjects),
+                        userDelta = (long)after.UserObjects - (before?.UserObjects ?? after.UserObjects)
+                    };
+                }).ToArray();
+            var skinDeltas = samples.Where(s => s.Phase.Contains("/skin/"))
+                .Select(s => new { skin = s.Phase.Split('/')[^1],
+                    privateBytesDelta = s.PrivateBytes - first.PrivateBytes,
+                    gdiDelta = (long)s.GdiObjects - first.GdiObjects,
+                    userDelta = (long)s.UserObjects - first.UserObjects }).ToArray();
+            var eventSnapshot = SnapshotEvents();
+            var cpuSpikes = samples.Where(s => s.CpuCorePercent >= 35 || s.Browsers.Sum(b => b.CpuCorePercent) >= 35)
+                .Take(100).Select(s =>
+                {
+                    var lastEvent = eventSnapshot.LastOrDefault(e => e.AtMs <= s.ElapsedMs && s.ElapsedMs - e.AtMs <= 10000);
+                    return new { s.Phase, s.ElapsedMs, s.CpuCorePercent,
+                        webViewCpuCorePercent = Math.Round(s.Browsers.Sum(b => b.CpuCorePercent), 2),
+                        relatedEventCategory = lastEvent.Kind,
+                        relatedEvent = lastEvent.Value };
+                }).ToArray();
             const string name = "ui-resources.json";
             File.WriteAllText(Path.Combine(folder, name), JsonSerializer.Serialize(new
             {
                 scope = "Main-process CPU is per phase in units of one core. Browser CPU is cumulative milliseconds per PID.",
                 navigation,
-                events = SnapshotEvents(),
+                events = eventSnapshot.Select(e => new { elapsedMs = e.AtMs, kind = e.Kind, value = e.Value }),
+                cpuSpikes,
+                widgetDeltas,
+                skinDeltas,
                 wallpaperFrames = frames.IsCompletedSuccessfully ? frames.Result : null,
                 sampleMs,
                 cycles,
@@ -153,6 +191,7 @@ internal static class UiResourceAudit
         }
         finally { Activity -= RecordEvent; }
 
-        object[] SnapshotEvents() { lock (events) return events.ToArray(); }
+        (double AtMs, string Kind, string Value)[] SnapshotEvents()
+        { lock (events) return events.ToArray(); }
     }
 }

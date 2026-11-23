@@ -3,10 +3,10 @@
   "pre_release": true,
   "tests_deferred_per_user": true,
   "counts": {
-    "new": 17,
-    "existing": 16,
-    "partial": 2,
-    "pending": 65
+    "new": 35,
+    "existing": 17,
+    "partial": 8,
+    "pending": 40
   },
   "phases": {
     "Α — Γρήγορες, τοπικές αλλαγές": [
@@ -120,10 +120,10 @@
     {
       "id": 1,
       "title": "Δείκτης CPU ανά λειτουργία, με ξεχωριστή ένδειξη για τις διεργασίες WebView2.",
-      "status": "pending",
-      "status_el": "ΕΚΚΡΕΜΕΙ ΥΛΟΠΟΙΗΣΗ",
-      "evidence": "—",
-      "note": "Δεν έχει τεκμηριωθεί ολοκλήρωση στον παρόντα κύκλο"
+      "status": "new",
+      "status_el": "ΥΛΟΠΟΙΗΘΗΚΕ ΣΤΟΝ SOURCE · ΧΩΡΙΣ BUILD",
+      "evidence": "src/Services/UiResourceAudit.cs",
+      "note": "Ειδικές μετρήσεις CPU ανά φάση και ανά WebView2 process στο προαιρετικό απομονωμένο UI audit."
     },
     {
       "id": 2,
@@ -136,26 +136,26 @@
     {
       "id": 3,
       "title": "Μέτρηση του χρόνου από το κλικ μέχρι το πρώτο ζωγραφισμένο καρέ της σελίδας.",
-      "status": "pending",
-      "status_el": "ΕΚΚΡΕΜΕΙ ΥΛΟΠΟΙΗΣΗ",
-      "evidence": "—",
-      "note": "Δεν έχει τεκμηριωθεί ολοκλήρωση στον παρόντα κύκλο"
+      "status": "new",
+      "status_el": "ΥΛΟΠΟΙΗΘΗΚΕ ΣΤΟΝ SOURCE · ΧΩΡΙΣ BUILD",
+      "evidence": "src/UI/MainWindow.cs",
+      "note": "Καταγραφή χρόνου κλικ→πρώτη σχεδίαση σελίδας και διάκριση αργών σελίδων."
     },
     {
       "id": 4,
       "title": "Σύγκριση private bytes μετά από επαναλαμβανόμενο άνοιγμα και κλείσιμο κάθε widget.",
-      "status": "pending",
-      "status_el": "ΕΚΚΡΕΜΕΙ ΥΛΟΠΟΙΗΣΗ",
-      "evidence": "—",
-      "note": "Δεν έχει τεκμηριωθεί ολοκλήρωση στον παρόντα κύκλο"
+      "status": "new",
+      "status_el": "ΥΛΟΠΟΙΗΘΗΚΕ ΣΤΟΝ SOURCE · ΧΩΡΙΣ BUILD",
+      "evidence": "src/Services/UiResourceAudit.cs",
+      "note": "Μεταβολές private bytes/GDI/USER πριν και μετά επαναλαμβανόμενους κύκλους widget."
     },
     {
       "id": 5,
       "title": "Εντοπισμός αύξησης GDI και USER handles μετά από αλλαγές skin.",
-      "status": "pending",
-      "status_el": "ΕΚΚΡΕΜΕΙ ΥΛΟΠΟΙΗΣΗ",
-      "evidence": "—",
-      "note": "Δεν έχει τεκμηριωθεί ολοκλήρωση στον παρόντα κύκλο"
+      "status": "new",
+      "status_el": "ΥΛΟΠΟΙΗΘΗΚΕ ΣΤΟΝ SOURCE · ΧΩΡΙΣ BUILD",
+      "evidence": "src/Services/UiResourceAudit.cs",
+      "note": "Μέτρηση GDI/USER/private bytes μετά από αλλαγές skin στο UI audit."
     },
     {
       "id": 6,
@@ -192,10 +192,10 @@
     {
       "id": 10,
       "title": "Προβολή χρονογραμμής που συσχετίζει αιχμές CPU με αλλαγή σκηνής ή φόρτωση πρόσθετου.",
-      "status": "pending",
-      "status_el": "ΕΚΚΡΕΜΕΙ ΥΛΟΠΟΙΗΣΗ",
-      "evidence": "—",
-      "note": "Δεν έχει τεκμηριωθεί ολοκλήρωση στον παρόντα κύκλο"
+      "status": "new",
+      "status_el": "ΥΛΟΠΟΙΗΘΗΚΕ ΣΤΟΝ SOURCE · ΧΩΡΙΣ BUILD",
+      "evidence": "src/Services/UiResourceAudit.cs",
+      "note": "Χρονική συσχέτιση αιχμών CPU κύριου process και WebView2 με τα πιο πρόσφατα UI/plugin/scene συμβάντα."
     },
     {
       "id": 11,
@@ -224,18 +224,18 @@
     {
       "id": 14,
       "title": "Εμφάνιση εκδότη και κατάστασης υπογραφής στο παράθυρο εγκατάστασης πρόσθετου.",
-      "status": "pending",
-      "status_el": "ΕΚΚΡΕΜΕΙ ΥΛΟΠΟΙΗΣΗ",
-      "evidence": "—",
-      "note": "Δεν έχει τεκμηριωθεί ολοκλήρωση στον παρόντα κύκλο"
+      "status": "partial",
+      "status_el": "ΜΕΡΙΚΟ · ΧΡΕΙΑΖΕΤΑΙ ΣΥΜΠΛΗΡΩΣΗ/QA",
+      "evidence": "src/Services/PluginTrust.cs · src/Services/PluginHost.cs · src/Widgets/TrayApplicationContext.cs",
+      "note": "Προβάλλεται δηλωμένος εκδότης και πιστοποιητικό όπου υπάρχει, με σαφή ένδειξη ότι η κρυπτογραφική εμπιστοσύνη ΔΕΝ επαληθεύτηκε."
     },
     {
       "id": 15,
       "title": "Έλεγχος ακεραιότητας του update πριν από αντικατάσταση αρχείων.",
-      "status": "pending",
-      "status_el": "ΕΚΚΡΕΜΕΙ ΥΛΟΠΟΙΗΣΗ",
-      "evidence": "—",
-      "note": "Δεν έχει τεκμηριωθεί ολοκλήρωση στον παρόντα κύκλο"
+      "status": "existing",
+      "status_el": "ΥΠΗΡΧΕ ΣΤΗ ΒΑΣΗ · ΑΝΕΠΙΒΕΒΑΙΩΤΟ",
+      "evidence": "src/Services/UpdateInstallerService.cs",
+      "note": "Προϋπήρχε SHA-256 πριν την αντικατάσταση και κλείδωμα αρχείου κατά την επαλήθευση προς αποφυγή TOCTOU."
     },
     {
       "id": 16,
@@ -256,10 +256,10 @@
     {
       "id": 18,
       "title": "Προσωρινή απομόνωση συγκεκριμένου πρόσθετου μετά από διαδοχικές αστοχίες.",
-      "status": "pending",
-      "status_el": "ΕΚΚΡΕΜΕΙ ΥΛΟΠΟΙΗΣΗ",
-      "evidence": "—",
-      "note": "Δεν έχει τεκμηριωθεί ολοκλήρωση στον παρόντα κύκλο"
+      "status": "new",
+      "status_el": "ΥΛΟΠΟΙΗΘΗΚΕ ΣΤΟΝ SOURCE · ΧΩΡΙΣ BUILD",
+      "evidence": "src/Services/PluginFailureQuarantine.cs · src/Services/PluginHost.cs",
+      "note": "Καραντίνα ανά plugin μετά από τρεις αποτυχίες/10 λεπτά για 30 λεπτά, με περιορισμένη ατομική καταγραφή και χειροκίνητη επανενεργοποίηση."
     },
     {
       "id": 19,
@@ -336,10 +336,10 @@
     {
       "id": 28,
       "title": "Ανεξάρτητος έλεγχος έντασης για βροχή στο τζάμι και βροχή στο τοπίο.",
-      "status": "pending",
-      "status_el": "ΕΚΚΡΕΜΕΙ ΥΛΟΠΟΙΗΣΗ",
-      "evidence": "—",
-      "note": "Δεν έχει τεκμηριωθεί ολοκλήρωση στον παρόντα κύκλο"
+      "status": "new",
+      "status_el": "ΥΛΟΠΟΙΗΘΗΚΕ ΣΤΟΝ SOURCE · ΧΩΡΙΣ BUILD",
+      "evidence": "src/Widgets/wallpaper/weather.js · src/Widgets/wallpaper/index.html · src/Widgets/WallpaperWindow.cs · src/UI/MainWindow.cs",
+      "note": "Ανεξάρτητοι συντελεστές βροχής τοπίου και τζαμιού και δύο ρυθμιστικά 0–200%, με αποθήκευση στο τέλος της αλλαγής."
     },
     {
       "id": 29,
@@ -392,18 +392,18 @@
     {
       "id": 35,
       "title": "Προεπισκόπηση προφίλ με χρονόμετρο επαναφοράς.",
-      "status": "pending",
-      "status_el": "ΕΚΚΡΕΜΕΙ ΥΛΟΠΟΙΗΣΗ",
-      "evidence": "—",
-      "note": "Δεν έχει τεκμηριωθεί ολοκλήρωση στον παρόντα κύκλο"
+      "status": "new",
+      "status_el": "ΥΛΟΠΟΙΗΘΗΚΕ ΣΤΟΝ SOURCE · ΧΩΡΙΣ BUILD",
+      "evidence": "src/UI/MainWindow.cs · src/Services/WorkspaceProfileService.cs",
+      "note": "Προεπισκόπηση προφίλ με όριο 30s, αυτόματη επαναφορά και διατήρηση backup αν η ανάκτηση αποτύχει."
     },
     {
       "id": 36,
       "title": "Κανόνες προφίλ ανά συνδεδεμένο τροφοδοτικό και στάθμη μπαταρίας.",
-      "status": "pending",
-      "status_el": "ΕΚΚΡΕΜΕΙ ΥΛΟΠΟΙΗΣΗ",
-      "evidence": "—",
-      "note": "Δεν έχει τεκμηριωθεί ολοκλήρωση στον παρόντα κύκλο"
+      "status": "new",
+      "status_el": "ΥΛΟΠΟΙΗΘΗΚΕ ΣΤΟΝ SOURCE · ΧΩΡΙΣ BUILD",
+      "evidence": "src/Services/AutomationService.cs · src/UI/MainWindow.cs",
+      "note": "Κανόνες προφίλ βάσει AC/μπαταρίας και ποσοστού, με μεταβατική ενεργοποίηση αντί συνεχών φορτώσεων."
     },
     {
       "id": 37,
@@ -448,10 +448,10 @@
     {
       "id": 42,
       "title": "Αναίρεση τελευταίας ομαδικής τακτοποίησης παραθύρων.",
-      "status": "pending",
-      "status_el": "ΕΚΚΡΕΜΕΙ ΥΛΟΠΟΙΗΣΗ",
-      "evidence": "—",
-      "note": "Δεν έχει τεκμηριωθεί ολοκλήρωση στον παρόντα κύκλο"
+      "status": "new",
+      "status_el": "ΥΛΟΠΟΙΗΘΗΚΕ ΣΤΟΝ SOURCE · ΧΩΡΙΣ BUILD",
+      "evidence": "src/Services/AutoTileService.cs · src/UI/MainWindow.cs",
+      "note": "Αναίρεση της τελευταίας χειροκίνητης ομαδικής διάταξης με αποθηκευμένες αρχικές θέσεις παραθύρων."
     },
     {
       "id": 43,
@@ -504,18 +504,18 @@
     {
       "id": 49,
       "title": "Εξαιρέσεις για διαλόγους, παλέτες εργαλείων και προσωρινά παράθυρα.",
-      "status": "pending",
-      "status_el": "ΕΚΚΡΕΜΕΙ ΥΛΟΠΟΙΗΣΗ",
-      "evidence": "—",
-      "note": "Δεν έχει τεκμηριωθεί ολοκλήρωση στον παρόντα κύκλο"
+      "status": "partial",
+      "status_el": "ΜΕΡΙΚΟ · ΧΡΕΙΑΖΕΤΑΙ ΣΥΜΠΛΗΡΩΣΗ/QA",
+      "evidence": "src/Services/AutoTileService.cs",
+      "note": "Το χειροκίνητο auto-tile εξαιρεί διαλόγους/παλέτες, αλλά απαιτείται έλεγχος και στο πλήρες DeskZones workflow."
     },
     {
       "id": 50,
       "title": "Προεπισκόπηση των παραθύρων που θα μετακινηθούν όταν αλλάξει προφίλ.",
-      "status": "pending",
-      "status_el": "ΕΚΚΡΕΜΕΙ ΥΛΟΠΟΙΗΣΗ",
-      "evidence": "—",
-      "note": "Δεν έχει τεκμηριωθεί ολοκλήρωση στον παρόντα κύκλο"
+      "status": "partial",
+      "status_el": "ΜΕΡΙΚΟ · ΧΡΕΙΑΖΕΤΑΙ ΣΥΜΠΛΗΡΩΣΗ/QA",
+      "evidence": "src/Services/AutoTileService.cs · src/UI/MainWindow.cs",
+      "note": "Υπάρχει προεπισκόπηση παραθύρων για manual auto-tile, όχι ακόμη προεπισκόπηση όλων των μετακινήσεων κατά την αλλαγή προφίλ."
     },
     {
       "id": 51,
@@ -536,10 +536,10 @@
     {
       "id": 53,
       "title": "Προβολή φακέλου ως container με παρακολούθηση μόνο όσο είναι ορατό.",
-      "status": "pending",
-      "status_el": "ΕΚΚΡΕΜΕΙ ΥΛΟΠΟΙΗΣΗ",
-      "evidence": "—",
-      "note": "Δεν έχει τεκμηριωθεί ολοκλήρωση στον παρόντα κύκλο"
+      "status": "new",
+      "status_el": "ΥΛΟΠΟΙΗΘΗΚΕ ΣΤΟΝ SOURCE · ΧΩΡΙΣ BUILD",
+      "evidence": "src/Containers/ContainerWindow.cs",
+      "note": "Το portal container χρησιμοποιεί FileSystemWatcher μόνο όταν είναι ορατό, ακυρώνει ενδιάμεσες ανανεώσεις όταν κρύβεται."
     },
     {
       "id": 54,
@@ -552,18 +552,18 @@
     {
       "id": 55,
       "title": "Άμεση αναζήτηση σε όλα τα containers με μετάβαση στο αποτέλεσμα.",
-      "status": "pending",
-      "status_el": "ΕΚΚΡΕΜΕΙ ΥΛΟΠΟΙΗΣΗ",
-      "evidence": "—",
-      "note": "Δεν έχει τεκμηριωθεί ολοκλήρωση στον παρόντα κύκλο"
+      "status": "partial",
+      "status_el": "ΜΕΡΙΚΟ · ΧΡΕΙΑΖΕΤΑΙ ΣΥΜΠΛΗΡΩΣΗ/QA",
+      "evidence": "src/Containers/SpotSearch.cs · src/Containers/ContainerHost.cs",
+      "note": "Το Spot Search αναζητά όλα τα containers και προστέθηκε Shift+Enter για εστίαση μοναδικά προσδιορισμένου ορατού container· λείπει η αυτόματη εμφάνιση κρυφών containers."
     },
     {
       "id": 56,
       "title": "Προσωρινή ανάπτυξη κλειστού container κατά τη μεταφορά αρχείου.",
-      "status": "pending",
-      "status_el": "ΕΚΚΡΕΜΕΙ ΥΛΟΠΟΙΗΣΗ",
-      "evidence": "—",
-      "note": "Δεν έχει τεκμηριωθεί ολοκλήρωση στον παρόντα κύκλο"
+      "status": "new",
+      "status_el": "ΥΛΟΠΟΙΗΘΗΚΕ ΣΤΟΝ SOURCE · ΧΩΡΙΣ BUILD",
+      "evidence": "src/Containers/ContainerWindow.cs",
+      "note": "Ανάπτυξη κλειστού container μόνο κατά τη νόμιμη μεταφορά αρχείου και αυτόματη επαναφορά όταν τελειώσει το drag."
     },
     {
       "id": 57,
@@ -632,10 +632,10 @@
     {
       "id": 65,
       "title": "Προεπισκόπηση εγγράφου από τον εκκινητή χωρίς εκκίνηση εφαρμογής.",
-      "status": "pending",
-      "status_el": "ΕΚΚΡΕΜΕΙ ΥΛΟΠΟΙΗΣΗ",
-      "evidence": "—",
-      "note": "Δεν έχει τεκμηριωθεί ολοκλήρωση στον παρόντα κύκλο"
+      "status": "new",
+      "status_el": "ΥΛΟΠΟΙΗΘΗΚΕ ΣΤΟΝ SOURCE · ΧΩΡΙΣ BUILD",
+      "evidence": "src/Widgets/DesktopLauncher.cs · src/Widgets/QuickLookPreview.cs",
+      "note": "F3 και κουμπί προεπισκόπησης τοπικών αρχείων, με όριο μεγέθους και αποκλεισμό reparse points."
     },
     {
       "id": 66,
@@ -664,42 +664,42 @@
     {
       "id": 69,
       "title": "Κατάλογος συγκρούσεων καθολικών συντομεύσεων με δοκιμή νέου συνδυασμού.",
-      "status": "pending",
-      "status_el": "ΕΚΚΡΕΜΕΙ ΥΛΟΠΟΙΗΣΗ",
-      "evidence": "—",
-      "note": "Δεν έχει τεκμηριωθεί ολοκλήρωση στον παρόντα κύκλο"
+      "status": "new",
+      "status_el": "ΥΛΟΠΟΙΗΘΗΚΕ ΣΤΟΝ SOURCE · ΧΩΡΙΣ BUILD",
+      "evidence": "src/Widgets/HotkeyManager.cs · src/Widgets/HotkeyDiagnosticDialog.cs · src/Widgets/DesktopLauncher.cs",
+      "note": "Κατάλογος αποτυχημένων global hotkeys και δοκιμαστική καταχώρηση/αποδέσμευση συνδυασμών."
     },
     {
       "id": 70,
       "title": "Εναλλακτική συμπαγής προβολή εντολών για μικρή ανάλυση.",
-      "status": "pending",
-      "status_el": "ΕΚΚΡΕΜΕΙ ΥΛΟΠΟΙΗΣΗ",
-      "evidence": "—",
-      "note": "Δεν έχει τεκμηριωθεί ολοκλήρωση στον παρόντα κύκλο"
+      "status": "new",
+      "status_el": "ΥΛΟΠΟΙΗΘΗΚΕ ΣΤΟΝ SOURCE · ΧΩΡΙΣ BUILD",
+      "evidence": "src/UI/MainWindow.cs",
+      "note": "Συμπαγής παλέτα εντολών σε οθόνη κάτω των 1100×800 περίπου, μικρότερες γραμματοσειρές και διαστήματα."
     },
     {
       "id": 71,
       "title": "Κοινό πλέγμα στοίχισης για ρολόι, καιρό και system monitor.",
-      "status": "pending",
-      "status_el": "ΕΚΚΡΕΜΕΙ ΥΛΟΠΟΙΗΣΗ",
-      "evidence": "—",
-      "note": "Δεν έχει τεκμηριωθεί ολοκλήρωση στον παρόντα κύκλο"
+      "status": "new",
+      "status_el": "ΥΛΟΠΟΙΗΘΗΚΕ ΣΤΟΝ SOURCE · ΧΩΡΙΣ BUILD",
+      "evidence": "src/Widgets/WidgetEngine.cs · src/UI/MainWindow.DeskZonesSnapping.cs · src/UI/MainWindow.cs",
+      "note": "Επαναχρησιμοποίηση υφιστάμενου κοινού WidgetSnapEngine, νέες ρυθμίσεις grid στη σελίδα Widgets."
     },
     {
       "id": 72,
       "title": "Προσωρινό ξεκλείδωμα όλων των widgets με αντίστροφη μέτρηση.",
-      "status": "pending",
-      "status_el": "ΕΚΚΡΕΜΕΙ ΥΛΟΠΟΙΗΣΗ",
-      "evidence": "—",
-      "note": "Δεν έχει τεκμηριωθεί ολοκλήρωση στον παρόντα κύκλο"
+      "status": "new",
+      "status_el": "ΥΛΟΠΟΙΗΘΗΚΕ ΣΤΟΝ SOURCE · ΧΩΡΙΣ BUILD",
+      "evidence": "src/Widgets/WidgetEngine.cs · src/UI/MainWindow.cs",
+      "note": "Προσωρινή υπέρβαση κλειδώματος όλων των widgets για 2 λεπτά με αντίστροφη μέτρηση, χωρίς μεταβολή αποθηκευμένου IsLocked."
     },
     {
       "id": 73,
       "title": "Προσαρμογή συχνότητας ανανέωσης ανά widget.",
-      "status": "pending",
-      "status_el": "ΕΚΚΡΕΜΕΙ ΥΛΟΠΟΙΗΣΗ",
-      "evidence": "—",
-      "note": "Δεν έχει τεκμηριωθεί ολοκλήρωση στον παρόντα κύκλο"
+      "status": "partial",
+      "status_el": "ΜΕΡΙΚΟ · ΧΡΕΙΑΖΕΤΑΙ ΣΥΜΠΛΗΡΩΣΗ/QA",
+      "evidence": "src/Widgets/WidgetEngine.cs",
+      "note": "Επιλογή 25–400% ανά native widget με periodic monitor timer, αλλά δεν έχει ενοποιηθεί για όλα τα web/media/notification widgets."
     },
     {
       "id": 74,
@@ -728,10 +728,10 @@
     {
       "id": 77,
       "title": "Σταθερό αναγνωριστικό κάρτας δικτύου όταν αλλάξει το όνομα σύνδεσης.",
-      "status": "pending",
-      "status_el": "ΕΚΚΡΕΜΕΙ ΥΛΟΠΟΙΗΣΗ",
-      "evidence": "—",
-      "note": "Δεν έχει τεκμηριωθεί ολοκλήρωση στον παρόντα κύκλο"
+      "status": "new",
+      "status_el": "ΥΛΟΠΟΙΗΘΗΚΕ ΣΤΟΝ SOURCE · ΧΩΡΙΣ BUILD",
+      "evidence": "src/Services/AdvancedSystemMonitorService.cs",
+      "note": "Αντιστοίχιση δικτύου με σταθερό NetworkInterface.Id ανεξάρτητα από το ορατό όνομα κάρτας."
     },
     {
       "id": 78,
@@ -792,10 +792,10 @@
     {
       "id": 85,
       "title": "Αναγγελία αλλαγής ενεργού προφίλ μέσω αναγνώστη οθόνης.",
-      "status": "pending",
-      "status_el": "ΕΚΚΡΕΜΕΙ ΥΛΟΠΟΙΗΣΗ",
-      "evidence": "—",
-      "note": "Δεν έχει τεκμηριωθεί ολοκλήρωση στον παρόντα κύκλο"
+      "status": "partial",
+      "status_el": "ΜΕΡΙΚΟ · ΧΡΕΙΑΖΕΤΑΙ ΣΥΜΠΛΗΡΩΣΗ/QA",
+      "evidence": "src/Services/WorkspaceProfileService.cs · src/UI/MainWindow.cs",
+      "note": "Αποστέλλεται Accessibility DescriptionChange μετά από αλλαγή προφίλ, όμως η πραγματική αναγγελία από screen reader δεν έχει επαληθευτεί."
     },
     {
       "id": 86,
@@ -918,6 +918,6 @@
       "note": "Προαιρετικό και χρονικά περιορισμένο session diagnostics"
     }
   ],
-  "revision": "R4",
-  "last_changed_utc": "2026-11-23"
+  "revision": "R5",
+  "last_changed_utc": "2026-11-23T12:45:00Z"
 }

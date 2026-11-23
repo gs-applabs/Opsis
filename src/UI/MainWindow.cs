@@ -206,6 +206,7 @@ namespace MotionDesk.UI
             ThemeManager.UiContext = System.Threading.SynchronizationContext.Current;
             AnimationsSettingChanged += UpdateAnimationTimers;
             WorkspaceProfileService.ExitSaveDone = false;
+            WorkspaceProfileService.ProfileActivated += AnnounceActiveProfile;
             ThemeManager.Changed += OnThemeOrLanguageChanged;
             ThemeManager.Repainted += OnThemeRepainted;
             LocalizationManager.Changed += OnThemeOrLanguageChanged;
@@ -221,6 +222,7 @@ namespace MotionDesk.UI
             {
                 if (!WorkspaceProfileService.ExitSaveDone) { try { WorkspaceProfileService.Save("Last Session"); } catch { } }
                 AnimationsSettingChanged -= UpdateAnimationTimers;
+                WorkspaceProfileService.ProfileActivated -= AnnounceActiveProfile;
                 _studioNavTips?.Dispose();
                 ThemeManager.Changed -= OnThemeOrLanguageChanged;
                 ThemeManager.Repainted -= OnThemeRepainted;
@@ -705,7 +707,33 @@ namespace MotionDesk.UI
         private NavButton AddNavButton(Control parent, string text, string key, Action action, string? shortcutLabel)
         {
             var button = new NavButton(key, text, _usesStudio ? null : shortcutLabel) { Width = _usesStudio ? 164 : 184 };
-            button.Click += (_, _) => { _currentPageKey = key; SafeBuildPage(key, action); };
+            button.Click += (_, _) =>
+            {
+                _currentPageKey = key;
+                var elapsed = System.Diagnostics.Stopwatch.StartNew();
+                Control? newPage = null;
+                void FirstPaint(object? sender, PaintEventArgs e)
+                {
+                    if (newPage != null) newPage.Paint -= FirstPaint;
+                    elapsed.Stop();
+                    UiResourceAudit.Mark("page-first-paint", key + ":" + elapsed.ElapsedMilliseconds);
+                    if (elapsed.ElapsedMilliseconds > 3000)
+                        RotatingLogger.Write($"Slow page first paint: {key}, {elapsed.ElapsedMilliseconds} ms");
+                }
+                void NewControl(object? sender, ControlEventArgs e)
+                {
+                    _content.ControlAdded -= NewControl;
+                    newPage = e.Control;
+                    if (newPage != null) newPage.Paint += FirstPaint;
+                }
+                _content.ControlAdded += NewControl;
+                try { SafeBuildPage(key, action); }
+                finally
+                {
+                    // If the builder reused content and did not add a control, avoid a lingering handler.
+                    _content.ControlAdded -= NewControl;
+                }
+            };
             button.Click += (_, _) => SetActiveButton(button);
             button.Click += (_, _) => Services.UiSounds.PlayClick();
             parent.Controls.Add(button);
@@ -749,6 +777,17 @@ namespace MotionDesk.UI
             if (pageKey == "Profiles") pageKey = "Automation";
             if (_navButtons.TryGetValue(pageKey, out var button))
                 button.PerformClick();
+        }
+
+        /// <summary>Notify screen readers about a successfully restored workspace.</summary>
+        private void AnnounceActiveProfile(string profile)
+        {
+            if (IsDisposed || !IsHandleCreated) return;
+            if (InvokeRequired) { BeginInvoke((Action)(() => AnnounceActiveProfile(profile))); return; }
+            string announcement = StudioText("Active profile: ", "Ενεργό προφίλ: ") + profile;
+            AccessibleDescription = announcement;
+            AccessibilityNotifyClients(AccessibleEvents.DescriptionChange, -1);
+            ShowStatus(announcement, StatusKind.Info);
         }
 
         private void SetActiveButton(NavButton button)
@@ -1347,8 +1386,40 @@ namespace MotionDesk.UI
             sizeRow.Controls.Add(SettingsView.NumericRow(LocalizationManager.T("Settings.HeightLabel"), AppSettings.Load().WidgetDefaultHeight, 100, 800,
                 v => { var a = AppSettings.Load(); a.WidgetDefaultHeight = v; a.Save(); }, marginLeft: 24));
             panel.Controls.Add(sizeRow);
+            panel.Controls.Add(SettingsView.Checkbox(StudioText("Align all widgets to one grid", "Στοίχιση όλων των widgets στο ίδιο πλέγμα"),
+                AppSettings.Load().GridSnap, value =>
+                {
+                    WidgetSnapEngine.EnableGridSnap = value;
+                    var saved = AppSettings.Load(); saved.GridSnap = value; saved.Save();
+                }));
+            panel.Controls.Add(SettingsView.NumericRow(StudioText("Common snap grid size (px)", "Μέγεθος κοινού πλέγματος (px)"),
+                AppSettings.Load().GridSize, 5, 100, value =>
+                {
+                    WidgetSnapEngine.GridSize = value;
+                    var saved = AppSettings.Load(); saved.GridSize = value; saved.Save();
+                }));
 
             AddSection(panel, LocalizationManager.T("Widgets.SectionWorkspaceActions"));
+            // #72: the temporary unlock never writes IsLocked=false to disk.
+            var unlockRow = new FlowLayoutPanel { AutoSize = true, WrapContents = false };
+            var countdown = new Label { AutoSize = false, Width = 230, Height = 37,
+                TextAlign = ContentAlignment.MiddleLeft, ForeColor = UiTheme.TextSecondary };
+            var unlockButton = new Button { Text = StudioText("Unlock widgets for 2 min", "Ξεκλείδωμα widgets για 2 λεπτά"), AutoSize = true };
+            unlockButton.Click += (_, _) => WidgetHostEngine.Instance.UnlockTemporarily(TimeSpan.FromMinutes(2));
+            var endUnlock = new Button { Text = StudioText("Lock now", "Κλείδωμα τώρα"), AutoSize = true };
+            endUnlock.Click += (_, _) => WidgetHostEngine.Instance.UnlockTemporarily(TimeSpan.Zero);
+            var unlockTick = new System.Windows.Forms.Timer { Interval = 1000 };
+            unlockTick.Tick += (_, _) =>
+            {
+                var remaining = WidgetHostEngine.Instance.RemainingTemporaryUnlock;
+                countdown.Text = remaining > TimeSpan.Zero
+                    ? StudioText($"Temporary access: {remaining.Minutes}:{remaining.Seconds:00}", $"Προσωρινή πρόσβαση: {remaining.Minutes}:{remaining.Seconds:00}")
+                    : StudioText("Locks are active", "Τα κλειδώματα είναι ενεργά");
+            };
+            unlockTick.Start();
+            panel.Disposed += (_, _) => { unlockTick.Stop(); unlockTick.Dispose(); };
+            unlockRow.Controls.Add(unlockButton); unlockRow.Controls.Add(endUnlock); unlockRow.Controls.Add(countdown);
+            panel.Controls.Add(unlockRow);
             AddIconButtonGrid(panel,
                 ("Save", LocalizationManager.T("Widgets.SaveLayout"), (_, _) => { WorkspaceProfileService.Save("Last Session"); _statusLabel.Text = LocalizationManager.T("Widgets.LayoutSavedStatus"); }),
                 ("Restore", LocalizationManager.T("Widgets.RestoreLayout"), (_, _) => { WorkspaceProfileService.Load("Last Session"); _statusLabel.Text = LocalizationManager.T("Widgets.WorkspaceRestoredStatus"); }),
@@ -1488,7 +1559,29 @@ namespace MotionDesk.UI
                     var settings = AppSettings.Load(); settings.AutoTileEnabled = enabled; settings.Save();
                     AutoTileService.RefreshSettings();
                 }));
-            tiling.Controls.Add(StudioButton(StudioText("Tile windows now", "Τακτοποίηση τώρα"), () => AutoTileService.Apply(force: true), 185));
+            tiling.Controls.Add(StudioButton(StudioText("Preview and tile windows", "Προεπισκόπηση και τακτοποίηση"), () =>
+            {
+                var plan = AutoTileService.Preview();
+                if (plan.Count == 0)
+                {
+                    MessageBox.Show(this, StudioText("No eligible windows to arrange.", "Δεν υπάρχουν κατάλληλα παράθυρα για διάταξη."));
+                    return;
+                }
+                var description = string.Join(Environment.NewLine, plan.Take(14).Select(item =>
+                    item.Title + " → " + item.Monitor + " / " + item.After.Width + "×" + item.After.Height));
+                if (plan.Count > 14) description += $"{Environment.NewLine}… +{plan.Count - 14}";
+                if (MessageBox.Show(this,
+                        StudioText("The following windows will be moved. Continue?", "Τα ακόλουθα παράθυρα θα μετακινηθούν. Συνέχεια?")
+                        + Environment.NewLine + Environment.NewLine + description,
+                        StudioText("Preview tiling", "Προεπισκόπηση διάταξης"),
+                        MessageBoxButtons.YesNo, MessageBoxIcon.Question, MessageBoxDefaultButton.Button2) == DialogResult.Yes)
+                    AutoTileService.Apply(force: true);
+            }, 240));
+            tiling.Controls.Add(StudioButton(StudioText("Undo last manual tiling", "Αναίρεση τελευταίας διάταξης"), () =>
+            {
+                if (!AutoTileService.UndoLastManual())
+                    MessageBox.Show(this, StudioText("No previous manual window arrangement is available.", "Δεν υπάρχει προηγούμενη χειροκίνητη διάταξη."));
+            }, 240));
 
             SetPage("Page.DeskZones.Title", panel);
         }
@@ -1898,6 +1991,26 @@ namespace MotionDesk.UI
             var glass = new FlatToggle { RowWidth = 700, Text = LocalizationManager.T("Wallpaper.WeatherGlass"), Checked = settings.WeatherGlass, BackColor = UiTheme.PageBackground, Margin = new Padding(0, 6, 0, 10) };
             glass.CheckedChanged += (_, _) => WallpaperHostEngine.Instance.SetWeatherGlass(glass.Checked);
             host.Controls.Add(glass);
+
+            void AddRainSlider(string english, string greek, bool onGlass, int initial)
+            {
+                var line = new FlowLayoutPanel { AutoSize = true, WrapContents = false, Margin = new Padding(2, 4, 0, 4) };
+                line.Controls.Add(new Label { Text = StudioText(english, greek), Width = 190, Height = 34,
+                    TextAlign = ContentAlignment.MiddleLeft, ForeColor = UiTheme.TextSecondary });
+                var slider = new TrackBar { Width = 250, Minimum = 0, Maximum = 200,
+                    TickFrequency = 25, SmallChange = 5, LargeChange = 25,
+                    Value = Math.Clamp(initial, 0, 200), AutoSize = false, Height = 40 };
+                var amount = new Label { Text = slider.Value + "%", AutoSize = false, Width = 55, Height = 34,
+                    TextAlign = ContentAlignment.MiddleLeft, ForeColor = UiTheme.TextSecondary };
+                // Show intermediate value without saving to SSD on every pixel of movement.
+                slider.ValueChanged += (_, _) => amount.Text = slider.Value + "%";
+                slider.MouseUp += (_, _) => WallpaperHostEngine.Instance.SetRainIntensity(onGlass, slider.Value);
+                slider.KeyUp += (_, _) => WallpaperHostEngine.Instance.SetRainIntensity(onGlass, slider.Value);
+                line.Controls.Add(slider); line.Controls.Add(amount);
+                host.Controls.Add(line);
+            }
+            AddRainSlider("Rain in landscape", "Βροχή στο τοπίο", false, settings.RainLandscapeIntensity);
+            AddRainSlider("Rain on window glass", "Βροχή στο τζάμι", true, settings.RainGlassIntensity);
 
             var selectedLandscape = settings.WeatherLandmarks && LandmarkCatalog.IsValid(settings.WeatherLandmarkId)
                 ? settings.WeatherLandmarkId : settings.WeatherLandmarks ? LandmarkCatalog.Auto : LandmarkCatalog.Off;
@@ -2954,16 +3067,18 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
 
         private void ShowCommandPalette(string initial = "")
         {
+            var paletteArea = Screen.FromControl(this).WorkingArea;
+            bool compactPalette = paletteArea.Width < 1100 || paletteArea.Height < 800;
             using var dialog = new MotionDesk.UI.AppDialog
             {
                 Text = LocalizationManager.T("Command.PaletteTitle"),
                 StartPosition = FormStartPosition.CenterParent,
-                Size = new Size(640, 470),
-                Padding = new Padding(18, 16, 18, 16),
+                Size = compactPalette ? new Size(480, 350) : new Size(640, 470),
+                Padding = compactPalette ? new Padding(10, 8, 10, 8) : new Padding(18, 16, 18, 16),
                 BackColor = UiTheme.PageBackground,
                 ForeColor = UiTheme.TextPrimary,
                 FormBorderStyle = FormBorderStyle.Sizable,
-                MinimumSize = new Size(480, 340),
+                MinimumSize = new Size(360, 280),
                 MaximizeBox = false,
                 MinimizeBox = false
             };
@@ -2973,7 +3088,7 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
             var box = new TextBox
             {
                 Dock = DockStyle.Top,
-                Font = new Font("Segoe UI", 14),
+                Font = new Font("Segoe UI", compactPalette ? 11 : 14),
                 PlaceholderText = LocalizationManager.T("Command.PalettePlaceholder"),
                 BackColor = UiTheme.Surface,
                 ForeColor = UiTheme.TextPrimary,
@@ -2982,12 +3097,12 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
             var list = new ListBox
             {
                 Dock = DockStyle.Fill,
-                Font = new Font("Segoe UI", 11),
+                Font = new Font("Segoe UI", compactPalette ? 9.5f : 11),
                 BackColor = UiTheme.PageBackground,
                 ForeColor = UiTheme.TextPrimary,
                 BorderStyle = BorderStyle.None,
                 DrawMode = DrawMode.OwnerDrawFixed,
-                ItemHeight = 30
+                ItemHeight = compactPalette ? 24 : 30
             };
             list.DrawItem += (_, e) =>
             {
@@ -3152,11 +3267,78 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
             AddIconButtonGrid(panel,
                 ("Save", LocalizationManager.T("Profiles.SaveCurrentAsProfile"), (_, _) => { if (!string.IsNullOrWhiteSpace(name.Text)) { WorkspaceProfileService.Save(name.Text.Trim()); Refresh(); } }),
                 ("Restore", LocalizationManager.T("Profiles.LoadSelected"), (_, _) => { if (list.SelectedItem is string p && WorkspaceProfileService.Load(p)) { NavigateTo("Dashboard"); } }),
+                ("Preview", StudioText("Preview for 30 seconds", "Προεπισκόπηση 30 δευτερολέπτων"), (_, _) =>
+                {
+                    if (list.SelectedItem is string p) PreviewProfileWithRollback(p);
+                }),
                 ("Add", LocalizationManager.T("Profiles.CreateUpdateDefaults"), (_, _) => { foreach (var p in new[] { "Work", "Gaming", "Focus" }) { if (!WorkspaceProfileService.ListProfiles().Contains(p, StringComparer.OrdinalIgnoreCase)) WorkspaceProfileService.Save(p); } Refresh(); }),
                 ("Delete", LocalizationManager.T("Profiles.DeleteSelected"), (_, _) => { if (list.SelectedItem is string p && !p.Equals("Last Session", StringComparison.OrdinalIgnoreCase)) { WorkspaceProfileService.Delete(p); Refresh(); } }));
             // Which automation rules switch to a profile (so "Gaming Mode" for Steam is visible next to the profiles it uses, plan R.1).
             var ruleLines = AutomationService.Instance.Rules.Select(r => $"{r.Name}:  {r.TriggerProcess}  →  {r.Profile}" + (WorkspaceProfileService.ListProfiles().Contains(r.Profile) ? "" : "  (!)")).ToList();
             if (ruleLines.Count > 0) AddText(panel, string.Join("\n", ruleLines));
+        }
+
+        /// <summary>Keep the original workspace in a temporary profile and revert if not confirmed within 30 seconds.</summary>
+        private void PreviewProfileWithRollback(string profile)
+        {
+            string backupName = "__opsis-preview-" + Guid.NewGuid().ToString("N");
+            bool mayDeleteBackup = false;
+            bool backupSaved = false;
+            try
+            {
+                WorkspaceProfileService.Save(backupName);
+                backupSaved = true;
+                if (!WorkspaceProfileService.Load(profile))
+                {
+                    ReportStatus(StudioText("Profile could not be previewed.", "Αποτυχία προεπισκόπησης προφίλ."), StatusKind.Error);
+                    return;
+                }
+                using var prompt = new MotionDesk.UI.AppDialog
+                {
+                    Text = StudioText("Confirm workspace", "Επιβεβαίωση χώρου εργασίας"),
+                    StartPosition = FormStartPosition.CenterParent, ClientSize = new Size(490, 160),
+                    FormBorderStyle = FormBorderStyle.FixedDialog,
+                    MinimizeBox = false, MaximizeBox = false
+                };
+                int seconds = 30;
+                var note = new Label { Dock = DockStyle.Top, Height = 78, TextAlign = ContentAlignment.MiddleCenter,
+                    Text = StudioText("Apply this workspace permanently? Automatically restores in 30 seconds.",
+                        "Να διατηρηθεί το προφίλ; Αυτόματη επαναφορά σε 30 δευτερόλεπτα.") };
+                var actions = new FlowLayoutPanel { Dock = DockStyle.Bottom, Height = 55, FlowDirection = FlowDirection.RightToLeft };
+                var yes = new Button { Text = StudioText("Keep", "Διατήρηση"), DialogResult = DialogResult.Yes, Width = 120 };
+                var no = new Button { Text = StudioText("Restore now", "Επαναφορά τώρα"), DialogResult = DialogResult.No, Width = 150 };
+                actions.Controls.Add(no); actions.Controls.Add(yes);
+                prompt.Controls.Add(note); prompt.Controls.Add(actions);
+                prompt.AcceptButton = yes; prompt.CancelButton = no;
+                using var countdown = new System.Windows.Forms.Timer { Interval = 1000 };
+                countdown.Tick += (_, _) =>
+                {
+                    seconds--;
+                    note.Text = StudioText($"Keep this workspace? Restoring in {seconds}s.",
+                        $"Να διατηρηθεί το προφίλ; Επαναφορά σε {seconds} δευτ.");
+                    if (seconds <= 0) { prompt.DialogResult = DialogResult.No; prompt.Close(); }
+                };
+                countdown.Start();
+                bool keep = prompt.ShowDialog(this) == DialogResult.Yes;
+                countdown.Stop();
+                if (!keep)
+                {
+                    mayDeleteBackup = WorkspaceProfileService.Load(backupName);
+                    if (!mayDeleteBackup)
+                        ReportStatus(StudioText($"Automatic recovery failed. Backup profile preserved: {backupName}",
+                            $"Η αυτόματη ανάκτηση απέτυχε. Το αντίγραφο διατηρήθηκε: {backupName}"), StatusKind.Error);
+                }
+                else mayDeleteBackup = true;
+            }
+            catch (Exception ex)
+            {
+                RotatingLogger.Write("Profile preview failed: " + ex.GetType().Name);
+                mayDeleteBackup = backupSaved && WorkspaceProfileService.Load(backupName);
+                if (backupSaved && !mayDeleteBackup)
+                    ReportStatus(StudioText($"Recovery backup was retained: {backupName}",
+                        $"Το αντίγραφο ανάκτησης διατηρήθηκε: {backupName}"), StatusKind.Error);
+            }
+            finally { if (mayDeleteBackup) WorkspaceProfileService.Delete(backupName); }
         }
 
         // Ενοποιημένη καρτέλα: πρώην ξεχωριστά "System Monitor" + "Performance Center" (το
@@ -3253,7 +3435,7 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
             foreach (var rule in AutomationService.Instance.Rules)
             {
                 var row = new FlowLayoutPanel { AutoSize = true, WrapContents = false, Margin = new Padding(0, 2, 0, 4) };
-                var check = new FlatCheckBox { Text = $"{rule.Name}  ·  {rule.TriggerProcess}  →  {rule.Profile}", Checked = rule.Enabled, AutoSize = true, BackColor = UiTheme.PageBackground, Padding = new Padding(0, 4, 0, 0) };
+                var check = new FlatCheckBox { Text = $"{rule.Name}  ·  {rule.TriggerProcess}  [{rule.PowerCondition}, ≤{rule.BatteryBelowPercent}%] →  {rule.Profile}", Checked = rule.Enabled, AutoSize = true, BackColor = UiTheme.PageBackground, Padding = new Padding(0, 4, 0, 0) };
                 check.CheckedChanged += (_, _) => { rule.Enabled = check.Checked; AutomationService.Instance.Save(); };
                 row.Controls.Add(check);
 
@@ -3306,7 +3488,7 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
             {
                 Text = LocalizationManager.T("Automation.RuleDialogTitle"),
                 StartPosition = FormStartPosition.CenterParent,
-                Size = new Size(420, 230),
+                Size = new Size(440, 340),
                 FormBorderStyle = FormBorderStyle.FixedDialog,
                 MinimizeBox = false,
                 MaximizeBox = false,
@@ -3318,11 +3500,21 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
             var procBox = new TextBox { Location = new Point(14, 86), Width = 380, Text = rule.TriggerProcess };
             var profileLabel = new Label { Text = LocalizationManager.T("Automation.ProfileToLoadLabel"), Location = new Point(14, 118), AutoSize = true, ForeColor = UiTheme.TextPrimary };
             var profileBox = new TextBox { Location = new Point(14, 138), Width = 380, Text = rule.Profile };
-            var okBtn = new Button { Text = LocalizationManager.T("Common.OK"), Location = new Point(228, 170), DialogResult = DialogResult.OK };
-            var cancelBtn = new Button { Text = LocalizationManager.T("Common.Cancel"), Location = new Point(316, 170), DialogResult = DialogResult.Cancel };
+            var powerLabel = new Label { Text = StudioText("Power condition", "Κατάσταση τροφοδοσίας"), Location = new Point(14, 170), AutoSize = true, ForeColor = UiTheme.TextPrimary };
+            var powerCombo = new ComboBox { Location = new Point(14, 190), Width = 170, DropDownStyle = ComboBoxStyle.DropDownList };
+            powerCombo.Items.AddRange(new object[] { "Any", "Battery", "AC" });
+            powerCombo.SelectedItem = rule.PowerCondition is "Battery" or "AC" ? rule.PowerCondition : "Any";
+            var belowLabel = new Label { Text = StudioText("Battery below % (0 = off)", "Μπαταρία κάτω από % (0 = χωρίς όριο)"),
+                Location = new Point(195, 170), AutoSize = true, ForeColor = UiTheme.TextPrimary };
+            var belowNumber = new NumericUpDown { Location = new Point(195, 190), Width = 160, Minimum = 0, Maximum = 100,
+                Value = Math.Clamp(rule.BatteryBelowPercent, 0, 100) };
+            var okBtn = new Button { Text = LocalizationManager.T("Common.OK"), Location = new Point(228, 244), DialogResult = DialogResult.OK };
+            var cancelBtn = new Button { Text = LocalizationManager.T("Common.Cancel"), Location = new Point(316, 244), DialogResult = DialogResult.Cancel };
             dialog.Controls.Add(nameLabel); dialog.Controls.Add(nameBox);
             dialog.Controls.Add(procLabel); dialog.Controls.Add(procBox);
             dialog.Controls.Add(profileLabel); dialog.Controls.Add(profileBox);
+            dialog.Controls.Add(powerLabel); dialog.Controls.Add(powerCombo);
+            dialog.Controls.Add(belowLabel); dialog.Controls.Add(belowNumber);
             dialog.Controls.Add(okBtn); dialog.Controls.Add(cancelBtn);
             dialog.AcceptButton = okBtn; dialog.CancelButton = cancelBtn;
             dialog.HandleCreated += (_, _) => GlassBlur.ApplyWindowDropShadow(dialog.Handle);
@@ -3331,6 +3523,8 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
             rule.Name = nameBox.Text.Trim();
             rule.TriggerProcess = procBox.Text.Trim();
             rule.Profile = profileBox.Text.Trim();
+            rule.PowerCondition = powerCombo.SelectedItem?.ToString() ?? "Any";
+            rule.BatteryBelowPercent = (int)belowNumber.Value;
             return true;
         }
 

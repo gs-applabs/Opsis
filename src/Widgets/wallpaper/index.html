@@ -1008,7 +1008,7 @@ async function doRefresh() {
     if (window.WeatherWallpaper) {
         const wx = isWeatherMode(cfg.mode);
         if (wx) window.OpsisLandmarks?.setCities(cfg.cityScenes);   // οι προσομοιώσεις (καιρός/ώρα/άνεμος) ισχύουν μόνο στο Weather mode — τα υπόλοιπα modes δείχνουν την πραγματική ώρα/θερμοκρασία
-        WeatherWallpaper.setConfig({ realistic: wx, weatherSim: wx ? (cfg.weatherSim || 'Auto') : 'Auto', timeSim: wx ? (cfg.timeSim || 'Auto') : 'Auto', windSim: wx ? (cfg.windSim || 'Auto') : 'Auto', glass: cfg.weatherGlass !== false, landmarks: cfg.weatherLandmarks !== false, landmarkId: cfg.weatherLandmarkId || 'Auto', lat: cfg.weatherLat, lon: cfg.weatherLon });
+        WeatherWallpaper.setConfig({ realistic: wx, weatherSim: wx ? (cfg.weatherSim || 'Auto') : 'Auto', timeSim: wx ? (cfg.timeSim || 'Auto') : 'Auto', windSim: wx ? (cfg.windSim || 'Auto') : 'Auto', glass: cfg.weatherGlass !== false, rainGlassIntensity: cfg.rainGlassIntensity, rainLandscapeIntensity: cfg.rainLandscapeIntensity, landmarks: cfg.weatherLandmarks !== false, landmarkId: cfg.weatherLandmarkId || 'Auto', lat: cfg.weatherLat, lon: cfg.weatherLon });
     }
     stopPolling();
     if (!isPaused && (isWeatherMode(cfg.mode) || cfg.weatherInfo))

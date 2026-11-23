@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
@@ -76,7 +76,7 @@ namespace MotionDesk.Services
         public void SetPluginEnabled(string id, bool enabled)
         {
             var settings = AppSettings.Load();
-            if (enabled) settings.DisabledPluginIds.Remove(id);
+            if (enabled) { settings.DisabledPluginIds.Remove(id); PluginFailureQuarantine.Clear(id); }
             else if (!settings.DisabledPluginIds.Contains(id)) settings.DisabledPluginIds.Add(id);
             settings.Save();
 
@@ -88,7 +88,12 @@ namespace MotionDesk.Services
                     if (enabled && !p.Started) { PushLanguage(p.Plugin); PushTheme(p.Plugin); PushHardwareProfile(p.Plugin); p.Plugin.Start(); p.Started = true; }
                     else if (!enabled && p.Started) { p.Plugin.Stop(); p.Started = false; }
                 }
-                catch (Exception ex) { Log($"Plugin '{p.Plugin.Name}' failed to {(enabled ? "start" : "stop")} after toggle: {ex.Message}"); }
+                catch (Exception ex)
+                {
+                    Log($"Plugin '{p.Plugin.Name}' failed to {(enabled ? "start" : "stop")} after toggle: {ex.Message}");
+                    if (PluginFailureQuarantine.RecordFailure(p.Plugin.Id))
+                        Log($"Plugin '{p.Plugin.Name}' temporarily quarantined after repeated failures.");
+                }
             }
             Changed?.Invoke();
         }
@@ -156,12 +161,17 @@ namespace MotionDesk.Services
                     PushLanguage(p.Plugin);
                     PushTheme(p.Plugin);
                     PushHardwareProfile(p.Plugin);
-                    if (!disabled.Contains(p.Plugin.Id)) { p.Plugin.Start(); p.Started = true; }
+                    if (!disabled.Contains(p.Plugin.Id) && !PluginFailureQuarantine.IsQuarantined(p.Plugin.Id))
+                        { p.Plugin.Start(); p.Started = true; }
+                    else if (PluginFailureQuarantine.IsQuarantined(p.Plugin.Id))
+                        Log($"Plugin '{p.Plugin.Name}' is temporarily isolated; use the plugin toggle to re-enable it intentionally.");
                 }
                 catch (Exception ex)
                 {
                     Log($"Plugin '{p.Plugin.Name}' failed to start: {ex}");
-                    RemoveLoaded(p);
+                    if (PluginFailureQuarantine.RecordFailure(p.Plugin.Id))
+                        Log($"Plugin '{p.Plugin.Name}' quarantined after three failures.");
+                    // Keep metadata and per-plugin toggle available for user recovery.
                 }
             }
 
@@ -196,7 +206,16 @@ namespace MotionDesk.Services
                     var widget = provider.GetWidgets().FirstOrDefault(w => string.Equals(w.ReplacesBuiltIn, builtInId, StringComparison.OrdinalIgnoreCase));
                     if (widget != null) { Log($"Plugin '{p.Plugin.Name}': widget '{widget.Key}' replaces built-in '{builtInId}'"); return widget; }
                 }
-                catch (Exception ex) { Log($"Plugin '{p.Plugin.Name}' widgets failed: {ex.Message}"); }
+                catch (Exception ex)
+                {
+                    Log($"Plugin '{p.Plugin.Name}' widgets failed: {ex.Message}");
+                    if (PluginFailureQuarantine.RecordFailure(p.Plugin.Id))
+                    {
+                        try { p.Plugin.Stop(); } catch (Exception) { }
+                        p.Started = false;
+                        Log($"Plugin '{p.Plugin.Name}' quarantined after three failures; other plugins remain active.");
+                    }
+                }
             }
             return null;
         }
@@ -341,7 +360,8 @@ namespace MotionDesk.Services
                 catch (Exception ex) { Log($"Plugin '{folder}' skipped: trust check failed: {ex.Message}"); return false; }
                 if (!TrustStore.IsApproved(name, hash))
                 {
-                    lock (_pending) { _pending.RemoveAll(p => string.Equals(p.Folder, folder, StringComparison.OrdinalIgnoreCase)); _pending.Add(new PluginTrustRequest(name, folder, hash)); }
+                    var (publisher, signature) = PluginPublisherInfo.Inspect(folder);
+                    lock (_pending) { _pending.RemoveAll(p => string.Equals(p.Folder, folder, StringComparison.OrdinalIgnoreCase)); _pending.Add(new PluginTrustRequest(name, folder, hash, publisher, signature)); }
                     Log($"Plugin '{name}' in '{folder}' is waiting for approval (sha256 {hash}); it is not loaded until the user approves it.");
                     return false;
                 }
@@ -392,9 +412,15 @@ namespace MotionDesk.Services
             {
                 p.Plugin.NavigationRequested += key => NavigationRequested?.Invoke(key);
                 PushLanguage(p.Plugin); PushTheme(p.Plugin); PushHardwareProfile(p.Plugin);
-                if (!AppSettings.Load().DisabledPluginIds.Contains(p.Plugin.Id)) { p.Plugin.Start(); p.Started = true; }
+                if (!AppSettings.Load().DisabledPluginIds.Contains(p.Plugin.Id) && !PluginFailureQuarantine.IsQuarantined(p.Plugin.Id))
+                    { p.Plugin.Start(); p.Started = true; }
             }
-            catch (Exception ex) { Log($"Plugin '{p.Plugin.Name}' failed to start: {ex}"); RemoveLoaded(p); }
+            catch (Exception ex)
+            {
+                Log($"Plugin '{p.Plugin.Name}' failed to start: {ex}");
+                if (PluginFailureQuarantine.RecordFailure(p.Plugin.Id))
+                    Log($"Plugin '{p.Plugin.Name}' quarantined after three failures.");
+            }
         }
 
         internal static IEnumerable<(string Folder, bool TrustedRoot)> EnumerateCandidateFolders()

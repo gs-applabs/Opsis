@@ -409,6 +409,8 @@ function setConfig(c) {
     cfg = { ...cfg, ...c };
     if (typeof cfg.lat !== 'number' || isNaN(cfg.lat)) cfg.lat = 37.9838;
     if (typeof cfg.lon !== 'number' || isNaN(cfg.lon)) cfg.lon = 23.7275;
+    cfg.rainGlassIntensity = Number.isFinite(+cfg.rainGlassIntensity) ? clamp(+cfg.rainGlassIntensity, 0, 2) : 1;
+    cfg.rainLandscapeIntensity = Number.isFinite(+cfg.rainLandscapeIntensity) ? clamp(+cfg.rainLandscapeIntensity, 0, 2) : 1;
     // Weather observations belong to a location. Never briefly show the previous city's
     // temperature when the user changes coordinates while the next request is pending.
     if (old.lat !== cfg.lat || old.lon !== cfg.lon) data = null;
@@ -1352,7 +1354,7 @@ function drawRipples(ctx2, dt, amb) {
 }
 
 function drawRain(ctx2, dt, amb, density) {
-    const intensity = S.rain;
+    const intensity = clamp(S.rain * cfg.rainLandscapeIntensity, 0, 2);
     if (intensity < 0.02) return;
     const col = mix([135, 152, 180], [215, 230, 250], clamp(amb + 0.1, 0, 1));
     const layers = [
@@ -1465,7 +1467,8 @@ function drawFog(ctx2, dt, graded, amb) {
 // Ξ³Ο‰Ξ½Ξ―Ξ± Ο„ΞΏΟ… Ο‡ΟΞ®ΟƒΟ„Ξ·, Ξ±ΞΊΟΞΌΞ± ΞΊΞΉ Ξ±Ξ½ Ο„ΞµΟ‡Ξ½ΞΉΞΊΞ¬ Ξ¶Ο‰Ξ³ΟΞ±Ο†ΞΉΞ¶ΟΟ„Ξ±Ξ½ ΞΊΞ¬ΞΈΞµ frame. ΞΞµΞ³Ξ±Ξ»ΟΟ„ΞµΟΞµΟ‚ ΟƒΟ„Ξ±Ξ³ΟΞ½ΞµΟ‚ + ΟƒΞ±Ο†ΟΟ‚
 // ΞΌΞµΞ³Ξ±Ξ»ΟΟ„ΞµΟΞΏ alpha Ο€Ξ±Ξ½Ο„ΞΏΟ, Ο€ΞΉΞΏ ΞΊΞΏΞ½Ο„Ξ¬ ΟƒΟ„ΞΏ Ο€ΟΟ‚ Ο†Ξ±Ξ―Ξ½ΞµΟ„Ξ±ΞΉ Ο„ΞΏ Ξ±Ξ½Ο„Ξ―ΟƒΟ„ΞΏΞΉΟ‡ΞΏ ΞµΟ†Ξ­ Ο„ΞΏΟ… Lively Wallpaper.
 function updateGlass(dt) {
-    const want = cfg.glass && S.rain > 0.12 ? Math.round((34 + 150 * S.rain) * Math.min(1.4, W / 1920 + 0.2)) : 0;
+    const glassRain = clamp(S.rain * cfg.rainGlassIntensity, 0, 2);
+    const want = cfg.glass && glassRain > 0.12 ? Math.min(500, Math.round((34 + 150 * glassRain) * Math.min(1.4, W / 1920 + 0.2))) : 0;
     while (glass.length < want && Math.random() < 0.6) {
         glass.push({ x: Math.random() * W, y: Math.random() * H, r: (3 + Math.random() * 7) * K, vy: 0, trail: [], age: 0 });
     }
