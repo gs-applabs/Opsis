@@ -1,0 +1,37 @@
+{
+  "project": "OPSIS Desktop Customization",
+  "version": "2.8.0.2500",
+  "checkpoint": "R10",
+  "package_purpose": "Claude Code review; source only, no certified Windows installer",
+  "original_r10_source_zip": "Opsis-Desktop-Customization-2.8.0.2500-R10-partials-source.zip",
+  "original_r10_sha256": "e34ad6c47f5b3302d499e8f5bd6de495600dfc8b4ee95e56364b3a7b079d1a67",
+  "original_source_files_verified": 611,
+  "original_source_bytes": 81091522,
+  "reconstructed_history_commits_from_zips": 11,
+  "reconstructed_history_warning": "Artificial chronological checkpoints, NOT original GitHub commit history or author provenance",
+  "status_from_provided_tracker": {
+    "new": 73,
+    "existing": 17,
+    "partial": 7,
+    "pending": 3
+  },
+  "partial_points": [
+    12,
+    17,
+    20,
+    24,
+    32,
+    40,
+    97
+  ],
+  "pending_windows_release_gates": [
+    92,
+    93,
+    99
+  ],
+  "documented_node_tests": "39/39 in included QA/node-test-r10.txt (prior evidence; rerun required)",
+  "dotnet11_windows_build": "not verified",
+  "inno_setup_installer": "not generated/verified",
+  "external_plugin_source": "Not bundled; see CLAUDE_CODE_HANDOFF/REPOSITORIES-AND-DEPENDENCIES-EL.md",
+  "prepared_date": "2026-11-23"
+}

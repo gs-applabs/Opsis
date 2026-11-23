@@ -1,0 +1,1040 @@
+[
+  {
+    "revision": "BASE-2402",
+    "label": "2.7.7.2402 .NET 11 performance baseline",
+    "source_zip": "Opsis-Desktop-Customization-2.7.7.2402-net11-performance-source.zip",
+    "source_sha256": "124e70a43c15f84f14a29bc452e38736ed2104950a419bbd86bade7ea5325e4b",
+    "source_bytes": 70000758,
+    "source_file_count": 555,
+    "git_sha": "610bf57c4db4fc0b49bc2edf14e1f94081e0455b",
+    "change_counts": {
+      "added": 555,
+      "modified": 0,
+      "deleted": 0,
+      "renamed": 0
+    },
+    "changes": []
+  },
+  {
+    "revision": "BASE-2403",
+    "label": "2.7.7.2403 integrated baseline",
+    "source_zip": "Opsis-Desktop-Customization-2.7.7.2403-integrated-source.zip",
+    "source_sha256": "e3377657bf77800dde41baca086d9c81ffafb70a0d904d2964390087044bba34",
+    "source_bytes": 70011382,
+    "source_file_count": 559,
+    "git_sha": "ccdee6baad0dc03799ca5054dd96e16722140df6",
+    "change_counts": {
+      "added": 4,
+      "modified": 13,
+      "deleted": 0,
+      "renamed": 0
+    },
+    "changes": [
+      {
+        "status": "M",
+        "path": ".github/workflows/windows-audit.yml"
+      },
+      {
+        "status": "A",
+        "path": "INTEGRATION-REPORT-2.7.7.2403-EL.md"
+      },
+      {
+        "status": "M",
+        "path": "Opsis.Studio.csproj"
+      },
+      {
+        "status": "M",
+        "path": "README-EL.md"
+      },
+      {
+        "status": "M",
+        "path": "ROADMAP-100-EL.md"
+      },
+      {
+        "status": "M",
+        "path": "installer.iss"
+      },
+      {
+        "status": "M",
+        "path": "src/Services/AtomicFile.cs"
+      },
+      {
+        "status": "M",
+        "path": "src/Services/SelfTestRunner.cs"
+      },
+      {
+        "status": "M",
+        "path": "src/Services/WallpaperPackages.cs"
+      },
+      {
+        "status": "M",
+        "path": "src/Services/WorkspaceProfileService.cs"
+      },
+      {
+        "status": "M",
+        "path": "src/UI/MainWindow.WallpaperMedia.cs"
+      },
+      {
+        "status": "M",
+        "path": "src/Widgets/WeatherService.cs"
+      },
+      {
+        "status": "M",
+        "path": "src/Widgets/wallpaper/index.html"
+      },
+      {
+        "status": "A",
+        "path": "src/Widgets/wallpaper/weather-freshness.js"
+      },
+      {
+        "status": "M",
+        "path": "src/Widgets/wallpaper/weather.js"
+      },
+      {
+        "status": "A",
+        "path": "tests/WeatherFreshness.test.cjs"
+      },
+      {
+        "status": "A",
+        "path": "tests/WeatherOffline.test.cjs"
+      }
+    ]
+  },
+  {
+    "revision": "R2",
+    "label": "2.8.0.2500 plugin ABI preparation",
+    "source_zip": "Opsis-2.8.0.2500-plugin-dll-1.0.0.0-source-preview-R2.zip",
+    "source_sha256": "e87ada29d0ae8738a14934a59deb0d86f7820c0065ffc2b1def31820a3f8e2f8",
+    "source_bytes": 70072647,
+    "source_file_count": 565,
+    "git_sha": "485c53f294e8f9d402b2b16c5ed5785ac15bddd0",
+    "change_counts": {
+      "added": 6,
+      "modified": 9,
+      "deleted": 0,
+      "renamed": 0
+    },
+    "changes": [
+      {
+        "status": "A",
+        "path": ".github/workflows/plugin-compatibility.yml"
+      },
+      {
+        "status": "M",
+        "path": ".github/workflows/windows-audit.yml"
+      },
+      {
+        "status": "A",
+        "path": "COMPATIBILITY-2.8.0.2500-PREVIEW-EL.md"
+      },
+      {
+        "status": "M",
+        "path": "Opsis.Studio.csproj"
+      },
+      {
+        "status": "A",
+        "path": "PLUGIN-DLL-1.0.0.0-STATUS-EL.md"
+      },
+      {
+        "status": "M",
+        "path": "README-EL.md"
+      },
+      {
+        "status": "M",
+        "path": "installer.iss"
+      },
+      {
+        "status": "M",
+        "path": "src/Services/DesktopDiagnostics.cs"
+      },
+      {
+        "status": "M",
+        "path": "src/Services/MediaSuiteDetector.cs"
+      },
+      {
+        "status": "M",
+        "path": "src/Services/PluginHost.cs"
+      },
+      {
+        "status": "M",
+        "path": "src/Services/PluginUiStyle.cs"
+      },
+      {
+        "status": "M",
+        "path": "suite/apps.json"
+      },
+      {
+        "status": "A",
+        "path": "tests/PluginCompatibility.test.cjs"
+      },
+      {
+        "status": "A",
+        "path": "tests/PluginReleaseGate.test.cjs"
+      },
+      {
+        "status": "A",
+        "path": "tools/check-plugin-dll-versions.ps1"
+      }
+    ]
+  },
+  {
+    "revision": "R3",
+    "label": "100 improvements source inventory",
+    "source_zip": "Opsis-Desktop-Customization-2.8.0.2500-100-improvements-R3-source-preview.zip",
+    "source_sha256": "4544a780a607a2f76de91913efb8f5d39351753a06de8bc470816dbaf57d5563",
+    "source_bytes": 70064598,
+    "source_file_count": 574,
+    "git_sha": "6f87135ef6ec3cd44431c722923cf414470df49f",
+    "change_counts": {
+      "added": 9,
+      "modified": 20,
+      "deleted": 0,
+      "renamed": 0
+    },
+    "changes": [
+      {
+        "status": "M",
+        "path": ".github/workflows/windows-audit.yml"
+      },
+      {
+        "status": "A",
+        "path": "IMPLEMENTATION-100-STATUS-2.8.0.2500-EL.md"
+      },
+      {
+        "status": "A",
+        "path": "IMPLEMENTATION-100-STATUS-2.8.0.2500.json"
+      },
+      {
+        "status": "M",
+        "path": "installer.iss"
+      },
+      {
+        "status": "M",
+        "path": "locales/el-GR.json"
+      },
+      {
+        "status": "M",
+        "path": "locales/en-US.json"
+      },
+      {
+        "status": "M",
+        "path": "src/Containers/DesktopFiles.cs"
+      },
+      {
+        "status": "M",
+        "path": "src/Services/AppSettings.cs"
+      },
+      {
+        "status": "A",
+        "path": "src/Services/CommandHistoryStore.cs"
+      },
+      {
+        "status": "A",
+        "path": "src/Services/DiagnosticSessionService.cs"
+      },
+      {
+        "status": "A",
+        "path": "src/Services/PluginCompatibilityCatalog.cs"
+      },
+      {
+        "status": "A",
+        "path": "src/Services/SearchLanguage.cs"
+      },
+      {
+        "status": "A",
+        "path": "src/Services/TextContrast.cs"
+      },
+      {
+        "status": "M",
+        "path": "src/UI/HelpForm.cs"
+      },
+      {
+        "status": "M",
+        "path": "src/UI/MainWindow.Appearance.cs"
+      },
+      {
+        "status": "M",
+        "path": "src/UI/MainWindow.Organization.cs"
+      },
+      {
+        "status": "M",
+        "path": "src/UI/MainWindow.Performance.cs"
+      },
+      {
+        "status": "M",
+        "path": "src/UI/MainWindow.Themes.cs"
+      },
+      {
+        "status": "M",
+        "path": "src/UI/MainWindow.cs"
+      },
+      {
+        "status": "M",
+        "path": "src/UI/PageSearch.cs"
+      },
+      {
+        "status": "M",
+        "path": "src/UI/UiTheme.cs"
+      },
+      {
+        "status": "M",
+        "path": "src/Widgets/DeskStripWindow.cs"
+      },
+      {
+        "status": "M",
+        "path": "src/Widgets/DesktopLauncher.cs"
+      },
+      {
+        "status": "M",
+        "path": "src/Widgets/WallpaperWindow.cs"
+      },
+      {
+        "status": "M",
+        "path": "src/Widgets/ZoneLayoutEditorForm.cs"
+      },
+      {
+        "status": "M",
+        "path": "src/Widgets/ZoneLayoutStore.cs"
+      },
+      {
+        "status": "M",
+        "path": "src/Widgets/wallpaper/index.html"
+      },
+      {
+        "status": "A",
+        "path": "suite/plugin-compatibility.json"
+      },
+      {
+        "status": "A",
+        "path": "tools/write-build-report.ps1"
+      }
+    ]
+  },
+  {
+    "revision": "R4",
+    "label": "11 partially implemented improvements",
+    "source_zip": "Opsis-Desktop-Customization-2.8.0.2500-R4-partials-source.zip",
+    "source_sha256": "8947b610307023e00face42b56ee6e1ffd63173a5b6f1a1377c7e0a0dd5171e1",
+    "source_bytes": 70078239,
+    "source_file_count": 581,
+    "git_sha": "b54b4e480e2a149de86bb5551cb519ea87e25888",
+    "change_counts": {
+      "added": 7,
+      "modified": 18,
+      "deleted": 0,
+      "renamed": 0
+    },
+    "changes": [
+      {
+        "status": "M",
+        "path": ".github/workflows/windows-audit.yml"
+      },
+      {
+        "status": "M",
+        "path": "IMPLEMENTATION-100-STATUS-2.8.0.2500-EL.md"
+      },
+      {
+        "status": "M",
+        "path": "IMPLEMENTATION-100-STATUS-2.8.0.2500.json"
+      },
+      {
+        "status": "M",
+        "path": "Opsis.Studio.csproj"
+      },
+      {
+        "status": "A",
+        "path": "R4-CHANGELOG-11-PARTIALS-EL.md"
+      },
+      {
+        "status": "A",
+        "path": "Version.props"
+      },
+      {
+        "status": "M",
+        "path": "installer/build.ps1"
+      },
+      {
+        "status": "M",
+        "path": "src/Services/AppVersion.cs"
+      },
+      {
+        "status": "M",
+        "path": "src/Services/AtomicFile.cs"
+      },
+      {
+        "status": "M",
+        "path": "src/Services/PluginCompatibilityCatalog.cs"
+      },
+      {
+        "status": "M",
+        "path": "src/Services/PluginHost.cs"
+      },
+      {
+        "status": "M",
+        "path": "src/Services/UpdateCheckService.cs"
+      },
+      {
+        "status": "M",
+        "path": "src/Services/UpdateInstallerService.cs"
+      },
+      {
+        "status": "A",
+        "path": "src/Services/VerifiedRollbackService.cs"
+      },
+      {
+        "status": "M",
+        "path": "src/Services/WorkspaceProfileService.cs"
+      },
+      {
+        "status": "M",
+        "path": "src/UI/HelpForm.cs"
+      },
+      {
+        "status": "M",
+        "path": "src/UI/MainWindow.Organization.cs"
+      },
+      {
+        "status": "M",
+        "path": "src/UI/MainWindow.Themes.cs"
+      },
+      {
+        "status": "M",
+        "path": "src/UI/MainWindow.cs"
+      },
+      {
+        "status": "M",
+        "path": "src/Widgets/WallpaperWindow.cs"
+      },
+      {
+        "status": "M",
+        "path": "src/Widgets/wallpaper/index.html"
+      },
+      {
+        "status": "A",
+        "path": "tests/AtomicWriteCrashHarness/AtomicWriteCrashHarness.csproj"
+      },
+      {
+        "status": "A",
+        "path": "tests/AtomicWriteCrashHarness/Program.cs"
+      },
+      {
+        "status": "A",
+        "path": "tools/emit-release-identity.ps1"
+      },
+      {
+        "status": "A",
+        "path": "tools/verify-atomic-powerloss.ps1"
+      }
+    ]
+  },
+  {
+    "revision": "R5",
+    "label": "65-point programme progress",
+    "source_zip": "Opsis-Desktop-Customization-2.8.0.2500-R5-source-checkpoint.zip",
+    "source_sha256": "c96ed7383dcc839e6082f9ddfada0e9c70844535d31a48ab2fa75f3221298b68",
+    "source_bytes": 70115836,
+    "source_file_count": 584,
+    "git_sha": "5dbfae4d65139c006e1a2b863de073920119b795",
+    "change_counts": {
+      "added": 3,
+      "modified": 19,
+      "deleted": 0,
+      "renamed": 0
+    },
+    "changes": [
+      {
+        "status": "M",
+        "path": "IMPLEMENTATION-100-STATUS-2.8.0.2500-EL.md"
+      },
+      {
+        "status": "M",
+        "path": "IMPLEMENTATION-100-STATUS-2.8.0.2500.json"
+      },
+      {
+        "status": "A",
+        "path": "R5-CHANGELOG-65-PROGRESS-EL.md"
+      },
+      {
+        "status": "M",
+        "path": "src/Containers/ContainerWindow.cs"
+      },
+      {
+        "status": "M",
+        "path": "src/Containers/SpotSearch.cs"
+      },
+      {
+        "status": "M",
+        "path": "src/Services/AdvancedSystemMonitorService.cs"
+      },
+      {
+        "status": "M",
+        "path": "src/Services/AutoTileService.cs"
+      },
+      {
+        "status": "M",
+        "path": "src/Services/AutomationService.cs"
+      },
+      {
+        "status": "A",
+        "path": "src/Services/PluginFailureQuarantine.cs"
+      },
+      {
+        "status": "M",
+        "path": "src/Services/PluginHost.cs"
+      },
+      {
+        "status": "M",
+        "path": "src/Services/PluginTrust.cs"
+      },
+      {
+        "status": "M",
+        "path": "src/Services/UiResourceAudit.cs"
+      },
+      {
+        "status": "M",
+        "path": "src/Services/WorkspaceProfileService.cs"
+      },
+      {
+        "status": "M",
+        "path": "src/UI/MainWindow.cs"
+      },
+      {
+        "status": "M",
+        "path": "src/Widgets/DesktopLauncher.cs"
+      },
+      {
+        "status": "A",
+        "path": "src/Widgets/HotkeyDiagnosticDialog.cs"
+      },
+      {
+        "status": "M",
+        "path": "src/Widgets/HotkeyManager.cs"
+      },
+      {
+        "status": "M",
+        "path": "src/Widgets/TrayApplicationContext.cs"
+      },
+      {
+        "status": "M",
+        "path": "src/Widgets/WallpaperWindow.cs"
+      },
+      {
+        "status": "M",
+        "path": "src/Widgets/WidgetEngine.cs"
+      },
+      {
+        "status": "M",
+        "path": "src/Widgets/wallpaper/index.html"
+      },
+      {
+        "status": "M",
+        "path": "src/Widgets/wallpaper/weather.js"
+      }
+    ]
+  },
+  {
+    "revision": "R6",
+    "label": "Session 1/4",
+    "source_zip": "Opsis-Desktop-Customization-2.8.0.2500-R6-Session-1-of-4-source.zip",
+    "source_sha256": "9e5616e41a068e8f2fd1cb3795a9f6add4cfdfd7a734562f9aca2b33edcd464d",
+    "source_bytes": 70130521,
+    "source_file_count": 585,
+    "git_sha": "842219a19a1ced66aa08e9ca45e706ca7f5270e8",
+    "change_counts": {
+      "added": 1,
+      "modified": 17,
+      "deleted": 0,
+      "renamed": 0
+    },
+    "changes": [
+      {
+        "status": "M",
+        "path": "IMPLEMENTATION-100-STATUS-2.8.0.2500-EL.md"
+      },
+      {
+        "status": "M",
+        "path": "IMPLEMENTATION-100-STATUS-2.8.0.2500.json"
+      },
+      {
+        "status": "A",
+        "path": "R6-SESSION-1-OF-4-EL.md"
+      },
+      {
+        "status": "M",
+        "path": "src/Containers/ContainerWindow.Interaction.cs"
+      },
+      {
+        "status": "M",
+        "path": "src/Containers/ContainerWindow.cs"
+      },
+      {
+        "status": "M",
+        "path": "src/Music/DesktopMusicController.cs"
+      },
+      {
+        "status": "M",
+        "path": "src/Music/MusicOverlayPage.cs"
+      },
+      {
+        "status": "M",
+        "path": "src/Music/MusicOverlaySettings.cs"
+      },
+      {
+        "status": "M",
+        "path": "src/Music/WallpaperMusicSurface.cs"
+      },
+      {
+        "status": "M",
+        "path": "src/UI/MainWindow.Appearance.cs"
+      },
+      {
+        "status": "M",
+        "path": "src/UI/MainWindow.cs"
+      },
+      {
+        "status": "M",
+        "path": "src/Widgets/DeskStripWindow.cs"
+      },
+      {
+        "status": "M",
+        "path": "src/Widgets/WallpaperWindow.cs"
+      },
+      {
+        "status": "M",
+        "path": "src/Widgets/WidgetEngine.cs"
+      },
+      {
+        "status": "M",
+        "path": "src/Widgets/wallpaper/index.html"
+      },
+      {
+        "status": "M",
+        "path": "src/Widgets/wallpaper/sky-mask.js"
+      },
+      {
+        "status": "M",
+        "path": "src/Widgets/wallpaper/weather-atmosphere.js"
+      },
+      {
+        "status": "M",
+        "path": "src/Widgets/wallpaper/weather.js"
+      }
+    ]
+  },
+  {
+    "revision": "R7",
+    "label": "Session 2/4",
+    "source_zip": "Opsis-Desktop-Customization-2.8.0.2500-R7-Session-2-of-4-source.zip",
+    "source_sha256": "d16d75d694580e784bf48271d36386ef957de4c950c5b73879095e3a6b8b9da2",
+    "source_bytes": 70137892,
+    "source_file_count": 588,
+    "git_sha": "e004aec5b85909bffa4554d8c407cdf97af9a767",
+    "change_counts": {
+      "added": 3,
+      "modified": 10,
+      "deleted": 0,
+      "renamed": 0
+    },
+    "changes": [
+      {
+        "status": "M",
+        "path": "IMPLEMENTATION-100-STATUS-2.8.0.2500-EL.md"
+      },
+      {
+        "status": "M",
+        "path": "IMPLEMENTATION-100-STATUS-2.8.0.2500.json"
+      },
+      {
+        "status": "A",
+        "path": "R7-SESSION-2-OF-4-EL.md"
+      },
+      {
+        "status": "A",
+        "path": "src/Containers/BrokenShortcutTools.cs"
+      },
+      {
+        "status": "M",
+        "path": "src/Containers/ContainerHost.Organization.cs"
+      },
+      {
+        "status": "M",
+        "path": "src/Containers/ContainerHost.cs"
+      },
+      {
+        "status": "A",
+        "path": "src/Containers/ContainerLayoutHistory.cs"
+      },
+      {
+        "status": "M",
+        "path": "src/Containers/ContainerWindow.cs"
+      },
+      {
+        "status": "M",
+        "path": "src/Containers/SpotSearch.cs"
+      },
+      {
+        "status": "M",
+        "path": "src/Services/AudioSpectrumService.cs"
+      },
+      {
+        "status": "M",
+        "path": "src/Services/SharedLoopbackCapture.cs"
+      },
+      {
+        "status": "M",
+        "path": "src/Widgets/DeskStripWindow.cs"
+      },
+      {
+        "status": "M",
+        "path": "src/Widgets/ZoneLayoutEditorForm.cs"
+      }
+    ]
+  },
+  {
+    "revision": "R8",
+    "label": "Session 3/4",
+    "source_zip": "Opsis-Desktop-Customization-2.8.0.2500-R8-Session-3-of-4-source.zip",
+    "source_sha256": "3f57fecd86afe5abd951022812b7ac91059ec856c87aa197ad086e2a8d01dab1",
+    "source_bytes": 70160005,
+    "source_file_count": 596,
+    "git_sha": "6e87becbf8c8058c243f5f85bde8243bc70784bc",
+    "change_counts": {
+      "added": 8,
+      "modified": 14,
+      "deleted": 0,
+      "renamed": 0
+    },
+    "changes": [
+      {
+        "status": "M",
+        "path": "IMPLEMENTATION-100-STATUS-2.8.0.2500-EL.md"
+      },
+      {
+        "status": "M",
+        "path": "IMPLEMENTATION-100-STATUS-2.8.0.2500.json"
+      },
+      {
+        "status": "A",
+        "path": "R8-SESSION-3-OF-4-EL.md"
+      },
+      {
+        "status": "M",
+        "path": "src/Music/DesktopMusicController.cs"
+      },
+      {
+        "status": "M",
+        "path": "src/Services/AppSettings.cs"
+      },
+      {
+        "status": "M",
+        "path": "src/Services/AutoTileService.cs"
+      },
+      {
+        "status": "A",
+        "path": "src/Services/MonitorTopologyService.cs"
+      },
+      {
+        "status": "A",
+        "path": "src/Services/WindowZoneRule.cs"
+      },
+      {
+        "status": "M",
+        "path": "src/Services/WorkspaceProfileService.cs"
+      },
+      {
+        "status": "M",
+        "path": "src/UI/MainWindow.cs"
+      },
+      {
+        "status": "A",
+        "path": "src/UI/ProfileMonitorMappingDialog.cs"
+      },
+      {
+        "status": "A",
+        "path": "src/UI/SkylineMaskEditorForm.cs"
+      },
+      {
+        "status": "A",
+        "path": "src/UI/WeatherTriptychForm.cs"
+      },
+      {
+        "status": "M",
+        "path": "src/Widgets/DesktopIconVisibilityEngine.cs"
+      },
+      {
+        "status": "M",
+        "path": "src/Widgets/TrayApplicationContext.cs"
+      },
+      {
+        "status": "M",
+        "path": "src/Widgets/WallpaperWindow.cs"
+      },
+      {
+        "status": "M",
+        "path": "src/Widgets/WidgetEngine.cs"
+      },
+      {
+        "status": "A",
+        "path": "src/Widgets/wallpaper/celestial-path.js"
+      },
+      {
+        "status": "M",
+        "path": "src/Widgets/wallpaper/index.html"
+      },
+      {
+        "status": "M",
+        "path": "src/Widgets/wallpaper/sky-mask.js"
+      },
+      {
+        "status": "A",
+        "path": "src/Widgets/wallpaper/skyline-editor.html"
+      },
+      {
+        "status": "M",
+        "path": "src/Widgets/wallpaper/weather.js"
+      }
+    ]
+  },
+  {
+    "revision": "R9",
+    "label": "Session 4/4",
+    "source_zip": "Opsis-Desktop-Customization-2.8.0.2500-R9-Session-4-of-4-source.zip",
+    "source_sha256": "905d2ca5e5943f3ac6f34a0a5e8fae5569f0ecfa93e3ab5baeac32572863b112",
+    "source_bytes": 70184583,
+    "source_file_count": 605,
+    "git_sha": "5da3ff3a8ea1b7a75fa735b5db6c17e8965644ff",
+    "change_counts": {
+      "added": 9,
+      "modified": 22,
+      "deleted": 0,
+      "renamed": 0
+    },
+    "changes": [
+      {
+        "status": "A",
+        "path": ".github/workflows/r9-release-qa.yml"
+      },
+      {
+        "status": "M",
+        "path": "IMPLEMENTATION-100-STATUS-2.8.0.2500-EL.md"
+      },
+      {
+        "status": "M",
+        "path": "IMPLEMENTATION-100-STATUS-2.8.0.2500.json"
+      },
+      {
+        "status": "A",
+        "path": "QA/R9-checkpoint-manifest.json"
+      },
+      {
+        "status": "A",
+        "path": "QA/build-installer-blockers.txt"
+      },
+      {
+        "status": "A",
+        "path": "QA/node-test-r9.txt"
+      },
+      {
+        "status": "A",
+        "path": "R9-SESSION-4-OF-4-EL.md"
+      },
+      {
+        "status": "M",
+        "path": "installer/explorer/Build-Explorer.ps1"
+      },
+      {
+        "status": "M",
+        "path": "src/Music/DesktopMusicController.cs"
+      },
+      {
+        "status": "M",
+        "path": "src/Music/MusicOverlayPage.cs"
+      },
+      {
+        "status": "M",
+        "path": "src/Music/MusicOverlaySettings.cs"
+      },
+      {
+        "status": "M",
+        "path": "src/Services/AutoTileService.cs"
+      },
+      {
+        "status": "M",
+        "path": "src/Services/DependencyManagerService.cs"
+      },
+      {
+        "status": "A",
+        "path": "src/Services/PluginCapabilityManifest.cs"
+      },
+      {
+        "status": "M",
+        "path": "src/Services/PluginHost.cs"
+      },
+      {
+        "status": "M",
+        "path": "src/Services/PluginTrust.cs"
+      },
+      {
+        "status": "M",
+        "path": "src/Services/SharedLoopbackCapture.cs"
+      },
+      {
+        "status": "A",
+        "path": "src/Services/WidgetConsentStore.cs"
+      },
+      {
+        "status": "M",
+        "path": "src/UI/MainWindow.WallpaperMedia.cs"
+      },
+      {
+        "status": "M",
+        "path": "src/UI/MainWindow.cs"
+      },
+      {
+        "status": "M",
+        "path": "src/Widgets/TrayApplicationContext.cs"
+      },
+      {
+        "status": "M",
+        "path": "src/Widgets/WallpaperWindow.cs"
+      },
+      {
+        "status": "M",
+        "path": "src/Widgets/WidgetEngine.cs"
+      },
+      {
+        "status": "M",
+        "path": "src/Widgets/WidgetSdkView.cs"
+      },
+      {
+        "status": "M",
+        "path": "src/Widgets/ZoneLayoutEditorForm.cs"
+      },
+      {
+        "status": "M",
+        "path": "src/Widgets/ZoneLayoutStore.cs"
+      },
+      {
+        "status": "M",
+        "path": "src/Widgets/wallpaper/index.html"
+      },
+      {
+        "status": "M",
+        "path": "tests/PluginCompatibility.test.cjs"
+      },
+      {
+        "status": "A",
+        "path": "tests/Session4.test.cjs"
+      },
+      {
+        "status": "M",
+        "path": "tests/WallpaperIdle.test.cjs"
+      },
+      {
+        "status": "A",
+        "path": "tools/qa-r9-windows.ps1"
+      }
+    ]
+  },
+  {
+    "revision": "R10",
+    "label": "Latest partial-closure source",
+    "source_zip": "Opsis-Desktop-Customization-2.8.0.2500-R10-partials-source.zip",
+    "source_sha256": "e34ad6c47f5b3302d499e8f5bd6de495600dfc8b4ee95e56364b3a7b079d1a67",
+    "source_bytes": 70196378,
+    "source_file_count": 611,
+    "git_sha": "7f27f635562bc3ad78dbf5a82eb5d92179dee260",
+    "change_counts": {
+      "added": 6,
+      "modified": 15,
+      "deleted": 0,
+      "renamed": 0
+    },
+    "changes": [
+      {
+        "status": "M",
+        "path": "IMPLEMENTATION-100-STATUS-2.8.0.2500-EL.md"
+      },
+      {
+        "status": "M",
+        "path": "IMPLEMENTATION-100-STATUS-2.8.0.2500.json"
+      },
+      {
+        "status": "A",
+        "path": "QA/R10-build-status.txt"
+      },
+      {
+        "status": "A",
+        "path": "QA/node-test-r10.txt"
+      },
+      {
+        "status": "A",
+        "path": "R10-PARTIAL-IMPLEMENTATION-EL.md"
+      },
+      {
+        "status": "M",
+        "path": "src/Containers/SpotSearch.cs"
+      },
+      {
+        "status": "M",
+        "path": "src/Music/DesktopMusicController.cs"
+      },
+      {
+        "status": "M",
+        "path": "src/Services/AudioSpectrumService.cs"
+      },
+      {
+        "status": "A",
+        "path": "src/Services/AuthenticodeVerifier.cs"
+      },
+      {
+        "status": "M",
+        "path": "src/Services/AutoTileService.cs"
+      },
+      {
+        "status": "M",
+        "path": "src/Services/PluginTrust.cs"
+      },
+      {
+        "status": "A",
+        "path": "src/Services/VisualizerInputCapture.cs"
+      },
+      {
+        "status": "M",
+        "path": "src/UI/MainWindow.WallpaperMedia.cs"
+      },
+      {
+        "status": "M",
+        "path": "src/UI/MainWindow.cs"
+      },
+      {
+        "status": "M",
+        "path": "src/UI/WeatherTriptychForm.cs"
+      },
+      {
+        "status": "M",
+        "path": "src/Widgets/TrayApplicationContext.cs"
+      },
+      {
+        "status": "M",
+        "path": "src/Widgets/WidgetEngine.cs"
+      },
+      {
+        "status": "M",
+        "path": "src/Widgets/WidgetSdkView.cs"
+      },
+      {
+        "status": "A",
+        "path": "tests/WidgetRefreshR10.test.cjs"
+      },
+      {
+        "status": "M",
+        "path": "widget-sdk/catalog/day-progress/widget.js"
+      },
+      {
+        "status": "M",
+        "path": "widget-sdk/catalog/local-time/widget.js"
+      }
+    ]
+  }
+]

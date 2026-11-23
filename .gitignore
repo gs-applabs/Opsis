@@ -1,0 +1,14 @@
+# Review workspace outputs. No product files are removed from the R10 snapshot.
+**/bin/
+**/obj/
+publish/
+Output/
+qa-results/
+_compat/
+.vs/
+.vscode/
+node_modules/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
