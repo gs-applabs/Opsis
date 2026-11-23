@@ -43,6 +43,8 @@ namespace MotionDesk.Services
         public bool MinimizeToTray { get; set; } = true;
         // DeskZones: applications (process names, without .exe) whose windows are never snapped (e.g. media players, games)
         public List<string> ZoneExcludedApps { get; set; } = new();
+        /// <summary>Optional explicit per-program and document-extension zone assignments.</summary>
+        public List<WindowZoneRule> ZoneRules { get; set; } = new();
         // Notify (tray balloon) when CPU or memory stays above 90% for a minute
         public bool UsageAlertsEnabled { get; set; } = false;
         // Check GitHub for a newer release once a day / show the changelog once after an update
@@ -120,6 +122,11 @@ namespace MotionDesk.Services
         public string AudioEnhancementPreset { get; set; } = "Flat";
         // 2.2.1: which graphics adapter the System Monitor widget shows (dedicated + integrated are both listed; arrows switch) and which disk the Disk widget shows.
         public int SystemMonitorGpuIndex { get; set; } = 0;
+        /// <summary>Opt-in recovery of external window placements after a docking monitor reconnects.</summary>
+        public bool RestoreWindowsAfterDocking { get; set; } = false;
+        /// <summary>Optional monitor stable IDs on which private wallpaper information is not drawn.</summary>
+        public List<string> PresentationMonitorIds { get; set; } = new();
+
         public int DiskWidgetIndex { get; set; } = 0;
 
         // Fences-style διπλό-κλικ σε κενό σημείο της επιφάνειας εργασίας για απόκρυψη/επαναφορά

@@ -1,14 +1,14 @@
-# OPSIS 2.8.0.2500 — Κατάσταση 100 αναβαθμίσεων (R7 · Session 2/4)
+# OPSIS 2.8.0.2500 — Κατάσταση 100 αναβαθμίσεων (R8 · Session 3/4)
 
-**Ημερομηνία:** 23 Νοεμβρίου 2026 · **Βάση:** R6 · **Νέο checkpoint:** R7-S2.
+**Ημερομηνία:** 23 Νοεμβρίου 2026 · **Βάση:** R7-S2 · **Νέο checkpoint:** R8-S3.
 
-**Αποτύπωση:** **55** νέες υλοποιήσεις στον πηγαίο κώδικα, **17** προϋπάρχουσες, **8** μερικές/προς QA και **20** εκκρεμείς.
+**Αποτύπωση:** **62** νέες υλοποιήσεις στον πηγαίο κώδικα, **17** προϋπάρχουσες, **11** μερικές/προς QA και **10** εκκρεμείς.
 
 **Προειδοποίηση:** Δεν εκτελέστηκαν build, tests, Windows E2E ή installer. Η ένδειξη «υλοποιήθηκε» σημαίνει ότι προστέθηκε κώδικας, **όχι ότι έχει επαληθευτεί λειτουργικά**.
 
-## Session 2 — αλλαγές σε 10 εκκρεμότητες
+## Session 3 — αλλαγές στα 10 επιλεγμένα σημεία
 
-Δείτε το [αναλυτικό R7 changelog](R7-SESSION-2-OF-4-EL.md) και τα IDs: **#38, #41, #48, #57, #58, #59, #64, #66, #67, #80**.
+Δείτε το [αναλυτικό R8 changelog](R8-SESSION-3-OF-4-EL.md). Σημεία **#17, #22, #24, #29, #31, #34, #37, #39, #40, #43**.
 
 ## Πλήρης κατάσταση
 
@@ -30,33 +30,33 @@
 | 14 | Εμφάνιση εκδότη και κατάστασης υπογραφής στο παράθυρο εγκατάστασης πρόσθετου. | ΜΕΡΙΚΟ · ΧΡΕΙΑΖΕΤΑΙ ΣΥΜΠΛΗΡΩΣΗ/QA | src/Services/PluginTrust.cs · src/Services/PluginHost.cs · src/Widgets/TrayApplicationContext.cs |
 | 15 | Έλεγχος ακεραιότητας του update πριν από αντικατάσταση αρχείων. | ΥΠΗΡΧΕ ΣΤΗ ΒΑΣΗ · ΑΝΕΠΙΒΕΒΑΙΩΤΟ | src/Services/UpdateInstallerService.cs |
 | 16 | Επαναφορά προηγούμενης έκδοσης αν το νέο προφίλ αποτύχει να ανοίξει. | ΥΛΟΠΟΙΗΘΗΚΕ ΣΤΟΝ SOURCE · ΧΩΡΙΣ BUILD | src/Services/VerifiedRollbackService.cs · src/Services/WorkspaceProfileService.cs · src/Services/UpdateInstallerService.cs · src/UI/MainWindow.cs |
-| 17 | Αναίρεση μαζικής μετακίνησης εικονιδίων με αποθήκευση της αρχικής θέσης. | ΕΚΚΡΕΜΕΙ ΥΛΟΠΟΙΗΣΗ | — |
+| 17 | Αναίρεση μαζικής μετακίνησης εικονιδίων με αποθήκευση της αρχικής θέσης. | ΜΕΡΙΚΟ · ΧΡΕΙΑΖΕΤΑΙ ΣΥΜΠΛΗΡΩΣΗ/QA | src/Widgets/DesktopIconVisibilityEngine.cs · src/Widgets/TrayApplicationContext.cs |
 | 18 | Προσωρινή απομόνωση συγκεκριμένου πρόσθετου μετά από διαδοχικές αστοχίες. | ΥΛΟΠΟΙΗΘΗΚΕ ΣΤΟΝ SOURCE · ΧΩΡΙΣ BUILD | src/Services/PluginFailureQuarantine.cs · src/Services/PluginHost.cs |
 | 19 | Εξαγωγή διαγνωστικών με προεπισκόπηση και απόκρυψη ονομάτων αρχείων και τοποθεσίας. | ΥΠΗΡΧΕ ΣΤΗ ΒΑΣΗ · ΑΝΕΠΙΒΕΒΑΙΩΤΟ | src/Services/ |
 | 20 | Έλεγχος επαναφοράς μετά από διακοπή ρεύματος την ώρα αποθήκευσης προφίλ. | ΜΕΡΙΚΟ · ΑΝΑΜΕΝΕΤΑΙ ΕΚΤΕΛΕΣΗ WINDOWS QA | src/Services/AtomicFile.cs · tests/AtomicWriteCrashHarness · tools/verify-atomic-powerloss.ps1 |
 | 21 | Επικάλυψη της ανιχνευμένης γραμμής ουρανού στην προεπισκόπηση. | ΥΛΟΠΟΙΗΘΗΚΕ ΣΤΟΝ SOURCE · ΧΩΡΙΣ BUILD | src/Widgets/wallpaper/sky-mask.js; src/Widgets/wallpaper/weather.js; src/UI/MainWindow.cs |
-| 22 | Διόρθωση της μάσκας με πινέλο ανά φωτογραφία. | ΕΚΚΡΕΜΕΙ ΥΛΟΠΟΙΗΣΗ | — |
+| 22 | Διόρθωση της μάσκας με πινέλο ανά φωτογραφία. | ΥΛΟΠΟΙΗΘΗΚΕ ΣΤΟΝ SOURCE · ΧΩΡΙΣ BUILD | src/UI/SkylineMaskEditorForm.cs · src/Widgets/wallpaper/skyline-editor.html · src/Widgets/wallpaper/sky-mask.js · src/Widgets/WallpaperWindow.cs |
 | 23 | Αποθήκευση της μάσκας με αποτύπωμα εικόνας ώστε να μην εφαρμόζεται σε άλλη λήψη. | ΥΛΟΠΟΙΗΘΗΚΕ ΣΤΟΝ SOURCE · ΧΩΡΙΣ BUILD | src/Widgets/wallpaper/sky-mask.js |
-| 24 | Ταυτόχρονη προεπισκόπηση χαραυγής, μεσημεριού και νύχτας. | ΕΚΚΡΕΜΕΙ ΥΛΟΠΟΙΗΣΗ | — |
+| 24 | Ταυτόχρονη προεπισκόπηση χαραυγής, μεσημεριού και νύχτας. | ΜΕΡΙΚΟ · ΧΡΕΙΑΖΕΤΑΙ ΣΥΜΠΛΗΡΩΣΗ/QA | src/UI/WeatherTriptychForm.cs · src/UI/MainWindow.cs |
 | 25 | Επιλογή σημείου ενδιαφέροντος για την περικοπή σε κατακόρυφη οθόνη. | ΥΛΟΠΟΙΗΘΗΚΕ ΣΤΟΝ SOURCE · ΧΩΡΙΣ BUILD | src/Widgets/WallpaperWindow.cs; src/UI/MainWindow.cs; src/Widgets/wallpaper/weather-atmosphere.js |
 | 26 | Ομαλή μετάβαση στον τελευταίο διαθέσιμο καιρό όταν χαθεί η σύνδεση. | ΥΠΗΡΧΕ ΣΤΗ ΒΑΣΗ · ΑΝΕΠΙΒΕΒΑΙΩΤΟ | src/Widgets/wallpaper/ |
 | 27 | Ένδειξη ηλικίας και πηγής των δεδομένων καιρού επάνω στο widget. | ΥΠΗΡΧΕ ΣΤΗ ΒΑΣΗ · ΑΝΕΠΙΒΕΒΑΙΩΤΟ | src/Widgets/wallpaper/ |
 | 28 | Ανεξάρτητος έλεγχος έντασης για βροχή στο τζάμι και βροχή στο τοπίο. | ΥΛΟΠΟΙΗΘΗΚΕ ΣΤΟΝ SOURCE · ΧΩΡΙΣ BUILD | src/Widgets/wallpaper/weather.js · src/Widgets/wallpaper/index.html · src/Widgets/WallpaperWindow.cs · src/UI/MainWindow.cs |
-| 29 | Διαδρομή ήλιου και σελήνης με βάση ημερομηνία και γεωγραφικό πλάτος. | ΕΚΚΡΕΜΕΙ ΥΛΟΠΟΙΗΣΗ | — |
+| 29 | Διαδρομή ήλιου και σελήνης με βάση ημερομηνία και γεωγραφικό πλάτος. | ΥΛΟΠΟΙΗΘΗΚΕ ΣΤΟΝ SOURCE · ΧΩΡΙΣ BUILD | src/Widgets/wallpaper/celestial-path.js · src/Widgets/wallpaper/weather.js · src/Widgets/wallpaper/index.html |
 | 30 | Έλεγχος αναγνωσιμότητας ρολογιού στην πραγματική θέση του πάνω στη φωτογραφία. | ΥΛΟΠΟΙΗΘΗΚΕ ΣΤΟΝ SOURCE · ΧΩΡΙΣ BUILD | src/Widgets/wallpaper/index.html |
-| 31 | Αναγνώριση διάταξης οθονών μετά τη σύνδεση docking station. | ΕΚΚΡΕΜΕΙ ΥΛΟΠΟΙΗΣΗ | — |
+| 31 | Αναγνώριση διάταξης οθονών μετά τη σύνδεση docking station. | ΥΛΟΠΟΙΗΘΗΚΕ ΣΤΟΝ SOURCE · ΧΩΡΙΣ BUILD | src/Services/MonitorTopologyService.cs · src/Widgets/TrayApplicationContext.cs |
 | 32 | Πανοραμικό φόντο μόνο σε επιλεγμένο ζεύγος οθονών. | ΕΚΚΡΕΜΕΙ ΥΛΟΠΟΙΗΣΗ | — |
 | 33 | Αντιστάθμιση πλαισίων για πανοραμικές εικόνες. | ΕΚΚΡΕΜΕΙ ΥΛΟΠΟΙΗΣΗ | — |
-| 34 | Σταθερή θέση widget σε οθόνες με διαφορετικό DPI. | ΕΚΚΡΕΜΕΙ ΥΛΟΠΟΙΗΣΗ | — |
+| 34 | Σταθερή θέση widget σε οθόνες με διαφορετικό DPI. | ΥΛΟΠΟΙΗΘΗΚΕ ΣΤΟΝ SOURCE · ΧΩΡΙΣ BUILD | src/Widgets/WidgetEngine.cs · src/Services/MonitorTopologyService.cs |
 | 35 | Προεπισκόπηση προφίλ με χρονόμετρο επαναφοράς. | ΥΛΟΠΟΙΗΘΗΚΕ ΣΤΟΝ SOURCE · ΧΩΡΙΣ BUILD | src/UI/MainWindow.cs · src/Services/WorkspaceProfileService.cs |
 | 36 | Κανόνες προφίλ ανά συνδεδεμένο τροφοδοτικό και στάθμη μπαταρίας. | ΥΛΟΠΟΙΗΘΗΚΕ ΣΤΟΝ SOURCE · ΧΩΡΙΣ BUILD | src/Services/AutomationService.cs · src/UI/MainWindow.cs |
-| 37 | Επαναφορά παραθύρων στην αρχική οθόνη μετά από προσωρινή αποσύνδεση. | ΕΚΚΡΕΜΕΙ ΥΛΟΠΟΙΗΣΗ | — |
+| 37 | Επαναφορά παραθύρων στην αρχική οθόνη μετά από προσωρινή αποσύνδεση. | ΥΛΟΠΟΙΗΘΗΚΕ ΣΤΟΝ SOURCE · ΧΩΡΙΣ BUILD | src/Services/MonitorTopologyService.cs · src/Services/AppSettings.cs · src/UI/MainWindow.cs |
 | 38 | Διαφορετική πυκνότητα πληροφοριών σε κατακόρυφη δευτερεύουσα οθόνη. | ΥΛΟΠΟΙΗΘΗΚΕ ΣΤΟΝ SOURCE · ΧΩΡΙΣ BUILD | src/Containers/ContainerWindow.cs |
-| 39 | Μεταφορά προφίλ σε άλλο PC με χειροκίνητη αντιστοίχιση οθονών. | ΕΚΚΡΕΜΕΙ ΥΛΟΠΟΙΗΣΗ | — |
-| 40 | Εξαίρεση οθόνης παρουσίασης από προσωπικές ειδοποιήσεις και στοιχεία πολυμέσων. | ΕΚΚΡΕΜΕΙ ΥΛΟΠΟΙΗΣΗ | — |
+| 39 | Μεταφορά προφίλ σε άλλο PC με χειροκίνητη αντιστοίχιση οθονών. | ΥΛΟΠΟΙΗΘΗΚΕ ΣΤΟΝ SOURCE · ΧΩΡΙΣ BUILD | src/Services/WorkspaceProfileService.cs · src/UI/ProfileMonitorMappingDialog.cs · src/UI/MainWindow.cs |
+| 40 | Εξαίρεση οθόνης παρουσίασης από προσωπικές ειδοποιήσεις και στοιχεία πολυμέσων. | ΜΕΡΙΚΟ · ΧΡΕΙΑΖΕΤΑΙ ΣΥΜΠΛΗΡΩΣΗ/QA | src/Music/DesktopMusicController.cs · src/Widgets/WallpaperWindow.cs · src/Services/AppSettings.cs · src/UI/MainWindow.cs |
 | 41 | Προεπισκόπηση ζώνης με το πληκτρολόγιο πριν από τη μετακίνηση. | ΥΛΟΠΟΙΗΘΗΚΕ ΣΤΟΝ SOURCE · ΧΩΡΙΣ BUILD | src/Widgets/ZoneLayoutEditorForm.cs |
 | 42 | Αναίρεση τελευταίας ομαδικής τακτοποίησης παραθύρων. | ΥΛΟΠΟΙΗΘΗΚΕ ΣΤΟΝ SOURCE · ΧΩΡΙΣ BUILD | src/Services/AutoTileService.cs · src/UI/MainWindow.cs |
-| 43 | Κανόνες αντιστοίχισης εφαρμογής και τύπου εγγράφου σε ζώνη. | ΕΚΚΡΕΜΕΙ ΥΛΟΠΟΙΗΣΗ | — |
+| 43 | Κανόνες αντιστοίχισης εφαρμογής και τύπου εγγράφου σε ζώνη. | ΥΛΟΠΟΙΗΘΗΚΕ ΣΤΟΝ SOURCE · ΧΩΡΙΣ BUILD | src/Services/WindowZoneRule.cs · src/Services/AppSettings.cs · src/Services/AutoTileService.cs · src/UI/MainWindow.cs |
 | 44 | Προσωρινή επέκταση παραθύρου σε δύο γειτονικές ζώνες. | ΕΚΚΡΕΜΕΙ ΥΛΟΠΟΙΗΣΗ | — |
 | 45 | Αλλαγή μεγέθους δύο γειτονικών ζωνών από κοινό όριο. | ΕΚΚΡΕΜΕΙ ΥΛΟΠΟΙΗΣΗ | — |
 | 46 | Διατάξεις ειδικά για κατακόρυφη εργασία κώδικα και τεκμηρίωσης. | ΥΛΟΠΟΙΗΘΗΚΕ ΣΤΟΝ SOURCE · ΧΩΡΙΣ BUILD | src/Widgets/ZoneLayoutStore.cs · src/Widgets/ZoneLayoutEditorForm.cs |
@@ -115,10 +115,7 @@
 | 99 | Δύο δοκιμές με αποθηκευμένες ρυθμίσεις: αναβάθμιση εντός του τρέχοντος branch και χωριστή εγκατάσταση δίπλα στην 2.4.6.1. Έλεγχος καταλόγου, autostart, απεγκατάστασης και εκκίνησης όσο τρέχει το άλλο branch. | ΕΚΚΡΕΜΕΙ ΥΛΟΠΟΙΗΣΗ | — |
 | 100 | Προαιρετική καταγραφή συνεδρίας διάγνωσης με αυτόματο τερματισμό και τοπικό αρχείο. | ΥΠΗΡΧΕ ΣΤΗ ΒΑΣΗ · ΑΝΕΠΙΒΕΒΑΙΩΤΟ | src/Services/ |
 
-## 20 εκκρεμή προς υλοποίηση
+## Επόμενο Session 4/4
 
-#12, #13, #17, #22, #24, #29, #31, #32, #33, #34, #37, #39, #40, #43, #44, #45, #78, #92, #93, #99.
+Ακόμη εκκρεμούν **#12, #13, #32, #33, #44, #45, #78, #92, #93, #99**. Τα #92, #93 και #99 αφορούν ελέγχους εγκατάστασης/συμβατότητας και δεν θα χαρακτηριστούν επιτυχώς επαληθευμένα χωρίς πραγματικά Windows E2E.
 
-## Επόμενα βήματα
-
-Ολοκλήρωση των 20 εκκρεμών με τα Sessions 3/4 και 4/4. Μετά τις αλλαγές κώδικα: έλεγχοι όλων των 100 σημείων, των 8 μερικών/QA, της έκδοσης DLL plugins 1.0.0.0, του Crawler, Χρονολογίου, Media Suite, ασφάλειας, ανάκτησης και installer.

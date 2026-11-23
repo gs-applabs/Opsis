@@ -49,6 +49,9 @@ namespace MotionDesk.Widgets
             healthyTimer.Start();
 
             // Plugin (π.χ. News Crawler): ξεκινούν πριν χτιστεί το μενού ώστε να προσθέσουν τα δικά τους στοιχεία.
+            // Dock monitor fingerprint and window return (opt-in); never captures user files.
+            var dockRestorer = new DockWindowRestorer();
+            Application.ApplicationExit += (_, _) => dockRestorer.Dispose();
             PluginHost.Instance.NavigationRequested += key => ShowMainWindow("plugin:" + key);
             // Plugins from user-writable folders run code inside Opsis: ask once, show the content hash, remember the approval (plugin-trust.json).
             // (the approval question is NOT asked while starting: see PluginHost.ConsiderFolder / ResolvePending)
@@ -107,6 +110,17 @@ namespace MotionDesk.Widgets
                 gridSnapItem.Checked = WidgetSnapEngine.EnableGridSnap;
             };
             desktopMenu.DropDownItems.Add(gridSnapItem);
+            desktopMenu.DropDownItems.Add(new ToolStripSeparator());
+            desktopMenu.DropDownItems.Add("OPSIS: " + (LocalizationManager.CurrentLanguage.StartsWith("el") ? "Αποθήκευση θέσεων εικονιδίων" : "Capture desktop icon positions"), null, (_, _) =>
+            {
+                var count=DesktopIconVisibilityEngine.CapturePositionsForUndo();
+                MessageBox.Show(count>0 ? $"Captured {count} icon positions for undo." : "No positions captured (desktop unavailable or auto-arrange enabled).", "OPSIS");
+            });
+            desktopMenu.DropDownItems.Add("OPSIS: " + (LocalizationManager.CurrentLanguage.StartsWith("el") ? "Αναίρεση μετακίνησης εικονιδίων" : "Undo desktop icon move"), null, (_, _) =>
+            {
+                var count=DesktopIconVisibilityEngine.UndoLastBulkMove();
+                MessageBox.Show(count>0 ? $"Restored {count} icon positions." : "There is no usable icon move snapshot.", "OPSIS");
+            });
             contextMenu.Items.Add(desktopMenu);
 
             // ---- Workspace profiles (Work / Gaming / Focus keep their names in every language: they are profile ids)

@@ -9,6 +9,15 @@ public sealed class WorkspaceProfile
     public AppSettings AppSettings { get; set; } = new();
     public WallpaperSettingsSnapshot Wallpaper { get; set; } = new();
     public List<WidgetSnapshot> Widgets { get; set; } = new();
+    public List<ProfileMonitor> Monitors { get; set; } = new();
+}
+
+public sealed class ProfileMonitor
+{
+    public string Id { get; set; } = string.Empty;
+    public string DeviceName { get; set; } = string.Empty;
+    public int Width { get; set; }
+    public int Height { get; set; }
 }
 
 public sealed class WallpaperSettingsSnapshot
@@ -54,7 +63,9 @@ public static class WorkspaceProfileService
                 PerformanceMode = wallpaper.PerformanceMode,
                 Enabled = WallpaperHostEngine.Instance.IsEnabled
             },
-            Widgets = WidgetHostEngine.Instance.GetSnapshots().ToList()
+            Widgets = WidgetHostEngine.Instance.GetSnapshots().ToList(),
+            Monitors = MonitorTopologyService.Current().Select(x => new ProfileMonitor
+            { Id=x.Id, DeviceName=x.DeviceName, Width=x.Bounds.Width, Height=x.Bounds.Height }).ToList()
         };
 
         MotionDesk.Services.AtomicFile.WriteAllText(Path.Combine(Root, name + ".json"), JsonSerializer.Serialize(profile, new JsonSerializerOptions { WriteIndented = true }));
@@ -160,6 +171,55 @@ public static class WorkspaceProfileService
             VerifiedRollbackService.NoteProfileFailed(name);
             return false;
         }
+    }
+
+    /// <summary>Export the selected saved profile. Data is never overwritten without SaveFileDialog confirmation.</summary>
+    public static void ExportPortable(string name, string destination)
+    {
+        var source = Path.Combine(Root, Sanitize(name) + ".json");
+        if (!File.Exists(source)) throw new FileNotFoundException("Profile not found", source);
+        File.Copy(source, destination, true);
+    }
+
+    /// <summary>Import into local profile storage, remapping only monitor identities. Does not activate the profile.</summary>
+    public static string ImportPortable(string sourcePath, IReadOnlyDictionary<string,string> map)
+    {
+        var source = new FileInfo(sourcePath);
+        if (!source.Exists || source.Length is < 2 or > 8 * 1024 * 1024) throw new InvalidDataException("Invalid profile size");
+        var profile = JsonSerializer.Deserialize<WorkspaceProfile>(File.ReadAllText(sourcePath))
+            ?? throw new InvalidDataException("Missing profile data");
+        if (profile.AppSettings == null || profile.Wallpaper == null || profile.Widgets == null || profile.Widgets.Count > 120)
+            throw new InvalidDataException("Invalid profile content");
+        var connected = MonitorTopologyService.Current();
+        foreach (var widget in profile.Widgets)
+        {
+            if (widget.Width is < 1 or > 2400 || widget.Height is < 1 or > 1600) throw new InvalidDataException("Invalid widget dimensions");
+            if (widget.MonitorId is { Length: > 0 } old && map.TryGetValue(old, out var assigned))
+            {
+                var match = connected.FirstOrDefault(x=>x.Id.Equals(assigned,StringComparison.OrdinalIgnoreCase));
+                if (match == null) throw new InvalidDataException("Monitor mapping is not connected");
+                widget.MonitorId=match.Id; widget.MonitorDevice=match.DeviceName;
+                widget.MonitorWidth=match.Bounds.Width; widget.MonitorHeight=match.Bounds.Height;
+            }
+        }
+        profile.Monitors=connected.Select(x=>new ProfileMonitor
+            { Id=x.Id,DeviceName=x.DeviceName,Width=x.Bounds.Width,Height=x.Bounds.Height }).ToList();
+        var basename=Sanitize(profile.Name);
+        if (basename.StartsWith("__opsis",StringComparison.OrdinalIgnoreCase)) basename="Imported";
+        basename=basename.Length>70 ? basename[..70] : basename;
+        // Never silently overwrite an import made in the same second.
+        var suffix=DateTime.UtcNow.ToString("yyyyMMdd-HHmmss") + "-" + Guid.NewGuid().ToString("N")[..8];
+        var name=$"{basename}-import-{suffix}";
+        Directory.CreateDirectory(Root);
+        AtomicFile.WriteAllText(Path.Combine(Root,name+".json"),JsonSerializer.Serialize(profile));
+        return name;
+    }
+
+    public static IReadOnlyList<ProfileMonitor> PreviewPortableMonitors(string sourcePath)
+    {
+        var source = new FileInfo(sourcePath);
+        if (!source.Exists || source.Length is < 2 or > 8 * 1024 * 1024) throw new InvalidDataException("Invalid profile size");
+        return (JsonSerializer.Deserialize<WorkspaceProfile>(File.ReadAllText(sourcePath))?.Monitors ?? new()).Take(16).ToArray();
     }
 
     public static void Delete(string name)

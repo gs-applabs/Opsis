@@ -2583,6 +2583,13 @@ namespace MotionDesk.Widgets
         public int Width { get; set; }
         public int Height { get; set; }
         public bool IsLocked { get; set; }
+        // Portable monitor anchors for mixed-DPI displays and docking station restores.
+        public string? MonitorId { get; set; }
+        public string? MonitorDevice { get; set; }
+        public double? RelativeX { get; set; }
+        public double? RelativeY { get; set; }
+        public int MonitorWidth { get; set; }
+        public int MonitorHeight { get; set; }
     }
 
     public class WidgetHostEngine
@@ -2607,7 +2614,16 @@ namespace MotionDesk.Widgets
 
         public IReadOnlyList<WidgetSnapshot> GetSnapshots() => _activeWidgets
             .Where(w => !w.IsDisposed)
-            .Select(w => new WidgetSnapshot { WidgetId = w.WidgetId, X = w.Location.X, Y = w.Location.Y, Width = w.Width, Height = w.Height, IsLocked = w.IsLocked })
+            .Select(w => {
+                var screen = Screen.FromControl(w);
+                var monitor = MonitorTopologyService.ForDevice(screen.DeviceName);
+                var area = screen.WorkingArea;
+                return new WidgetSnapshot { WidgetId = w.WidgetId, X = w.Left, Y = w.Top, Width = w.Width, Height = w.Height,
+                    IsLocked = w.IsLocked, MonitorId = monitor?.Id, MonitorDevice = screen.DeviceName,
+                    MonitorWidth = screen.Bounds.Width, MonitorHeight = screen.Bounds.Height,
+                    RelativeX = area.Width > 0 ? (w.Left - area.Left) / (double)area.Width : null,
+                    RelativeY = area.Height > 0 ? (w.Top - area.Top) / (double)area.Height : null };
+            })
             .ToArray();
 
         public void RestoreSnapshots(IEnumerable<WidgetSnapshot> snapshots)
@@ -2615,7 +2631,15 @@ namespace MotionDesk.Widgets
             CloseAll();
             foreach (var snapshot in snapshots.Where(s => !string.IsNullOrWhiteSpace(s.WidgetId)))
             {
-                var widget = SpawnWidget(snapshot.WidgetId, snapshot.X, snapshot.Y, Math.Max(160, snapshot.Width), Math.Max(100, snapshot.Height));
+                var match = MonitorTopologyService.Match(snapshot.MonitorId, snapshot.MonitorDevice, snapshot.MonitorWidth, snapshot.MonitorHeight);
+                var area = match?.WorkingArea ?? Screen.PrimaryScreen?.WorkingArea ?? SystemInformation.VirtualScreen;
+                var width = Math.Max(160, snapshot.Width); var height = Math.Max(100, snapshot.Height);
+                var x = snapshot.RelativeX is double rx && double.IsFinite(rx) ? area.Left + (int)Math.Round(Math.Clamp(rx,0,1)*area.Width) : snapshot.X;
+                var y = snapshot.RelativeY is double ry && double.IsFinite(ry) ? area.Top + (int)Math.Round(Math.Clamp(ry,0,1)*area.Height) : snapshot.Y;
+                x = Math.Clamp(x,area.Left,Math.Max(area.Left,area.Right-width));
+                y = Math.Clamp(y,area.Top,Math.Max(area.Top,area.Bottom-height));
+                var widget = SpawnWidget(snapshot.WidgetId, x, y, width, height);
+                widget.Location = new Point(x,y);
                 widget.IsLocked = snapshot.IsLocked;
                 widget.SaveWidgetState();
             }

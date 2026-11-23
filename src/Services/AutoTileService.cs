@@ -21,6 +21,31 @@ internal static class AutoTileService
             (extended & (0x00000080L | 0x00000001L)) == 0;
     }
 
+    private static Rectangle ResolveRuleRect(WinApi.AppWindow window, Screen screen, Rectangle fallback, AppSettings settings)
+    {
+        var program = Path.GetFileNameWithoutExtension(window.ExePath);
+        foreach (var rule in settings.ZoneRules ?? new())
+        {
+            if (rule == null || rule.ZoneIndex<0 || rule.ZoneIndex>47 ||
+                !program.Equals(Path.GetFileNameWithoutExtension(rule.Process),StringComparison.OrdinalIgnoreCase)) continue;
+            if (!string.IsNullOrWhiteSpace(rule.Extension))
+            {
+                var extension=rule.Extension.StartsWith('.') ? rule.Extension : "."+rule.Extension;
+                // Explicit extension is matched as a token in the window title. Unknown document type
+                // is NOT guessed from the process name (notepad can open anything).
+                if (!System.Text.RegularExpressions.Regex.IsMatch(window.Title,
+                    @"(?<![a-zA-Z0-9])"+System.Text.RegularExpressions.Regex.Escape(extension)+@"(?=\b|[^a-zA-Z0-9]|$)",
+                    System.Text.RegularExpressions.RegexOptions.IgnoreCase,System.TimeSpan.FromMilliseconds(50))) continue;
+            }
+            var layout=ZoneLayoutStore.GetLayout(screen.DeviceName);
+            if (rule.ZoneIndex>=layout.Zones.Count) continue;
+            var area=DesktopToolbar.WorkAreaForTiling(screen);
+            var rect=layout.Zones[rule.ZoneIndex].ToAbsolute(area);
+            if(rect.Width>=120 && rect.Height>=90) return rect;
+        }
+        return fallback;
+    }
+
     internal static IReadOnlyList<TilePreview> Preview()
     {
         var settings = AppSettings.Peek();
@@ -42,7 +67,7 @@ internal static class AutoTileService
                 if (!GetWindowRect(selected[i].Handle, out var original)) continue;
                 result.Add(new TilePreview(selected[i].Title, selected[i].Handle,
                     Rectangle.FromLTRB(original.Left, original.Top, original.Right, original.Bottom),
-                    slots[i], screen.DeviceName));
+                    ResolveRuleRect(selected[i],screen,slots[i],settings), screen.DeviceName));
             }
         }
         return result;
@@ -112,7 +137,7 @@ internal static class AutoTileService
             var slots = AutoTileLayout.Arrange(area, selected.Length, settings.AutoTileMode, settings.AutoTileGap);
             for (int i = 0; i < slots.Length; i++)
             {
-                var slot = slots[i];
+                var slot = ResolveRuleRect(selected[i],screen,slots[i],settings);
                 SetWindowPos(selected[i].Handle, IntPtr.Zero, slot.X, slot.Y, slot.Width, slot.Height, 0x0010 | 0x0004 | 0x0200 | 0x4000);
             }
         }

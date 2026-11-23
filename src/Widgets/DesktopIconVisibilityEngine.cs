@@ -301,6 +301,62 @@ namespace MotionDesk.Widgets
             return lines;
         }
 
+        // Snapshot BEFORE a bulk operation, never every animation frame. This is a separate undo
+        // file from quick-hide and from hidden-originals recovery to avoid overwriting either.
+        private static string BulkUndoPath => Path.Combine(Services.AppPaths.AppDataFolder, "desktop-icon-move-undo.json");
+        public static int CapturePositionsForUndo()
+        {
+            var snapshot = new List<SavedIconPos>();
+            try
+            {
+                WithDesktopList((process,list,count) =>
+                {
+                    if (HasAutoArrange(list)) return; // Explorer owns automatic layout.
+                    for (int i=0;i<count;i++)
+                    {
+                        var name=GetItemTextRemote(process,list,i).Trim();
+                        var point=ReadItemPosition(process,list,i);
+                        if (name.Length==0 || point == null || IsParked(point.Value)) continue;
+                        snapshot.Add(new SavedIconPos { Name=name,Index=i,X=point.Value.X,Y=point.Value.Y });
+                    }
+                });
+                if(snapshot.Count < 2) return 0;
+                Services.AtomicFile.WriteAllText(BulkUndoPath,JsonSerializer.Serialize(snapshot));
+                return snapshot.Count;
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { return 0; }
+        }
+
+        public static int UndoLastBulkMove()
+        {
+            if(!File.Exists(BulkUndoPath)) return 0;
+            List<SavedIconPos> saved;
+            try { saved=JsonSerializer.Deserialize<List<SavedIconPos>>(Services.AtomicFile.ReadAllText(BulkUndoPath)) ?? new(); }
+            catch(Exception ex) when(ex is IOException or UnauthorizedAccessException or JsonException) { return 0; }
+            if(saved.Count==0 || saved.Count>10000) return 0;
+            var previous=saved.GroupBy(x=>x.Name,StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(x=>x.Key,x=>x.ToList(),StringComparer.OrdinalIgnoreCase);
+            var restored=0;
+            try
+            {
+                WithDesktopList((hp,list,count)=>
+                {
+                    if(HasAutoArrange(list)) return;
+                    for(int i=0;i<count;i++)
+                    {
+                        var name=GetItemTextRemote(hp,list,i).Trim();
+                        if(!previous.TryGetValue(name,out var candidates) || candidates.Count==0) continue;
+                        var old=candidates.Find(x=>x.Index==i) ?? candidates[0];
+                        if(ReadItemPosition(hp,list,i) is not Point current || IsParked(current)) continue;
+                        if(SetItemPositionRemote(list,i,old.X,old.Y)) { restored++; candidates.Remove(old); }
+                    }
+                });
+                if(restored>0 && restored==saved.Count) File.Delete(BulkUndoPath);
+            }
+            catch(Exception ex) when(ex is IOException or UnauthorizedAccessException) { }
+            return restored;
+        }
+
         /// <summary>Test only: hides the icons exactly like the double-click gesture does (state file written), without any hook.</summary>
         public void HideForTest() { var l = FindDesktopListView(); if (l != IntPtr.Zero && !_hidden) ToggleDesktopIcons(l); }
 

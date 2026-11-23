@@ -405,8 +405,10 @@ function resize(w, h) {
 }
 
 function setConfig(c) {
+    const oldEdits = JSON.stringify(cfg.skyEdits || {});
     const old = cfg;
     cfg = { ...cfg, ...c };
+    if (oldEdits !== JSON.stringify(cfg.skyEdits || {})) { photoState.id = ''; photoState.key = ''; }
     if (typeof cfg.lat !== 'number' || isNaN(cfg.lat)) cfg.lat = 37.9838;
     if (typeof cfg.lon !== 'number' || isNaN(cfg.lon)) cfg.lon = 23.7275;
     cfg.rainGlassIntensity = Number.isFinite(+cfg.rainGlassIntensity) ? clamp(+cfg.rainGlassIntensity, 0, 2) : 1;
@@ -522,7 +524,10 @@ function drawMoonLayer(t, sr, ss, vis, cityPhoto) {
     if (v > 1) return null;
     const e = Math.sin(Math.PI * clamp(v, 0, 1));
     const horizon = cityPhoto ? H * PHOTO_SKYLINE : HORIZON;
-    const x = W * (0.12 + 0.76 * v), y = horizon - e * horizon * 0.72 + 6;
+    const lunar = cfg.timeSim === 'Auto' ? window.OpsisCelestialPath?.position(new Date(), cfg.lat, cfg.lon, true) : null;
+    const lunarX = lunar && lunar.azimuth >= 75 && lunar.azimuth <= 285 ? (lunar.azimuth-75)/210 : null;
+    const x = W * (lunarX === null ? 0.12+0.76*v : 0.08+0.84*lunarX);
+    const y = lunar ? horizon-Math.max(-.12,Math.min(1,lunar.altitude/70))*horizon*.72+6 : horizon-e*horizon*.72+6;
     const r = Math.max(18, Math.min(W, H) * 0.042);
     lightX = x / W;
     const alpha = vis * (1 - S.cloud * 0.9) * smooth((e + 0.06) / 0.14);
@@ -561,7 +566,12 @@ function drawSunLayer(sky, t, sr, ss, cityPhoto) {
     if (u < -0.12 || u > 1.12) return null;
     const e = Math.sin(Math.PI * clamp(u, -0.12, 1.12));
     const horizon = cityPhoto ? H * PHOTO_SKYLINE : HORIZON;
-    const x = W * (0.1 + 0.8 * clamp(u, -0.1, 1.1)), y = horizon - e * horizon * 0.78;
+    const solar = cfg.timeSim === 'Auto' ? window.OpsisCelestialPath?.position(new Date(), cfg.lat, cfg.lon) : null;
+    // Azimuth follows the real latitude/date; the vertical coordinate follows true altitude.
+    // In extreme latitudes keep the classic horizon mapping to avoid projecting north-side arcs backwards.
+    const sunX = solar && solar.azimuth >= 75 && solar.azimuth <= 285 ? (solar.azimuth-75)/210 : null;
+    const x = W * (sunX === null ? 0.1+0.8*clamp(u,-0.1,1.1) : 0.08+0.84*sunX);
+    const y = solar ? horizon - Math.max(-.12, Math.min(1, solar.altitude / 70))*horizon*.78 : horizon - e*horizon*.78;
     const r = Math.max(18, Math.min(W, H) * 0.04);
     const vis = smooth((e + 0.1) / 0.16) * (1 - S.cloud * 0.82) * (1 - S.fog * 0.3);
     if (e > 0.02) lightX = x / W;
@@ -883,7 +893,7 @@ function startScenePhoto(id) {
     const image = photoState.img = new Image();
     image.onload = () => {
         if (photoState.img !== image) return;
-        try { photoState.skyMask = window.OpsisSkyMask?.detect(image, photo.file); }
+        try { photoState.skyMask = window.OpsisSkyMask?.detect(image, photo.file, cfg.skyEdits?.[photo.file]); }
         catch { /* Keep the photo opaque when pixels cannot be read. */ }
         photoState.ready = true;
     };

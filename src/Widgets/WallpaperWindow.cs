@@ -152,6 +152,30 @@ namespace MotionDesk.Widgets
         }
 
         // Επιστρέφει JSON με mode, palette name/χρώματα και τις ρυθμίσεις animation (ταχύτητα/glow/πάχος γραμμής).
+        private static Dictionary<string, object> VerifiedSkylineEdits(WallpaperSettings settings)
+        {
+            var result = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
+            foreach (var pair in (settings.WeatherSkylineEdits ?? new()).Take(32))
+            {
+                var edit = pair.Value;
+                if (edit == null || edit.Width != 512 || edit.Height is < 1 or > 512 || edit.Rows?.Count != 512) continue;
+                if (edit.Rows.Any(row => row < 0 || row > edit.Height)) continue;
+                var relative = pair.Key.Replace('\\', '/');
+                if (!relative.StartsWith("scenes/", StringComparison.Ordinal) || relative.Contains("..", StringComparison.Ordinal)) continue;
+                var full = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "widgets", "wallpaper", relative.Replace('/', Path.DirectorySeparatorChar)));
+                try
+                {
+                    if (!File.Exists(full) || new FileInfo(full).Length > 40L * 1024 * 1024) continue;
+                    using var input = File.OpenRead(full);
+                    var sha = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(input));
+                    if (sha.Equals(edit.Sha256, StringComparison.OrdinalIgnoreCase))
+                        result[relative] = new { width = edit.Width, height = edit.Height, rows = edit.Rows };
+                }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
+            }
+            return result;
+        }
+
         public string GetWaveConfigJson()
         {
             var settings = WallpaperSettings.Load();
@@ -208,6 +232,7 @@ namespace MotionDesk.Widgets
                 rainGlassIntensity = Math.Clamp(settings.RainGlassIntensity, 0, 200) / 100.0,
                 weatherPhotoFocusX = Math.Clamp(settings.WeatherPhotoFocusX, 0, 100) / 100.0,
                 weatherSkylinePreview = settings.WeatherSkylinePreview,
+                weatherSkyEdits = VerifiedSkylineEdits(settings),
                 weatherLandmarks = settings.WeatherLandmarks,
                 weatherLandmarkId = settings.WeatherLandmarkId,
                 cityScenes = WallpaperSettings.IsWeatherMode(effectiveMode) ? LandmarkCatalog.Scenes.Select(city => new
@@ -219,7 +244,10 @@ namespace MotionDesk.Widgets
                 weatherLon = settings.WeatherLon,
                 rotateMinutes = settings.RotateEveryMinutes,
                 windSim = settings.WindSimulation,
-                weatherInfo = settings.WeatherShowInfo && (WallpaperSettings.IsWeatherMode(effectiveMode) || settings.InfoOnAllModes),
+                weatherInfo = settings.WeatherShowInfo && (WallpaperSettings.IsWeatherMode(effectiveMode) || settings.InfoOnAllModes)
+                    && !(AppSettings.Peek().PresentationMonitorIds?.Any(id =>
+                        id.Equals(_screenDeviceName, StringComparison.OrdinalIgnoreCase) ||
+                        id.Equals(MonitorTopologyService.ForDevice(_screenDeviceName)?.Id, StringComparison.OrdinalIgnoreCase)) ?? false),
                 infoX = Math.Clamp(settings.WeatherInfoX, 0, 100),
                 infoY = Math.Clamp(settings.WeatherInfoY, 0, 100),
                 infoScale = Math.Clamp(settings.WeatherInfoScale, 40, 250),
@@ -382,6 +410,16 @@ namespace MotionDesk.Widgets
         };
     }
 
+    // Editor records normalized skyline rows for one exact image asset.  The file SHA-256
+    // is checked by the host before forwarding the edit to WebView2.
+    public sealed class WallpaperSkylineEdit
+    {
+        public string Sha256 { get; set; } = string.Empty;
+        public int Width { get; set; } = 512;
+        public int Height { get; set; }
+        public List<int> Rows { get; set; } = new();
+    }
+
     public sealed class WallpaperSettings
     {
         /// <summary>The catalog merged with what the user saved: every known element is present, in catalog order.</summary>
@@ -458,7 +496,8 @@ namespace MotionDesk.Widgets
         public int RainLandscapeIntensity { get; set; } = 100; // 0..200 percent, independent of actual weather data
         public int RainGlassIntensity { get; set; } = 100;     // 0..200 percent; 0 disables window droplets
         public int WeatherPhotoFocusX { get; set; } = 50;     // 0..100, subject placement in portrait photo crop
-        public bool WeatherSkylinePreview { get; set; } = false; // temporary visualisation while adjusting a photo
+        public bool WeatherSkylinePreview { get; set; } = false;
+        public Dictionary<string, WallpaperSkylineEdit> WeatherSkylineEdits { get; set; } = new(StringComparer.OrdinalIgnoreCase); // temporary visualisation while adjusting a photo
         public string WeatherLandmarkId { get; set; } = "Auto";   // Auto (nearest to the weather location) | Off | a landmark id, independent of the location
         public bool WeatherLandmarks { get; set; } = true;   // the best-known landmark of the weather location on the horizon (landmarks.js)
 

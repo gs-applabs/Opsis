@@ -1531,6 +1531,30 @@ namespace MotionDesk.UI
                 BackColor = UiTheme.Surface, ForeColor = UiTheme.TextPrimary, BorderStyle = BorderStyle.FixedSingle, Margin = new Padding(0, 0, 0, 10),
                 Text = string.Join(Environment.NewLine, AppSettings.Load().ZoneExcludedApps)
             };
+            AddText(panel, StudioText("Rule format: program|.extension|zone (zero based). Leave extension blank for all documents, e.g. notepad||0.",
+                "Κανόνες: πρόγραμμα|.επέκταση|ζώνη (από 0), π.χ. notepad||0. Η επέκταση μπορεί να μείνει κενή."));
+            var ruleBox = new TextBox { Multiline=true, Width=465,Height=115,ScrollBars=ScrollBars.Vertical,
+                Font=UiTheme.FontBody,BackColor=UiTheme.Surface,ForeColor=UiTheme.TextPrimary,
+                Text=string.Join(Environment.NewLine,(AppSettings.Load().ZoneRules ?? new())
+                    .Select(r=>$"{r.Process}|{r.Extension}|{r.ZoneIndex}")) };
+            panel.Controls.Add(ruleBox);
+            panel.Controls.Add(StudioButton(StudioText("Save app/document zone rules", "Αποθήκευση κανόνων ζωνών"), () =>
+            {
+                var rules=new List<WindowZoneRule>();
+                foreach(var line in ruleBox.Lines.Where(x=>!string.IsNullOrWhiteSpace(x)))
+                {
+                    var parts=line.Trim().Split('|');
+                    if(parts.Length!=3 || !int.TryParse(parts[2].Trim(),out var zone) || zone is < 0 or > 47 || parts[0].Length is < 1 or > 80)
+                    { MessageBox.Show(this,StudioText("Invalid rule line", "Μη έγκυρη γραμμή κανόνα")+": "+line);return; }
+                    var process=Path.GetFileNameWithoutExtension(parts[0].Trim());
+                    var ext=parts[1].Trim();
+                    if(ext.Length>20 || (ext.Length>0 && !System.Text.RegularExpressions.Regex.IsMatch(ext,@"^\.?[a-zA-Z0-9]{1,16}$")))
+                    { MessageBox.Show(this,StudioText("Invalid extension", "Μη έγκυρη επέκταση")+": "+ext);return; }
+                    rules.Add(new WindowZoneRule{Process=process,Extension=ext,ZoneIndex=zone});
+                }
+                if(rules.Count>48){MessageBox.Show(this,"Maximum 48 rules.");return;}
+                var a=AppSettings.Load();a.ZoneRules=rules;a.Save();AutoTileService.RefreshSettings();
+            },width:293));
             excludedBox.Leave += (_, _) =>
             {
                 var a = AppSettings.Load();
@@ -2046,6 +2070,18 @@ namespace MotionDesk.UI
             }, width: 210));
             landscapes.Controls.Add(currentLandscape);
             host.Controls.Add(landscapes);
+            var wxTools = new FlowLayoutPanel { AutoSize = true, WrapContents = true, Margin = new Padding(0, 0, 0, 8) };
+            wxTools.Controls.Add(StudioButton(StudioText("Edit photo skyline", "Πινέλο γραμμής ουρανού"), () =>
+            {
+                if (!SkylineMaskEditorForm.OpenFor(selectedLandscape, this))
+                    MessageBox.Show(this, StudioText("Choose a photographic landscape first.", "Επίλεξε πρώτα φωτογραφικό τοπίο."));
+            }, width: 210));
+            wxTools.Controls.Add(StudioButton(StudioText("Dawn / noon / night", "Χαραυγή / μεσημέρι / νύχτα"), () =>
+            {
+                using var previewForm = new WeatherTriptychForm();
+                previewForm.ShowDialog(this);
+            }, width: 230));
+            host.Controls.Add(wxTools);
         }
 
         // ALL wallpaper modes (videos, Waves, Particles, Weather): live weather, location and the clock / date / temperature overlay
@@ -3291,6 +3327,53 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                 }),
                 ("Add", LocalizationManager.T("Profiles.CreateUpdateDefaults"), (_, _) => { foreach (var p in new[] { "Work", "Gaming", "Focus" }) { if (!WorkspaceProfileService.ListProfiles().Contains(p, StringComparer.OrdinalIgnoreCase)) WorkspaceProfileService.Save(p); } Refresh(); }),
                 ("Delete", LocalizationManager.T("Profiles.DeleteSelected"), (_, _) => { if (list.SelectedItem is string p && !p.Equals("Last Session", StringComparison.OrdinalIgnoreCase)) { WorkspaceProfileService.Delete(p); Refresh(); } }));
+            var portability = new FlowLayoutPanel { AutoSize = true, WrapContents = true };
+            portability.Controls.Add(StudioButton(StudioText("Export selected profile", "Εξαγωγή προφίλ"), () =>
+            {
+                if (list.SelectedItem is not string item) return;
+                using var dialog = new SaveFileDialog { Filter = "OPSIS profile (*.json)|*.json", FileName = item + ".json" };
+                if (dialog.ShowDialog(this) != DialogResult.OK) return;
+                try { WorkspaceProfileService.ExportPortable(item, dialog.FileName); }
+                catch (Exception ex) { MessageBox.Show(this, ex.Message, "OPSIS", MessageBoxButtons.OK, MessageBoxIcon.Warning); }
+            }, width: 215));
+            portability.Controls.Add(StudioButton(StudioText("Import with monitor mapping", "Εισαγωγή με αντιστοίχιση οθονών"), () =>
+            {
+                using var file = new OpenFileDialog { Filter = "OPSIS profile (*.json)|*.json", Multiselect = false };
+                if (file.ShowDialog(this) != DialogResult.OK) return;
+                try
+                {
+                    var monitors = WorkspaceProfileService.PreviewPortableMonitors(file.FileName);
+                    using var mapping = new ProfileMonitorMappingDialog(monitors);
+                    if (mapping.ShowDialog(this) != DialogResult.OK) return;
+                    var imported = WorkspaceProfileService.ImportPortable(file.FileName, mapping.Mapping);
+                    Refresh(); list.SelectedItem = imported;
+                }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.Text.Json.JsonException or InvalidDataException)
+                { MessageBox.Show(this, ex.Message, "OPSIS", MessageBoxButtons.OK, MessageBoxIcon.Warning); }
+            }, width: 273));
+            panel.Controls.Add(portability);
+            AddText(panel, StudioText("Presentation monitors and docking", "Οθόνες παρουσίασης και docking"));
+            var dock = new CheckBox { AutoSize = true,
+                Text = StudioText("Restore external windows when docking monitors reconnect (opt-in)",
+                    "Επαναφορά εξωτερικών παραθύρων κατά την επανασύνδεση docking (προαιρετικό)"),
+                Checked = AppSettings.Load().RestoreWindowsAfterDocking };
+            dock.CheckedChanged += (_,_) => { var a=AppSettings.Load();a.RestoreWindowsAfterDocking=dock.Checked;a.Save(); };
+            panel.Controls.Add(dock);
+            foreach (var monitor in MonitorTopologyService.Current())
+            {
+                var saved = AppSettings.Load();
+                var chosen = new CheckBox { AutoSize = true,
+                    Text = StudioText("Presentation privacy on", "Απόκρυψη ιδιωτικών στοιχείων στην οθόνη") + " " + monitor.DeviceName,
+                    Checked = saved.PresentationMonitorIds?.Contains(monitor.Id,StringComparer.OrdinalIgnoreCase) == true };
+                chosen.CheckedChanged += (_,_) =>
+                {
+                    var a=AppSettings.Load();a.PresentationMonitorIds ??= new();
+                    a.PresentationMonitorIds.RemoveAll(x=>x.Equals(monitor.Id,StringComparison.OrdinalIgnoreCase));
+                    if(chosen.Checked)a.PresentationMonitorIds.Add(monitor.Id);
+                    a.Save();WallpaperHostEngine.Instance.RefreshAll();
+                };
+                panel.Controls.Add(chosen);
+            }
             // Which automation rules switch to a profile (so "Gaming Mode" for Steam is visible next to the profiles it uses, plan R.1).
             var ruleLines = AutomationService.Instance.Rules.Select(r => $"{r.Name}:  {r.TriggerProcess}  →  {r.Profile}" + (WorkspaceProfileService.ListProfiles().Contains(r.Profile) ? "" : "  (!)")).ToList();
             if (ruleLines.Count > 0) AddText(panel, string.Join("\n", ruleLines));

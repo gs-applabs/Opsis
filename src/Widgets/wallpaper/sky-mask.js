@@ -81,18 +81,25 @@
         } catch { /* best effort: an unavailable store never breaks wallpaper */ }
     }
 
-    function detect(image, file) {
+    function detect(image, file, manual) {
         const profile = window.OpsisSceneSkyProfiles?.[file];
         if (profile === null) return null;
         const canvas = document.createElement('canvas');
         canvas.width = 512;
-        canvas.height = profile?.[0] ??
-            Math.max(1, Math.min(512, Math.round(canvas.width * image.naturalHeight / image.naturalWidth)));
+        // Manual edits originate from the actual photograph ratio and intentionally
+        // override older generated catalogue dimensions for this single image.
+        canvas.height = manual?.height !== undefined && Number.isInteger(manual.height) &&
+            manual.height >= 1 && manual.height <= 512 ? manual.height : (profile?.[0] ??
+            Math.max(1, Math.min(512, Math.round(canvas.width * image.naturalHeight / image.naturalWidth))));
         const g = canvas.getContext('2d', { willReadFrequently: !profile });
         let hash = null;
         try { hash = fingerprint(image); } catch { /* tainted/undecodable image */ }
+        const edited = manual && manual.width === canvas.width && manual.height === canvas.height &&
+            Array.isArray(manual.rows) && manual.rows.length === canvas.width &&
+            manual.rows.every(n => Number.isInteger(n) && n >= 0 && n <= canvas.height)
+            ? manual.rows : null;
         const saved = hash ? loadSaved(file, hash, canvas.width, canvas.height) : null;
-        let rows = saved || profile?.[1];
+        let rows = edited || saved || profile?.[1];
         if (!rows) {
             g.drawImage(image, 0, 0, canvas.width, canvas.height);
             rows = skyline(g.getImageData(0, 0, canvas.width, canvas.height).data, canvas.width, canvas.height);
@@ -110,7 +117,7 @@
         g.putImageData(mask, 0, 0);
         canvas.opsisRows = rows; // only used when the user enables the skyline overlay
         // Persist the image-specific sky profile only after successful detection.
-        if (hash && !saved) saveMask(file, hash, canvas.width, canvas.height, rows);
+        if (hash && !saved && !edited) saveMask(file, hash, canvas.width, canvas.height, rows);
         return canvas;
     }
 

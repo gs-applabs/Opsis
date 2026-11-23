@@ -87,6 +87,12 @@ internal sealed class DesktopMusicController : IDisposable
                 display = Screen.AllScreens.FirstOrDefault(s => s.DeviceName == displaySetting) ?? Screen.PrimaryScreen;
                 nextDisplayLookup = now + 1000;
             }
+            // Per-monitor presentation privacy: no title, artwork OR visualizer drawn there.
+            var monitorId = display == null ? null : MonitorTopologyService.ForDevice(display.DeviceName)?.Id;
+            var hide = display != null && (MotionDesk.Services.AppSettings.Peek().PresentationMonitorIds?.Any(id =>
+                id.Equals(display.DeviceName,StringComparison.OrdinalIgnoreCase) ||
+                id.Equals(monitorId,StringComparison.OrdinalIgnoreCase)) ?? false);
+            if (hide) { drawing = false; surface.Clear(); StopAudio(); return; }
             var bands = spectrum?.GetBands() ?? Silence;
             var analysis = spectrum?.GetVisualizerFrame();
             _ = surface.RenderAsync(display, settings, snapshot, bands, preview && !audible && snapshot == null,
