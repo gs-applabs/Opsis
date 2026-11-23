@@ -157,7 +157,7 @@ public sealed partial class MainWindow
                 AccessibleRole = AccessibleRole.StaticText
             });
         }
-        edits.Controls.Add(StudioButton(StudioText("Edit", "Επεξεργασία"), () =>
+        var editRule = StudioButton(StudioText("Edit", "Επεξεργασία"), () =>
         {
             int at = list.SelectedIndex;
             if (at < 0) return;
@@ -167,24 +167,95 @@ public sealed partial class MainWindow
             if (EditFileRule(rules[at], targets, dialog) is not { } rule) return;
             rules[at] = rule;
             Populate(at);
-        }, 120));
-        edits.Controls.Add(StudioButton(StudioText("Delete", "Διαγραφή"), () =>
+        }, 120);
+        edits.Controls.Add(editRule);
+        var deleteRule = StudioButton(StudioText("Delete", "Διαγραφή"), () =>
         {
             int at = list.SelectedIndex;
             if (at < 0) return;
             CaptureChecks();
             rules.RemoveAt(at);
             Populate(at);
-        }, 100));
+        }, 100);
+        edits.Controls.Add(deleteRule);
+        var moveButtons = new List<(int Offset, Button Button)>();
         foreach (int offset in new[] { -1, 1 })
-            edits.Controls.Add(StudioButton(offset < 0 ? "↑" : "↓", () =>
+        {
+            var moveButton = StudioButton(offset < 0 ? "↑" : "↓", () =>
             {
                 int at = list.SelectedIndex, to = at + offset;
                 if (at < 0 || to < 0 || to >= rules.Count) return;
                 CaptureChecks();
                 (rules[at], rules[to]) = (rules[to], rules[at]);
                 Populate(to);
-            }, 48));
+            }, 48);
+            moveButtons.Add((offset, moveButton));
+            edits.Controls.Add(moveButton);
+        }
+        var disabledReason = new Label
+        {
+            AutoSize = true, MaximumSize = new Size(560, 0),
+            ForeColor = UiTheme.TextSecondary, Font = UiTheme.FontBody,
+            AccessibleRole = AccessibleRole.StaticText
+        };
+        void UpdateRuleActions()
+        {
+            int at = list.SelectedIndex;
+            bool selection = at >= 0 && at < rules.Count;
+            editRule.Enabled = deleteRule.Enabled = selection;
+            foreach (var (offset, button) in moveButtons)
+                button.Enabled = selection && at + offset >= 0 && at + offset < rules.Count;
+            disabledReason.Text = !selection
+                ? StudioText("Select a rule to edit, delete or move it.",
+                    "Επιλέξτε κανόνα για επεξεργασία, διαγραφή ή αλλαγή σειράς.")
+                : StudioText("Up/down commands are disabled at the first/last position.",
+                    "Η μετακίνηση απενεργοποιείται στην πρώτη/τελευταία θέση.");
+            editRule.AccessibleDescription = deleteRule.AccessibleDescription = disabledReason.Text;
+            foreach (var (_, button) in moveButtons) button.AccessibleDescription = disabledReason.Text;
+        }
+        list.SelectedIndexChanged += (_, _) => UpdateRuleActions();
+        list.ItemCheck += (_, _) => dialog.BeginInvoke((Action)UpdateRuleActions);
+        UpdateRuleActions();
+        edits.Controls.Add(disabledReason);
+        // #51: Independent, read-only dry-run of the selected rule. The preview
+        // uses the normal routing matcher but never calls SaveFileRules or moves
+        // files. The single-rule package has no default route, so results are
+        // attributable only to that rule, regardless of global rule ordering.
+        var previewSelected = StudioButton(StudioText("Simulate selected rule", "Προσομοίωση επιλεγμένου κανόνα"), () => { }, 245);
+        edits.Controls.Add(previewSelected);
+        list.SelectedIndexChanged += (_, _) => previewSelected.Enabled = list.SelectedIndex >= 0;
+        previewSelected.Enabled = list.SelectedIndex >= 0;
+        previewSelected.AccessibleDescription = StudioText("Dry-run only: does not move any files.",
+            "Μόνο προσομοίωση: δεν μετακινεί αρχεία.");
+        previewSelected.Click += async (_, _) =>
+        {
+            int selected = list.SelectedIndex;
+            if (selected < 0 || selected >= rules.Count) return;
+            CaptureChecks();
+            var selectedRule = rules[selected] with { Enabled = true };
+            var only = package with
+            {
+                Rules = new[] { selectedRule }, RulesEnabled = true,
+                DefaultTarget = null, KeepUnmatched = false
+            };
+            previewSelected.Enabled = false;
+            try
+            {
+                var matches = await Task.Run(() => DesktopFiles.Route(only, host.Containers(),
+                    Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory),
+                    Environment.GetFolderPath(Environment.SpecialFolder.CommonDesktopDirectory), CancellationToken.None));
+                if (dialog.IsDisposed) return;
+                string text = StudioText("Read-only rule simulation", "Προσομοίωση κανόνα χωρίς αλλαγές") +
+                    $": {selectedRule.Name}\r\n" +
+                    string.Join(Environment.NewLine, matches.SelectMany(x => x.Value.Select(v =>
+                        $"{v.DisplayName}  →  {x.Key}" )).Take(500));
+                if (matches.Count == 0) text += "\r\n" + StudioText("No matches", "Χωρίς αντιστοιχίσεις");
+                ShowTextDialog(dialog.Text, StudioText("Selected rule preview", "Προεπισκόπηση κανόνα"), text);
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException)
+            { if (!dialog.IsDisposed) MessageBox.Show(dialog, ex.Message, dialog.Text); }
+            finally { if (!previewSelected.IsDisposed) previewSelected.Enabled = list.SelectedIndex >= 0; }
+        };
         var actions = new FlowLayoutPanel { Dock = DockStyle.Fill, AutoSize = true, FlowDirection = FlowDirection.RightToLeft };
         var preview = StudioButton(StudioText("Preview matches", "Προεπισκόπηση αντιστοιχίσεων"), () => { }, 205);
         using var previewCancellation = new CancellationTokenSource();
@@ -199,6 +270,8 @@ public sealed partial class MainWindow
             host.Flush();
             var models = host.Containers();
             preview.Enabled = false;
+            preview.AccessibleDescription = StudioText("Calculating a read-only preview; file operations are disabled.",
+                "Υπολογισμός προεπισκόπησης χωρίς εγγραφή ή μετακίνηση αρχείων.");
             try
             {
                 var matches = await Task.Run(() => DesktopFiles.Route(draft, models,

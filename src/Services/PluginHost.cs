@@ -459,6 +459,19 @@ namespace MotionDesk.Services
             foreach (var dll in Directory.EnumerateFiles(folder, "*Plugin.dll"))
             {
                 if (!PackagePaths.IsExistingUnlinkedPath(folder, dll)) continue;
+                // #97: only known 1.0.0.0 plugin entrypoints are gated.
+                // Unknown third-party plugins retain the established ABI policy.
+                var fileName = Path.GetFileName(dll);
+                if (fileName.Equals("OpsisNewsCrawler.OpsisPlugin.dll", StringComparison.OrdinalIgnoreCase) ||
+                    fileName.Equals("Chronikologio.OpsisPlugin.dll", StringComparison.OrdinalIgnoreCase))
+                {
+                    var identity = AssemblyName.GetAssemblyName(dll);
+                    if (identity.Version != new Version(1, 0, 0, 0))
+                    {
+                        Log($"Plugin '{fileName}' skipped: ABI {identity.Version} (2.8.0.2500 requires 1.0.0.0). Update this plugin before enabling it.");
+                        continue;
+                    }
+                }
                 var context = new PluginLoadContext(dll);
                 var assembly = context.LoadFromAssemblyPath(dll);
                 foreach (var type in assembly.GetTypes())

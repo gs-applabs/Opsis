@@ -135,13 +135,27 @@ let audioBoost = 1;
 function bridge() { return window.chrome?.webview?.hostObjects?.wallpaper ?? null; }
 
 let adaptiveScale = 1, slowMs = 0, fastMs = 0;
+// Each wallpaper WebView is one physical monitor. Its ring and adaptive
+// downscale are therefore independent from the other screens' frame budgets.
 const frameIntervals = new Float32Array(300);
+const renderCosts = new Float32Array(300);
 let frameCount = 0, frameIndex = 0;
-window.opsisFrameStats = () => {
-    const data = Array.from(frameIntervals.subarray(0, frameCount)).sort((a, b) => a - b);
-    const percentile = p => data.length ? data[Math.ceil(data.length * p) - 1] : null;
-    return { mode: cfg.mode, samples: frameCount, p95Ms: percentile(.95), p99Ms: percentile(.99), adaptiveScale };
-};
+function framePercentile(buffer, p) {
+    if (!frameCount) return null;
+    const sorted = Array.from(buffer.subarray(0, frameCount)).sort((a, b) => a - b);
+    return sorted[Math.max(0, Math.ceil(sorted.length * p) - 1)];
+}
+window.opsisFrameStats = () => ({
+    monitor: cfg.perf?.monitorId || 'unknown', mode: cfg.mode,
+    targetFps: cfg.perf?.targetFps || 30,
+    budgetMs: 1000 / Math.max(1, cfg.perf?.targetFps || 30),
+    samples: frameCount,
+    p95Ms: framePercentile(frameIntervals, .95),
+    p99Ms: framePercentile(frameIntervals, .99),
+    renderP95Ms: framePercentile(renderCosts, .95),
+    renderP99Ms: framePercentile(renderCosts, .99),
+    adaptiveScale, canvasWidth: canvas.width, canvasHeight: canvas.height
+});
 function resetFrameStats() {
     frameCount = frameIndex = slowMs = fastMs = lastFrameTime = 0;
 }
@@ -151,10 +165,15 @@ function resizeCanvas() {
     const athens = cfg.mode === 'Ancient Athens';
     const studio = OpsisStudioScenes.has(cfg.mode);
     const requested = pixelRatio * (cfg.perf?.renderScale || 1) * adaptiveScale;
+    // Per-monitor max pixel budget: high-resolution secondary screens no
+    // longer consume disproportionate GPU time at the same base tier.
+    const pixelBudget = Math.max(320 * 240, cfg.perf?.pixelBudget || 3840 * 2160);
+    const capped = Math.min(requested, Math.sqrt(pixelBudget /
+        Math.max(1, window.innerWidth * window.innerHeight)));
     const dpr = athens || studio
         ? Math.min(athens ? pixelRatio : requested, 3840 / Math.max(1, window.innerWidth, window.innerHeight),
             Math.sqrt(3840 * 2160 / Math.max(1, window.innerWidth * window.innerHeight)))
-        : requested;
+        : capped;
     const width = Math.max(1, Math.floor(window.innerWidth * dpr));
     const height = Math.max(1, Math.floor(window.innerHeight * dpr));
     if (canvas.width !== width) canvas.width = width;
@@ -730,15 +749,23 @@ function waveLoop(now) {
         const started = performance.now();
         renderFrame(reduced ? 0 : dt);
         if (lastFrameTime) {
+            const cost = performance.now() - started;
             frameIntervals[frameIndex] = gap;
+            renderCosts[frameIndex] = cost;
             frameIndex = (frameIndex + 1) % frameIntervals.length;
             frameCount = Math.min(frameCount + 1, frameIntervals.length);
             if (!reduced && cfg.perf?.adaptive && cfg.mode !== 'Ancient Athens') {
-                const cost = performance.now() - started;
-                slowMs = cost > minFrameMs * .9 || gap > minFrameMs * 1.8 ? slowMs + Math.min(gap, 250) : 0;
-                fastMs = cost < minFrameMs * .45 && gap < minFrameMs * 1.5 ? fastMs + Math.min(gap, 250) : 0;
-                if ((slowMs >= 3000 && adaptiveScale > .625) || (fastMs >= 15000 && adaptiveScale < 1)) {
-                    adaptiveScale += slowMs >= 3000 ? -.125 : .125;
+                // #8: use p95 *render cost* (not the rAF scheduling gap)
+                // against THIS monitor's FPS budget. Hysteresis avoids
+                // oscillation on brief tab/mouse activity and avoids
+                // downscaling when the GPU is idle but Windows delayed rAF.
+                const renderP95 = frameCount >= 60 ? framePercentile(renderCosts, .95) : cost;
+                slowMs = renderP95 > minFrameMs * .85 ? slowMs + Math.min(gap, 250) : 0;
+                fastMs = renderP95 < minFrameMs * .40 ? fastMs + Math.min(gap, 250) : 0;
+                const lower = slowMs >= 3000 && adaptiveScale > .5;
+                const raise = fastMs >= 15000 && adaptiveScale < 1;
+                if (lower || raise) {
+                    adaptiveScale = Math.max(.5, Math.min(1, adaptiveScale + (lower ? -.125 : .125)));
                     slowMs = fastMs = 0;
                     resizeCanvas();
                 }

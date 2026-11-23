@@ -3,9 +3,9 @@
   "pre_release": true,
   "tests_deferred_per_user": true,
   "counts": {
-    "new": 8,
+    "new": 17,
     "existing": 16,
-    "partial": 11,
+    "partial": 2,
     "pending": 65
   },
   "phases": {
@@ -128,10 +128,10 @@
     {
       "id": 2,
       "title": "Καταγραφή του 95ου και 99ου εκατοστημορίου χρόνου καρέ ανά οθόνη.",
-      "status": "partial",
-      "status_el": "ΜΕΡΙΚΟ · ΣΥΝΕΧΙΖΕΤΑΙ",
-      "evidence": "src/Services/",
-      "note": "Υπάρχει καταγραφή χρόνου καρέ· η απόδειξη χωριστά ανά οθόνη εκκρεμεί"
+      "status": "new",
+      "status_el": "ΥΛΟΠΟΙΗΘΗΚΕ ΣΤΟΝ SOURCE · ΧΩΡΙΣ BUILD",
+      "evidence": "src/Widgets/wallpaper/index.html · src/Widgets/WallpaperWindow.cs",
+      "note": "Ανεξάρτητος ring buffer p95/p99 ανά WebView/monitor, κόστος πραγματικής σχεδίασης, frame budget και αναφορά ανά DeviceName."
     },
     {
       "id": 3,
@@ -176,10 +176,10 @@
     {
       "id": 8,
       "title": "Αυτόματη μείωση ανάλυσης του wallpaper όταν υπερβαίνεται ο στόχος χρόνου καρέ.",
-      "status": "partial",
-      "status_el": "ΜΕΡΙΚΟ · ΣΥΝΕΧΙΖΕΤΑΙ",
-      "evidence": "src/Widgets/",
-      "note": "Υπάρχει προσαρμογή ανάλυσης· χρειάζεται αντιστοίχιση με στόχο ανά οθόνη"
+      "status": "new",
+      "status_el": "ΥΛΟΠΟΙΗΘΗΚΕ ΣΤΟΝ SOURCE · ΧΩΡΙΣ BUILD",
+      "evidence": "src/Widgets/wallpaper/index.html · src/Widgets/WallpaperWindow.cs",
+      "note": "Προσαρμογή adaptiveScale βάσει p95 rendering cost ανά οθόνη, υστέρηση 3s/15s και περιορισμός pixel budget ανά βαθμίδα."
     },
     {
       "id": 9,
@@ -240,10 +240,10 @@
     {
       "id": 16,
       "title": "Επαναφορά προηγούμενης έκδοσης αν το νέο προφίλ αποτύχει να ανοίξει.",
-      "status": "partial",
-      "status_el": "ΜΕΡΙΚΟ · ΣΥΝΕΧΙΖΕΤΑΙ",
-      "evidence": "src/Services/WorkspaceProfileService.cs",
-      "note": "Rollback εφαρμογής προφίλ· όχι πλήρες rollback binary version"
+      "status": "new",
+      "status_el": "ΥΛΟΠΟΙΗΘΗΚΕ ΣΤΟΝ SOURCE · ΧΩΡΙΣ BUILD",
+      "evidence": "src/Services/VerifiedRollbackService.cs · src/Services/WorkspaceProfileService.cs · src/Services/UpdateInstallerService.cs · src/UI/MainWindow.cs",
+      "note": "Διατήρηση προηγούμενου, ήδη επαληθευμένου installer και ελεγχόμενη προαιρετική επαναφορά έπειτα από αποτυχία Last Session, χωρίς αυτόματη εκτέλεση. Διαθέσιμο μόνο όταν υπάρχει κατάλληλος προηγούμενος installer."
     },
     {
       "id": 17,
@@ -273,9 +273,9 @@
       "id": 20,
       "title": "Έλεγχος επαναφοράς μετά από διακοπή ρεύματος την ώρα αποθήκευσης προφίλ.",
       "status": "partial",
-      "status_el": "ΜΕΡΙΚΟ · ΣΥΝΕΧΙΖΕΤΑΙ",
-      "evidence": "src/Services/AtomicFile.cs",
-      "note": "Ατομική εγγραφή, εκκρεμεί σενάριο πραγματικής διακοπής ρεύματος"
+      "status_el": "ΜΕΡΙΚΟ · ΑΝΑΜΕΝΕΤΑΙ ΕΚΤΕΛΕΣΗ WINDOWS QA",
+      "evidence": "src/Services/AtomicFile.cs · tests/AtomicWriteCrashHarness · tools/verify-atomic-powerloss.ps1",
+      "note": "FlushToDisk, ανθεκτική ατομική ενημέρωση και ανάκτηση προσωρινού πρώτης εγγραφής· ετοιμάστηκε χειροκίνητο crash harness, ΔΕΝ εκτελέστηκε· πραγματική διακοπή ρεύματος δεν έχει προσομοιωθεί."
     },
     {
       "id": 21,
@@ -520,10 +520,10 @@
     {
       "id": 51,
       "title": "Προσομοίωση κανόνα ταξινόμησης πριν μετακινηθεί αρχείο.",
-      "status": "partial",
-      "status_el": "ΜΕΡΙΚΟ · ΣΥΝΕΧΙΖΕΤΑΙ",
+      "status": "new",
+      "status_el": "ΥΛΟΠΟΙΗΘΗΚΕ ΣΤΟΝ SOURCE · ΧΩΡΙΣ BUILD",
       "evidence": "src/UI/MainWindow.Organization.cs",
-      "note": "Υπάρχει αναφορά preview· όχι ανεξάρτητος οδηγός dry-run κάθε κανόνα"
+      "note": "Ξεχωριστό dry-run του επιλεγμένου κανόνα με μοναδικό ενεργό rule, χωρίς μετακίνηση αρχείων."
     },
     {
       "id": 52,
@@ -760,18 +760,18 @@
     {
       "id": 81,
       "title": "Δείγμα κουμπιού σε κανονική κατάσταση, hover, πάτημα, εστίαση και απενεργοποίηση στον επεξεργαστή θέματος.",
-      "status": "partial",
-      "status_el": "ΜΕΡΙΚΟ · ΣΥΝΕΧΙΖΕΤΑΙ",
+      "status": "new",
+      "status_el": "ΥΛΟΠΟΙΗΘΗΚΕ ΣΤΟΝ SOURCE · ΧΩΡΙΣ BUILD",
       "evidence": "src/UI/MainWindow.Themes.cs",
-      "note": "Δείγματα 5 καταστάσεων· χρειάζεται επικύρωση hover/focus συμπεριφοράς"
+      "note": "Πραγματικά δείγματα WinForms με mouse hover/down/up, Tab focus και disabled κατάσταση."
     },
     {
       "id": 82,
       "title": "Προεπισκόπηση θέματος με τις μεγαλύτερες μεταφρασμένες λεζάντες.",
-      "status": "partial",
-      "status_el": "ΜΕΡΙΚΟ · ΣΥΝΕΧΙΖΕΤΑΙ",
+      "status": "new",
+      "status_el": "ΥΛΟΠΟΙΗΘΗΚΕ ΣΤΟΝ SOURCE · ΧΩΡΙΣ BUILD",
       "evidence": "src/UI/MainWindow.Themes.cs",
-      "note": "Οι μακρύτερες λεζάντες προβάλλονται σε λίστα, όχι σε όλες τις κάρτες"
+      "note": "Οι 35 μεγαλύτερες πραγματικές μεταφράσεις προβάλλονται και σε προεπισκόπηση καρτών με περιορισμένο πλάτος και προσβάσιμα tooltips."
     },
     {
       "id": 83,
@@ -832,18 +832,18 @@
     {
       "id": 90,
       "title": "Επεξήγηση του λόγου που ένα κουμπί είναι ανενεργό μέσα στην ίδια σελίδα.",
-      "status": "partial",
-      "status_el": "ΜΕΡΙΚΟ · ΣΥΝΕΧΙΖΕΤΑΙ",
-      "evidence": "src/UI/MainWindow.Organization.cs",
-      "note": "Αιτιολόγηση disabled στο New Rule· χρειάζεται για κάθε disabled εντολή"
+      "status": "new",
+      "status_el": "ΥΛΟΠΟΙΗΘΗΚΕ ΣΤΟΝ SOURCE · ΧΩΡΙΣ BUILD",
+      "evidence": "src/UI/MainWindow.cs · src/UI/MainWindow.Organization.cs",
+      "note": "Ενσωματωμένη σελίδα αιτιολόγησης ανενεργών κουμπιών, δυναμική παρακολούθηση EnabledChanged και περιγραφές για κύριες ασύγχρονες ενέργειες."
     },
     {
       "id": 91,
       "title": "Ένας πίνακας έκδοσης για app, installer, βοήθεια και ενημερώσεις.",
-      "status": "partial",
-      "status_el": "ΜΕΡΙΚΟ · ΣΥΝΕΧΙΖΕΤΑΙ",
-      "evidence": "src/Services/AppVersion.cs",
-      "note": "Κοινή έκδοση στον app, απαιτείται πλήρης σύνδεση installer/help/update"
+      "status": "new",
+      "status_el": "ΥΛΟΠΟΙΗΘΗΚΕ ΣΤΟΝ SOURCE · ΧΩΡΙΣ BUILD",
+      "evidence": "Version.props · Opsis.Studio.csproj · installer.iss · src/Services/AppVersion.cs · src/Services/UpdateCheckService.cs · tools/emit-release-identity.ps1",
+      "note": "Μία authored έκδοση σε Version.props· EXE, Help, Update, Installer και release metadata αντλούν από το ίδιο compiled version."
     },
     {
       "id": 92,
@@ -872,10 +872,10 @@
     {
       "id": 95,
       "title": "Θεματική βοήθεια από κάθε κουμπί με F1.",
-      "status": "partial",
-      "status_el": "ΜΕΡΙΚΟ · ΣΥΝΕΧΙΖΕΤΑΙ",
+      "status": "new",
+      "status_el": "ΥΛΟΠΟΙΗΘΗΚΕ ΣΤΟΝ SOURCE · ΧΩΡΙΣ BUILD",
       "evidence": "src/UI/MainWindow.cs · src/UI/HelpForm.cs",
-      "note": "F1 ανά σελίδα· όχι ακόμη από κάθε συγκεκριμένο κουμπί"
+      "note": "F1 αναλύει το πραγματικά εστιασμένο control και ανοίγει την τεκμηρίωση με το αντίστοιχο θέμα και ασφαλές fallback στη σελίδα."
     },
     {
       "id": 96,
@@ -889,9 +889,9 @@
       "id": 97,
       "title": "Κατάλογος συμβατότητας επεκτάσεων ανά branch. Πρώτα News Crawler και Appearance, που αναφέρονται στον παλιό installer, με έκδοση API και διαδρομή εγκατάστασης για κάθε πακέτο.",
       "status": "partial",
-      "status_el": "ΜΕΡΙΚΟ · ΣΥΝΕΧΙΖΕΤΑΙ",
-      "evidence": "suite/plugin-compatibility.json · src/Services/PluginCompatibilityCatalog.cs",
-      "note": "Κατάλογος προσθηκών· οι συμβατότητες στα Windows δεν έχουν επιβεβαιωθεί"
+      "status_el": "ΜΕΡΙΚΟ · ΑΝΑΜΕΝΕΤΑΙ ΕΚΤΕΛΕΣΗ WINDOWS QA",
+      "evidence": "src/Services/PluginCompatibilityCatalog.cs · src/Services/PluginHost.cs · suite/plugin-compatibility.json",
+      "note": "Έλεγχος assembly identity χωρίς φόρτωση, αποκλεισμός ασύμβατων Crawler/Χρονικολογίου και κατάλογος branch/paths. Πλήρης Windows ABI + installer E2E απαιτείται αργότερα."
     },
     {
       "id": 98,
@@ -917,5 +917,7 @@
       "evidence": "src/Services/",
       "note": "Προαιρετικό και χρονικά περιορισμένο session diagnostics"
     }
-  ]
+  ],
+  "revision": "R4",
+  "last_changed_utc": "2026-11-23"
 }

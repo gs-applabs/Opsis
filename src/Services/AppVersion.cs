@@ -18,6 +18,20 @@ namespace MotionDesk.Services
 
         public static bool IsPreRelease => Label != Short;
 
+        // The installer reads the published EXE's FileVersion; Help and updater
+        // deliberately derive their version from this same compiled assembly.
+        // This metadata record makes it visible to release tooling without
+        // duplicating a version literal in app pages or update requests.
+        public static object ReleaseIdentity => new
+        {
+            app = Short,
+            help = Short,
+            update = Short,
+            installer = Short,
+            preview = IsPreRelease,
+            label = Label
+        };
+
         public static string Format(Version v) => v.Revision > 0 ? v.ToString(4) : v.ToString(3);
 
         public static string Describe(Version v, string? informational)

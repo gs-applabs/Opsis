@@ -44,6 +44,9 @@ namespace MotionDesk.Services
             if (expected is null) throw new InvalidOperationException("no-digest");
 
             Directory.CreateDirectory(UpdateDir);
+            // Preserve only a previously verified installer matching the
+            // currently-running version. Never archive an unknown setup.
+            VerifiedRollbackService.ArchiveCurrentInstallerBeforeUpdate();
             foreach (var old in Directory.GetFiles(UpdateDir))
             { try { File.Delete(old); } catch (IOException) { } catch (UnauthorizedAccessException) { } }
             var path = Path.Combine(UpdateDir, "OpsisSetup.exe");
@@ -76,6 +79,7 @@ namespace MotionDesk.Services
                 try { File.Delete(path); } catch (IOException) { }
                 throw new InvalidDataException("hash-mismatch");
             }
+            File.WriteAllText(path + ".sha256", actual); // authenticated digest for a future, explicitly approved rollback
             return (path, actual);
         }
 

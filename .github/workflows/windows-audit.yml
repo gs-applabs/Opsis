@@ -42,7 +42,7 @@ jobs:
           $setup = Get-ChildItem Output -File -Filter 'OpsisSetup-*.exe' | Select-Object -First 1
           if (!$setup) { throw 'Installer output missing' }
           [ordered]@{
-            appVersion = '2.8.0.2500'
+            appVersion = (Get-Item .\publish\Opsis.Studio.exe).VersionInfo.FileVersion
             dotnetSdk = (dotnet --version)
             node = (node --version)
             installerName = $setup.Name

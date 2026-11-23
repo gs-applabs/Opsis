@@ -172,7 +172,7 @@ namespace MotionDesk.Widgets
                 infoFont = string.IsNullOrWhiteSpace(settings.InfoFont) ? "Segoe UI Light" : settings.InfoFont,
                 waveStyle = settings.WaveStyle,
                 athensPhase = settings.AthensPhase,
-                perf = WallpaperHostEngine.PerfObject(),
+                perf = WallpaperHostEngine.PerfObject(_screenDeviceName),
                 pageUri,
                 elements = settings.Elements.Where(e => e.Enabled).Select(e => new { id = e.Id, scale = Math.Clamp(e.Scale, 40, 250) }),
                 elSide = settings.ElementsSide is "Right" or "Center" ? settings.ElementsSide : "Left",
@@ -1452,19 +1452,33 @@ namespace MotionDesk.Widgets
         internal Task<object[]> AuditFramesAsync() =>
             Task.WhenAll(_windows.Where(w => !w.IsDisposed).Select(w => w.AuditFramesAsync()));
 
-        internal static object PerfObject()
+        internal static object PerfObject(string? monitorId = null)
         {
             var p = MotionDesk.Services.PerformanceProfile.ForFeature(MotionDesk.Services.PerfFeature.Wallpaper);
+            // Every monitor gets its own render budget; the JavaScript adaptive
+            // governor lives in that monitor's dedicated WebView2 page.
+            int maxPixels = p.Tier switch
+            {
+                MotionDesk.Services.HardwareTier.Low => 1280 * 720,
+                MotionDesk.Services.HardwareTier.High => 3840 * 2160,
+                _ => 1920 * 1080
+            };
             bool reduced = MotionDesk.Services.AppSettings.Peek().Glass?.ReducedEffects == true ||
                 !System.Windows.Forms.SystemInformation.UIEffectsEnabled || System.Windows.Forms.SystemInformation.HighContrast;
-            return new { adaptive = PerformanceGovernor.Enabled && !reduced && PerformanceProfile.FeatureOverride(PerfFeature.Wallpaper) == null, tier = p.Tier.ToString(), fps = p.WallpaperFps, renderScale = p.RenderScale, layers = p.WaveLayers, glowBlur = p.GlowBlur, glow = p.GlowBlur > 0, shading = p.Shading, targetFps = p.WallpaperFps, reducedMotion = reduced };
+            return new { adaptive = PerformanceGovernor.Enabled && !reduced && PerformanceProfile.FeatureOverride(PerfFeature.Wallpaper) == null,
+                monitorId = monitorId ?? "unknown", pixelBudget = maxPixels, tier = p.Tier.ToString(),
+                fps = p.WallpaperFps, renderScale = p.RenderScale, layers = p.WaveLayers, glowBlur = p.GlowBlur,
+                glow = p.GlowBlur > 0, shading = p.Shading, targetFps = p.WallpaperFps, reducedMotion = reduced };
         }
 
         /// <summary>Dynamic scaling: pushes the new profile to the running pages without reloading them.</summary>
         public void PushPerf()
         {
-            string json = JsonSerializer.Serialize(PerfObject());
-            foreach (var w in _windows) _ = w.RunScriptAsync("window.opsisSetPerf&&window.opsisSetPerf(" + json + ")");
+            foreach (var w in _windows.Where(w => !w.IsDisposed))
+            {
+                string json = JsonSerializer.Serialize(PerfObject(w.TargetScreen.DeviceName));
+                _ = w.RunScriptAsync("window.opsisSetPerf&&window.opsisSetPerf(" + json + ")");
+            }
         }
         public void PushProperties() { foreach (var w in _windows) _ = w.PushPropertiesAsync(); }
         public Task RefreshAllAsync() => Task.WhenAll(_windows.Select(w => w.RefreshAsync()));

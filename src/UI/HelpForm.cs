@@ -22,24 +22,50 @@ internal sealed class HelpForm : OpsisWindow
     private readonly TextBox _search = new() { Name = "HelpSearch", Width = 320, MaxLength = 100 };
     private readonly Label _searchHint = new() { AutoSize = true, Padding = new Padding(8, 6, 0, 0) };
     private bool _licenseLoaded;
+    private bool _settingContext;
 
     internal static void ShowSingle(IWin32Window? owner, IReadOnlyList<(string Version, string Date)> history,
-        HelpSection section = HelpSection.Instructions, string? query = null)
+        HelpSection section = HelpSection.Instructions, string? query = null, string? controlTopic = null)
     {
         if (_open is { IsDisposed: false } existing)
         {
             existing._tabs.SelectedIndex = (int)section;
-            existing.Search(query);
+            existing.ShowContextualHelp(query, controlTopic);
             if (existing.WindowState == FormWindowState.Minimized) existing.WindowState = FormWindowState.Normal;
             existing.Activate();
             return;
         }
         var form = new HelpForm(history, section);
         _open = form;
-        if (!string.IsNullOrWhiteSpace(query)) form._search.Text = query;
+        form.ShowContextualHelp(query, controlTopic);
         form.FormClosed += (_, _) => _open = null;
         if (owner == null) form.Show();
         else form.Show(owner);
+    }
+
+    private void ShowContextualHelp(string? page, string? topic)
+    {
+        // This is a read-only, local contextual strip: never treat user-facing
+        // control captions as HTML, a URL or an executable command.
+        if (string.IsNullOrWhiteSpace(page) && string.IsNullOrWhiteSpace(topic)) return;
+        page = (page ?? string.Empty).Trim();
+        topic = (topic ?? string.Empty).Replace('\r', ' ').Replace('\n', ' ').Trim();
+        if (topic.Length > 120) topic = topic[..120];
+        if (page.Length > 80) page = page[..80];
+
+        // Search for the more specific control first; if the manual has not yet
+        // documented it, the page topic is always the safe navigation fallback.
+        if (!string.IsNullOrWhiteSpace(topic) && SearchLanguage.Matches(_instructions.Text, topic))
+            Search(topic);
+        else if (!string.IsNullOrWhiteSpace(page)) Search(page);
+        // Keep the exact focused control visible in the input even on fallback.
+        _settingContext = true;
+        try { _search.Text = !string.IsNullOrWhiteSpace(topic) ? topic : page; }
+        finally { _settingContext = false; }
+        _searchHint.Text = MainWindow.StudioText(
+            $"Page: {page} · Focused control: {topic}",
+            $"Σελίδα: {page} · Στοιχείο: {topic}");
+        _searchHint.AutoEllipsis = true;
     }
 
     internal static void SavePreview(string png, IReadOnlyList<(string Version, string Date)> history, int tab)
@@ -128,7 +154,7 @@ internal sealed class HelpForm : OpsisWindow
         _search.PlaceholderText = MainWindow.StudioText("Search help (Greeklish supported)", "Αναζήτηση βοήθειας (και Greeklish)");
         _search.AccessibleName = _search.PlaceholderText;
         _search.Font = UiTheme.FontBody;
-        _search.TextChanged += (_, _) => Search(_search.Text);
+        _search.TextChanged += (_, _) => { if (!_settingContext) Search(_search.Text); };
         _searchHint.Text = MainWindow.StudioText("Enter a topic or word; F3 finds again", "Γράψε θέμα ή λέξη· F3 για νέα αναζήτηση");
         _searchHint.Font = UiTheme.FontBody;
         findRow.Controls.Add(_search);

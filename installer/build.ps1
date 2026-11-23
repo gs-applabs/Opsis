@@ -20,6 +20,7 @@ if ($CrawlerSetup) {
 
 dotnet publish $dotnetProject --configuration Release --runtime win-x64 --self-contained false -o $destination
 if ($LASTEXITCODE -ne 0) { throw 'Opsis publish failed.' }
+& (Join-Path $repo 'tools/emit-release-identity.ps1') -PublishDir $destination -OutFile (Join-Path $repo 'Output/release-identity.json')
 & (Join-Path $PSScriptRoot 'explorer/Build-Explorer.ps1') -OutputDirectory $destination -AllowClassicMenu
 & $compilerPath @arguments $installer
 if ($LASTEXITCODE -ne 0) { throw 'Inno Setup compilation failed.' }

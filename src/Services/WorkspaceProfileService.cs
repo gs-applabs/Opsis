@@ -61,16 +61,32 @@ public static class WorkspaceProfileService
     public static bool Load(string name)
     {
         var path = Path.Combine(Root, Sanitize(name) + ".json");
-        if (!File.Exists(path)) return false;
+        if (!File.Exists(path))
+        {
+            VerifiedRollbackService.NoteProfileFailed(name);
+            return false;
+        }
         WorkspaceProfile? profile;
         try
         {
             // A damaged profile may be restored from .bak by AtomicFile.ReadAllText.
-            if (new FileInfo(path).Length > 16L * 1024 * 1024) return false;
+            if (new FileInfo(path).Length > 16L * 1024 * 1024)
+            {
+                VerifiedRollbackService.NoteProfileFailed(name);
+                return false;
+            }
             profile = JsonSerializer.Deserialize<WorkspaceProfile>(AtomicFile.ReadAllText(path));
         }
-        catch (Exception ex) when (ex is JsonException or IOException or UnauthorizedAccessException) { return false; }
-        if (profile?.AppSettings == null || profile.Wallpaper == null || profile.Widgets == null) return false;
+        catch (Exception ex) when (ex is JsonException or IOException or UnauthorizedAccessException)
+        {
+            VerifiedRollbackService.NoteProfileFailed(name);
+            return false;
+        }
+        if (profile?.AppSettings == null || profile.Wallpaper == null || profile.Widgets == null)
+        {
+            VerifiedRollbackService.NoteProfileFailed(name);
+            return false;
+        }
 
         // Snapshot the live state before writing ANY new settings. If a widget/plugin throws
         // midway through a profile switch, restore both disk settings and the visible workspace.
@@ -136,6 +152,7 @@ public static class WorkspaceProfileService
             {
                 AttachLog.Write("Profile rollback needs safe-mode recovery: " + restoreEx.GetType().Name);
             }
+            VerifiedRollbackService.NoteProfileFailed(name);
             return false;
         }
     }

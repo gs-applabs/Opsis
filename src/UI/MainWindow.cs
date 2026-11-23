@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.IO;
@@ -247,6 +247,20 @@ namespace MotionDesk.UI
             {
                 WidgetHostEngine.Instance.SpawnWidget("sysmon", 100, 100, 300, 200);
             }
+            // A failed startup profile can offer a known, SHA-256-verified
+            // previous installer. It never starts automatically and only after
+            // explicit user approval; otherwise the app stays in safe mode.
+            Shown += (_, _) => BeginInvoke((Action)(() =>
+            {
+                if (IsDisposed || !VerifiedRollbackService.TryConsumeOffer(out var previousSetup, out var sha256)) return;
+                var choice = MessageBox.Show(this,
+                    StudioText("Your last-session profile could not be loaded after the update. Restore the verified previous Opsis version? The existing profile files are kept.",
+                        "Το προηγούμενο προφίλ δεν άνοιξε μετά την ενημέρωση. Επαναφορά της επαληθευμένης προηγούμενης έκδοσης Opsis; Τα αρχεία προφίλ θα διατηρηθούν."),
+                    StudioText("Version recovery", "Ανάκτηση έκδοσης"), MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
+                if (choice != DialogResult.Yes) return;
+                try { UpdateInstallerService.LaunchAfterExit(previousSetup, sha256); Application.Exit(); }
+                catch (Exception ex) { MessageBox.Show(this, ex.Message, "Opsis", MessageBoxButtons.OK, MessageBoxIcon.Error); }
+            }));
             if (_navButtons.TryGetValue("Dashboard", out var dashboardButton))
                 SetActiveButton(dashboardButton);
             UpdateAnimationTimers(); // παράθυρο ακόμη αόρατο (π.χ. --background) → οι animations ξεκινούν μόνο όταν εμφανιστεί
@@ -1091,10 +1105,55 @@ namespace MotionDesk.UI
             Flicker.BatchRedraw(_content, () => SetPageCore(control));
         }
 
+        // #90: Each disabled command is explained IN its page instead of
+        // silently appearing grey. Specific descriptions take precedence; the
+        // generic fallback does not pretend to know a missing prerequisite.
+        private void WireDisabledActionReasons(Control page)
+        {
+            if (page is not FlowLayoutPanel flow) return;
+            var actions = new List<Button>();
+            static void Collect(Control parent, List<Button> buttons)
+            {
+                foreach (Control item in parent.Controls)
+                {
+                    if (item is Button button) buttons.Add(button);
+                    if (item.HasChildren) Collect(item, buttons);
+                }
+            }
+            Collect(page, actions);
+            if (actions.Count == 0) return;
+            var explanation = new Label
+            {
+                AutoSize = true, MaximumSize = new Size(700, 0),
+                ForeColor = UiTheme.TextSecondary, Font = UiTheme.FontBody,
+                AccessibleRole = AccessibleRole.StaticText, Visible = false,
+                Margin = new Padding(6, 2, 6, 8)
+            };
+            void Refresh()
+            {
+                if (explanation.IsDisposed) return;
+                var disabled = actions.Where(x => !x.IsDisposed && !x.Enabled).Take(12).ToArray();
+                explanation.Visible = disabled.Length != 0;
+                explanation.Text = string.Join(Environment.NewLine, disabled.Select(button =>
+                {
+                    string caption = (button.Text ?? button.AccessibleName ?? button.Name ?? "Action").Replace('\r', ' ').Replace('\n', ' ').Trim();
+                    string reason = !string.IsNullOrWhiteSpace(button.AccessibleDescription)
+                        ? button.AccessibleDescription
+                        : StudioText("Unavailable while prerequisites are missing or an operation is in progress.",
+                            "Μη διαθέσιμο όσο λείπουν προϋποθέσεις ή εκτελείται κάποια ενέργεια.");
+                    return caption + ": " + reason;
+                }));
+            }
+            foreach (var button in actions) button.EnabledChanged += (_, _) => Refresh();
+            flow.Controls.Add(explanation);
+            Refresh();
+        }
+
         private void SetPageCore(Control control)
         {
             StyleStudioInputs(control);
             ApplySkinColors(control);
+            WireDisabledActionReasons(control);
             _visitedSearchText[_currentPageKey] = PageSearch.TextOf(control);
             _content.SuspendLayout();
             // ΔΙΟΡΘΩΣΗ πραγματικού bug: Controls.Clear() αφαιρεί τα child controls από τη συλλογή
@@ -1164,7 +1223,15 @@ namespace MotionDesk.UI
                     NavigateTo("Settings");
                     return true;
                 case Keys.F1:
-                    HelpForm.ShowSingle(this, VersionHistory, HelpSection.Instructions, _currentPageKey);
+                    // Drill down to the actual focused button/edit/checkbox. The page
+                    // remains the fallback; controls can attach their own description.
+                    var focused = FindFocusedHelpControl(_content) ?? ActiveControl;
+                    string? topic = focused?.AccessibleDescription;
+                    if (string.IsNullOrWhiteSpace(topic)) topic = focused?.AccessibleName;
+                    if (string.IsNullOrWhiteSpace(topic)) topic = focused?.Text;
+                    if (string.IsNullOrWhiteSpace(topic)) topic = focused?.Name;
+                    HelpForm.ShowSingle(this, VersionHistory, HelpSection.Instructions,
+                        _currentPageKey, string.IsNullOrWhiteSpace(topic) ? null : topic.Trim());
                     return true;
                 case Keys.F5:
                     if (_pageBuilders.TryGetValue(_currentPageKey, out var builder)) builder();
@@ -1175,6 +1242,17 @@ namespace MotionDesk.UI
             }
 
             return base.ProcessCmdKey(ref msg, keyData);
+        }
+
+        private static Control? FindFocusedHelpControl(Control root)
+        {
+            if (!root.ContainsFocus) return null;
+            foreach (Control child in root.Controls)
+            {
+                if (!child.ContainsFocus) continue;
+                return FindFocusedHelpControl(child) ?? child;
+            }
+            return root.Focused ? root : null;
         }
 
         private void ShowDashboard()
@@ -1857,7 +1935,7 @@ namespace MotionDesk.UI
             host.Controls.Add(locLabel);
             var locRow = new FlowLayoutPanel { AutoSize = true, WrapContents = false, Margin = new Padding(0, 0, 0, 10) };
             var cityBox = new TextBox { Width = 240, Text = settings.WeatherCity, BackColor = UiTheme.Surface, ForeColor = UiTheme.TextPrimary, BorderStyle = BorderStyle.FixedSingle, Font = UiTheme.FontBody, Margin = new Padding(0, 5, 10, 0) };
-            var setBtn = new HoverButton { Text = LocalizationManager.T("Wallpaper.WeatherLocationSet"), AutoSize = true, Padding = new Padding(16, 6, 16, 6), FlatStyle = FlatStyle.Flat, ForeColor = Color.White, BackColor = UiTheme.AccentBlue, BaseColor = UiTheme.AccentBlue, HoverBackColor = ControlPaint.Light(UiTheme.AccentBlue, 0.15f), TabStop = false, Cursor = Cursors.Hand, Margin = new Padding(0, 2, 0, 0) };
+            var setBtn = new HoverButton { AccessibleDescription = StudioText("Searching for the entered city; enabled when the search finishes.", "Αναζήτηση πόλης· το κουμπί ενεργοποιείται μόλις ολοκληρωθεί."), Text = LocalizationManager.T("Wallpaper.WeatherLocationSet"), AutoSize = true, Padding = new Padding(16, 6, 16, 6), FlatStyle = FlatStyle.Flat, ForeColor = Color.White, BackColor = UiTheme.AccentBlue, BaseColor = UiTheme.AccentBlue, HoverBackColor = ControlPaint.Light(UiTheme.AccentBlue, 0.15f), TabStop = false, Cursor = Cursors.Hand, Margin = new Padding(0, 2, 0, 0) };
             setBtn.FlatAppearance.BorderSize = 0;
 
             // Ζητήθηκε ρητά μετά από αναφορά χρήστη ότι η αναζήτηση "δεν βγάζει επιλογές πόλεων" όταν
@@ -1945,6 +2023,7 @@ namespace MotionDesk.UI
             host.Controls.Add(reverseToggle);
             var privacyRow = new FlowLayoutPanel { AutoSize = true, WrapContents = true, MaximumSize = new Size(700, 0), Margin = new Padding(0, 0, 0, 10) };
             var myLocBtn = NewHoverButton(LocalizationManager.T("Wallpaper.WeatherUseMyLocation"), () => { });
+            myLocBtn.AccessibleDescription = StudioText("The Windows location request is running; the action is temporarily unavailable.", "Εκκρεμεί αίτημα τοποθεσίας Windows· η ενέργεια είναι προσωρινά μη διαθέσιμη.");
             myLocBtn.Width = 220;
             myLocBtn.Click += async (_, _) =>
             {
@@ -3594,10 +3673,13 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
             AddSection(panel, StudioText("Plugin compatibility for 2.8.0.2500 (planned)",
                 "Συμβατότητα plugins για 2.8.0.2500 (σχεδιαζόμενη)"));
             foreach (var plugin in PluginCompatibilityCatalog.Read())
+            {
+                var observed = PluginCompatibilityCatalog.Probe(plugin);
                 AddText(panel, $"{plugin.Name} · {plugin.Integration}\n" +
                     $"{plugin.Repository} [{plugin.Branch}]\n" +
                     $"{(plugin.Dll == null ? "standalone" : plugin.Dll + " · ABI " + (plugin.AssemblyVersion ?? "pending"))}\n" +
-                    plugin.Validation);
+                    observed.State + " · " + plugin.Validation);
+            }
 
             AddSection(panel, LocalizationManager.T("About.SectionCapabilities"));
             AddText(panel, LocalizationManager.T("About.CapabilitiesList"));
@@ -4809,7 +4891,7 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
 
                 if (dep.WingetId is { } wingetId)
                 {
-                    installBtn = new HoverButton { Text = LocalizationManager.T("Settings.DependencyInstall"), Enabled = false, Width = 140, Height = 30, Location = new Point(540, 6), FlatStyle = FlatStyle.Flat, ForeColor = UiTheme.TextPrimary, BackColor = UiTheme.SurfaceHover, Cursor = Cursors.Hand };
+                    installBtn = new HoverButton { AccessibleDescription = StudioText("Checking the dependency or installing it; this action is temporarily unavailable.", "Έλεγχος ή εγκατάσταση εξάρτησης· η ενέργεια είναι προσωρινά μη διαθέσιμη."), Text = LocalizationManager.T("Settings.DependencyInstall"), Enabled = false, Width = 140, Height = 30, Location = new Point(540, 6), FlatStyle = FlatStyle.Flat, ForeColor = UiTheme.TextPrimary, BackColor = UiTheme.SurfaceHover, Cursor = Cursors.Hand };
                     installBtn.FlatAppearance.BorderSize = 0;
                     installBtn.Click += async (_, _) =>
                     {

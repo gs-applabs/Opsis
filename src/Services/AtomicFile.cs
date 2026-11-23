@@ -32,10 +32,18 @@ internal static class AtomicFile
         try
         {
             using (var stream = new FileStream(tmp, FileMode.CreateNew, FileAccess.Write, FileShare.None))
-            using (var writer = new StreamWriter(stream, new UTF8Encoding(false)))
+            using (var writer = new StreamWriter(stream, new UTF8Encoding(false), bufferSize: 4096, leaveOpen: true))
+            {
                 writer.Write(contents);
-
+                writer.Flush();
+                // Request storage flush BEFORE the atomic swap. This does not
+                // guarantee survival of an actual power outage on every SSD,
+                // but improves ordering and permits a reproducible crash test.
+                stream.Flush(flushToDisk: true);
+            }
+            CrashInE2EOnly("after-temp-flush");
             KeepBackup(path);
+            CrashInE2EOnly("after-backup");
             // A reader or antivirus can briefly hold the destination open on Windows.
             for (int attempt = 0; ; attempt++)
             {
@@ -50,6 +58,15 @@ internal static class AtomicFile
         {
             try { File.Delete(tmp); } catch (IOException) { } catch (UnauthorizedAccessException) { }
         }
+    }
+
+    // Controlled crash injection for dedicated CHILD processes in the future
+    // power-loss regression harness. Never activated on production sessions.
+    private static void CrashInE2EOnly(string stage)
+    {
+        if (Environment.GetEnvironmentVariable("OPSIS_E2E") == "1" &&
+            Environment.GetEnvironmentVariable("OPSIS_ATOMIC_CRASH_STAGE") == stage)
+            Environment.FailFast("OPSIS atomic-write E2E crash stage: " + stage);
     }
 
     // Keeps the previous GOOD file as "<name>.bak" (refreshed at most every 10 minutes so frequent saves do not rewrite it constantly,
@@ -86,6 +103,35 @@ internal static class AtomicFile
 
     private static string ReadLocked(string path)
     {
+        // In a crash immediately before a first-ever rename, no destination
+        // exists. Recover a complete flushed temporary JSON rather than
+        // replacing settings with defaults. A valid main file ALWAYS wins.
+        if (!File.Exists(path))
+        {
+            foreach (string recoveryFile in Directory.EnumerateFiles(
+                Path.GetDirectoryName(Path.GetFullPath(path))!, Path.GetFileName(path) + ".*.tmp")
+                .OrderByDescending(File.GetLastWriteTimeUtc).Take(8))
+            {
+                try
+                {
+                    var staged = File.ReadAllText(recoveryFile);
+                    if (!IsValidJson(staged)) continue;
+                    File.Move(recoveryFile, path, overwrite: false);
+                    return staged;
+                }
+                catch (IOException) { /* try another complete staging file */ }
+                catch (UnauthorizedAccessException) { /* locked or inaccessible */ }
+            }
+            if (File.Exists(path + ".bak"))
+            {
+                var previous = File.ReadAllText(path + ".bak");
+                if (IsValidJson(previous))
+                {
+                    File.Copy(path + ".bak", path, overwrite: false);
+                    return previous;
+                }
+            }
+        }
         string text = ReadWithRetry(path);
         if (IsValidJson(text)) return text;
 

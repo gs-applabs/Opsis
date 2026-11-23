@@ -92,6 +92,20 @@ namespace MotionDesk.UI
                 };
                 sample.FlatAppearance.BorderSize = i == 3 ? 2 : 1;
                 sample.FlatAppearance.BorderColor = i == 3 ? UiTheme.AccentCyan : UiTheme.Border;
+                // These are REAL WinForms states, not five static colour chips.
+                // Hover and pressed colours are wired to mouse events. Keyboard
+                // focus is shown with a border and can be reached with Tab.
+                sample.FlatAppearance.MouseOverBackColor = UiTheme.SurfaceHover;
+                sample.FlatAppearance.MouseDownBackColor = UiTheme.AccentCyan;
+                sample.TabStop = i != 4;
+                sample.GotFocus += (_, _) => { sample.FlatAppearance.BorderColor = UiTheme.AccentCyan; sample.FlatAppearance.BorderSize = 2; };
+                sample.LostFocus += (_, _) => { sample.FlatAppearance.BorderColor = UiTheme.Border; sample.FlatAppearance.BorderSize = 1; };
+                sample.MouseEnter += (_, _) => { if (sample.Enabled) sample.BackColor = UiTheme.SurfaceHover; };
+                sample.MouseLeave += (_, _) => { if (sample.Enabled) sample.BackColor = backs[Array.IndexOf(names, sample.Text)]; };
+                sample.MouseDown += (_, _) => { if (sample.Enabled) sample.BackColor = UiTheme.AccentCyan; };
+                sample.MouseUp += (_, _) => { if (sample.Enabled) sample.BackColor = UiTheme.SurfaceHover; };
+                sample.AccessibleDescription = StudioText("Use Tab to focus and mouse to hover/press this sample.",
+                    "Εστιάστε με Tab και δοκιμάστε hover/πάτημα με ποντίκι.");
                 states.Controls.Add(sample);
             }
             root.Controls.Add(states, 0, 1);
@@ -126,11 +140,39 @@ namespace MotionDesk.UI
                 catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException)
                 { MotionDesk.Services.RotatingLogger.Write("Theme locale preview: " + ex.GetType().Name); }
             }
-            foreach (var sample in samples.OrderByDescending(x => x.Value.Length).Take(80))
+            var longest = samples.OrderByDescending(x => x.Value.Length).Take(80).ToArray();
+            foreach (var sample in longest)
                 list.Items.Add($"{sample.Lang}  ·  {sample.Key}  ·  {sample.Value}");
             if (list.Items.Count == 0)
                 list.Items.Add(StudioText("No localised labels found", "Δεν βρέθηκαν μεταφράσεις"));
-            root.Controls.Add(list, 0, 3);
+            // #82: display long real translations IN preview cards, not merely
+            // as a text list. Width is deliberately limited to surface overflow.
+            var side = new SplitContainer { Dock = DockStyle.Fill, Width = 840, Height = 390,
+                SplitterDistance = 430, Panel1MinSize = 230, Panel2MinSize = 180,
+                BorderStyle = BorderStyle.None };
+            var cards = new FlowLayoutPanel { Dock = DockStyle.Fill, FlowDirection = FlowDirection.TopDown,
+                WrapContents = false, AutoScroll = true, Padding = new Padding(3) };
+            var localeTip = new ToolTip { ShowAlways = true };
+            dialog.Disposed += (_, _) => localeTip.Dispose();
+            foreach (var sample in longest.Take(35))
+            {
+                var card = new Panel { Width = 380, Height = 85, Margin = new Padding(3, 3, 3, 8),
+                    Padding = new Padding(8), BackColor = UiTheme.Surface };
+                var heading = new Label { Text = sample.Lang + "  ·  " + sample.Key, Width = 356,
+                    Height = 18, Top = 5, Left = 10, ForeColor = UiTheme.TextSecondary, AutoEllipsis = true };
+                var action = new Button { Text = sample.Value, Width = 356, Height = 48, Top = 29, Left = 10,
+                    AutoEllipsis = true, FlatStyle = FlatStyle.Flat, BackColor = UiTheme.SurfaceHover,
+                    ForeColor = TextContrast.Readable(UiTheme.TextPrimary, UiTheme.SurfaceHover) };
+                action.FlatAppearance.BorderColor = UiTheme.Border;
+                action.AccessibleName = sample.Value;
+                localeTip.SetToolTip(action, sample.Value);
+                card.Controls.Add(heading);
+                card.Controls.Add(action);
+                cards.Controls.Add(card);
+            }
+            side.Panel1.Controls.Add(cards);
+            side.Panel2.Controls.Add(list);
+            root.Controls.Add(side, 0, 3);
             dialog.Controls.Add(root);
             dialog.ShowDialog(this);
         }

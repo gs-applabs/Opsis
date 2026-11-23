@@ -42,7 +42,7 @@ namespace MotionDesk.Services
             return c;
         }
 
-        public static Version CurrentVersion => Assembly.GetExecutingAssembly().GetName().Version ?? new Version(1, 0, 0);
+        public static Version CurrentVersion => AppVersion.Number;
 
         public static async Task<CheckResult> CheckAsync(CancellationToken ct = default)
         {
