@@ -1,0 +1,522 @@
+[
+  {
+    "id": "parthenon",
+    "name": "Αθήνα",
+    "nameEn": "Athens",
+    "lat": 37.9715,
+    "lon": 23.7267,
+    "file": "scenes/greece/parthenon.webp",
+    "terrain": "hill",
+    "motif": "temple"
+  },
+  {
+    "id": "alexandroupoli",
+    "name": "Αλεξανδρούπολη",
+    "nameEn": "Alexandroupoli",
+    "lat": 40.8456,
+    "lon": 25.8739,
+    "terrain": "coast",
+    "motif": "lighthouse",
+    "file": "scenes/greece/alexandroupoli.webp"
+  },
+  {
+    "id": "komotini",
+    "name": "Κομοτηνή",
+    "nameEn": "Komotini",
+    "lat": 41.1178,
+    "lon": 25.4053,
+    "terrain": "plain",
+    "motif": "tower",
+    "file": "scenes/greece/komotini.webp"
+  },
+  {
+    "id": "xanthi",
+    "name": "Ξάνθη",
+    "nameEn": "Xanthi",
+    "lat": 41.1414,
+    "lon": 24.8836,
+    "terrain": "hill",
+    "motif": "roofs",
+    "file": "scenes/greece/xanthi.webp"
+  },
+  {
+    "id": "drama",
+    "name": "Δράμα",
+    "nameEn": "Drama",
+    "lat": 41.149,
+    "lon": 24.147,
+    "terrain": "river",
+    "motif": "roofs",
+    "file": "scenes/greece/drama.webp"
+  },
+  {
+    "id": "kavala",
+    "name": "Καβάλα",
+    "nameEn": "Kavala",
+    "lat": 40.9396,
+    "lon": 24.4129,
+    "file": "scenes/greece/kavala.webp",
+    "terrain": "coast",
+    "motif": "fort"
+  },
+  {
+    "id": "whitetower",
+    "name": "Θεσσαλονίκη",
+    "nameEn": "Thessaloniki",
+    "lat": 40.6264,
+    "lon": 22.9484,
+    "terrain": "coast",
+    "motif": "roundtower",
+    "file": "scenes/greece/whitetower.webp"
+  },
+  {
+    "id": "polygyros",
+    "name": "Πολύγυρος",
+    "nameEn": "Polygyros",
+    "lat": 40.376,
+    "lon": 23.442,
+    "terrain": "hill",
+    "motif": "roofs",
+    "file": "scenes/greece/polygyros.webp"
+  },
+  {
+    "id": "veroia",
+    "name": "Βέροια",
+    "nameEn": "Veroia",
+    "lat": 40.5243,
+    "lon": 22.2024,
+    "terrain": "river",
+    "motif": "roofs",
+    "file": "scenes/greece/veroia.webp"
+  },
+  {
+    "id": "kilkis",
+    "name": "Κιλκίς",
+    "nameEn": "Kilkis",
+    "lat": 40.993,
+    "lon": 22.874,
+    "terrain": "hill",
+    "motif": "roofs",
+    "file": "scenes/greece/kilkis.webp"
+  },
+  {
+    "id": "edessa",
+    "name": "Έδεσσα",
+    "nameEn": "Edessa",
+    "lat": 40.8027,
+    "lon": 22.0474,
+    "terrain": "river",
+    "motif": "falls",
+    "file": "scenes/greece/edessa.webp"
+  },
+  {
+    "id": "katerini",
+    "name": "Κατερίνη",
+    "nameEn": "Katerini",
+    "lat": 40.27,
+    "lon": 22.503,
+    "terrain": "hill",
+    "motif": "roofs",
+    "file": "scenes/greece/katerini.webp"
+  },
+  {
+    "id": "serres",
+    "name": "Σέρρες",
+    "nameEn": "Serres",
+    "lat": 41.09,
+    "lon": 23.548,
+    "terrain": "plain",
+    "motif": "roofs",
+    "file": "scenes/greece/serres.webp"
+  },
+  {
+    "id": "kozani",
+    "name": "Κοζάνη",
+    "nameEn": "Kozani",
+    "lat": 40.3006,
+    "lon": 21.7889,
+    "terrain": "hill",
+    "motif": "tower",
+    "file": "scenes/greece/kozani.webp"
+  },
+  {
+    "id": "florina",
+    "name": "Φλώρινα",
+    "nameEn": "Florina",
+    "lat": 40.781,
+    "lon": 21.409,
+    "file": "scenes/greece/florina.webp",
+    "terrain": "river",
+    "motif": "roofs"
+  },
+  {
+    "id": "grevena",
+    "name": "Γρεβενά",
+    "nameEn": "Grevena",
+    "lat": 40.084,
+    "lon": 21.427,
+    "terrain": "hill",
+    "motif": "roofs",
+    "file": "scenes/greece/grevena.webp"
+  },
+  {
+    "id": "kastoria",
+    "name": "Καστοριά",
+    "nameEn": "Kastoria",
+    "lat": 40.519,
+    "lon": 21.268,
+    "file": "scenes/greece/kastoria.webp",
+    "terrain": "lake",
+    "motif": "roofs"
+  },
+  {
+    "id": "ioannina",
+    "name": "Ιωάννινα",
+    "nameEn": "Ioannina",
+    "lat": 39.667,
+    "lon": 20.853,
+    "file": "scenes/greece/ioannina.webp",
+    "terrain": "lake",
+    "motif": "fort"
+  },
+  {
+    "id": "arta",
+    "name": "Άρτα",
+    "nameEn": "Arta",
+    "lat": 39.16,
+    "lon": 20.985,
+    "file": "scenes/greece/arta.webp",
+    "terrain": "river",
+    "motif": "bridge"
+  },
+  {
+    "id": "preveza",
+    "name": "Πρέβεζα",
+    "nameEn": "Preveza",
+    "lat": 38.959,
+    "lon": 20.751,
+    "file": "scenes/greece/preveza.webp",
+    "terrain": "coast",
+    "motif": "harbor"
+  },
+  {
+    "id": "igoumenitsa",
+    "name": "Ηγουμενίτσα",
+    "nameEn": "Igoumenitsa",
+    "lat": 39.504,
+    "lon": 20.265,
+    "terrain": "coast",
+    "motif": "harbor",
+    "file": "scenes/greece/igoumenitsa.webp"
+  },
+  {
+    "id": "larissa",
+    "name": "Λάρισα",
+    "nameEn": "Larissa",
+    "lat": 39.639,
+    "lon": 22.419,
+    "file": "scenes/greece/larissa.webp",
+    "terrain": "plain",
+    "motif": "theater"
+  },
+  {
+    "id": "karditsa",
+    "name": "Καρδίτσα",
+    "nameEn": "Karditsa",
+    "lat": 39.364,
+    "lon": 21.921,
+    "terrain": "plain",
+    "motif": "roofs",
+    "file": "scenes/greece/karditsa.webp"
+  },
+  {
+    "id": "volos",
+    "name": "Βόλος",
+    "nameEn": "Volos",
+    "lat": 39.358,
+    "lon": 22.944,
+    "file": "scenes/greece/volos.webp",
+    "terrain": "coast",
+    "motif": "harbor"
+  },
+  {
+    "id": "trikala",
+    "name": "Τρίκαλα",
+    "nameEn": "Trikala",
+    "lat": 39.555,
+    "lon": 21.769,
+    "terrain": "river",
+    "motif": "bridge",
+    "file": "scenes/greece/trikala.webp"
+  },
+  {
+    "id": "livadeia",
+    "name": "Λιβαδειά",
+    "nameEn": "Livadeia",
+    "lat": 38.438,
+    "lon": 22.876,
+    "terrain": "river",
+    "motif": "bridge",
+    "file": "scenes/greece/livadeia.webp"
+  },
+  {
+    "id": "chalkida",
+    "name": "Χαλκίδα",
+    "nameEn": "Chalcis",
+    "lat": 38.463,
+    "lon": 23.597,
+    "terrain": "coast",
+    "motif": "bridge",
+    "file": "scenes/greece/chalkida.webp"
+  },
+  {
+    "id": "karpenisi",
+    "name": "Καρπενήσι",
+    "nameEn": "Karpenisi",
+    "lat": 38.916,
+    "lon": 21.798,
+    "terrain": "hill",
+    "motif": "roofs",
+    "file": "scenes/greece/karpenisi.webp"
+  },
+  {
+    "id": "amfissa",
+    "name": "Άμφισσα",
+    "nameEn": "Amfissa",
+    "lat": 38.528,
+    "lon": 22.377,
+    "terrain": "hill",
+    "motif": "fort",
+    "file": "scenes/greece/amfissa.webp"
+  },
+  {
+    "id": "lamia",
+    "name": "Λαμία",
+    "nameEn": "Lamia",
+    "lat": 38.9,
+    "lon": 22.433,
+    "terrain": "hill",
+    "motif": "fort",
+    "file": "scenes/greece/lamia.webp"
+  },
+  {
+    "id": "argostoli",
+    "name": "Αργοστόλι",
+    "nameEn": "Argostoli",
+    "lat": 38.175,
+    "lon": 20.489,
+    "terrain": "coast",
+    "motif": "bridge",
+    "file": "scenes/greece/argostoli.webp"
+  },
+  {
+    "id": "corfu",
+    "name": "Κέρκυρα",
+    "nameEn": "Corfu",
+    "lat": 39.624,
+    "lon": 19.921,
+    "terrain": "coast",
+    "motif": "fort",
+    "file": "scenes/greece/corfu.webp"
+  },
+  {
+    "id": "lefkada",
+    "name": "Λευκάδα",
+    "nameEn": "Lefkada",
+    "lat": 38.834,
+    "lon": 20.706,
+    "terrain": "coast",
+    "motif": "harbor",
+    "file": "scenes/greece/lefkada.webp"
+  },
+  {
+    "id": "zakynthos",
+    "name": "Ζάκυνθος",
+    "nameEn": "Zakynthos",
+    "lat": 37.784,
+    "lon": 20.899,
+    "terrain": "coast",
+    "motif": "tower",
+    "file": "scenes/greece/zakynthos.webp"
+  },
+  {
+    "id": "patras",
+    "name": "Πάτρα",
+    "nameEn": "Patras",
+    "lat": 38.2467,
+    "lon": 21.7295,
+    "file": "scenes/greece/patras.webp",
+    "terrain": "coast",
+    "motif": "lighthouse"
+  },
+  {
+    "id": "pyrgos",
+    "name": "Πύργος",
+    "nameEn": "Pyrgos",
+    "lat": 37.675,
+    "lon": 21.441,
+    "terrain": "plain",
+    "motif": "tower",
+    "file": "scenes/greece/pyrgos.webp"
+  },
+  {
+    "id": "messolonghi",
+    "name": "Μεσολόγγι",
+    "nameEn": "Missolonghi",
+    "lat": 38.371,
+    "lon": 21.429,
+    "terrain": "lake",
+    "motif": "harbor",
+    "file": "scenes/greece/messolonghi.webp"
+  },
+  {
+    "id": "tripoli",
+    "name": "Τρίπολη",
+    "nameEn": "Tripoli",
+    "lat": 37.51,
+    "lon": 22.372,
+    "terrain": "plain",
+    "motif": "roofs",
+    "file": "scenes/greece/tripoli.webp"
+  },
+  {
+    "id": "nafplio",
+    "name": "Ναύπλιο",
+    "nameEn": "Nafplio",
+    "lat": 37.564,
+    "lon": 22.8,
+    "file": "scenes/greece/nafplio.webp",
+    "terrain": "coast",
+    "motif": "fort"
+  },
+  {
+    "id": "corinth",
+    "name": "Κόρινθος",
+    "nameEn": "Corinth",
+    "lat": 37.938,
+    "lon": 22.932,
+    "terrain": "coast",
+    "motif": "harbor",
+    "file": "scenes/greece/corinth.webp"
+  },
+  {
+    "id": "sparta",
+    "name": "Σπάρτη",
+    "nameEn": "Sparta",
+    "lat": 37.075,
+    "lon": 22.431,
+    "terrain": "hill",
+    "motif": "roofs",
+    "file": "scenes/greece/sparta.webp"
+  },
+  {
+    "id": "kalamata",
+    "name": "Καλαμάτα",
+    "nameEn": "Kalamata",
+    "lat": 37.039,
+    "lon": 22.113,
+    "terrain": "coast",
+    "motif": "harbor",
+    "file": "scenes/greece/kalamata.webp"
+  },
+  {
+    "id": "chios",
+    "name": "Χίος",
+    "nameEn": "Chios",
+    "lat": 38.369,
+    "lon": 26.136,
+    "terrain": "coast",
+    "motif": "harbor",
+    "file": "scenes/greece/chios.webp"
+  },
+  {
+    "id": "mytilene",
+    "name": "Μυτιλήνη",
+    "nameEn": "Mytilene",
+    "lat": 39.107,
+    "lon": 26.554,
+    "terrain": "coast",
+    "motif": "fort",
+    "file": "scenes/greece/mytilene.webp"
+  },
+  {
+    "id": "samos",
+    "name": "Σάμος (Βαθύ)",
+    "nameEn": "Samos (Vathy)",
+    "lat": 37.754,
+    "lon": 26.977,
+    "terrain": "coast",
+    "motif": "harbor",
+    "file": "scenes/greece/samos.webp"
+  },
+  {
+    "id": "ermoupoli",
+    "name": "Ερμούπολη",
+    "nameEn": "Ermoupoli",
+    "lat": 37.445,
+    "lon": 24.942,
+    "terrain": "coast",
+    "motif": "tower",
+    "file": "scenes/greece/ermoupoli.webp"
+  },
+  {
+    "id": "rhodes",
+    "name": "Ρόδος",
+    "nameEn": "Rhodes",
+    "lat": 36.446,
+    "lon": 28.224,
+    "terrain": "coast",
+    "motif": "fort",
+    "file": "scenes/greece/rhodes.webp"
+  },
+  {
+    "id": "heraklion",
+    "name": "Ηράκλειο",
+    "nameEn": "Heraklion",
+    "lat": 35.339,
+    "lon": 25.133,
+    "terrain": "coast",
+    "motif": "fort",
+    "file": "scenes/greece/heraklion.webp"
+  },
+  {
+    "id": "chania",
+    "name": "Χανιά",
+    "nameEn": "Chania",
+    "lat": 35.517,
+    "lon": 24.019,
+    "file": "scenes/greece/chania.webp",
+    "terrain": "coast",
+    "motif": "lighthouse"
+  },
+  {
+    "id": "agios-nikolaos",
+    "name": "Άγιος Νικόλαος",
+    "nameEn": "Agios Nikolaos",
+    "lat": 35.19,
+    "lon": 25.716,
+    "terrain": "lake",
+    "motif": "harbor",
+    "file": "scenes/greece/agios-nikolaos.webp"
+  },
+  {
+    "id": "rethymno",
+    "name": "Ρέθυμνο",
+    "nameEn": "Rethymno",
+    "lat": 35.369,
+    "lon": 24.475,
+    "terrain": "coast",
+    "motif": "fort",
+    "file": "scenes/greece/rethymno.webp"
+  },
+  {
+    "id": "patras-harbor",
+    "name": "Πάτρα – Πατραϊκός",
+    "nameEn": "Patras – Gulf",
+    "lat": 38.2467,
+    "lon": 21.7295,
+    "file": "scenes/greece/patras-harbor.webp",
+    "terrain": "coast",
+    "motif": "lighthouse"
+  }
+]

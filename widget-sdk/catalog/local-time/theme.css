@@ -1,0 +1,6 @@
+:root { font-family: "Segoe UI", sans-serif; color: #f5f7fa; --accent: #67d7ec; }
+:root[data-theme="light"] { color: #182639; }
+body { margin: 8px 14px; }
+output { font-size: clamp(25px, 9vw, 43px); font-weight: 650; font-variant-numeric: tabular-nums; }
+p { margin: 3px 0 10px; }
+progress { width: 100%; height: 10px; accent-color: var(--accent); }

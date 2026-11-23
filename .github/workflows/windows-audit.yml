@@ -1,0 +1,55 @@
+name: Opsis Desktop Customization Windows audit
+
+on: workflow_dispatch
+
+permissions:
+  contents: read
+
+jobs:
+  desktop:
+    runs-on: windows-2025
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '11.0.x'
+      - name: Build installer and matching source archive
+        shell: pwsh
+        run: |
+          winget install --id JRSoftware.InnoSetup.7 --exact --silent --accept-package-agreements --accept-source-agreements
+          $compiler = @("${env:ProgramFiles}\Inno Setup 7\ISCC.exe", "${env:ProgramFiles(x86)}\Inno Setup 7\ISCC.exe", "$env:LOCALAPPDATA\Programs\Inno Setup 7\ISCC.exe") | Where-Object { Test-Path $_ } | Select-Object -First 1
+          if (!$compiler) { throw 'Inno Setup 7 compiler missing' }
+          ./installer/build.ps1 -Compiler $compiler
+          git archive --format=zip --output=Output/Opsis-Source.zip HEAD
+          if ($LASTEXITCODE -ne 0) { throw 'Source archive failed' }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Opsis-Desktop-Customization-source-and-installer
+          path: Output/
+          if-no-files-found: error
+      - name: Audit the application and taskbar registry
+        shell: pwsh
+        run: |
+          $env:OPSIS_APPDATA = Join-Path $env:RUNNER_TEMP 'opsis-studio-audit'
+          $env:OPSIS_E2E = '1'
+          $env:OPSIS_AUDIT_TASKBAR = '1'
+          $env:OPSIS_AUDIT_RESOURCE_CYCLES = '3'
+          $output = Join-Path $env:GITHUB_WORKSPACE 'audit-result'
+          New-Item -ItemType Directory -Force $output | Out-Null
+          $process = Start-Process .\publish\Opsis.Studio.exe -ArgumentList @('--ui-audit', ('"' + $output + '"')) -PassThru
+          if (-not $process.WaitForExit(1500000)) {
+            Stop-Process -Id $process.Id -Force
+            throw 'Opsis audit timed out'
+          }
+          $report = Join-Path $output 'ui-audit.md'
+          if (Test-Path $report) { Get-Content $report | Out-File -Append $env:GITHUB_STEP_SUMMARY -Encoding utf8 }
+          if ($process.ExitCode -ne 0) { throw "Opsis audit failed with exit code $($process.ExitCode)" }
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: opsis-studio-windows-audit
+          path: audit-result
+          if-no-files-found: warn

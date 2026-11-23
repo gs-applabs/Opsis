@@ -1,0 +1,38 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net11.0-windows10.0.19041.0</TargetFramework>
+    <WindowsSdkPackageVersion>10.0.19041.87</WindowsSdkPackageVersion>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <SelfContained>false</SelfContained>
+    <UseWindowsForms>true</UseWindowsForms>
+    <ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode>
+    <ApplicationIcon>assets/Opsis.ico</ApplicationIcon>
+    <RootNamespace>MotionDesk</RootNamespace>
+    <AssemblyName>Opsis.Studio</AssemblyName>
+    <Product>Opsis Desktop Customization</Product>
+    <Version>2.7.7.2402</Version>
+    <FileVersion>2.7.7.2402</FileVersion>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <NoWarn>$(NoWarn);WFO1000</NoWarn>
+    <DebugType>none</DebugType>
+  </PropertyGroup>
+  <ItemGroup>
+    <Using Include="Opsis.UI" />
+    <Reference Include="lib/*.dll" Exclude="lib/WebView2Loader.dll;lib/libMonoPosixHelper.dll;lib/MonoPosixHelper.dll">
+      <Private>true</Private>
+    </Reference>
+    <None Update="lib/WebView2Loader.dll;lib/libMonoPosixHelper.dll;lib/MonoPosixHelper.dll" CopyToOutputDirectory="PreserveNewest" Link="%(Filename)%(Extension)" />
+    <None Update="assets/**;locales/**;suite/**;wallpapers/**;widget-sdk/**;LICENSE;THIRD_PARTY_NOTICES.md" CopyToOutputDirectory="PreserveNewest" />
+    <None Update="lib/HidSharp-LICENSE.txt" CopyToOutputDirectory="PreserveNewest" />
+    <None Remove="src/Widgets/wallpaper/**;src/Widgets/sysmon/**" />
+    <Content Include="src/Widgets/wallpaper/**" CopyToOutputDirectory="PreserveNewest" Link="widgets/wallpaper/%(RecursiveDir)%(Filename)%(Extension)" />
+    <Content Include="src/Widgets/sysmon/**" CopyToOutputDirectory="PreserveNewest" Link="widgets/sysmon/%(RecursiveDir)%(Filename)%(Extension)" />
+    <EmbeddedResource Include="src/Widgets/Data/gazetteer-gr.tsv.gz" LogicalName="gazetteer-gr.tsv.gz" />
+    <EmbeddedResource Include="src/Widgets/wallpaper/scenes/capitals.json" LogicalName="opsis-capitals.json" />
+    <EmbeddedResource Include="src/Widgets/wallpaper/scenes/islands.json" LogicalName="opsis-islands.json" />
+    <EmbeddedResource Include="src/Music/suite-visualizers.js" LogicalName="OpsisMusicOverlay.suite-visualizers.js" />
+    <EmbeddedResource Include="src/Music/wallpaper-music.js" LogicalName="OpsisMusicOverlay.wallpaper-music.js" />
+  </ItemGroup>
+</Project>

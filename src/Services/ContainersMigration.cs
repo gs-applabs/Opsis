@@ -1,0 +1,157 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Runtime.InteropServices;
+using System.Text.Json;
+using System.Text.Json.Nodes;
+using MotionDesk.Widgets;
+
+namespace MotionDesk.Services
+{
+    // One-time import of the legacy Opsis DeskContainers (AppData\deskcontainers\*_config.json) into the DeskContainers engine's
+    // containers.json, run before the engine's first start. The legacy files are only read, never changed or deleted.
+    internal static class ContainersMigration
+    {
+        [DllImport("user32.dll")] private static extern uint GetDpiForSystem();
+
+        public static string ContainersJsonPath => Path.Combine(AppPaths.AppDataFolder, "containers", "Profiles", "Default", "containers.json");
+
+        /// <summary>Carries the legacy container settings (auto-hide, chameleon, daily backup, spot search) into the engine options.json once, before its first start.</summary>
+        public static void MigrateLegacySettings()
+        {
+            try
+            {
+                string optionsPath = Path.Combine(AppPaths.AppDataFolder, "containers", "Profiles", "Default", "options.json");
+                if (File.Exists(optionsPath)) return;
+                var a = AppSettings.Load();
+                var o = new System.Text.Json.Nodes.JsonObject
+                {
+                    ["AutoHideContainers"] = a.ContainersAutoHide, ["AutoHideTime"] = Math.Clamp(a.ContainersAutoHideSeconds, 1, 300),
+                    ["EnableChameleonMode"] = a.ContainersChameleon, ["EnableAutoBackup"] = a.ContainersDailyBackup, ["EnableSpotSearchHotkey"] = a.ContainersSpotSearch
+                };
+                Directory.CreateDirectory(Path.GetDirectoryName(optionsPath)!);
+                File.WriteAllText(optionsPath, o.ToJsonString(new JsonSerializerOptions { WriteIndented = true }));
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
+        }
+
+        /// <summary>Imports legacy containers when the engine has no containers.json yet. Returns how many containers were written.</summary>
+        public static int MigrateLegacyContainers()
+        {
+            try
+            {
+                if (File.Exists(ContainersJsonPath)) return 0;
+                string dir = Path.Combine(AppPaths.AppDataFolder, "deskcontainers");
+                if (!Directory.Exists(dir)) return 0;
+                var states = new List<DeskContainerState>();
+                foreach (var f in Directory.GetFiles(dir, "*_config.json"))
+                {
+                    try { var s = JsonSerializer.Deserialize<DeskContainerState>(AtomicFile.ReadAllText(f)); if (s != null) states.Add(s); }
+                    catch (Exception ex) when (ex is JsonException or IOException) { }
+                }
+                if (states.Count == 0) return 0;
+                double scale = Math.Max(1.0, GetDpiForSystem() / 96.0);
+                Directory.CreateDirectory(Path.GetDirectoryName(ContainersJsonPath)!);
+                File.WriteAllText(ContainersJsonPath, Convert(states, scale));
+                return states.Count;
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { return 0; }
+        }
+
+        /// <summary>Builds the containers.json text (DeskContainers schema) for the given legacy container states. Pixel sizes are divided by <paramref name="dpiScale"/>.</summary>
+        internal static string Convert(IReadOnlyList<DeskContainerState> states, double dpiScale)
+        {
+            var array = new JsonArray();
+            foreach (var s in states)
+            {
+                bool portal = !string.IsNullOrWhiteSpace(s.PortalFolder);
+                bool note = s.IsNote && !portal;
+                double h = Math.Max(60, s.Height / dpiScale);
+                var container = new JsonObject
+                {
+                    ["Id"] = Guid.NewGuid().ToString(),
+                    ["Title"] = string.IsNullOrWhiteSpace(s.Title) ? "Container" : s.Title,
+                    ["X"] = Math.Round(s.X / dpiScale, 1),
+                    ["Y"] = Math.Round(s.Y / dpiScale, 1),
+                    ["Width"] = Math.Round(Math.Max(120, s.Width / dpiScale), 1),
+                    ["Height"] = Math.Round(h, 1),
+                    ["IsLocked"] = s.IsLocked ? "true" : "false",
+                    ["IsHidden"] = "false",
+                    ["IsRolled"] = s.IsRolledUp ? "true" : "false",
+                    ["UnrolledHeight"] = Math.Round(h, 1),
+                    ["CustomColor"] = null,
+                    ["ContainerBorderThickness"] = 2
+                };
+                container["IconSize"] = s.IconPx switch { <= 16 => "Tiny", <= 24 => "Small", <= 32 => "Medium", <= 48 => "Large", _ => "Huge" };
+                container["TitleTextSize"] = s.TitleFontSize switch { <= 10.5f => "Small", <= 12.5f => "Medium", <= 16.5f => "Large", <= 20.5f => "Extra Large", _ => "Huge" };
+                string[] fonts = { "Segoe UI", "Segoe UI Semibold", "Arial", "Calibri", "Cambria", "Consolas", "Georgia", "Tahoma", "Trebuchet MS", "Verdana", "Comic Sans MS" };
+                if (!string.IsNullOrWhiteSpace(s.TitleFontFamily) && fonts.Contains(s.TitleFontFamily)) container["TitleFontFamily"] = s.TitleFontFamily;
+
+                if (portal)
+                {
+                    container["ItemsType"] = "Portal";
+                    container["Items"] = "";                      // portal containers keep their folder in "Path" (Items stays an empty string)
+                    container["Path"] = s.PortalFolder;
+                    container["TabsEnabled"] = "false"; container["CurrentTab"] = 0; container["Tabs"] = new JsonArray();
+                }
+                else if (note)
+                {
+                    container["ItemsType"] = "Note";
+                    container["Items"] = new JsonArray();
+                    container["NoteContent"] = s.NoteText ?? "";
+                    container["TextColor"] = "White";
+                    container["TabsEnabled"] = "false"; container["CurrentTab"] = 0; container["Tabs"] = new JsonArray();
+                }
+                else
+                {
+                    container["ItemsType"] = "Data";
+                    if (s.Tabs is { Count: > 1 })
+                    {
+                        container["Items"] = new JsonArray();
+                        container["TabsEnabled"] = "true";
+                        container["CurrentTab"] = Math.Clamp(s.ActiveTab, 0, s.Tabs.Count - 1);
+                        var tabs = new JsonArray();
+                        for (int i = 0; i < s.Tabs.Count; i++)
+                            tabs.Add(new JsonObject { ["TabName"] = string.IsNullOrWhiteSpace(s.Tabs[i].Name) ? (i == 0 ? (s.Title ?? "Main") : $"Tab {i + 1}") : s.Tabs[i].Name, ["Items"] = ItemsOf(s.Tabs[i].Items) });
+                        container["Tabs"] = tabs;
+                    }
+                    else
+                    {
+                        container["Items"] = ItemsOf(s.Items ?? (s.Paths ?? Array.Empty<string>()).Select(p => new ContainerItem { Path = p }).ToList());
+                        container["TabsEnabled"] = "false"; container["CurrentTab"] = 0; container["Tabs"] = new JsonArray();
+                    }
+                }
+                array.Add(container);
+            }
+            return array.ToJsonString(new JsonSerializerOptions { WriteIndented = true });
+        }
+
+        private static JsonArray ItemsOf(IEnumerable<ContainerItem>? items)
+        {
+            var arr = new JsonArray();
+            int order = 0;
+            foreach (var i in items ?? Enumerable.Empty<ContainerItem>())
+            {
+                if (string.IsNullOrWhiteSpace(i.Path)) continue;
+                if (i.Path.StartsWith("::spacer::", StringComparison.Ordinal))      // blank spacer -> the engine's own spacer item
+                {
+                    arr.Add(new JsonObject { ["Filename"] = "INTERNAL_BLANK_EMPTY_" + Guid.NewGuid(), ["DisplayName"] = "", ["IsFolder"] = false, ["IsLink"] = false, ["IsNetwork"] = false, ["AlwaysRunAsAdmin"] = false, ["DisplayOrder"] = order++ });
+                    continue;
+                }
+                string ext = Path.GetExtension(i.Path).ToLowerInvariant();
+                arr.Add(new JsonObject
+                {
+                    ["Filename"] = i.Path,
+                    ["IsFolder"] = Directory.Exists(i.Path),
+                    ["IsLink"] = ext is ".lnk" or ".url",
+                    ["IsNetwork"] = i.Path.StartsWith(@"\\", StringComparison.Ordinal),
+                    ["DisplayName"] = Path.GetFileNameWithoutExtension(i.Path) is { Length: > 0 } n ? n : Path.GetFileName(i.Path),
+                    ["AlwaysRunAsAdmin"] = false,
+                    ["DisplayOrder"] = order++
+                });
+            }
+            return arr;
+        }
+    }
+}

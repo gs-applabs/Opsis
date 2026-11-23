@@ -1,0 +1,8 @@
+﻿Opsis Desktop Customization
+
+Εξατομίκευση της επιφάνειας εργασίας των Windows με wallpapers,
+DeskContainers, DeskStrip, widgets και Desk Music Visualizer.
+
+Ο οδηγός ελέγχει για το .NET 11 Desktop Runtime και το Microsoft Edge
+WebView2 Runtime. Μπορείς να εγκαταστήσεις όσα λείπουν από τη σελίδα
+εξαρτήσεων. Η ενημέρωση διατηρεί τις ρυθμίσεις του Opsis Desktop Customization.
