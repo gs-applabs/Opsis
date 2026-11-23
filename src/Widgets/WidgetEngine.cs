@@ -328,6 +328,15 @@ namespace MotionDesk.Widgets
                 _ = InitializeNativeNotificationsAsync();
             else if (string.Equals(widgetId, "bluetooth", StringComparison.OrdinalIgnoreCase))
                 _ = InitializeNativeBluetoothAsync();
+            else if (widgetId.StartsWith("plugin:", StringComparison.OrdinalIgnoreCase))
+            {
+                // Additive plugin widgets are opt-in; their identifiers never become WebView URLs.
+                if (!TryInitializeAdditionalPluginWidget(widgetId["plugin:".Length..]))
+                {
+                    var panel = CreateNativePanel("Plugin widget unavailable", out var label);
+                    label.Text = "The plugin is not enabled or is not installed.";
+                }
+            }
             else
                 _ = InitializeWebViewAsync();
         }
@@ -1240,10 +1249,20 @@ namespace MotionDesk.Widgets
         // ίδιο μοτίβο με πολλά desktop calendar widgets (π.χ. Rainmeter): δείχνει μήνα/ημέρες/
         // σήμερα, όχι πραγματικά ραντεβού.
         // A plugin (e.g. "On this day") can replace a built-in widget with its own content: the plugin control is hosted in the same native panel (title, drag, resize).
+        private bool TryInitializeAdditionalPluginWidget(string key)
+        {
+            var widget = PluginHost.Instance.FindAdditionalWidget(key);
+            return widget is not null && TryHostPluginWidget(widget);
+        }
+
         private bool TryInitializePluginWidget(string builtInId)
         {
             var widget = PluginHost.Instance.FindWidgetReplacing(builtInId);
-            if (widget == null) return false;
+            return widget is not null && TryHostPluginWidget(widget);
+        }
+
+        private bool TryHostPluginWidget(OpsisNewsCrawler.Plugin.Abstractions.PluginWidget widget)
+        {
             Control content;
             try { content = widget.CreateContent(); }
             catch (Exception ex) { RotatingLogger.Write($"Plugin widget '{widget.Key}' failed to create: {ex.Message}"); return false; }

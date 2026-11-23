@@ -6,7 +6,7 @@ using Xunit;
 namespace Opsis.Tests;
 
 // The 2026-11 contract additions (IPluginWidgetProvider, PluginWidget, PluginFeed, PluginFeeds): a plugin can replace a built-in desktop widget (e.g. "calendar")
-// and publish text feeds for the News Crawler bars. They are optional: the assembly version stays 0.8.0.0.
+// and publish text feeds for the News Crawler bars. They are optional: the assembly identity is selected by the staged host build.
 public sealed class PluginWidgetContractTests
 {
     private sealed class StubPlugin : IOpsisNewsCrawlerPlugin, IPluginWidgetProvider
@@ -62,6 +62,32 @@ public sealed class PluginWidgetContractTests
     }
 
     [Fact]
+    public void AdditivePluginWidgetsCanBeEnumeratedAndOpenedWithoutReplacingCalendar()
+    {
+        var host = new PluginHost();
+        host.AddForTest(new StubPlugin("extra", null), started: true);
+        host.AddForTest(new StubPlugin("stopped", null), started: false);
+        host.AddForTest(new StubPlugin("calendar", "calendar"), started: true);
+        var all = host.GetAdditionalWidgets();
+        var added = Assert.Single(all);
+        Assert.Equal("w-extra", added.Key);
+        Assert.NotNull(host.FindAdditionalWidget("W-EXTRA"));
+        Assert.Null(host.FindAdditionalWidget("calendar"));
+        Assert.Null(host.FindAdditionalWidget("w-stopped"));
+        using var content = added.CreateContent();
+        Assert.IsType<Label>(content);
+    }
+
+    [Fact]
+    public void AdditiveWidgetProviderExceptionsAreIsolated()
+    {
+        var host = new PluginHost();
+        host.AddForTest(new StubPlugin("broken", null, throws: true), started: true);
+        host.AddForTest(new StubPlugin("good", null), started: true);
+        Assert.Equal("w-good", Assert.Single(host.GetAdditionalWidgets()).Key);
+    }
+
+    [Fact]
     public void AStoppedPluginOrOneThatDoesNotReplaceAnythingIsIgnored()
     {
         var host = new PluginHost();
@@ -103,7 +129,9 @@ public sealed class PluginWidgetContractTests
     public void TheContractAssemblyKeepsItsVersionAndHasTheNewTypes()
     {
         var asm = typeof(IOpsisNewsCrawlerPlugin).Assembly;
-        Assert.Equal(new Version(0, 8, 0, 0), asm.GetName().Version);
+        var expected = Environment.GetEnvironmentVariable("OPSIS_P3_CONTRACT_TEST") == "1"
+            ? new Version(1, 0, 0, 0) : new Version(0, 8, 0, 0);
+        Assert.Equal(expected, asm.GetName().Version);
         var names = asm.GetExportedTypes().Select(t => t.Name).ToHashSet();
         foreach (var n in new[] { "IOpsisNewsCrawlerPlugin", "PluginNavigationItem", "IPluginProfileAware", "IPluginWidgetProvider", "PluginWidget", "PluginFeed", "PluginFeedItem", "PluginFeeds" })
             Assert.Contains(n, names);
@@ -126,5 +154,78 @@ public sealed class PluginWidgetContractTests
             Assert.False(string.IsNullOrEmpty(w!.TitleEl));
         }
         finally { foreach (var p in host.Plugins) { try { p.Stop(); } catch (Exception) { } } }
+    }
+
+    // This must exercise the actual Crawler DLL, not a StubPlugin or a skipped optional smoke.
+    // The staged Windows workflow sets the directory and makes the assertion mandatory.
+    [Fact]
+    public void P3RealCrawlerPluginLoadsIntoOpsisWithOneSharedContract()
+    {
+        var dir = Environment.GetEnvironmentVariable("OPSIS_REAL_CRAWLER_PLUGIN_DIR");
+        var required = Environment.GetEnvironmentVariable("OPSIS_P3_INTEGRATION_REQUIRED") == "1";
+        if (string.IsNullOrWhiteSpace(dir))
+        {
+            Assert.False(required, "Windows integration CI must provide OPSIS_REAL_CRAWLER_PLUGIN_DIR");
+            return; // local developer tests need not publish Crawler first
+        }
+
+        Assert.True(Directory.Exists(dir), $"Crawler plugin directory not found: {dir}");
+        Assert.Equal(new Version(1, 0, 0, 0), typeof(IOpsisNewsCrawlerPlugin).Assembly.GetName().Version);
+
+        var host = new PluginHost();
+        host.LoadFolder(dir);
+        var plugin = Assert.Single(host.Plugins, p => p.Id == "giorstergiopoulos.opsisnewscrawler");
+        Assert.Equal("0.28.0", plugin.Version);
+        Assert.Equal(new Version(1, 0, 0, 0), plugin.GetType().Assembly.GetName().Version);
+        Assert.Same(typeof(IOpsisNewsCrawlerPlugin).Assembly,
+            plugin.GetType().GetInterfaces().Single(i => i.FullName == typeof(IOpsisNewsCrawlerPlugin).FullName).Assembly);
+
+        var widgetProvider = Assert.IsAssignableFrom<IPluginWidgetProvider>(plugin);
+        var widgets = widgetProvider.GetWidgets();
+        Assert.Equal(5, widgets.Count);
+        Assert.Equal(5, widgets.Select(w => w.Key).Distinct(StringComparer.OrdinalIgnoreCase).Count());
+        foreach (var key in new[] { "crawler-news", "crawler-markets", "crawler-weather",
+                                   "crawler-breaking", "crawler-history" })
+            Assert.Contains(widgets, w => w.Key == key);
+
+        Assert.Contains(plugin.GetNavigationItems(), n => n.Key == "OpsisNewsCrawler");
+        Assert.NotEmpty(plugin.GetTrayMenuItems());
+        Assert.NotNull(plugin.GetAboutInfo());
+    }
+
+    [Fact]
+    public void P3CrawlerAndChronikologioCanLoadSimultaneouslyWithoutContractCollisions()
+    {
+        var crawler = Environment.GetEnvironmentVariable("OPSIS_REAL_CRAWLER_PLUGIN_DIR");
+        var calendar = Environment.GetEnvironmentVariable("OPSIS_REAL_CHRONIKOLOGIO_PLUGIN_DIR");
+        var required = Environment.GetEnvironmentVariable("OPSIS_P3_INTEGRATION_REQUIRED") == "1";
+        if (string.IsNullOrWhiteSpace(crawler) || string.IsNullOrWhiteSpace(calendar))
+        {
+            Assert.False(required, "Staged Windows CI must publish both Crawler and Chronikologio plugins");
+            return;
+        }
+        Assert.True(Directory.Exists(crawler));
+        Assert.True(Directory.Exists(calendar));
+
+        var host = new PluginHost();
+        host.LoadFolder(crawler);
+        host.LoadFolder(calendar);
+        Assert.Equal(2, host.Plugins.Select(x => x.Id).Distinct(StringComparer.OrdinalIgnoreCase).Count());
+
+        var news = Assert.Single(host.Plugins, x => x.Id == "giorstergiopoulos.opsisnewscrawler");
+        var chrono = Assert.Single(host.Plugins, x => x.Id == "chronikologio");
+        Assert.Equal(new Version(1, 0, 0, 0), typeof(IOpsisNewsCrawlerPlugin).Assembly.GetName().Version);
+        foreach (var p in new[] { news, chrono })
+        {
+            var contract = p.GetType().GetInterfaces()
+                .Single(i => i.FullName == typeof(IOpsisNewsCrawlerPlugin).FullName).Assembly;
+            Assert.Same(typeof(IOpsisNewsCrawlerPlugin).Assembly, contract);
+            var referenced = Assert.Single(p.GetType().Assembly.GetReferencedAssemblies(),
+                a => a.Name == typeof(IOpsisNewsCrawlerPlugin).Assembly.GetName().Name);
+            Assert.Equal(new Version(1, 0, 0, 0), referenced.Version);
+        }
+        Assert.Equal(5, Assert.IsAssignableFrom<IPluginWidgetProvider>(news).GetWidgets().Count);
+        var replacements = Assert.IsAssignableFrom<IPluginWidgetProvider>(chrono).GetWidgets();
+        Assert.Contains(replacements, w => w.ReplacesBuiltIn == "calendar");
     }
 }

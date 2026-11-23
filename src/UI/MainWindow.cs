@@ -1134,6 +1134,23 @@ namespace MotionDesk.UI
                 ("Calendar", LocalizationManager.T("Widgets.Calendar"), (_, _) => WidgetHostEngine.Instance.SpawnWidget("calendar", 450, 600, ww, wh)),
                 ("Bluetooth", LocalizationManager.T("Widgets.Bluetooth"), (_, _) => WidgetHostEngine.Instance.SpawnWidget("bluetooth", 800, 600, ww, wh)));
 
+            // Keep Opsis.UI presentation: same button grid, panel and theme as all built-in widgets.
+            // Installed, started and approved plugins may offer extra widgets without replacing
+            // the calendar or changing the existing Opsis widget identifiers.
+            var pluginWidgets = PluginHost.Instance.GetAdditionalWidgets();
+            if (pluginWidgets.Count > 0)
+            {
+                AddSection(panel, LocalizationManager.CurrentLanguage == "el"
+                    ? "Πρόσθετα widgets εφαρμογών" : "Additional app widgets");
+                AddIconButtonGrid(panel, pluginWidgets.Select(w =>
+                {
+                    var widgetKey = w.Key;
+                    var title = LocalizationManager.CurrentLanguage == "el" ? w.TitleEl : w.TitleEn;
+                    return ("Widgets", title, (EventHandler)((_, _) =>
+                        WidgetHostEngine.Instance.SpawnWidget("plugin:" + widgetKey, 450, 350, ww, wh)));
+                }).ToArray());
+            }
+
             // Μετακινήθηκε εδώ από τις γενικές Ρυθμίσεις (ζητήθηκε ρητά "διάσπαρτες ρυθμίσεις που
             // μπορούν να μπουν στις αντίστοιχες καρτέλες") - το θέμα widgets/containers και το
             // προεπιλεγμένο μέγεθος νέων widgets αφορούν ΑΠΟΚΛΕΙΣΤΙΚΑ αυτή τη σελίδα.

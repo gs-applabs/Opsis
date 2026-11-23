@@ -197,6 +197,39 @@ namespace MotionDesk.Services
             return null;
         }
 
+        /// <summary>
+        /// Additive widgets offered by started plugins. Legacy plugins and built-in replacement
+        /// widgets are untouched. Duplicate IDs are ignored, and provider failures are isolated.
+        /// </summary>
+        public IReadOnlyList<PluginWidget> GetAdditionalWidgets()
+        {
+            var results = new List<PluginWidget>();
+            var used = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var p in Snap().Where(p => p.Started))
+            {
+                if (p.Plugin is not IPluginWidgetProvider provider) continue;
+                try
+                {
+                    foreach (var widget in Retry(() => provider.GetWidgets().ToList()))
+                    {
+                        if (widget is null || !string.IsNullOrWhiteSpace(widget.ReplacesBuiltIn) ||
+                            string.IsNullOrWhiteSpace(widget.Key) || widget.Key.Length > 96 ||
+                            widget.Key.Contains(':') || widget.CreateContent is null ||
+                            !used.Add(widget.Key)) continue;
+                        results.Add(widget);
+                        if (results.Count >= 32) return results;
+                    }
+                }
+                catch (Exception ex) { Log($"Plugin '{p.Plugin.Name}' additional widgets failed: {ex.Message}"); }
+            }
+            return results;
+        }
+
+        /// <summary>Finds one explicit plugin tile; never executes a fallback web view.</summary>
+        public PluginWidget? FindAdditionalWidget(string? key) =>
+            string.IsNullOrWhiteSpace(key) ? null :
+            GetAdditionalWidgets().FirstOrDefault(w => string.Equals(w.Key, key, StringComparison.OrdinalIgnoreCase));
+
         /// <summary>Σελίδες των plugin για το sidebar, ταξινομημένες κατά Order. Ένα απενεργοποιημένο plugin δεν συνεισφέρει.</summary>
         public IReadOnlyList<PluginNavigationItem> GetNavigationItems()
         {
