@@ -25,6 +25,27 @@ jobs:
           ./installer/build.ps1 -Compiler $compiler
           git archive --format=zip --output=Output/Opsis-Source.zip HEAD
           if ($LASTEXITCODE -ne 0) { throw 'Source archive failed' }
+      - name: Run isolated self-tests and weather renderer regressions
+        shell: pwsh
+        run: |
+          $env:OPSIS_APPDATA = Join-Path $env:RUNNER_TEMP 'opsis-selftests'
+          & .\publish\Opsis.Studio.exe --run-selftest
+          if ($LASTEXITCODE -ne 0) { throw "Opsis self-test failed: $LASTEXITCODE" }
+          node --test
+          if ($LASTEXITCODE -ne 0) { throw "Wallpaper JavaScript tests failed: $LASTEXITCODE" }
+      - name: Record reproducible toolchain and installer SHA-256
+        shell: pwsh
+        run: |
+          $setup = Get-ChildItem Output -File -Filter 'OpsisSetup-*.exe' | Select-Object -First 1
+          if (!$setup) { throw 'Installer output missing' }
+          [ordered]@{
+            appVersion = '2.7.7.2403'
+            dotnetSdk = (dotnet --version)
+            node = (node --version)
+            installerName = $setup.Name
+            installerSha256 = (Get-FileHash -LiteralPath $setup.FullName -Algorithm SHA256).Hash
+            generatedUtc = [DateTime]::UtcNow.ToString('o')
+          } | ConvertTo-Json | Out-File Output/build-manifest.json -Encoding utf8
       - uses: actions/upload-artifact@v4
         with:
           name: Opsis-Desktop-Customization-source-and-installer

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.IO.Compression;
 using System.Text.Json;
 
 namespace MotionDesk.Services
@@ -19,6 +20,7 @@ namespace MotionDesk.Services
             results.Add(RunCheck("HardwareProfile.DetectAndOverrideRoundTrip", CheckHardwareProfile));
             results.Add(RunCheck("AtomicFile.CorruptedFileRecovery", CheckAtomicFileRecovery));
             results.Add(RunCheck("SafeMode.CounterRoundTrip", CheckSafeModeCounter));
+            results.Add(RunCheck("WallpaperPackages.PreflightAndTransactionalImport", CheckWallpaperPackageSecurity));
 
             bool allPassed = results.TrueForAll(r => r.Passed);
             WriteReport(results, allPassed);
@@ -74,6 +76,40 @@ namespace MotionDesk.Services
                 return null;
             }
             finally { try { Directory.Delete(dir, recursive: true); } catch (Exception) { } }
+        }
+
+        private static string? CheckWallpaperPackageSecurity()
+        {
+            string root = Path.Combine(Path.GetTempPath(), "OpsisPackageTest_" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(root);
+            try
+            {
+                string zipPath = Path.Combine(root, "trusted.zip");
+                using (var zip = ZipFile.Open(zipPath, ZipArchiveMode.Create))
+                {
+                    using (var stream = new StreamWriter(zip.CreateEntry("bundle/index.html").Open())) stream.Write("<html>Test wallpaper</html>");
+                    using (var stream = new StreamWriter(zip.CreateEntry("bundle/effect.js").Open())) stream.Write("// harmless test");
+                }
+                var preview = WallpaperPackages.Inspect(zipPath);
+                if (preview.Files.Count != 2 || preview.ScriptCount != 2) return "unexpected wallpaper preview";
+                string dest = Path.Combine(root, "installed");
+                string index = WallpaperPackages.Import(zipPath, dest);
+                if (!File.Exists(index) || !File.Exists(Path.Combine(Path.GetDirectoryName(index)!, "effect.js")))
+                    return "the package was not fully imported";
+
+                string unsafeZip = Path.Combine(root, "untrusted.zip");
+                using (var zip = ZipFile.Open(unsafeZip, ZipArchiveMode.Create))
+                {
+                    using (var stream = new StreamWriter(zip.CreateEntry("index.html").Open())) stream.Write("<html></html>");
+                    using (var stream = new StreamWriter(zip.CreateEntry("../escape.txt").Open())) stream.Write("not allowed");
+                }
+                try { WallpaperPackages.Import(unsafeZip, dest); return "unsafe package was accepted"; }
+                catch (InvalidDataException) { /* expected: no partial folder created */ }
+                if (File.Exists(Path.Combine(root, "escape.txt"))) return "ZIP path escaped its target";
+                if (Directory.EnumerateDirectories(dest).Count() != 1) return "failed import left a partial folder";
+                return null;
+            }
+            finally { try { Directory.Delete(root, recursive: true); } catch (Exception) { } }
         }
 
         private static string? CheckSafeModeCounter()

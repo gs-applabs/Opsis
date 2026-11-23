@@ -11,8 +11,8 @@
     <RootNamespace>MotionDesk</RootNamespace>
     <AssemblyName>Opsis.Studio</AssemblyName>
     <Product>Opsis Desktop Customization</Product>
-    <Version>2.7.7.2402</Version>
-    <FileVersion>2.7.7.2402</FileVersion>
+    <Version>2.7.7.2403</Version>
+    <FileVersion>2.7.7.2403</FileVersion>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <NoWarn>$(NoWarn);WFO1000</NoWarn>

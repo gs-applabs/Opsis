@@ -409,11 +409,20 @@ function setConfig(c) {
     cfg = { ...cfg, ...c };
     if (typeof cfg.lat !== 'number' || isNaN(cfg.lat)) cfg.lat = 37.9838;
     if (typeof cfg.lon !== 'number' || isNaN(cfg.lon)) cfg.lon = 23.7275;
-    if (old.weatherSim !== cfg.weatherSim || old.windSim !== cfg.windSim) computeTargets();
+    // Weather observations belong to a location. Never briefly show the previous city's
+    // temperature when the user changes coordinates while the next request is pending.
+    if (old.lat !== cfg.lat || old.lon !== cfg.lon) data = null;
+    if (old.weatherSim !== cfg.weatherSim || old.windSim !== cfg.windSim || old.lat !== cfg.lat || old.lon !== cfg.lon) computeTargets();
     sunCache.key = '';
 }
 
-function setWeather(d) { data = d; computeTargets(); }
+function setWeather(d) {
+    // A network failure / empty cache must not erase the last good scene. The visual target
+    // remains steady; when a valid observation arrives, the normal easing blends to it.
+    if (!d || d.ok !== true) return;
+    data = d;
+    computeTargets();
+}
 
 // ---------------------------------------------------------------- drawing
 function approach(cur, tgt, dt, rate) { return cur + (tgt - cur) * Math.min(1, dt * rate); }
@@ -1627,7 +1636,11 @@ window.WeatherWallpaper = {
         // Ξ–Ξ·Ο„Ξ®ΞΈΞ·ΞΊΞµ ΟΞ·Ο„Ξ¬ "ΞµΞΌΟ†Ξ¬Ξ½ΞΉΟƒΞ· Ξ±Ξ½Ξ­ΞΌΞΏΟ… ΞΌΞ±Ξ¶Ξ― ΞΌΞµ Ο„Ξ·Ξ½ ΟΟΞ±/Ξ·ΞΌΞµΟΞΏΞΌΞ·Ξ½Ξ―Ξ±/ΞΈΞµΟΞΌΞΏΞΊΟΞ±ΟƒΞ―Ξ± ΟƒΟ„Ξ·Ξ½ ΞµΟ€ΞΉΟ†Ξ¬Ξ½ΞµΞΉΞ±
         // ΞµΟΞ³Ξ±ΟƒΞ―Ξ±Ο‚" β€” windKmh/beaufort ΞµΞΊΟ„Ξ―ΞΈΞµΞ½Ο„Ξ±ΞΉ ΞµΞ΄Ο ΟΟƒΟ„Ξµ Ο„ΞΏ index.html Ξ½Ξ± Ο„Ξ± Ξ΄ΞµΞ―ΞΎΞµΞΉ ΟƒΟ„ΞΏ Ξ―Ξ΄ΞΉΞΏ
         // overlay (Ξ²Ξ». updateWeatherInfo). S.wind ΞµΞ―Ξ½Ξ±ΞΉ Ξ®Ξ΄Ξ· ΟƒΞµ km/h (Ξ²Ξ». computeTargets).
-        return { h: Math.floor(m / 60) % 24, m: Math.floor(m % 60), date: d, temp: data && data.ok ? data.temp : null, code: cfg.weatherSim && cfg.weatherSim !== 'Auto' ? ({ Clear: 0, PartlyCloudy: 2, Cloudy: 3, Drizzle: 51, Rain: 63, HeavyRain: 65, Thunderstorm: 95, Snow: 73, Fog: 45 })[cfg.weatherSim] : (data && data.ok ? data.code : null), windKmh: Math.round(S.wind), beaufort: BFN };
+        return { h: Math.floor(m / 60) % 24, m: Math.floor(m % 60), date: d, temp: data && data.ok ? data.temp : null, code: cfg.weatherSim && cfg.weatherSim !== 'Auto' ? ({ Clear: 0, PartlyCloudy: 2, Cloudy: 3, Drizzle: 51, Rain: 63, HeavyRain: 65, Thunderstorm: 95, Snow: 73, Fog: 45 })[cfg.weatherSim] : (data && data.ok ? data.code : null), windKmh: Math.round(S.wind), beaufort: BFN,
+            source: data?.ok ? data.source : null,
+            observedAt: data?.ok ? data.observedAt : null,
+            fetchedAt: data?.ok ? data.fetchedAt : null,
+            stale: !!data?.stale };
     },
     // test helpers (headless screenshots)
     _state: () => ({ S, TGT, bf: BFN, t: localMinutes(), sun: sunTimes(offsetMinutes()) }),

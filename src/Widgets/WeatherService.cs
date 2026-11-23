@@ -145,7 +145,9 @@ namespace MotionDesk.Services
             string key = $"{lat.ToString(CultureInfo.InvariantCulture)},{lon.ToString(CultureInfo.InvariantCulture)}";
             lock (_wpLock)
             {
-                if (_wpCacheKey == key && _wpCacheJson != null) return _wpCacheJson;
+                if (_wpCacheKey == key && _wpCacheJson != null)
+                    return DateTime.UtcNow - _wpCacheAt >= TimeSpan.FromMinutes(10)
+                        ? MarkStale(_wpCacheJson) : _wpCacheJson;
             }
             return "{\"ok\":false,\"pending\":true}";
         }
@@ -190,7 +192,11 @@ namespace MotionDesk.Services
                     json = JsonSerializer.Serialize(new
                     {
                         ok = true, code = CodeForCondition(fallback.Condition), temp = fallback.TemperatureC, humidity = fallback.HumidityPercent ?? -1,
-                        precip = 0.0, cloud = -1, wind = fallback.WindKmh, windDir = 270, isDay = true, utcOffsetSec = (int?)null, source = fallback.Source
+                        precip = 0.0, cloud = -1, wind = fallback.WindKmh, windDir = 270,
+                        isDay = SolarCalc.IsDay(DateTime.UtcNow, lat, lon),
+                        utcOffsetSec = WeatherPayload.GuessOffsetSeconds(lon, DateTime.UtcNow),
+                        source = fallback.Source, observedAt = DateTime.UtcNow.ToString("o", CultureInfo.InvariantCulture),
+                        fetchedAt = DateTime.UtcNow.ToString("o", CultureInfo.InvariantCulture), stale = false
                     });
             }
 

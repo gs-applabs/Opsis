@@ -17,6 +17,8 @@ html,body{margin:0;padding:0;width:100vw;height:100vh;overflow:hidden;background
 #wxTemp{font-size:calc(var(--s)*4.4vh);font-weight:300;margin-top:calc(var(--s)*1.8vh);min-height:1.25em;line-height:1.25}
 #wxWind{font-size:calc(var(--s)*2.6vh);font-weight:300;letter-spacing:.04em;margin-top:calc(var(--s)*.4vh);opacity:.85;line-height:1.25}
 #wxWind:empty{display:none}
+#wxSource{font-size:calc(var(--s)*1.65vh);font-weight:400;letter-spacing:.02em;margin-top:calc(var(--s)*.4vh);opacity:.72;line-height:1.25}
+#wxSource:empty{display:none}
 #wxCity{font-size:calc(var(--s)*2.4vh);font-weight:300;letter-spacing:.12em;margin-top:calc(var(--s)*.6vh);opacity:.75;text-transform:uppercase;min-height:1.25em;line-height:1.25}
 #pulse{position:fixed;inset:0;pointer-events:none;background:radial-gradient(circle at 50% 50%,rgba(255,255,255,.14),transparent 65%);opacity:0;transition:opacity 120ms linear}
 </style>
@@ -28,7 +30,7 @@ html,body{margin:0;padding:0;width:100vw;height:100vh;overflow:hidden;background
 <div id="desk"></div>
 <img id="mediaImg" alt="">
 <iframe id="mediaFrame" allow="autoplay; encrypted-media" referrerpolicy="strict-origin-when-cross-origin"></iframe>
-<div id="wxInfo"><div id="wxTime"></div><div id="wxDate"></div><div id="wxTemp"></div><div id="wxWind"></div><div id="wxCity"></div></div>
+<div id="wxInfo"><div id="wxTime"></div><div id="wxDate"></div><div id="wxTemp"></div><div id="wxWind"></div><div id="wxCity"></div><div id="wxSource"></div></div>
 <div id="pulse"></div>
 <script src="landmarks.js"></script>
 <script src="city-landscape.js"></script>
@@ -36,6 +38,7 @@ html,body{margin:0;padding:0;width:100vw;height:100vh;overflow:hidden;background
 <script src="scene-sky-profiles.js"></script>
 <script src="sky-mask.js"></script>
 <script src="weather.js"></script>
+<script src="weather-freshness.js"></script>
 <script src="ancient-athens.js"></script>
 <script src="studio-landscapes.js"></script>
 <script src="studio-scenes.js"></script>
@@ -638,6 +641,8 @@ function updateWeatherInfo() {
     document.getElementById('wxTemp').textContent = [tempText, windText, cond].filter(Boolean).join('  ·  ');
     document.getElementById('wxWind').textContent = '';
     document.getElementById('wxCity').textContent = cfg.weatherCity || '';
+    document.getElementById('wxSource').textContent = window.OpsisWeatherFreshness
+        ? window.OpsisWeatherFreshness.format(i, Date.now(), cfg.lang) : '';
     box.style.fontFamily = '"' + String(cfg.infoFont || 'Segoe UI Light').replace(/["\\]/g, '') + '", "Segoe UI", system-ui, sans-serif';
     box.style.left = (cfg.infoX ?? 50) + '%';
     box.style.top = (cfg.infoY ?? 34) + '%';

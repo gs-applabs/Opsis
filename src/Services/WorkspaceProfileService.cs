@@ -63,39 +63,81 @@ public static class WorkspaceProfileService
         var path = Path.Combine(Root, Sanitize(name) + ".json");
         if (!File.Exists(path)) return false;
         WorkspaceProfile? profile;
-        try { profile = JsonSerializer.Deserialize<WorkspaceProfile>(AtomicFile.ReadAllText(path)); }
-        catch (JsonException) { return false; }
-        catch (IOException) { return false; }
-        if (profile == null) return false;
+        try
+        {
+            // A damaged profile may be restored from .bak by AtomicFile.ReadAllText.
+            if (new FileInfo(path).Length > 16L * 1024 * 1024) return false;
+            profile = JsonSerializer.Deserialize<WorkspaceProfile>(AtomicFile.ReadAllText(path));
+        }
+        catch (Exception ex) when (ex is JsonException or IOException or UnauthorizedAccessException) { return false; }
+        if (profile?.AppSettings == null || profile.Wallpaper == null || profile.Widgets == null) return false;
 
-        // Εφαρμόζουμε ΜΟΝΟ τις ρυθμίσεις που ανήκουν στον "χώρο εργασίας" (snap). Πριν γινόταν
-        // profile.AppSettings.Save() — ΟΛΟ το snapshot των ρυθμίσεων τη στιγμή που αποθηκεύτηκε το προφίλ —
-        // οπότε η φόρτωση π.χ. του "Gaming" άλλαζε σιωπηλά γλώσσα, θέμα, διαφάνεια, φάκελο μετατροπής κ.ά. στις
-        // παλιές τιμές και έσβηνε ό,τι είχε αλλάξει ο χρήστης έκτοτε.
-        var currentApp = AppSettings.Load();
-        currentApp.GridSnap = profile.AppSettings.GridSnap;
-        currentApp.SnapThreshold = profile.AppSettings.SnapThreshold;
-        currentApp.GridSize = profile.AppSettings.GridSize;
-        currentApp.Save();
-        var wallpaper = WallpaperSettings.Load();
-        wallpaper.VideoPath = profile.Wallpaper.VideoPath ?? string.Empty;
-        wallpaper.PerformanceMode = profile.Wallpaper.PerformanceMode ?? "Balanced";
-        wallpaper.Save();
+        // Snapshot the live state before writing ANY new settings. If a widget/plugin throws
+        // midway through a profile switch, restore both disk settings and the visible workspace.
+        AppSettings currentApp;
+        WallpaperSettings wallpaper;
+        IReadOnlyList<WidgetSnapshot> previousWidgets;
+        bool previousEnabled;
+        try
+        {
+            currentApp = AppSettings.Load();
+            wallpaper = WallpaperSettings.Load();
+            previousWidgets = WidgetHostEngine.Instance.GetSnapshots().ToArray();
+            previousEnabled = WallpaperHostEngine.Instance.IsEnabled;
+        }
+        catch (Exception ex) { AttachLog.Write("Profile snapshot failed: " + ex.GetType().Name); return false; }
 
-        WidgetSnapEngine.EnableGridSnap = profile.AppSettings.GridSnap;
-        WidgetSnapEngine.SnapThreshold = Math.Clamp(profile.AppSettings.SnapThreshold, 5, 50);
-        WidgetSnapEngine.GridSize = Math.Clamp(profile.AppSettings.GridSize, 5, 100);
+        bool oldGridSnap = currentApp.GridSnap;
+        int oldThreshold = currentApp.SnapThreshold, oldGridSize = currentApp.GridSize;
+        string oldVideo = wallpaper.VideoPath, oldPerformance = wallpaper.PerformanceMode;
+        try
+        {
+            // Only workspace-specific values are imported: language, theme and global user
+            // settings must not silently revert to the values saved by an older profile.
+            currentApp.GridSnap = profile.AppSettings.GridSnap;
+            currentApp.SnapThreshold = Math.Clamp(profile.AppSettings.SnapThreshold, 5, 50);
+            currentApp.GridSize = Math.Clamp(profile.AppSettings.GridSize, 5, 100);
+            currentApp.Save();
 
-        WidgetHostEngine.Instance.RestoreSnapshots(profile.Widgets ?? new List<WidgetSnapshot>());
-        // DeskContainers keep their own profiles inside the DeskContainers engine (menu > Profiles), not in the workspace profile.
-        // Τα DeskZones layouts ΔΕΝ είναι πλέον μέρος του workspace profile — ζουν ανεξάρτητα στο
-        // δικό τους αρχείο (ZoneLayoutStore), ακριβώς όπως τα πραγματικά FancyZones layouts δεν
-        // αλλάζουν όταν εναλλάσσεις "προφίλ" εργασίας.
+            wallpaper.VideoPath = profile.Wallpaper.VideoPath ?? string.Empty;
+            wallpaper.PerformanceMode = profile.Wallpaper.PerformanceMode ?? "Balanced";
+            wallpaper.Save();
 
-        WallpaperHostEngine.Instance.SetPerformanceMode(wallpaper.PerformanceMode);
-        if (profile.Wallpaper.Enabled) WallpaperHostEngine.Instance.Enable();
-        else WallpaperHostEngine.Instance.Disable();
-        return true;
+            WidgetSnapEngine.EnableGridSnap = currentApp.GridSnap;
+            WidgetSnapEngine.SnapThreshold = currentApp.SnapThreshold;
+            WidgetSnapEngine.GridSize = currentApp.GridSize;
+            WidgetHostEngine.Instance.RestoreSnapshots(profile.Widgets);
+            WallpaperHostEngine.Instance.SetPerformanceMode(wallpaper.PerformanceMode);
+            if (profile.Wallpaper.Enabled) WallpaperHostEngine.Instance.Enable();
+            else WallpaperHostEngine.Instance.Disable();
+            return true;
+        }
+        catch (Exception ex)
+        {
+            AttachLog.Write("Profile switch rolled back: " + ex.GetType().Name);
+            try
+            {
+                currentApp.GridSnap = oldGridSnap;
+                currentApp.SnapThreshold = oldThreshold;
+                currentApp.GridSize = oldGridSize;
+                currentApp.Save();
+                wallpaper.VideoPath = oldVideo;
+                wallpaper.PerformanceMode = oldPerformance;
+                wallpaper.Save();
+                WidgetSnapEngine.EnableGridSnap = oldGridSnap;
+                WidgetSnapEngine.SnapThreshold = oldThreshold;
+                WidgetSnapEngine.GridSize = oldGridSize;
+                WidgetHostEngine.Instance.RestoreSnapshots(previousWidgets);
+                WallpaperHostEngine.Instance.SetPerformanceMode(oldPerformance);
+                if (previousEnabled) WallpaperHostEngine.Instance.Enable();
+                else WallpaperHostEngine.Instance.Disable();
+            }
+            catch (Exception restoreEx)
+            {
+                AttachLog.Write("Profile rollback needs safe-mode recovery: " + restoreEx.GetType().Name);
+            }
+            return false;
+        }
     }
 
     public static void Delete(string name)

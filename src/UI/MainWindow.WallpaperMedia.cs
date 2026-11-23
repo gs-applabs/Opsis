@@ -90,6 +90,16 @@ namespace MotionDesk.UI
                 if (dlg.ShowDialog(this) != DialogResult.OK) return;
                 try
                 {
+                    var preview = WallpaperPackages.Inspect(dlg.FileName);
+                    string listed = string.Join(Environment.NewLine, preview.Files.Take(24).Select(f => "  • " + f));
+                    if (preview.Files.Count > 24) listed += Environment.NewLine +
+                        L($"… and {preview.Files.Count - 24} more files", $"… και άλλα {preview.Files.Count - 24} αρχεία");
+                    string summary = L(
+                        $"Entry point: {preview.EntryPoint}\nFiles: {preview.Files.Count}  ·  Unpacked: {preview.UncompressedBytes / 1048576d:F1} MiB\n\n{listed}\n\nWallpaper packages can run HTML/JavaScript. Only import packages you trust. Proceed?",
+                        $"Αρχική σελίδα: {preview.EntryPoint}\nΑρχεία: {preview.Files.Count}  ·  Χωρίς συμπίεση: {preview.UncompressedBytes / 1048576d:F1} MiB\n\n{listed}\n\nΤα πακέτα wallpaper μπορούν να εκτελούν HTML/JavaScript. Εισήγαγε μόνο αξιόπιστα πακέτα. Συνέχεια?");
+                    if (MessageBox.Show(this, summary, L("Review wallpaper package", "Προεπισκόπηση πακέτου wallpaper"),
+                            MessageBoxButtons.YesNo, MessageBoxIcon.Warning, MessageBoxDefaultButton.Button2) != DialogResult.Yes)
+                        return;
                     string index = WallpaperPackages.Import(dlg.FileName);
                     var s = WallpaperSettings.Load(); s.PageSource = index; s.Save();
                     WallpaperHostEngine.Instance.Enable(); WallpaperHostEngine.Instance.RefreshAll();
