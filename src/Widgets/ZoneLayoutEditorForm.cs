@@ -98,7 +98,20 @@ namespace MotionDesk.Widgets
             }
 
             // ---- Μεγάλη προεπισκόπιση της τρέχουσας επιλογής ----
-            _bigPreview = new ZonePreviewPanel { Dock = DockStyle.Fill, Margin = new Padding(0, 0, 0, 10) };
+            _bigPreview = new ZonePreviewPanel { Dock = DockStyle.Fill, Margin = new Padding(0, 0, 0, 10),
+                TabStop = true, AccessibleName = "Zone preview · use arrow keys to inspect zones" };
+            _bigPreview.PreviewKeyDown += (_, e) => { if (e.KeyCode is Keys.Left or Keys.Right or Keys.Up or Keys.Down) e.IsInputKey = true; };
+            _bigPreview.KeyDown += (_, e) =>
+            {
+                int count = BuildSelected().Zones.Count;
+                if (count == 0) return;
+                if (e.KeyCode is Keys.Left or Keys.Up) _bigPreview.SelectedZone = (_bigPreview.SelectedZone < 0 ? count - 1 : (_bigPreview.SelectedZone + count - 1) % count);
+                else if (e.KeyCode is Keys.Right or Keys.Down) _bigPreview.SelectedZone = (_bigPreview.SelectedZone + 1) % count;
+                else if (e.KeyCode == Keys.Home) _bigPreview.SelectedZone = 0;
+                else if (e.KeyCode == Keys.End) _bigPreview.SelectedZone = count - 1;
+                else return;
+                e.Handled = e.SuppressKeyPress = true;
+            };
             root.Controls.Add(_bigPreview, 0, 1);
 
             // ---- Ρυθμιζόμενο πλήθος στηλών/σειρών — μόνο για Columns/Rows/Grid/Custom ----
@@ -368,8 +381,14 @@ namespace MotionDesk.Widgets
     public sealed class ZonePreviewPanel : Panel
     {
         private ZoneLayoutData _layout = new();
+        private int _selectedZone = -1;
+        public int SelectedZone
+        {
+            get => _selectedZone;
+            set { _selectedZone = _layout.Zones.Count == 0 ? -1 : Math.Clamp(value, 0, _layout.Zones.Count - 1); Invalidate(); }
+        }
         public ZonePreviewPanel() { SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.UserPaint | ControlStyles.OptimizedDoubleBuffer, true); BackColor = Color.Transparent; }
-        public void SetLayout(ZoneLayoutData layout) { _layout = layout; Invalidate(); }
+        public void SetLayout(ZoneLayoutData layout) { _layout = layout; _selectedZone = -1; Invalidate(); }
 
         protected override void OnPaint(PaintEventArgs e)
         {
@@ -386,12 +405,14 @@ namespace MotionDesk.Widgets
             const int previewInset = 1;
             int drawW = Math.Max(1, Width - previewInset * 2);
             int drawH = Math.Max(1, Height - previewInset * 2);
-            foreach (var z in _layout.Zones)
+            for (int zoneIndex = 0; zoneIndex < _layout.Zones.Count; zoneIndex++)
             {
+                var z = _layout.Zones[zoneIndex];
                 var rect = new Rectangle(previewInset + (int)(z.X * drawW), previewInset + (int)(z.Y * drawH), (int)(z.Width * drawW), (int)(z.Height * drawH));
                 if (rect.Width <= 2 || rect.Height <= 2) continue;
-                using var fill = new SolidBrush(Color.FromArgb(70, UiTheme.AccentCyan));
-                using var border = new Pen(UiTheme.AccentCyan, 1.4f);
+                bool chosen = zoneIndex == _selectedZone;
+                using var fill = new SolidBrush(Color.FromArgb(chosen ? 145 : 70, UiTheme.AccentCyan));
+                using var border = new Pen(chosen ? Color.White : UiTheme.AccentCyan, chosen ? 3f : 1.4f);
                 using var path = UiTheme.RoundedPath(rect, 4);
                 g.FillPath(fill, path);
                 g.DrawPath(border, path);

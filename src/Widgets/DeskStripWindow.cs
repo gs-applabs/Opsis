@@ -19,6 +19,10 @@ namespace MotionDesk.Widgets
         public List<string> Paths { get; set; } = new();
         /// <summary>Ids of Opsis-family apps already offered for automatic pinning (an app the user unpins stays unpinned).</summary>
         public List<string> AutoPinnedFamily { get; set; } = new();
+        /// <summary>Monitor-specific pinned icon ordering (the base list remains the canonical membership).</summary>
+        public Dictionary<string, List<string>> MonitorPinnedOrder { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+        /// <summary>Named launch groups: absolute app paths in exact user-specified start order.</summary>
+        public Dictionary<string, List<string>> LaunchGroups { get; set; } = new(StringComparer.OrdinalIgnoreCase);
         public bool StartEnabled { get; set; }
         public DockPosition Position { get; set; } = DockPosition.Bottom;
         public bool AutoHide { get; set; } = false;
@@ -155,6 +159,17 @@ namespace MotionDesk.Widgets
 
         public DeskStripSettings Settings => _s;
         public IReadOnlyList<string> PinnedApps => _s.Paths;
+        private IReadOnlyList<string> PinnedForThisMonitor()
+        {
+            var name = DockScreen.DeviceName;
+            if (!_s.MonitorPinnedOrder.TryGetValue(name, out var order) || order == null) return _s.Paths;
+            var valid = _s.Paths.ToHashSet(StringComparer.OrdinalIgnoreCase);
+            return order.Where(valid.Contains).Distinct(StringComparer.OrdinalIgnoreCase)
+                .Concat(_s.Paths.Where(path => !order.Contains(path, StringComparer.OrdinalIgnoreCase))).ToList();
+        }
+        private const string SearchPrefix = "opsis://search/";
+        internal static bool IsPinnedSearch(string path) => path.StartsWith(SearchPrefix, StringComparison.OrdinalIgnoreCase);
+        private static string SearchQuery(string path) => Uri.UnescapeDataString(path[SearchPrefix.Length..]);
 
         /// <summary>Αλλαγή ρυθμίσεων από το UI: εφαρμόζεται αμέσως και αποθηκεύεται.</summary>
         public void UpdateSettings(Action<DeskStripSettings> change)
@@ -165,6 +180,10 @@ namespace MotionDesk.Widgets
             _s.LabelFontScalePercent = Math.Clamp(_s.LabelFontScalePercent, 85, 150);
             _popup?.HidePopup(); _popup?.Dispose(); _popup = null; // re-create with new font size on next hover
             _s.Paths = _s.Paths.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+            // Keep per-monitor order lists bounded to installed/pinned app ids.
+            foreach (var monitor in _s.MonitorPinnedOrder.Keys.ToArray())
+                _s.MonitorPinnedOrder[monitor] = _s.MonitorPinnedOrder[monitor]
+                    .Where(path => _s.Paths.Contains(path, StringComparer.OrdinalIgnoreCase)).Take(300).ToList();
             ApplySharedSettings(animate: oldPos == _s.Position);
             QueueSave();
         }
@@ -290,11 +309,12 @@ namespace MotionDesk.Widgets
             foreach (var i in _items) previous[i.Key] = i;
             var list = new List<Item>();
 
-            foreach (var path in _s.Paths)
+            foreach (var path in PinnedForThisMonitor())
             {
                 if (!previous.TryGetValue(path, out var it) || !it.Pinned)
                     it = new Item { Key = path, Pinned = true, Display = Path.GetFileNameWithoutExtension(path), Entrance = _pendingEntrance.Contains(path) ? 0 : 1 };
-                it.Target ??= ResolveTarget(path);
+                it.Target ??= IsPinnedSearch(path) ? null : ResolveTarget(path);
+                if (IsPinnedSearch(path)) it.Display = "🔎 " + SearchQuery(path);
                 it.Icon ??= IconFor(path);
                 it.Windows = new List<IntPtr>();
                 list.Add(it);
@@ -370,6 +390,18 @@ namespace MotionDesk.Widgets
         private Bitmap? IconFor(string path)
         {
             if (_iconCache.TryGetValue(path, out var c)) return c;
+            if (IsPinnedSearch(path))
+            {
+                var icon = new Bitmap(64, 64);
+                using (var g = Graphics.FromImage(icon))
+                {
+                    g.SmoothingMode = SmoothingMode.AntiAlias;
+                    using var pen = new Pen(Color.White, 5);
+                    g.DrawEllipse(pen, 10, 9, 32, 32);
+                    g.DrawLine(pen, 38, 38, 56, 56);
+                }
+                return _iconCache[path] = icon;
+            }
             Bitmap? bmp = null;
             try
             {
@@ -743,6 +775,11 @@ namespace MotionDesk.Widgets
             try
             {
                 string target = it.Pinned ? it.Key : (it.Target ?? it.Key);
+                if (IsPinnedSearch(target))
+                {
+                    MotionDesk.Containers.ContainerHost.Current?.ShowSpotSearch(SearchQuery(target));
+                    return;
+                }
                 if (MotionDesk.Services.SafeLaunch.Reject(target) is { } why) { MotionDesk.Services.AttachLog.Write("dock launch refused: " + why + " (" + target + ")"); return; }
                 var psi = new ProcessStartInfo(target) { UseShellExecute = true };
                 if (admin) psi.Verb = "runas";
@@ -765,9 +802,32 @@ namespace MotionDesk.Widgets
                 {
                     try { Process.Start(new ProcessStartInfo("explorer.exe", $"/select,\"{file}\"") { UseShellExecute = true }); } catch (Exception) { }
                 });
+            if (it.Windows.Count > 1)
+            {
+                var windowsMenu = new ToolStripMenuItem("Παράθυρα εφαρμογής / App windows");
+                var visible = WinApi.EnumerateAppWindows()
+                    .Where(w => it.Windows.Contains(w.Handle)).ToArray();
+                for (var i = 0; i < visible.Length; i++)
+                {
+                    var window = visible[i];
+                    var title = string.IsNullOrWhiteSpace(window.Title) ? $"Window {i+1}" : window.Title;
+                    windowsMenu.DropDownItems.Add(new ToolStripMenuItem(title.Length > 90 ? title[..90] + "…" : title,
+                        null, (_, _) => WinApi.BringToFront(window.Handle)));
+                }
+                menu.Items.Add(windowsMenu);
+            }
             if (it.Windows.Count > 0)
                 menu.Items.Add(it.Windows.Count > 1 ? "Κλείσιμο όλων των παραθύρων / Close all windows" : "Κλείσιμο παραθύρου / Close window", null, (_, _) => { foreach (var w in it.Windows.ToList()) WinApi.Close(w); });
             menu.Items.Add(new ToolStripSeparator());
+            var launchMenu = new ToolStripMenuItem("Ομάδες εκκίνησης / Launch groups");
+            foreach (var group in _s.LaunchGroups.ToArray())
+            {
+                string name = group.Key;
+                launchMenu.DropDownItems.Add(name, null, (_, _) => _ = LaunchGroupAsync(name));
+            }
+            launchMenu.DropDownItems.Add(new ToolStripSeparator());
+            launchMenu.DropDownItems.Add("Νέα ομάδα… / New group…", null, (_, _) => CreateLaunchGroup());
+            menu.Items.Add(launchMenu);
             menu.Items.Add(LocalizationManager.T("DCM.DeskStripSettings"), null, (_, _) => TrayApplicationContext.OpenPage?.Invoke("DeskStrip"));
             menu.Items.Add(it.Pinned ? LocalizationManager.T("DCMenu.Unpin") : "Καρφίτσωμα στο dock / Pin to dock", null, (_, _) =>
             {
@@ -776,6 +836,43 @@ namespace MotionDesk.Widgets
             _contextOpen = true;
             menu.Closed += (_, _) => { _contextOpen = false; menu.Dispose(); };
             menu.Show(this, at);
+        }
+
+        // #48: app restoration follows the saved order; failed apps do not block the rest.
+        private async Task LaunchGroupAsync(string name)
+        {
+            if (!_s.LaunchGroups.TryGetValue(name, out var paths)) return;
+            foreach (var path in paths.Take(50).ToArray())
+            {
+                if (!File.Exists(path) || !path.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) ||
+                    MotionDesk.Services.SafeLaunch.Reject(path) != null) continue;
+                try { Process.Start(new ProcessStartInfo(path) { UseShellExecute = true }); }
+                catch (Exception ex) { MotionDesk.Services.AttachLog.Write("launch group app failed: " + ex.GetType().Name); }
+                await Task.Delay(850); // ordered start without blocking WinForms
+                if (IsDisposed || Disposing) return;
+            }
+        }
+
+        private void CreateLaunchGroup()
+        {
+            using var prompt = new Form { Text = "Opsis · Launch group", Width = 450, Height = 410,
+                StartPosition = FormStartPosition.CenterParent, FormBorderStyle = FormBorderStyle.FixedDialog,
+                MaximizeBox = false, MinimizeBox = false };
+            var name = new TextBox { Left = 16, Top = 14, Width = 400, PlaceholderText = "Group name / Όνομα ομάδας" };
+            var list = new CheckedListBox { Left = 16, Top = 51, Width = 400, Height = 250, CheckOnClick = true };
+            foreach (var path in _s.Paths)
+            {
+                string? executable = ResolveTarget(path);
+                if (executable != null && File.Exists(executable) &&
+                    executable.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) &&
+                    !list.Items.Contains(executable)) list.Items.Add(executable, false);
+            }
+            var save = new Button { Left = 300, Top = 315, Width = 116, Height = 34, Text = "Save / Αποθήκευση", DialogResult = DialogResult.OK };
+            prompt.Controls.AddRange([name, list, save]); prompt.AcceptButton = save;
+            if (prompt.ShowDialog(this) != DialogResult.OK || name.Text.Trim().Length is < 1 or > 80) return;
+            var chosen = list.CheckedItems.Cast<string>().Distinct(StringComparer.OrdinalIgnoreCase).Take(50).ToList();
+            if (chosen.Count == 0) return;
+            _s.LaunchGroups[name.Text.Trim()] = chosen; QueueSave();
         }
 
         // ---- προεπισκόπηση / tooltip -----------------------------------------------------------------------------
@@ -828,11 +925,16 @@ namespace MotionDesk.Widgets
 
         private void MovePinned(string key, int insertAt)
         {
-            int from = _s.Paths.FindIndex(p => string.Equals(p, key, StringComparison.OrdinalIgnoreCase));
+            // Rearrangement is local to this monitor when multiple docks are enabled.
+            var order = _s.AllMonitors && Screen.AllScreens.Length > 1
+                ? PinnedForThisMonitor().ToList() : _s.Paths;
+            int from = order.FindIndex(p => string.Equals(p, key, StringComparison.OrdinalIgnoreCase));
             if (from < 0) return;
-            _s.Paths.RemoveAt(from);
+            order.RemoveAt(from);
             if (insertAt > from) insertAt--;
-            _s.Paths.Insert(Math.Clamp(insertAt, 0, _s.Paths.Count), key);
+            order.Insert(Math.Clamp(insertAt, 0, order.Count), key);
+            if (!ReferenceEquals(order, _s.Paths))
+                _s.MonitorPinnedOrder[DockScreen.DeviceName] = order;
             SyncItems(); ApplyLayout(false); QueueSave();
         }
 
@@ -962,7 +1064,9 @@ namespace MotionDesk.Widgets
             {
                 var state = JsonSerializer.Deserialize<DeskStripSettings>(AtomicFile.ReadAllText(ConfigPath));
                 if (state == null) return;
-                _s.Paths = state.Paths.Where(p => File.Exists(p) || Directory.Exists(p)).ToList();
+                _s.Paths = (state.Paths ?? new()).Where(p => IsPinnedSearch(p) || File.Exists(p) || Directory.Exists(p)).ToList();
+                _s.MonitorPinnedOrder = state.MonitorPinnedOrder ?? new(StringComparer.OrdinalIgnoreCase);
+                _s.LaunchGroups = state.LaunchGroups ?? new(StringComparer.OrdinalIgnoreCase);
                 _s.Position = Enum.IsDefined(state.Position) ? state.Position : DockPosition.Bottom;
                 _s.AutoHide = state.AutoHide; _s.IconSize = Math.Clamp(state.IconSize == 0 ? 44 : state.IconSize, 28, 72);
                 _s.LabelFontScalePercent = Math.Clamp(state.LabelFontScalePercent == 0 ? 100 : state.LabelFontScalePercent, 85, 150);

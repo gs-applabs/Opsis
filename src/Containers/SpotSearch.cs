@@ -10,10 +10,12 @@ namespace MotionDesk.Containers
         private readonly TextBox _box = new() { BorderStyle = BorderStyle.None, Font = new Font("Segoe UI", 13f), Dock = DockStyle.Top };
         private readonly ListBox _list = new() { BorderStyle = BorderStyle.None, Font = new Font("Segoe UI", 11f), Dock = DockStyle.Fill, IntegralHeight = false };
         private readonly Func<ContainersDocument> _doc; private List<SearchHit> _hits = new();
+        private readonly string _initialQuery;
 
-        public SpotSearchForm(Func<ContainersDocument> doc)
+        public SpotSearchForm(Func<ContainersDocument> doc, string initialQuery = "")
         {
             _doc = doc;
+            _initialQuery = initialQuery;
             FormBorderStyle = FormBorderStyle.None; StartPosition = FormStartPosition.Manual; ShowInTaskbar = false; TopMost = true; Size = new Size(520, 300);
             BackColor = MotionDesk.UI.UiTheme.Surface; ForeColor = MotionDesk.UI.UiTheme.TextPrimary; Padding = new Padding(12);
             _box.BackColor = BackColor; _box.ForeColor = ForeColor; _list.BackColor = BackColor; _list.ForeColor = ForeColor;
@@ -33,10 +35,11 @@ namespace MotionDesk.Containers
             var menu = new ContextMenuStrip();
             menu.Items.Add("Show containing container (Shift+Enter)", null, (_, _) => ShowContainingContainer());
             menu.Items.Add("Open selected file (Enter)", null, (_, _) => Launch());
+            menu.Items.Add("Pin current search to DeskStrip / Καρφίτσωμα αναζήτησης", null, (_, _) => PinSearch());
             _list.ContextMenuStrip = menu;
             FormClosed += (_, _) => menu.Dispose();
             Deactivate += (_, _) => Close();
-            Shown += (_, _) => { Activate(); _box.Focus(); };
+            Shown += (_, _) => { Activate(); _box.Focus(); if (_initialQuery.Length > 0) { _box.Text = _initialQuery; _box.SelectAll(); } };
         }
 
         private void Refill()
@@ -62,6 +65,16 @@ namespace MotionDesk.Containers
             if (matches.Length != 1) return; // ambiguous titles/paths: never jump to the wrong container
             Close();
             host.Focus(matches[0].Id);
+        }
+
+        private void PinSearch()
+        {
+            var query = _box.Text.Trim();
+            if (query.Length is < 1 or > 160) return;
+            var dock = MotionDesk.Widgets.DeskStripHostEngine.Instance;
+            if (!dock.IsEnabled) dock.Enable();
+            dock.PinApp("opsis://search/" + Uri.EscapeDataString(query));
+            Close();
         }
 
         private void Launch()

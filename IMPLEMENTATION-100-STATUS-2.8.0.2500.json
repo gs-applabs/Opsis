@@ -3,10 +3,10 @@
   "pre_release": true,
   "tests_deferred_per_user": true,
   "counts": {
-    "new": 45,
+    "new": 55,
     "existing": 17,
     "partial": 8,
-    "pending": 30
+    "pending": 20
   },
   "phases": {
     "Α — Γρήγορες, τοπικές αλλαγές": [
@@ -416,10 +416,10 @@
     {
       "id": 38,
       "title": "Διαφορετική πυκνότητα πληροφοριών σε κατακόρυφη δευτερεύουσα οθόνη.",
-      "status": "pending",
-      "status_el": "ΕΚΚΡΕΜΕΙ ΥΛΟΠΟΙΗΣΗ",
-      "evidence": "—",
-      "note": "Δεν έχει τεκμηριωθεί ολοκλήρωση στον παρόντα κύκλο"
+      "status": "new",
+      "status_el": "ΥΛΟΠΟΙΗΘΗΚΕ ΣΤΟΝ SOURCE · ΧΩΡΙΣ BUILD",
+      "evidence": "src/Containers/ContainerWindow.cs",
+      "note": "Αυτόματη μετάβαση σε συμπαγή λίστα όταν ένα container εμφανίζεται σε στενή κατακόρυφη οθόνη· ο renderer ακολουθεί την ίδια γεωμετρία με το hit-testing."
     },
     {
       "id": 39,
@@ -440,10 +440,10 @@
     {
       "id": 41,
       "title": "Προεπισκόπηση ζώνης με το πληκτρολόγιο πριν από τη μετακίνηση.",
-      "status": "pending",
-      "status_el": "ΕΚΚΡΕΜΕΙ ΥΛΟΠΟΙΗΣΗ",
-      "evidence": "—",
-      "note": "Δεν έχει τεκμηριωθεί ολοκλήρωση στον παρόντα κύκλο"
+      "status": "new",
+      "status_el": "ΥΛΟΠΟΙΗΘΗΚΕ ΣΤΟΝ SOURCE · ΧΩΡΙΣ BUILD",
+      "evidence": "src/Widgets/ZoneLayoutEditorForm.cs",
+      "note": "Προεπισκόπηση ζώνης με Tab/βέλη/Home/End και ορατή εστίαση, πριν από το Apply."
     },
     {
       "id": 42,
@@ -496,10 +496,10 @@
     {
       "id": 48,
       "title": "Επαναφορά ομάδας εφαρμογών με σωστή σειρά εκκίνησης.",
-      "status": "pending",
-      "status_el": "ΕΚΚΡΕΜΕΙ ΥΛΟΠΟΙΗΣΗ",
-      "evidence": "—",
-      "note": "Δεν έχει τεκμηριωθεί ολοκλήρωση στον παρόντα κύκλο"
+      "status": "new",
+      "status_el": "ΥΛΟΠΟΙΗΘΗΚΕ ΣΤΟΝ SOURCE · ΧΩΡΙΣ BUILD",
+      "evidence": "src/Widgets/DeskStripWindow.cs",
+      "note": "Ομάδες εκκίνησης εφαρμογών με αποθηκευμένη σειρά και ελεγχόμενη διαδοχική εκκίνηση από το DeskStrip."
     },
     {
       "id": 49,
@@ -568,26 +568,26 @@
     {
       "id": 57,
       "title": "Επισήμανση συντομεύσεων με ανύπαρκτο προορισμό και μαζική επιδιόρθωση.",
-      "status": "pending",
-      "status_el": "ΕΚΚΡΕΜΕΙ ΥΛΟΠΟΙΗΣΗ",
-      "evidence": "—",
-      "note": "Δεν έχει τεκμηριωθεί ολοκλήρωση στον παρόντα κύκλο"
+      "status": "new",
+      "status_el": "ΥΛΟΠΟΙΗΘΗΚΕ ΣΤΟΝ SOURCE · ΧΩΡΙΣ BUILD",
+      "evidence": "src/Containers/BrokenShortcutTools.cs · src/Containers/ContainerWindow.cs · src/Containers/ContainerHost.cs",
+      "note": "Σήμανση σπασμένων .lnk, bounded αναζήτηση μοναδικών στόχων, ρητή έγκριση επιδιόρθωσης και backup του αρχικού shortcut."
     },
     {
       "id": 58,
       "title": "Κάδος πρόσφατων αλλαγών διάταξης με επαναφορά ανά container.",
-      "status": "pending",
-      "status_el": "ΕΚΚΡΕΜΕΙ ΥΛΟΠΟΙΗΣΗ",
-      "evidence": "—",
-      "note": "Δεν έχει τεκμηριωθεί ολοκλήρωση στον παρόντα κύκλο"
+      "status": "new",
+      "status_el": "ΥΛΟΠΟΙΗΘΗΚΕ ΣΤΟΝ SOURCE · ΧΩΡΙΣ BUILD",
+      "evidence": "src/Containers/ContainerLayoutHistory.cs · src/Containers/ContainerHost.cs",
+      "note": "Περιορισμένο ιστορικό διάταξης ανά container και επιβεβαιωμένη ανάκτηση προηγούμενης κατάστασης."
     },
     {
       "id": 59,
       "title": "Αντιγραφή διάταξης container σε δεύτερο workspace χωρίς αντιγραφή των αρχείων.",
-      "status": "pending",
-      "status_el": "ΕΚΚΡΕΜΕΙ ΥΛΟΠΟΙΗΣΗ",
-      "evidence": "—",
-      "note": "Δεν έχει τεκμηριωθεί ολοκλήρωση στον παρόντα κύκλο"
+      "status": "new",
+      "status_el": "ΥΛΟΠΟΙΗΘΗΚΕ ΣΤΟΝ SOURCE · ΧΩΡΙΣ BUILD",
+      "evidence": "src/Containers/ContainerHost.Organization.cs · src/Containers/ContainerWindow.cs",
+      "note": "Αντιγραφή μεταδεδομένων και αναφορών container σε υπάρχον ή νέο workspace χωρίς αντιγραφή πραγματικών αρχείων."
     },
     {
       "id": 60,
@@ -624,10 +624,10 @@
     {
       "id": 64,
       "title": "Καρφίτσωμα αναζήτησης ως έτοιμης ενέργειας στο dock.",
-      "status": "pending",
-      "status_el": "ΕΚΚΡΕΜΕΙ ΥΛΟΠΟΙΗΣΗ",
-      "evidence": "—",
-      "note": "Δεν έχει τεκμηριωθεί ολοκλήρωση στον παρόντα κύκλο"
+      "status": "new",
+      "status_el": "ΥΛΟΠΟΙΗΘΗΚΕ ΣΤΟΝ SOURCE · ΧΩΡΙΣ BUILD",
+      "evidence": "src/Containers/SpotSearch.cs · src/Widgets/DeskStripWindow.cs",
+      "note": "Καρφίτσωμα έτοιμης αναζήτησης στο DeskStrip και επανεκκίνηση SpotSearch με το αποθηκευμένο ερώτημα."
     },
     {
       "id": 65,
@@ -640,18 +640,18 @@
     {
       "id": 66,
       "title": "Ομαδοποίηση πολλών παραθύρων της ίδιας εφαρμογής στο DeskStrip.",
-      "status": "pending",
-      "status_el": "ΕΚΚΡΕΜΕΙ ΥΛΟΠΟΙΗΣΗ",
-      "evidence": "—",
-      "note": "Δεν έχει τεκμηριωθεί ολοκλήρωση στον παρόντα κύκλο"
+      "status": "new",
+      "status_el": "ΥΛΟΠΟΙΗΘΗΚΕ ΣΤΟΝ SOURCE · ΧΩΡΙΣ BUILD",
+      "evidence": "src/Widgets/DeskStripWindow.cs",
+      "note": "Υπομενού για μεμονωμένη επιλογή κάθε παραθύρου μιας εφαρμογής όταν υπάρχουν πολλαπλά παράθυρα."
     },
     {
       "id": 67,
       "title": "Προσαρμογή σειράς εικονιδίων χωριστά για κάθε οθόνη.",
-      "status": "pending",
-      "status_el": "ΕΚΚΡΕΜΕΙ ΥΛΟΠΟΙΗΣΗ",
-      "evidence": "—",
-      "note": "Δεν έχει τεκμηριωθεί ολοκλήρωση στον παρόντα κύκλο"
+      "status": "new",
+      "status_el": "ΥΛΟΠΟΙΗΘΗΚΕ ΣΤΟΝ SOURCE · ΧΩΡΙΣ BUILD",
+      "evidence": "src/Widgets/DeskStripWindow.cs",
+      "note": "Αποθηκευμένη σειρά καρφιτσωμένων εικονιδίων ανά DeviceName οθόνης, χωρίς διάσπαση της κοινής λίστας εφαρμογών."
     },
     {
       "id": 68,
@@ -752,10 +752,10 @@
     {
       "id": 80,
       "title": "Ομαλή επιστροφή του visualizer μετά από αποσύνδεση Bluetooth.",
-      "status": "pending",
-      "status_el": "ΕΚΚΡΕΜΕΙ ΥΛΟΠΟΙΗΣΗ",
-      "evidence": "—",
-      "note": "Δεν έχει τεκμηριωθεί ολοκλήρωση στον παρόντα κύκλο"
+      "status": "new",
+      "status_el": "ΥΛΟΠΟΙΗΘΗΚΕ ΣΤΟΝ SOURCE · ΧΩΡΙΣ BUILD",
+      "evidence": "src/Services/SharedLoopbackCapture.cs · src/Services/AudioSpectrumService.cs",
+      "note": "Ανίχνευση νέας γενιάς WASAPI loopback μετά από επανασύνδεση συσκευής και ομαλή επάνοδος με fade-in του φάσματος."
     },
     {
       "id": 81,
@@ -918,12 +918,13 @@
       "note": "Προαιρετικό και χρονικά περιορισμένο session diagnostics"
     }
   ],
-  "revision": "R5",
-  "last_changed_utc": "2026-11-23T12:45:00Z",
-  "checkpoint": "R6-S1",
+  "revision": "R7",
+  "last_changed_utc": "2026-11-23T15:55:00Z",
+  "checkpoint": "R7-S2",
   "implementation_sessions": {
     "completed": [
-      1
+      1,
+      2
     ],
     "planned": 4,
     "session1_ids": [
@@ -937,6 +938,18 @@
       76,
       79,
       88
+    ],
+    "session2_ids": [
+      38,
+      41,
+      48,
+      57,
+      58,
+      59,
+      64,
+      66,
+      67,
+      80
     ]
   }
 }

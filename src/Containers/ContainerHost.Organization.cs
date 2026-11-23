@@ -40,6 +40,81 @@ internal sealed partial class ContainerHost
         });
     }
 
+    internal IReadOnlyList<(int Index, string Name)> OtherLayoutTargets() =>
+        _organizationPackage == null ? [] : _organizationPackage.Layouts
+            .Select((layout, index) => (Index: index, Name: layout.Name))
+            .Where(item => item.Index != _organizationPackage.Selected).ToArray();
+
+    internal bool CopyContainerIntoLayout(string id, int targetIndex)
+    {
+        var package = _organizationPackage;
+        if (package == null || targetIndex < 0 || targetIndex >= package.Layouts.Length || targetIndex == package.Selected)
+            return false;
+        Flush();
+        var model = _service.Snapshot().Containers.FirstOrDefault(c => c.Id == id);
+        if (model == null) return false;
+        // Deep-copy metadata/references. Never copy, move or rewrite files on disk.
+        var clone = JsonSerializer.Deserialize<Container>(JsonSerializer.Serialize(model))!;
+        (clone.Extra ??= new())[LayoutImport.OwnerKey] = JsonSerializer.SerializeToElement("opsis-workspace-copy");
+        var layouts = (DesktopLayout[])package.Layouts.Clone();
+        var destination = layouts[targetIndex];
+        var models = destination.Containers.Where(c => c.Id != id).ToList();
+        models.Add(clone);
+        layouts[targetIndex] = destination with { Containers = models };
+        var updated = package with { Layouts = layouts };
+        _service.Update(doc =>
+        {
+            (doc.Extra ??= new())[LayoutImport.PackageKey] = JsonSerializer.SerializeToElement(updated);
+            return true;
+        });
+        _organizationPackage = updated;
+        return true;
+    }
+
+    /// <summary>Create another imported workspace with only the selected container's references,
+    /// keeping the current full layout. This is a metadata operation: no user file is copied.</summary>
+    internal bool CopyContainerIntoNewLayout(string id, string? name)
+    {
+        name = name?.Trim();
+        if (string.IsNullOrWhiteSpace(name) || name.Length > 80) return false;
+        Flush();
+        var document = _service.Snapshot();
+        var selected = document.Containers.FirstOrDefault(c => c.Id == id);
+        if (selected == null) return false;
+        var package = _organizationPackage;
+        if (package?.Layouts.Length >= 60 ||
+            package?.Layouts.Any(l => l.Name.Equals(name, StringComparison.OrdinalIgnoreCase)) == true) return false;
+        // Deep copies keep paths as references: the originals on disk are untouched.
+        Container CloneManaged(Container source)
+        {
+            var model = JsonSerializer.Deserialize<Container>(JsonSerializer.Serialize(source))!;
+            (model.Extra ??= new())[LayoutImport.OwnerKey] = JsonSerializer.SerializeToElement("opsis-workspace");
+            return model;
+        }
+        var clonedTarget = CloneManaged(selected);
+        var existingLayouts = package == null
+            ? new[] { new DesktopLayout("Current workspace", document.Containers.Select(CloneManaged).ToList()) }
+            : package.Layouts;
+        if (existingLayouts.Length >= 60) return false;
+        var updated = (package ?? EmptyOrganization) with
+        {
+            Layouts = existingLayouts.Append(new DesktopLayout(name, [clonedTarget])).ToArray(),
+            Selected = package?.Selected ?? 0
+        };
+        try { Backup(force: true); } catch (IOException) { }
+        _service.Update(doc =>
+        {
+            if (package == null)
+                foreach (var container in doc.Containers)
+                    (container.Extra ??= new())[LayoutImport.OwnerKey] = JsonSerializer.SerializeToElement("opsis-workspace");
+            (doc.Extra ??= new())[LayoutImport.PackageKey] = JsonSerializer.SerializeToElement(updated);
+            return true;
+        });
+        _organizationPackage = updated;
+        Sync();
+        return true;
+    }
+
     internal void ChangeImportedLayout(int layout)
     {
         if (_organizationPackage is not { } active || active.Layouts.Length == 0 || layout == active.Selected) return;

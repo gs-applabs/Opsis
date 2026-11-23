@@ -25,6 +25,8 @@ namespace MotionDesk.Services
 
         public int BandCount { get; }
         private readonly float[] _bands;
+        private int _captureGeneration = -1;
+        private float _resumeFade = 1f;
         private readonly int[] _bandBinEdges;
         public bool IsAvailable => _acquired && SharedLoopbackCapture.IsAvailable;
 
@@ -82,6 +84,14 @@ namespace MotionDesk.Services
         {
             if (!_acquired) return _bands;
 
+            // Bluetooth/HDMI device reconnect: fade from silence into the new live
+            // FFT stream, without a flash of full-height spectrum bars.
+            int generation = SharedLoopbackCapture.Generation;
+            if (generation != _captureGeneration)
+            {
+                _captureGeneration = generation;
+                _resumeFade = 0f;
+            }
             if (!SharedLoopbackCapture.CopyLatest(_samples))
             {
                 Array.Clear(_bands);
@@ -116,9 +126,10 @@ namespace MotionDesk.Services
                 // dB-scale mapping: -60dB..0dB -> 0..1, τυπική αναλογία για audio visualizers.
                 double db = 20 * Math.Log10(mag + 1e-6);
                 double level = (db + 60) / 60.0 * BandGains[b];
-                _bands[b] = (float)Math.Clamp(level, 0.0, 1.0);
+                _bands[b] = (float)Math.Clamp(level * _resumeFade, 0.0, 1.0);
             }
 
+            _resumeFade = Math.Min(1f, _resumeFade + 0.10f);
             return _bands;
         }
 

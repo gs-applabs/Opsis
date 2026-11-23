@@ -161,7 +161,7 @@ namespace MotionDesk.Containers
             try { return ColorTranslator.FromHtml(hex); } catch (Exception) { return fallback; }
         }
 
-        public static void Paint(Graphics g, Size client, Container model, List<ContainerItem> items, ContainerMetrics m, int scroll, int hover, int selected, ContainerIcons icons, bool glass, float scale, bool? highContrast = null, int pulseIndex = -1, float pulse = 0f, IReadOnlySet<string>? selectedPaths = null, bool titleOnly = false)
+        public static void Paint(Graphics g, Size client, Container model, List<ContainerItem> items, ContainerMetrics m, int scroll, int hover, int selected, ContainerIcons icons, bool glass, float scale, bool? highContrast = null, int pulseIndex = -1, float pulse = 0f, IReadOnlySet<string>? selectedPaths = null, bool titleOnly = false, bool? rowsOverride = null)
         {
             var hc = highContrast ?? SystemInformation.HighContrast;   // Windows High Contrast: system colours only, opaque, no glass
             g.SmoothingMode = SmoothingMode.AntiAlias; g.InterpolationMode = InterpolationMode.HighQualityBicubic; g.TextRenderingHint = TextRenderingHint.AntiAliasGridFit;
@@ -227,7 +227,7 @@ namespace MotionDesk.Containers
 
             // ---- items (only the visible range)
             string mode = ContainerItemLayout.ViewOf(model);
-            bool rows = mode is "list" or "details";
+            bool rows = rowsOverride ?? (mode is "list" or "details");
             var layout = new ContainerItemLayout(client, m, rows);
             var (first, last) = layout.VisibleRange(items.Count, scroll);
             var view = layout.Viewport;
@@ -259,6 +259,15 @@ namespace MotionDesk.Containers
                     ? new Rectangle(cell.X + (int)(4 * scale), cell.Y + (cell.Height - m.IconSize) / 2, m.IconSize, m.IconSize)
                     : new Rectangle(cell.X + (cell.Width - m.IconSize) / 2, cell.Y + (int)(4 * scale), m.IconSize, m.IconSize);
                 g.DrawImage(icons.Get(item.Path, m.IconSize), iconRect);
+                if (BrokenShortcutTools.IsKnownBroken(item.Path))
+                {
+                    var bad = new Rectangle(iconRect.Right - 15, iconRect.Bottom - 15, 15, 15);
+                    using var warningFill = new SolidBrush(Color.FromArgb(235, 196, 45, 36));
+                    g.FillEllipse(warningFill, bad);
+                    using var warningFont = new Font("Segoe UI", 9, FontStyle.Bold, GraphicsUnit.Pixel);
+                    TextRenderer.DrawText(g, "!", warningFont, bad, Color.White,
+                        TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPadding);
+                }
                 var name = string.IsNullOrEmpty(item.DisplayName) ? System.IO.Path.GetFileNameWithoutExtension(item.Path) : item.DisplayName;
                 float textLeft = iconRect.Right + 7 * scale;
                 bool details = mode == "details" && cell.Width >= 260 * scale;
@@ -417,7 +426,17 @@ namespace MotionDesk.Containers
             _icons.Loaded += Dirty;
             _portalTimer.Tick += (_, _) => { _portalTimer.Stop(); RefreshPortal(); };
             _hoverTimer.Tick += (_, _) => UpdateAutoHide();
-            Load += (_, _) => RefreshPortal();
+            Load += (_, _) =>
+            {
+                RefreshPortal();
+                // Probe .lnk files off-thread; renderer only reads the cached answer.
+                var paths = Model.Items.Concat(Model.Tabs.SelectMany(t => t.Items)).Select(i => i.Path).ToArray();
+                _ = Task.Run(() => BrokenShortcutTools.Find(paths)).ContinueWith(_ =>
+                {
+                    if (IsHandleCreated && !IsDisposed)
+                        try { BeginInvoke(new Action(Dirty)); } catch (InvalidOperationException) { }
+                }, TaskScheduler.Default);
+            };
         }
 
         /// <summary>For tests: waits until the background icon extraction has finished (UI messages keep pumping).</summary>
@@ -432,7 +451,11 @@ namespace MotionDesk.Containers
 
         private float Scale => DeviceDpi / 96f;
         private bool TabsOn => Model.Kind == ContainerKind.Data && Model.TabsEnabled && Model.Tabs.Count > 0;
-        private bool UsesRows => ContainerItemLayout.ViewOf(Model) is "list" or "details";
+        private bool UsesRows => ContainerItemLayout.ViewOf(Model) is "list" or "details" ||
+            (ContainerItemLayout.ViewOf(Model) == "grid" &&
+             Screen.FromRectangle(Bounds) is { Bounds: var monitorBounds } &&
+             monitorBounds.Height > monitorBounds.Width * 1.15 &&
+             Bounds.Width < 420); // portrait secondary displays: readable single-column density
         private ContainerItemLayout ItemLayout => new(Client, Metrics, UsesRows);
         private ContainerMetrics Metrics => ContainerMetrics.Default(Scale, Model.TitleBar.Height, UsesRows ? 20 : Model.Appearance.IconSize > 0 ? Model.Appearance.IconSize : 48) with { TopInset = TabsOn ? (int)(26 * Scale) : 0 };
 
@@ -671,7 +694,7 @@ namespace MotionDesk.Containers
         private void PaintFrame(Graphics g, Size size, bool? highContrast = null)
         {
             var pulse = PulseProgress();
-            ContainerRenderer.Paint(g, size, Model, Items, Metrics, _scroll, _hover, _selected, _icons, GlassOn, Scale, highContrast, _pulseIndex, pulse, _selection, titleOnly: IsCollapsed);
+            ContainerRenderer.Paint(g, size, Model, Items, Metrics, _scroll, _hover, _selected, _icons, GlassOn, Scale, highContrast, _pulseIndex, pulse, _selection, titleOnly: IsCollapsed, rowsOverride: UsesRows);
             if (!IsCollapsed) PaintTabIndicator(g);
         }
 
@@ -1097,6 +1120,25 @@ namespace MotionDesk.Containers
                         int detach = TabAt(at);
                         Add(Local("Detach tab", "Απόσπαση καρτέλας"), () => host.DetachTab(Model.Id, detach >= 0 ? detach : Model.CurrentTab));
                     }
+                    var copyTo = new ToolStripMenuItem(Local("Copy to another workspace…", "Αντιγραφή σε άλλο workspace…"));
+                    foreach (var target in host.OtherLayoutTargets())
+                    {
+                        int targetIndex = target.Index;
+                        copyTo.DropDownItems.Add(target.Name, null, (_, _) => host.CopyContainerIntoLayout(Model.Id, targetIndex));
+                    }
+                    copyTo.DropDownItems.Add(Local("New workspace…", "Νέο workspace…"), null, (_, _) =>
+                    {
+                        var newName = Ask(Local("Workspace name", "Όνομα workspace"), "New workspace");
+                        if (newName == null) return;
+                        if (MessageBox.Show(this,
+                            Local("Create a managed workspace copy of this container? No user files are copied; the current layout is backed up.",
+                                  "Δημιουργία διαχειριζόμενου workspace; Δεν αντιγράφονται αρχεία και κρατείται backup διάταξης."),
+                            "Opsis", MessageBoxButtons.YesNo, MessageBoxIcon.Question,
+                            MessageBoxDefaultButton.Button2) != DialogResult.Yes) return;
+                        if (!host.CopyContainerIntoNewLayout(Model.Id, newName))
+                            MessageBox.Show(this, Local("Name unavailable or workspace limit reached", "Το όνομα υπάρχει ήδη ή εξαντλήθηκε το όριο"), "Opsis");
+                    });
+                    menu.Items.Add(copyTo);
                 }
                 Add("New tab...", () => { var n = Ask("Tab name", "Tab " + (Model.Tabs.Count + 1)); if (n != null) AddTab(n); });
                 if (TabsOn) { Add("Rename this tab...", () => { var t = Model.Tabs[Math.Clamp(Model.CurrentTab, 0, Model.Tabs.Count - 1)]; var n = Ask("Tab name", t.Name); if (n != null) { t.Name = n; Dirty(); Changed?.Invoke(Model); } }); Add("Remove this tab (icons move to the next one)", () => RemoveTab(Model.CurrentTab)); }
@@ -1141,6 +1183,14 @@ namespace MotionDesk.Containers
                     filter.DropDownItems.Add(new ToolStripMenuItem(title, null, (_, _) => ChooseFilter(key))
                     { Checked = ItemFilter == key });
                 menu.Items.Add(filter);
+            }
+            if (ContainerHost.Current is { } localHost)
+            {
+                Add(Local("Restore previous layout", "Επαναφορά προηγούμενης διάταξης"),
+                    () => localHost.RestorePreviousLayout(Model.Id, this), localHost.HasLayoutHistory(Model.Id));
+                if (Model.Kind == ContainerKind.Data)
+                    Add(Local("Inspect and repair broken shortcuts…", "Έλεγχος/επιδιόρθωση συντομεύσεων…"),
+                        () => _ = localHost.InspectBrokenShortcutsAsync(Model.Id, this));
             }
             Add(LocalizationManager.T("DCM.RenameContainer"), RenameContainer);
             Add(MotionDesk.Services.LocalizationManager.T("DCM.ContainerSettings"), () => SettingsRequested?.Invoke(Model.Id));

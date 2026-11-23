@@ -15,6 +15,8 @@ namespace MotionDesk.Containers
         private readonly Control _ui;                                   // a control created on the UI thread, used to marshal pipe-thread events
         private readonly Dictionary<string, ContainerWindow> _windows = new();
         private readonly Dictionary<string, Container> _dirty = new();
+        private readonly ContainerLayoutHistory _layoutHistory = new();
+        private readonly System.Windows.Forms.Timer _layoutHistorySave = new() { Interval = 4000 };
         private readonly System.Windows.Forms.Timer _save = new() { Interval = 400 };
         // z-order: directly above the desktop, below normal windows; re-seated every second (Win+D, Explorer restart and other topmost changes move windows around)
         private readonly System.Windows.Forms.Timer _z = new() { Interval = 1000 };
@@ -38,6 +40,7 @@ namespace MotionDesk.Containers
             _service = new ContainersService(store, Monitors);
             _service.Mutated += () => { if (_ui.IsHandleCreated && !_ui.IsDisposed) try { _ui.BeginInvoke(Sync); } catch (Exception) { } };
             _save.Tick += (_, _) => Flush();
+            _layoutHistorySave.Tick += (_, _) => { _layoutHistorySave.Stop(); _layoutHistory.Save(); };
             _rules.Tick += (_, _) => EvaluateRules(); _rules.Start();
             _z.Tick += (_, _) => ReseatZOrder(); _z.Start();
             if (pipeName != null) { _pipe = new PipeServer(pipeName, new HostApi(this)); _pipe.Start(); }
@@ -87,7 +90,14 @@ namespace MotionDesk.Containers
         public void Apply(string id, Func<Container, bool> change)
         {
             Flush();
-            _service.Update(doc => { var c = doc.Containers.FirstOrDefault(x => x.Id == id); return c != null && change(c); });
+            _service.Update(doc =>
+            {
+                var c = doc.Containers.FirstOrDefault(x => x.Id == id);
+                if (c == null) return false;
+                _layoutHistory.Remember(c);
+                if (!_layoutHistorySave.Enabled) _layoutHistorySave.Start();
+                return change(c);
+            });
             Sync();
         }
 
@@ -134,6 +144,8 @@ namespace MotionDesk.Containers
             Flush();
             var container = Containers().FirstOrDefault(c => c.Id == id);
             if (container == null) return false;
+            _layoutHistory.Remember(container);
+            _layoutHistorySave.Start();
             _service.Handle("delete", new System.Text.Json.Nodes.JsonObject { ["id"] = id });
             var remaining = Containers();
             if (remaining.Any(c => c.Id == id)) return false;
@@ -198,7 +210,12 @@ namespace MotionDesk.Containers
             Sync();
         }
 
-        public void ShowSpotSearch() { var f = new SpotSearchForm(() => _service.Snapshot()); f.FormClosed += (_, _) => f.Dispose(); f.Show(); }
+        public void ShowSpotSearch(string initialQuery = "")
+        {
+            var f = new SpotSearchForm(() => _service.Snapshot(), initialQuery);
+            f.FormClosed += (_, _) => f.Dispose();
+            f.Show();
+        }
 
         /// <summary>Profile hotkeys: next / previous layout snapshot (the saved layouts act as profiles). Returns the name that was loaded, or null when there is none.</summary>
         public string? CycleSnapshot(int direction)
@@ -228,6 +245,35 @@ namespace MotionDesk.Containers
         }
         public IReadOnlyList<string> SnapshotNames() => ((System.Text.Json.Nodes.JsonArray)_service.Handle("snapshot-list", new System.Text.Json.Nodes.JsonObject())!).Select(n => n!.ToString()).ToList();
         public IReadOnlyList<Container> Containers() => _service.Snapshot().Containers;
+        internal bool HasLayoutHistory(string id) => _layoutHistory.Has(id);
+        internal void RestorePreviousLayout(string id, IWin32Window owner)
+        {
+            if (!_layoutHistory.Has(id)) return;
+            if (MessageBox.Show(owner,
+                    "Restore the previous saved container layout? The actual files will not be changed.",
+                    "Opsis · Layout history", MessageBoxButtons.YesNo, MessageBoxIcon.Question,
+                    MessageBoxDefaultButton.Button2) != DialogResult.Yes) return;
+            Flush(); Backup(force: true);
+            var previous = _layoutHistory.Pop(id);
+            if (previous == null) return;
+            _service.Update(doc =>
+            {
+                int index = doc.Containers.FindIndex(c => c.Id == id);
+                if (index >= 0) doc.Containers[index] = previous;
+                else doc.Containers.Add(previous);
+                return true;
+            });
+            _layoutHistory.Save();
+            ReplaceOrganizationWindows(c => c.Id == id);
+        }
+        internal async Task InspectBrokenShortcutsAsync(string id, IWin32Window owner)
+        {
+            var c = Containers().FirstOrDefault(x => x.Id == id);
+            if (c == null) return;
+            var paths = c.Items.Concat(c.Tabs.SelectMany(tab => tab.Items)).Select(i => i.Path).ToArray();
+            await BrokenShortcutTools.InspectAndRepairAsync(owner, paths);
+            if (_windows.TryGetValue(id, out var window) && !window.IsDisposed) window.Restyle();
+        }
 
         /// <summary>Makes the windows match the stored data (UI thread).</summary>
         public void Sync()
@@ -315,7 +361,14 @@ namespace MotionDesk.Containers
             _service.Update(doc =>
             {
                 var any = false;
-                foreach (var c in changed) { var i = doc.Containers.FindIndex(x => x.Id == c.Id); if (i >= 0) { doc.Containers[i] = c; any = true; } }
+                foreach (var c in changed)
+                {
+                    var i = doc.Containers.FindIndex(x => x.Id == c.Id);
+                    if (i < 0) continue;
+                    _layoutHistory.Remember(doc.Containers[i]);
+                    doc.Containers[i] = c; any = true;
+                }
+                if (any && !_layoutHistorySave.Enabled) _layoutHistorySave.Start();
                 return any;
             });
         }
@@ -338,7 +391,8 @@ namespace MotionDesk.Containers
             MotionDesk.UI.ThemeManager.Changed -= OnLookChanged; MotionDesk.UI.ThemeManager.Repainted -= OnLookChanged;
             MotionDesk.Services.HardwareProfileService.ProfileChanged -= OnTierChanged; MotionDesk.Services.LocalizationManager.Changed -= OnLookChanged; _look.Dispose(); _selection?.Dispose();
             try { MotionDesk.Widgets.DesktopIconVisibilityEngine.RestoreOriginals(); } catch (Exception) { }          // every exit gives the hidden originals back
-            Flush(); _save.Dispose(); _rules.Dispose(); _z.Dispose(); _pipe?.Dispose();
+            Flush(); _layoutHistorySave.Stop(); _layoutHistory.Save(); _layoutHistorySave.Dispose();
+            _save.Dispose(); _rules.Dispose(); _z.Dispose(); _pipe?.Dispose();
             foreach (var w in _windows.Values) { w.Close(); w.Dispose(); }
             _windows.Clear(); _ui.Dispose();
         }

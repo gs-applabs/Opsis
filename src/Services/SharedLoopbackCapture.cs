@@ -21,6 +21,9 @@ internal static class SharedLoopbackCapture
     private static readonly Guid FloatFormat = new("00000003-0000-0010-8000-00AA00389B71");
     private static int _refCount;
     private static WasapiLoopbackCapture? _capture;
+    private static int _generation;
+    /// <summary>Changes whenever a working audio capture replaces an old one.</summary>
+    internal static int Generation { get { lock (Sync) return _generation; } }
     private static System.Threading.Timer? _restartTimer;
 
     public static bool HasRecentSignal { get { lock (Sync) return _lastSignalTick != 0 && Environment.TickCount64 - _lastSignalTick < 1300; } }
@@ -74,6 +77,7 @@ internal static class SharedLoopbackCapture
             capture.RecordingStopped += OnStopped;
             capture.StartRecording();
             _capture = capture;
+            unchecked { _generation++; }
         }
         catch
         {
