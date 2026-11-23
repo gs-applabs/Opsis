@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
     <TargetFramework>net11.0-windows10.0.19041.0</TargetFramework>
@@ -11,8 +11,9 @@
     <RootNamespace>MotionDesk</RootNamespace>
     <AssemblyName>Opsis.Studio</AssemblyName>
     <Product>Opsis Desktop Customization</Product>
-    <Version>2.7.7.2403</Version>
-    <FileVersion>2.7.7.2403</FileVersion>
+    <Version>2.8.0.2500</Version>
+    <FileVersion>2.8.0.2500</FileVersion>
+    <InformationalVersion>2.8.0.2500-compatibility-preview</InformationalVersion>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <NoWarn>$(NoWarn);WFO1000</NoWarn>

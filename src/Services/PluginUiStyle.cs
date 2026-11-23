@@ -30,6 +30,20 @@ namespace MotionDesk.Services
         {
             try
             {
+                // The plugin style is fixed to Opsis since plan 2.1.1. Do not rewrite an
+                // identical JSON at every start: it creates unnecessary SSD writes and
+                // wakes the FileSystemWatcher in other family apps.
+                if (File.Exists(FilePath))
+                {
+                    try
+                    {
+                        using var existing = JsonDocument.Parse(File.ReadAllText(FilePath));
+                        if (existing.RootElement.TryGetProperty("style", out var style) &&
+                            style.ValueKind == JsonValueKind.String && style.GetString() == Current)
+                            return;
+                    }
+                    catch (JsonException) { /* corrupted file: replace it below */ }
+                }
                 Directory.CreateDirectory(AppPaths.AppDataFolder);
                 AtomicFile.WriteAllText(FilePath, JsonSerializer.Serialize(new { style = Current, version = DateTime.UtcNow.Ticks }));
             }

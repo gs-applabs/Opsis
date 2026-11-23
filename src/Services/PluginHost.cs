@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
@@ -510,7 +510,14 @@ namespace MotionDesk.Services
                 // όταν το contract δεν βρίσκεται στο probing path της εφαρμογής.
                 var contractAssembly = typeof(IOpsisNewsCrawlerPlugin).Assembly;
                 if (string.Equals(name.Name, contractAssembly.GetName().Name, StringComparison.OrdinalIgnoreCase))
-                    return contractAssembly;
+                    return CompatibleHostAssembly(name, contractAssembly);
+
+                // Opsis.UI must be shared as well: a separate copy inside every plugin's
+                // AssemblyLoadContext creates independent OpsisTheme/GlassSettings statics.
+                // The host owns theme, language and accessibility state for all plugins.
+                var sharedUiAssembly = typeof(Opsis.UI.FlatButton).Assembly;
+                if (string.Equals(name.Name, sharedUiAssembly.GetName().Name, StringComparison.OrdinalIgnoreCase))
+                    return CompatibleHostAssembly(name, sharedUiAssembly);
 
                 // Πρώτα χρησιμοποιούμε το .deps.json μέσω του AssemblyDependencyResolver.
                 var path = _resolver.ResolveAssemblyToPath(name);
@@ -539,6 +546,15 @@ namespace MotionDesk.Services
                 }
 
                 return null;
+            }
+
+            private static Assembly CompatibleHostAssembly(AssemblyName requested, Assembly host)
+            {
+                var available = host.GetName();
+                if (!AssemblyName.ReferenceMatchesDefinition(requested, available) ||
+                    (requested.Version != null && available.Version != null && requested.Version > available.Version))
+                    throw new FileLoadException($"Plugin requires {requested.FullName}; Opsis provides {available.FullName}. Update Opsis or the plugin.");
+                return host;
             }
 
             protected override IntPtr LoadUnmanagedDll(string unmanagedDllName)

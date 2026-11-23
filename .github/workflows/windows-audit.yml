@@ -39,18 +39,13 @@ jobs:
           $setup = Get-ChildItem Output -File -Filter 'OpsisSetup-*.exe' | Select-Object -First 1
           if (!$setup) { throw 'Installer output missing' }
           [ordered]@{
-            appVersion = '2.7.7.2403'
+            appVersion = '2.8.0.2500'
             dotnetSdk = (dotnet --version)
             node = (node --version)
             installerName = $setup.Name
             installerSha256 = (Get-FileHash -LiteralPath $setup.FullName -Algorithm SHA256).Hash
             generatedUtc = [DateTime]::UtcNow.ToString('o')
           } | ConvertTo-Json | Out-File Output/build-manifest.json -Encoding utf8
-      - uses: actions/upload-artifact@v4
-        with:
-          name: Opsis-Desktop-Customization-source-and-installer
-          path: Output/
-          if-no-files-found: error
       - name: Audit the application and taskbar registry
         shell: pwsh
         run: |
@@ -68,6 +63,14 @@ jobs:
           $report = Join-Path $output 'ui-audit.md'
           if (Test-Path $report) { Get-Content $report | Out-File -Append $env:GITHUB_STEP_SUMMARY -Encoding utf8 }
           if ($process.ExitCode -ne 0) { throw "Opsis audit failed with exit code $($process.ExitCode)" }
+      # Do not publish a release-candidate installer as a successful artifact before
+      # the application's actual UI and resource audit has passed.
+      - uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: Opsis-Desktop-Customization-2.8.0.2500-UNRELEASED-validated-build
+          path: Output/
+          if-no-files-found: error
       - uses: actions/upload-artifact@v4
         if: always()
         with:

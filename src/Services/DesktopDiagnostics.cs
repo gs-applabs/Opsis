@@ -1052,7 +1052,11 @@ namespace MotionDesk.Services
             }
             w.Close();
             File.WriteAllText(Path.Combine(folder, "plugin-widget.txt"),
-                $"plugins={PluginHost.Instance.Plugins.Count} replaced={(replacement != null)} widget={replacement?.Key}");
+                $"plugins={PluginHost.Instance.Plugins.Count} replaced={(replacement != null)} widget={replacement?.Key} " +
+                $"ids={string.Join(",", PluginHost.Instance.Plugins.Select(p => p.Id))} " +
+                $"versions={string.Join(",", PluginHost.Instance.Plugins.Select(p => p.Id + "@" + p.Version))} " +
+                $"pluginDlls={string.Join(",", PluginHost.Instance.Plugins.Select(p => p.Id + "@" + (p.GetType().Assembly.GetName().Version?.ToString(4) ?? "unknown")))} " +
+                $"feeds={string.Join(",", OpsisNewsCrawler.Plugin.Abstractions.PluginFeeds.All().Select(f => f.Key))}");
             PluginHost.Instance.StopAll();
             return replacement != null ? 0 : 1;
         }
