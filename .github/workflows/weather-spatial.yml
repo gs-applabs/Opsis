@@ -1,0 +1,57 @@
+name: Weather Wallpaper 2.5D / 3D validation
+on:
+  push:
+    branches: [feat/weather-wallpaper-25d-3d]
+  pull_request:
+    branches: [feat/p1-shell-customization-2.8.0.2510]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  weather-renderer-check:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-2022, windows-2025]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 40
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '11.0.x'
+      - name: Check JavaScript modules
+        run: |
+          node --check src/Widgets/wallpaper/weather-spatial.js
+          node --check src/Widgets/wallpaper/weather.js
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Spatial renderer fallback tests
+        run: |
+          node --test tests/weather-spatial/weather-spatial.test.cjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Compile Opsis .NET 11
+        run: |
+          dotnet restore Opsis.csproj --disable-parallel
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          dotnet build Opsis.csproj -c Release --no-restore -m:1 -p:UseSharedCompilation=false -nodeReuse:false
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Publish win-x64
+        run: |
+          dotnet publish Opsis.csproj -c Release -r win-x64 --self-contained false -o publish -m:1 -p:UseSharedCompilation=false -nodeReuse:false
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          if (!(Test-Path publish/widgets/wallpaper/weather-spatial.js)) { throw 'Spatial renderer missing from publish directory' }
+          Compress-Archive -Path publish/* -DestinationPath Opsis-Weather-25D-3D-${{ matrix.os }}.zip -Force
+      - name: Save renderer artifact
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: opsis-weather-${{ matrix.os }}
+          path: Opsis-Weather-25D-3D-*.zip
+          if-no-files-found: warn
+          retention-days: 7
