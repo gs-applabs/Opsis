@@ -30,6 +30,14 @@ public static class OpsisTaskbarDesigner
     private static string? _cachedPath;
     private static long _checkedAt;
     public static Profile Default => new();
+    private static Profile Copy(Profile p) => new()
+    {
+        Schema = p.Schema, Name = p.Name, Style = p.Style, Alignment = p.Alignment,
+        ButtonWidth = p.ButtonWidth, ButtonGap = p.ButtonGap,
+        OpacityPercent = p.OpacityPercent, ShowTaskView = p.ShowTaskView,
+        ShowClock = p.ShowClock, ActiveButtonAnimation = p.ActiveButtonAnimation,
+        AnimationIntervalMs = p.AnimationIntervalMs
+    };
 
     public static void Validate(Profile? p)
     {
@@ -49,11 +57,11 @@ public static class OpsisTaskbarDesigner
             var path = FilePath;
             if (_cached != null && string.Equals(_cachedPath, path, StringComparison.OrdinalIgnoreCase) &&
                 Environment.TickCount64 - _checkedAt < 5000)
-                return _cached;
+                return Copy(_cached);
             if (!File.Exists(path))
             {
                 _cached = Default; _cachedPath = path; _checkedAt = Environment.TickCount64;
-                return _cached;
+                return Copy(_cached);
             }
             if (new FileInfo(path).Length > 32 * 1024)
                 throw new InvalidDataException("Taskbar profile is oversized.");
@@ -61,7 +69,7 @@ public static class OpsisTaskbarDesigner
                 ?? throw new InvalidDataException("Taskbar profile not readable.");
             Validate(p);
             _cached = p; _cachedPath = path; _checkedAt = Environment.TickCount64;
-            return p;
+            return Copy(p);
         }
     }
 
