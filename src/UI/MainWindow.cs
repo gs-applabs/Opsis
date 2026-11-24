@@ -2706,19 +2706,89 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
             ecosystemList.Columns.Add(LocalizationManager.CurrentLanguage == "el" ? "Τύπος" : "Type", 135);
             ecosystemList.Columns.Add(LocalizationManager.CurrentLanguage == "el" ? "Κατηγορία" : "Category", 155);
             ecosystemList.Columns.Add(LocalizationManager.CurrentLanguage == "el" ? "Περιεχόμενο" : "Contribution", 315);
+            var galleryFilters = new FlowLayoutPanel
+            {
+                Width = 720, AutoSize = true, WrapContents = true
+            };
+            var galleryType = new ComboBox { Width = 150, DropDownStyle = ComboBoxStyle.DropDownList };
+            galleryType.Items.AddRange(new object[]
+            {
+                "All", "wallpaper", "widget", "theme", "icon-pack", "cursor-pack",
+                "automation-template", "layout"
+            });
+            galleryType.SelectedIndex = 0;
+            var galleryCategory = new ComboBox { Width = 200, DropDownStyle = ComboBoxStyle.DropDownList };
+            galleryCategory.Items.Add("All"); galleryCategory.SelectedIndex = 0;
+            var gallerySearch = new TextBox
+            {
+                Width = 285, PlaceholderText = StudioText("Search Gallery", "Αναζήτηση στη Gallery")
+            };
+            galleryFilters.Controls.Add(galleryType);
+            galleryFilters.Controls.Add(galleryCategory);
+            galleryFilters.Controls.Add(gallerySearch);
+            ecosystemCard.Controls.Add(galleryFilters);
             ecosystemCard.Controls.Add(ecosystemList);
+            System.Collections.Generic.IReadOnlyList<OpsisEcosystemGallery.Item> contributions =
+                Array.Empty<OpsisEcosystemGallery.Item>();
+
+            void DrawContributions()
+            {
+                var type = galleryType.SelectedItem?.ToString() ?? "All";
+                var category = galleryCategory.SelectedItem?.ToString() ?? "All";
+                var search = gallerySearch.Text.Trim();
+                ecosystemList.BeginUpdate();
+                try
+                {
+                    ecosystemList.Items.Clear();
+                    ecosystemList.Groups.Clear();
+                    var groups = new System.Collections.Generic.Dictionary<string, ListViewGroup>(
+                        StringComparer.OrdinalIgnoreCase);
+                    foreach (var item in contributions.Where(x =>
+                        (type == "All" || string.Equals(x.Type, type, StringComparison.OrdinalIgnoreCase)) &&
+                        (category == "All" || string.Equals(x.Category, category, StringComparison.OrdinalIgnoreCase)) &&
+                        (search.Length == 0 ||
+                            x.Title.Contains(search, StringComparison.CurrentCultureIgnoreCase) ||
+                            x.PluginId.Contains(search, StringComparison.CurrentCultureIgnoreCase) ||
+                            x.Category.Contains(search, StringComparison.CurrentCultureIgnoreCase))))
+                    {
+                        var groupKey = item.Type + " / " + item.Category;
+                        if (!groups.TryGetValue(groupKey, out var group))
+                        {
+                            group = new ListViewGroup(groupKey);
+                            groups[groupKey] = group;
+                            ecosystemList.Groups.Add(group);
+                        }
+                        var line = new ListViewItem(item.Type, group);
+                        line.SubItems.Add(item.Category);
+                        line.SubItems.Add(item.Title + " [" + item.PluginId + "]");
+                        line.Tag = item;
+                        ecosystemList.Items.Add(line);
+                    }
+                }
+                finally { ecosystemList.EndUpdate(); }
+            }
+
             void RefreshContributions()
             {
-                ecosystemList.Items.Clear();
-                foreach (var item in OpsisEcosystemGallery.Discover())
+                contributions = OpsisEcosystemGallery.Discover();
+                var category = galleryCategory.SelectedItem?.ToString() ?? "All";
+                galleryCategory.BeginUpdate();
+                try
                 {
-                    var line = new ListViewItem(item.Type);
-                    line.SubItems.Add(item.Category);
-                    line.SubItems.Add(item.Title + " [" + item.PluginId + "]");
-                    line.Tag = item;
-                    ecosystemList.Items.Add(line);
+                    galleryCategory.Items.Clear();
+                    galleryCategory.Items.Add("All");
+                    foreach (var name in contributions.Select(x => x.Category)
+                                 .Distinct(StringComparer.OrdinalIgnoreCase)
+                                 .OrderBy(x => x, StringComparer.CurrentCultureIgnoreCase))
+                        galleryCategory.Items.Add(name);
+                    galleryCategory.SelectedItem = galleryCategory.Items.Contains(category) ? category : "All";
                 }
+                finally { galleryCategory.EndUpdate(); }
+                DrawContributions();
             }
+            galleryType.SelectedIndexChanged += (_, _) => DrawContributions();
+            galleryCategory.SelectedIndexChanged += (_, _) => DrawContributions();
+            gallerySearch.TextChanged += (_, _) => DrawContributions();
             try { RefreshContributions(); }
             catch (Exception ex) { RotatingLogger.Write("Ecosystem Gallery discovery: " + ex.Message); }
             AddButtonGrid(ecosystemCard,
