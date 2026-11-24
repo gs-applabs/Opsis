@@ -28,8 +28,12 @@ public sealed partial class MainWindow
                         "  →  Target: " + report.TargetVersion);
                     lines.AppendLine("Native 2.8 features mapped: " + report.Baseline.Count);
                     lines.AppendLine("Current module registry: " + report.RegisteredModules);
+                    lines.AppendLine("Installed plugin package folders: " + report.InstalledPluginFolders.Count);
+                    lines.AppendLine("Pending plugin approvals: " + report.AwaitingPluginApprovals);
                     lines.AppendLine("Loaded plugin identities: " + report.LoadedPlugins.Count);
                     lines.AppendLine("Contributed Gallery assets: " + report.GalleryContributions);
+                    foreach (var folder in report.InstalledPluginFolders.Take(40))
+                        lines.AppendLine("  Package " + System.IO.Path.GetFileName(folder));
                     foreach (var plugin in report.LoadedPlugins)
                         lines.AppendLine("  Plugin " + plugin.Id + " v" + plugin.Version +
                             (plugin.Enabled ? " [enabled]" : " [disabled]"));
