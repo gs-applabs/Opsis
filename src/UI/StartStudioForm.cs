@@ -23,7 +23,9 @@ public sealed class StartStudioForm : Form
     private readonly CheckBox _pinnedOnly = new() { Text = "Pinned only / Μόνο καρφιτσωμένα", AutoSize = true, Margin = new Padding(7, 10, 10, 6) };
     private readonly Button _pinButton = new() { Text = "Pin / Unpin", Width = 120, Height = 30 };
     private readonly Button _refreshButton = new() { Text = "Refresh / Ανανέωση", Width = 160, Height = 30 };
-    private readonly FlowLayoutPanel _toolbar = new() { Dock = DockStyle.Top, Height = 42, WrapContents = false };
+    private readonly FlowLayoutPanel _toolbar = new() { Dock = DockStyle.Top, Height = 76, WrapContents = true };
+    private readonly ComboBox _layoutStyle = new() { Width = 112, DropDownStyle = ComboBoxStyle.DropDownList };
+    private readonly CheckBox _groupByFolder = new() { Text = "Group / Ομάδες", Width = 140, AutoSize = false, Height = 30 };
 
     public StartStudioForm()
     {
@@ -38,11 +40,16 @@ public sealed class StartStudioForm : Form
         _toolbar.Controls.Add(_pinnedOnly);
         _toolbar.Controls.Add(_pinButton);
         _toolbar.Controls.Add(_refreshButton);
+        _layoutStyle.Items.AddRange(new object[] { "List", "Tiles", "Compact" });
+        _toolbar.Controls.Add(_layoutStyle);
+        _toolbar.Controls.Add(_groupByFolder);
         Controls.Add(_toolbar);
         Controls.Add(_info);
         _pinnedOnly.CheckedChanged += (_, _) => RefreshResults();
         _pinButton.Click += (_, _) => TogglePinned();
         _refreshButton.Click += (_, _) => LoadShortcuts();
+        _layoutStyle.SelectedIndexChanged += (_, _) => ChangePresentation();
+        _groupByFolder.CheckedChanged += (_, _) => ChangePresentation();
         _search.TextChanged += (_, _) => RefreshResults();
         _results.DoubleClick += (_, _) => OpenSelected();
         _results.KeyDown += (_, e) => { if (e.KeyCode == Keys.Enter) { OpenSelected(); e.Handled = true; } };
@@ -87,9 +94,44 @@ public sealed class StartStudioForm : Form
         }
         _entries = items.GroupBy(x => x.Path, StringComparer.OrdinalIgnoreCase)
             .Select(g => g.First()).OrderBy(x => x.Name, StringComparer.CurrentCultureIgnoreCase).ToList();
-        try { _pinned = StartStudioPreferences.Read().PinnedShortcuts.ToHashSet(StringComparer.OrdinalIgnoreCase); }
+        try
+        {
+            var preferences = StartStudioPreferences.Read();
+            _pinned = preferences.PinnedShortcuts.ToHashSet(StringComparer.OrdinalIgnoreCase);
+            _layoutStyle.SelectedItem = preferences.DisplayStyle;
+            _groupByFolder.Checked = preferences.GroupByFolder;
+        }
         catch (Exception ex) { MessageBox.Show(this, ex.Message, "Start Studio saved shortcuts", MessageBoxButtons.OK, MessageBoxIcon.Warning); _pinned.Clear(); }
+        ApplyPresentation();
         RefreshResults();
+    }
+
+    private void ChangePresentation()
+    {
+        if (_layoutStyle.SelectedItem is not string style) return;
+        try { StartStudioPreferences.SetDisplay(style, _groupByFolder.Checked); }
+        catch (Exception ex) { _info.Text = "Start Studio: " + ex.Message; }
+        ApplyPresentation();
+        RefreshResults();
+    }
+
+    private void ApplyPresentation()
+    {
+        _results.BeginUpdate();
+        try
+        {
+            var style = _layoutStyle.SelectedItem?.ToString() ?? "List";
+            _results.View = style switch
+            {
+                "Tiles" => View.Tile,
+                "Compact" => View.SmallIcon,
+                _ => View.Details
+            };
+            _results.TileSize = new System.Drawing.Size(210, 66);
+            _results.ShowGroups = _groupByFolder.Checked;
+            if (style == "Compact") _results.Alignment = ListViewAlignment.Left;
+        }
+        finally { _results.EndUpdate(); }
     }
 
     private void TogglePinned()
@@ -113,6 +155,8 @@ public sealed class StartStudioForm : Form
         try
         {
             _results.Items.Clear();
+            _results.Groups.Clear();
+            var groups = new Dictionary<string, ListViewGroup>(StringComparer.OrdinalIgnoreCase);
             foreach (var entry in _entries.Where(x => (!_pinnedOnly.Checked || _pinned.Contains(x.Path)) &&
                 (term.Length == 0 ||
                 x.Name.Contains(term, StringComparison.CurrentCultureIgnoreCase) ||
@@ -124,6 +168,16 @@ public sealed class StartStudioForm : Form
                 var item = new ListViewItem((_pinned.Contains(entry.Path) ? "★ " : "") + entry.Name);
                 item.SubItems.Add(entry.Group);
                 item.Tag = entry.Path;
+                if (_groupByFolder.Checked)
+                {
+                    if (!groups.TryGetValue(entry.Group, out var group))
+                    {
+                        group = new ListViewGroup(entry.Group);
+                        groups.Add(entry.Group, group);
+                        _results.Groups.Add(group);
+                    }
+                    item.Group = group;
+                }
                 _results.Items.Add(item);
             }
             _info.Text = $"{_results.Items.Count} displayed / {_entries.Count} indexed — double click or Enter to launch";
