@@ -24,7 +24,7 @@ internal sealed class ReplacementTaskbar : Form
     private Button? _activeItem;
     private bool _pulseBright;
     private bool SignatureLook => AppSettings.Peek().ThemeMode == "SignatureGlass" && !SystemInformation.HighContrast;
-    private bool ShowGlassMark => _visual.StartGlassIcon || SignatureLook;
+    private bool ShowGlassMark => _visual.StartGlassIcon && !SystemInformation.HighContrast;
     private bool CanPulse => _visual.ActiveButtonAnimation && Visible && _activeItem is { IsDisposed: false } &&
         !SystemInformation.HighContrast && !AppActivity.IsPausedFor(Screen.FromControl(this));
 
@@ -248,7 +248,6 @@ internal sealed class ReplacementTaskbar : Form
         _start.Size = new Size(_visual.Style == "Compact" ? 60 : 66, _visual.Style == "Compact" ? 32 : 38);
         _taskView.Size = new Size(_visual.Style == "Compact" ? 35 : 42, _visual.Style == "Compact" ? 32 : 36);
         _clock.Size = new Size(104, _visual.Style == "Compact" ? 35 : 42);
-        foreach (var fixedButton in new[] { _start, _taskView, _clock }) StyleButton(fixedButton, false);
         _apps.FlowDirection = vertical ? FlowDirection.TopDown : FlowDirection.LeftToRight;
         _apps.SuspendLayout();
         try
