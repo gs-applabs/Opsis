@@ -283,7 +283,7 @@ namespace MotionDesk.UI
             var ui = UiContext;
             if (ui != null && System.Threading.SynchronizationContext.Current != ui)
             {
-                ui.Post(_ => RefreshFromWindows(), null);
+                ui.Post(_ => { MotionDesk.Services.HangTrace.Mark("RefreshFromWindows: start"); RefreshFromWindows(); MotionDesk.Services.HangTrace.Mark("RefreshFromWindows: done"); }, null);
                 return;
             }
             if (AppSettings.Load().ThemeMode == "Follow")

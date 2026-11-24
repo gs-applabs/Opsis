@@ -241,7 +241,7 @@ namespace MotionDesk.Widgets
 
         private void OnScreenChanged(object? sender, EventArgs e)
         {
-            if (IsHandleCreated && !IsDisposed) BeginInvoke(new Action(() => ApplyLayout(animate: false)));
+            if (IsHandleCreated && !IsDisposed) BeginInvoke(new Action(() => { MotionDesk.Services.HangTrace.Mark("DeskStrip.ApplyLayout: start"); ApplyLayout(animate: false); MotionDesk.Services.HangTrace.Mark("DeskStrip.ApplyLayout: done"); }));
         }
 
         // ---- ανίχνευση παραθύρων ----------------------------------------------------------------------------------
