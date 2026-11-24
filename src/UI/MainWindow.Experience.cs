@@ -152,6 +152,44 @@ public sealed partial class MainWindow
                 catch (Exception ex) { MessageBox.Show(this, ex.Message, "Weather Scene Composer", MessageBoxButtons.OK, MessageBoxIcon.Error); }
             }));
 
+        AddButtonGrid(sceneCard,
+            (StudioText("Export current theme", "Εξαγωγή τρέχοντος θέματος"), (_, _) =>
+            {
+                using var dialog = new SaveFileDialog
+                {
+                    Filter = "Opsis Theme (*.opsis-theme)|*.opsis-theme",
+                    FileName = "OpsisTheme.opsis-theme"
+                };
+                if (dialog.ShowDialog(this) != DialogResult.OK) return;
+                try
+                {
+                    OpsisThemeBundle.ExportCurrent(System.IO.Path.GetFileNameWithoutExtension(dialog.FileName), dialog.FileName);
+                    MessageBox.Show(this, StudioText("Theme exported. The bundle contains declarative settings only.",
+                        "Το θέμα εξήχθη με ασφαλή αρχεία ρυθμίσεων, χωρίς εκτελέσιμο κώδικα."),
+                        "Opsis Theme Bundle", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+                catch (Exception ex) { MessageBox.Show(this, ex.Message, "Opsis Theme Bundle", MessageBoxButtons.OK, MessageBoxIcon.Error); }
+            }),
+            (StudioText("Import theme bundle", "Εισαγωγή θέματος"), (_, _) =>
+            {
+                using var dialog = new OpenFileDialog
+                {
+                    Filter = "Opsis Theme (*.opsis-theme)|*.opsis-theme"
+                };
+                if (dialog.ShowDialog(this) != DialogResult.OK) return;
+                try
+                {
+                    var name = OpsisThemeBundle.Import(dialog.FileName);
+                    RefreshScenes();
+                    MessageBox.Show(this,
+                        StudioText("Imported without applying system changes: ", "Εισήχθη χωρίς αλλαγές συστήματος: ") + name +
+                        Environment.NewLine + StudioText("Apply its scene and appearance profile separately after reviewing.",
+                            "Εφάρμοσε τη σκηνή και το προφίλ εμφάνισης ξεχωριστά μετά από έλεγχο."),
+                        "Opsis Theme Bundle", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+                catch (Exception ex) { MessageBox.Show(this, ex.Message, "Opsis Theme Bundle", MessageBoxButtons.OK, MessageBoxIcon.Error); }
+            }));
+
         var windowCard = AddCardSection(panel, StudioText("P3 — Window Rules", "P3 — Κανόνες παραθύρων"));
         AddText(windowCard, StudioText(
             "Control position and always-on-top for explicitly named applications. Only the foreground window is inspected, no global hooks or DLL injection. All original positions are restored on exit.",
