@@ -348,11 +348,14 @@ public sealed partial class MainWindow
         {
             try
             {
+                if (windowEnabled.Checked && (SafeModeService.IsSafeMode || WindowsUpdateGuard.RequiresReview))
+                {
+                    windowEnabled.Checked = false;
+                    throw new InvalidOperationException("Windows compatibility review is required.");
+                }
                 var s = AppSettings.Load(); s.WindowRulesEnabled = windowEnabled.Checked; s.Save();
                 if (windowEnabled.Checked)
                 {
-                    if (SafeModeService.IsSafeMode || WindowsUpdateGuard.RequiresReview)
-                        throw new InvalidOperationException("Windows compatibility review is required.");
                     WindowRulesEngine.Instance.Start();
                 }
                 else { WindowRulesEngine.Instance.Stop(); WindowRulesEngine.Instance.Restore(); }
