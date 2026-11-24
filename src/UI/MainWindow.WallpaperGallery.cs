@@ -88,7 +88,7 @@ public sealed partial class MainWindow
         var addonGrid = NewGrid();
         page.Controls.Add(addonGrid);
         var addonItems = OpsisEcosystemGallery.Discover().Where(x => x.Type.Equals("wallpaper", StringComparison.OrdinalIgnoreCase) &&
-            Path.GetExtension(x.AssetPath).ToLowerInvariant() is ".jpg" or ".jpeg" or ".png").ToArray();
+            Path.GetExtension(x.AssetPath).ToLowerInvariant() is ".jpg" or ".jpeg" or ".png" or ".webp").ToArray();
         var addonTiles = new List<(WallpaperTile Tile, OpsisEcosystemGallery.Item Item)>();
         int packPage = 0;
         const int PackPageSize = 18;
@@ -264,11 +264,13 @@ public sealed partial class MainWindow
             try
             {
                 if (new FileInfo(path).Length > 32L * 1024 * 1024) return null;
+                if (Path.GetExtension(path).Equals(".webp", StringComparison.OrdinalIgnoreCase))
+                    return WallpaperPackImage.ReadThumbnail(path, width > 0 ? width : 480);
                 using var original = Image.FromFile(path);
                 if (original.Width <= 0 || original.Height <= 0 || (long)original.Width * original.Height > 40_000_000) return null;
                 return width > 0 ? new Bitmap(original, width, Math.Clamp((int)((long)original.Height * width / original.Width), 1, 960)) : new Bitmap(original);
             }
-            catch (Exception ex) when (ex is IOException or ArgumentException or System.Runtime.InteropServices.ExternalException) { return null; }
+            catch (Exception ex) when (ex is IOException or ArgumentException or System.Runtime.InteropServices.ExternalException or DllNotFoundException or TypeInitializationException) { return null; }
         }
 
         protected override void OnMouseEnter(EventArgs e) { base.OnMouseEnter(e); _pointer = true; StartPreview(); }

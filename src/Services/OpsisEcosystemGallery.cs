@@ -88,11 +88,11 @@ public static class OpsisEcosystemGallery
                 if ((File.GetAttributes(dir) & FileAttributes.ReparsePoint) != 0) continue;
                 var path = Path.Combine(dir, "opsis-contributions.json");
                 if (!File.Exists(path) || (File.GetAttributes(path) & FileAttributes.ReparsePoint) != 0 ||
-                    new FileInfo(path).Length > 128 * 1024) continue;
+                    new FileInfo(path).Length > (origin == "gallery-pack" ? MaxManifestBytes : 128 * 1024)) continue;
                 manifest = JsonSerializer.Deserialize<Manifest>(File.ReadAllText(path),
                     new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
                 if (manifest == null || manifest.Schema != 1 || !SafeToken(manifest.PluginId) ||
-                    manifest.Contributions == null || manifest.Contributions.Count > 100)
+                    manifest.Contributions == null || manifest.Contributions.Count > (origin == "gallery-pack" ? MaxPackImages : 100))
                     continue;
             }
             catch (Exception e) when (e is IOException or UnauthorizedAccessException or
@@ -171,8 +171,10 @@ public static class OpsisEcosystemGallery
     }
 
     private static readonly object PackGate = new();
-    private static readonly HashSet<string> PackImageExtensions = new(StringComparer.OrdinalIgnoreCase) { ".jpg", ".jpeg", ".png" };
-    private const long MaxPackBytes = 256L * 1024 * 1024;
+    private static readonly HashSet<string> PackImageExtensions = new(StringComparer.OrdinalIgnoreCase) { ".jpg", ".jpeg", ".png", ".webp" };
+    public const int MaxPackImages = 200;
+    private const long MaxPackBytes = 1024L * 1024 * 1024;
+    private const int MaxManifestBytes = 512 * 1024;
 
     /// <summary>Install a data-only static wallpaper pack into the existing gallery.
     /// No scripts, DLLs, archives within archives or auto-application. Publish only
@@ -184,7 +186,7 @@ public static class OpsisEcosystemGallery
         lock (PackGate)
         {
             using var archive = ZipFile.OpenRead(zipPath);
-            if (archive.Entries.Count is < 2 or > 101) throw new InvalidDataException("A gallery pack must contain one manifest and 1–100 images.");
+            if (archive.Entries.Count < 2 || archive.Entries.Count > MaxPackImages + 1) throw new InvalidDataException("A gallery pack must contain one manifest and 1–200 images.");
             var entries = new Dictionary<string, ZipArchiveEntry>(StringComparer.OrdinalIgnoreCase);
             long total = 0;
             foreach (var entry in archive.Entries)
@@ -197,13 +199,13 @@ public static class OpsisEcosystemGallery
                     throw new InvalidDataException("Gallery ZIP size quota exceeded.");
                 total += entry.Length;
             }
-            if (!entries.TryGetValue("opsis-contributions.json", out var manifestEntry) || manifestEntry.Length > 128 * 1024)
+            if (!entries.TryGetValue("opsis-contributions.json", out var manifestEntry) || manifestEntry.Length > MaxManifestBytes)
                 throw new InvalidDataException("Gallery manifest missing or too large.");
             byte[] manifestBytes = ReadEntry(manifestEntry);
             var manifest = JsonSerializer.Deserialize<Manifest>(manifestBytes, new JsonSerializerOptions { PropertyNameCaseInsensitive = true })
                 ?? throw new InvalidDataException("Invalid gallery manifest.");
             if (manifest.Schema != 1 || !SafeToken(manifest.PluginId) || manifest.PluginId is "." or ".." ||
-                manifest.PluginId.EndsWith('.') || manifest.Contributions == null || manifest.Contributions.Count is < 1 or > 100 ||
+                manifest.PluginId.EndsWith('.') || manifest.Contributions == null || (manifest.Contributions.Count < 1 || manifest.Contributions.Count > MaxPackImages) ||
                 !Version.TryParse(manifest.Version, out _) || entries.Count != manifest.Contributions.Count + 1)
                 throw new InvalidDataException("Invalid gallery pack identity or count.");
             // Use a fixed, generated folder name rather than trusting a manifest path.
@@ -238,17 +240,11 @@ public static class OpsisEcosystemGallery
                     byte[] data = ReadEntry(entries[item.Asset]);
                     string hash = Convert.ToHexString(SHA256.HashData(data));
                     if (!hashes.Add(hash)) throw new InvalidDataException("Duplicate image contents in the pack.");
-                    using var stream = new MemoryStream(data, writable: false);
-                    using var image = System.Drawing.Image.FromStream(stream, useEmbeddedColorManagement: false, validateImageData: true);
-                    bool png = Path.GetExtension(item.Asset).Equals(".png", StringComparison.OrdinalIgnoreCase);
-                    if ((png ? image.RawFormat.Guid != System.Drawing.Imaging.ImageFormat.Png.Guid :
-                        image.RawFormat.Guid != System.Drawing.Imaging.ImageFormat.Jpeg.Guid) ||
-                        image.Width <= 0 || image.Height <= 0 || image.Width > 8192 || image.Height > 8192 ||
-                        (long)image.Width * image.Height > 40_000_000)
-                        throw new InvalidDataException("Unsupported image format or dimensions.");
-                    // Never extract unvalidated filenames. Store under controlled names and
-                    // rewrite the manifest to those names; handles reserved DOS names too.
-                    string safeName = "image-" + hashes.Count.ToString("D3") + (png ? ".png" : ".jpg");
+                    string extension = Path.GetExtension(item.Asset).ToLowerInvariant();
+                    using (var decoded = WallpaperPackImage.Decode(data, extension)) { }
+                    // Keep the original compressed media unchanged. Only the controlled
+                    // storage filename and its manifest path are rewritten.
+                    string safeName = "image-" + hashes.Count.ToString("D3") + (extension == ".jpeg" ? ".jpg" : extension);
                     File.WriteAllBytes(Path.Combine(stage, "images", safeName), data);
                     item.Asset = "images/" + safeName;
                 }

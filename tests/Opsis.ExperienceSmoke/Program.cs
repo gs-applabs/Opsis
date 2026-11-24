@@ -301,6 +301,43 @@ try
     Check(OpsisEcosystemGallery.ImportWallpaperPack(addonZip) == 1 &&
         OpsisEcosystemGallery.Discover().Any(x => x.PluginId == "fixture.images" && x.Category == "Test"),
         "data-only wallpaper pack imported and categorized without applying wallpaper");
+    var webpBytes = Convert.FromBase64String("UklGRh4AAABXRUJQVlA4TBEAAAAvB8ABAAdQs840s/+BiOh/AAA=");
+    var webpZip = Path.Combine(folder, "addon-webp.zip");
+    using (var zip = System.IO.Compression.ZipFile.Open(webpZip, System.IO.Compression.ZipArchiveMode.Create))
+    {
+        using (var writer = new StreamWriter(zip.CreateEntry("opsis-contributions.json").Open()))
+            writer.Write(JsonSerializer.Serialize(new OpsisEcosystemGallery.Manifest { PluginId = "fixture.webp", Version = "1.0.0",
+                Contributions = new() { new() { Id = "webp", Type = "wallpaper", Title = "WebP fixture", Category = "Test", Asset = "images/fixture.webp" } } }));
+        using var entry = zip.CreateEntry("images/fixture.webp").Open();
+        entry.Write(webpBytes);
+    }
+    Check(OpsisEcosystemGallery.ImportWallpaperPack(webpZip) == 1, "static WebP pack imported");
+    var webpItem = OpsisEcosystemGallery.Discover().Single(x => x.PluginId == "fixture.webp");
+    Check(Path.GetExtension(webpItem.AssetPath) == ".webp" && File.ReadAllBytes(webpItem.AssetPath).SequenceEqual(webpBytes),
+        "WebP original preserved without transcoding");
+    using (var thumbnail = WallpaperPackImage.ReadThumbnail(webpItem.AssetPath, 4))
+        Check(thumbnail.Width == 4 && thumbnail.Height == 4, "WebP thumbnail decoded without Windows codec extension");
+    var largePack = Path.Combine(folder, "addon-200.zip");
+    using (var zip = System.IO.Compression.ZipFile.Open(largePack, System.IO.Compression.ZipArchiveMode.Create))
+    {
+        var manifest = new OpsisEcosystemGallery.Manifest { PluginId = "fixture.200", Version = "1.0.0" };
+        for (int i = 0; i < 200; i++)
+        {
+            var asset = $"images/image-{i:D3}.png";
+            manifest.Contributions.Add(new() { Id = $"image-{i:D3}", Type = "wallpaper", Title = $"Image {i}", Category = "Test", Asset = asset });
+            using var bmp = new System.Drawing.Bitmap(8, 8);
+            bmp.SetPixel(0, 0, System.Drawing.Color.FromArgb(255, i, 0, 0));
+            using var data = new MemoryStream();
+            bmp.Save(data, System.Drawing.Imaging.ImageFormat.Png);
+            using var entry = zip.CreateEntry(asset).Open();
+            data.Position = 0; data.CopyTo(entry);
+        }
+        using var writer = new StreamWriter(zip.CreateEntry("opsis-contributions.json").Open());
+        writer.Write(JsonSerializer.Serialize(manifest));
+    }
+    Check(OpsisEcosystemGallery.ImportWallpaperPack(largePack) == 200 &&
+        OpsisEcosystemGallery.Discover().Count(x => x.PluginId == "fixture.200") == 200,
+        "200-image pack imported and all entries discoverable");
     bool duplicatePackRejected = false;
     try { OpsisEcosystemGallery.ImportWallpaperPack(addonZip); }
     catch (InvalidDataException) { duplicatePackRejected = true; }
