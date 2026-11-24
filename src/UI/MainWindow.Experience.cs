@@ -37,7 +37,8 @@ public sealed partial class MainWindow
             {
                 try
                 {
-                    MessageBox.Show(this, OpsisRecoveryHub.InspectUpdateImpact(),
+                    MessageBox.Show(this, OpsisRecoveryHub.ReadLastUpdateImpact() + Environment.NewLine + Environment.NewLine +
+                        "Current scan: " + OpsisRecoveryHub.InspectUpdateImpact(),
                         "Opsis Compatibility Guard", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     RefreshGuard();
                 }
