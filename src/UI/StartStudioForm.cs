@@ -28,6 +28,7 @@ public sealed class StartStudioForm : Form
     private readonly CheckBox _groupByFolder = new() { Text = "Group / Ομάδες", Width = 140, AutoSize = false, Height = 30 };
     private readonly ComboBox _startStyle = new() { Width = 155, DropDownStyle = ComboBoxStyle.DropDownList };
     private readonly Button _startPreview = new() { Width = 46, Height = 40, Text = "", AccessibleName = "Selected Opsis Start button preview" };
+    private readonly System.Drawing.Icon? _startIcon = GetOpsisIcon();
     private bool _loadingPresentation;
 
     public StartStudioForm()
@@ -51,7 +52,7 @@ public sealed class StartStudioForm : Form
         _toolbar.Controls.Add(_startStyle);
         _startPreview.FlatStyle = FlatStyle.Flat;
         _startPreview.Paint += (_, e) => OpsisStartButtonArt.PaintButton(_startPreview, e,
-            _startStyle.SelectedItem as string ?? "Opsis Glass", GetOpsisIcon());
+            _startStyle.SelectedItem as string ?? "Opsis Glass", _startIcon);
         _startPreview.Click += (_, _) => MessageBox.Show(this,
             "This button design applies to the Opsis Replacement Taskbar. Native Windows Start stays unchanged.",
             "Opsis Start Button", MessageBoxButtons.OK, MessageBoxIcon.Information);
@@ -68,6 +69,7 @@ public sealed class StartStudioForm : Form
         _results.DoubleClick += (_, _) => OpenSelected();
         _results.KeyDown += (_, e) => { if (e.KeyCode == Keys.Enter) { OpenSelected(); e.Handled = true; } };
         Shown += (_, _) => { LoadShortcuts(); _search.Focus(); };
+        Disposed += (_, _) => _startIcon?.Dispose();
     }
 
     private void LoadShortcuts()
