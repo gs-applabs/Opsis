@@ -41,6 +41,10 @@ Both the WebGL2 3D precipitation and 2.5D depth effects are opt-in and fall back
 
 **Installed plugin inventory:** the audit distinguishes candidate installed folders (without executing their code), pending user trust approvals, loaded identities and disabled/enabled runtime plugins. It does not claim to certify a DLL merely because it is present. Gallery metadata may be listed without loading the DLL; explicit actions are required to apply a wallpaper or import a theme. Duplicate `PluginId:ItemId` contributions appear once; a higher valid manifest version takes precedence, with all sources retained in diagnostic results.
 
+### Cross-feature collision rules
+
+AutoTile and Window Rules are not allowed to control placement simultaneously: activation through the common feature adapter/UI is rejected while AutoTile is enabled, and the Window Rules runtime remains inactive if AutoTile later takes ownership. Two independent visual docks (Opsis replacement taskbar, DeskStrip, Desktop Toolbar) are reported as a review warning rather than deleted or silently disabled. The Opsis taskbar overlay is held if the read-only shell-product scan finds a high-risk competing replacement. No third-party program or preference is removed.
+
 ## 4. Remaining work before a true 3.0.0.3200
 
 The following larger original requests remain incomplete or require substantial real Windows 11 testing: full Windows Start replacement, advanced native Windows Taskbar and Explorer modifications across builds, Windhawk mod parity, full Rainmeter plugin/Lua engine, actual Windows `.scr` installation, downloadable online Theme Marketplace, deeper plugin SDK permission isolation, exhaustive live installed-plugin tests, 3D city/landmark geometry, Windows 11 GPU + DPI + fullscreen + multiple monitors, unattended update/migration rollback and packaging a production release.
@@ -54,6 +58,8 @@ Machine-readable state: `release/3.0.0.3200-readiness.json`.
 - `tests/integration/check_baseline_and_release.py` fails on any removed/retyped 2.8 configuration key, unreviewed additions or a premature 3.0 version bump.
 - `.github/workflows/3.0-integration.yml` runs both Windows 2022/2025 builds, safety/stress regressions, portable Opsis.exe self-test, Weather JS/WebGL fallback and real WebView2 captures.
 - `.github/workflows/3.0-installer-e2e.yml` builds and verifies the installer across clean install, reinstall and uninstall Windows VM lifecycles.
+- `src/Services/OpsisPluginPackageAudit.cs` reads assembly identity metadata only (no execution). Known NewsCrawler and Chronikologio entrypoints are checked against the **1.0.0.0 assembly ABI** required by the existing PluginHost. A matching version is not itself trust approval; other plugins still require the usual host SHA and contract validation.
+- `.github/workflows/3.0-plugins-e2e.yml` checks out the real `gs-applabs/OpsisNewsCrawler`, `gs-applabs/san-shmera` (Chronikologio) and `gs-applabs/OpsisMediaSuite` repositories, builds the .NET plugin DLLs, checks their *compiled* assembly identities and runs Electron Media Suite tests on both Windows VM images. The source repositories' default branches may differ from versions installed on a user's computer; live installed-package audit is also required.
 - Plugin compatibility, SHA-bound trust/approval and replacement of built-in widgets require E2E checks with the actual installed plugin binaries.
 - Full Windows 11 desktop visual tests and product security review remain mandatory and cannot be inferred from Windows Server GitHub Actions alone.
 
