@@ -9,7 +9,7 @@ namespace MotionDesk.Services
     /// <summary>Opt-in hot corners. UI thread timer, no system hooks or permanent OS changes.</summary>
     public sealed class HotCornersService : IDisposable
     {
-        private readonly Timer _timer = new() { Interval = 100 };
+        private readonly System.Windows.Forms.Timer _timer = new() { Interval = 100 };
         private readonly Action _openOpsis;
         private string _candidate = "";
         private long _enteredAt;
