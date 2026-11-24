@@ -20,6 +20,9 @@ internal sealed class ReplacementTaskbar : Form
     private string? _content;
     private bool _vertical;
     private OpsisTaskbarDesigner.Profile _visual = OpsisTaskbarDesigner.Default;
+    private readonly System.Windows.Forms.Timer _pulse = new() { Interval = 300 };
+    private Button? _activeItem;
+    private bool _pulseBright;
 
     internal static void RefreshSettings()
     {
@@ -126,7 +129,19 @@ internal sealed class ReplacementTaskbar : Form
             BeginInvoke(Stop);
         });
         ContextMenuStrip = menu;
-        Disposed += (_, _) => menu.Dispose();
+        Disposed += (_, _) => { _pulse.Stop(); _pulse.Dispose(); menu.Dispose(); };
+        _pulse.Tick += (_, _) =>
+        {
+            if (_activeItem == null || _activeItem.IsDisposed || !Visible) return;
+            _pulseBright = !_pulseBright;
+            _activeItem.FlatAppearance.BorderSize = _pulseBright ? 2 : 1;
+            _activeItem.FlatAppearance.BorderColor = _pulseBright
+                ? UiTheme.AccentCyan : UiTheme.TextSecondary;
+        };
+        VisibleChanged += (_, _) =>
+        {
+            _pulse.Enabled = Visible && _visual.ActiveButtonAnimation && _activeItem != null;
+        };
         _root.Controls.AddRange([_apps, _clock, _taskView, _start]);
         Controls.Add(_root);
     }
@@ -147,9 +162,14 @@ internal sealed class ReplacementTaskbar : Form
         _clock.BackColor = UiTheme.Surface;
         _taskView.ForeColor = UiTheme.TextPrimary;
         _taskView.BackColor = UiTheme.Surface;
-        string key = $"{vertical}|{active}|{_visual.Style}|{_visual.Alignment}|{_visual.ButtonWidth}|{_visual.ButtonGap}|{_visual.ShowTaskView}|{_visual.ShowClock}|{UiTheme.TextPrimary.ToArgb()}|{UiTheme.Surface.ToArgb()}|" +
+        string key = $"{vertical}|{active}|{_visual.Style}|{_visual.Alignment}|{_visual.ButtonWidth}|{_visual.ButtonGap}|{_visual.ShowTaskView}|{_visual.ShowClock}|{_visual.ActiveButtonAnimation}|{_visual.AnimationIntervalMs}|{UiTheme.TextPrimary.ToArgb()}|{UiTheme.Surface.ToArgb()}|" +
             string.Join('|', pins) + "|" + string.Join('|', list.Select(window => $"{window.Handle}:{window.Title}"));
-        if (_content == key) return;
+        if (_content == key)
+        {
+            _pulse.Interval = _visual.AnimationIntervalMs;
+            _pulse.Enabled = _visual.ActiveButtonAnimation && Visible && _activeItem != null;
+            return;
+        }
         _content = key;
         _vertical = vertical;
         _start.Dock = _taskView.Dock = vertical ? DockStyle.Top : DockStyle.Left;
@@ -166,6 +186,8 @@ internal sealed class ReplacementTaskbar : Form
         _apps.SuspendLayout();
         try
         {
+            _pulse.Stop();
+            _activeItem = null;
             foreach (Control old in _apps.Controls.Cast<Control>().ToArray()) old.Dispose();
             foreach (var file in pins.Take(14))
             {
@@ -188,7 +210,12 @@ internal sealed class ReplacementTaskbar : Form
                 }, window.Handle == active);
             }
         }
-        finally { _apps.ResumeLayout(); }
+        finally
+        {
+            _apps.ResumeLayout();
+            _pulse.Interval = _visual.AnimationIntervalMs;
+            _pulse.Enabled = _visual.ActiveButtonAnimation && Visible && _activeItem != null;
+        }
     }
 
     private void AddItem(string label, Action click, bool active)
@@ -198,7 +225,8 @@ internal sealed class ReplacementTaskbar : Form
             Height = OpsisTaskbarDesigner.ButtonHeight(_visual, _vertical, Height),
             Margin = new Padding(_visual.ButtonGap), FlatStyle = FlatStyle.Flat, Cursor = Cursors.Hand,
             BackColor = active ? UiTheme.SurfaceHover : UiTheme.Surface, ForeColor = active ? UiTheme.AccentCyan : UiTheme.TextPrimary };
-        item.FlatAppearance.BorderSize = 0;
+        item.FlatAppearance.BorderSize = active ? 1 : 0;
+        if (active) _activeItem = item;
         item.Click += (_, _) => click();
         _apps.Controls.Add(item);
     }
