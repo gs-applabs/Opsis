@@ -55,7 +55,7 @@ public static class OpsisRecoveryHub
     {
         var p = path.Replace('\\', '/');
         if (p.Contains("..", StringComparison.Ordinal) || p.StartsWith('/') || p.Contains(':')) return false;
-        if (p is "settings.json" or "wallpaper.json" or "module-core.json" or "automations.json" or "window-rules.json" or "start-studio.json") return true;
+        if (p is "settings.json" or "wallpaper.json" or "module-core.json" or "automations.json" or "window-rules.json" or "start-studio.json" or "taskbar-designer.json") return true;
         if (p is "native-profiles/explorer-view-before-opsis.json" or
             "native-profiles/taskbar-before-opsis.json") return true;
         if (p.StartsWith("widget-designs/", StringComparison.OrdinalIgnoreCase) &&
@@ -87,6 +87,7 @@ public static class OpsisRecoveryHub
         yield return "automations.json";
         yield return "window-rules.json";
         yield return "start-studio.json";
+        yield return "taskbar-designer.json";
         var widgetFolder = Path.Combine(AppPaths.AppDataFolder, "widget-designs");
         if (Directory.Exists(widgetFolder) && (File.GetAttributes(widgetFolder) & FileAttributes.ReparsePoint) == 0)
             foreach (var path in Directory.EnumerateFiles(widgetFolder, "*.json", SearchOption.TopDirectoryOnly).Take(250))
