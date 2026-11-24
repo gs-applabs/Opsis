@@ -17,13 +17,21 @@ public sealed class EffectsSettings
     public DarkTitleBars DarkTitle { get; set; } = DarkTitleBars.Off;
     public BackdropStyle Backdrop { get; set; } = BackdropStyle.Default;
     public bool AutoHideTaskbar { get; set; }
+    // Optional DWM backdrop for actual File Explorer windows, independent of other applications.
+    public bool ExplorerGlass { get; set; }
+    internal EffectsSettings Snapshot()
+    {
+        var copy = (EffectsSettings)MemberwiseClone();
+        copy.ExcludedProcesses = new List<string>(ExcludedProcesses);
+        return copy;
+    }
     /// <summary>Χρώμα γραμμής τίτλου / κειμένου τίτλου (Windows 11 22H2+). null = προεπιλογή. Όπως το Mica For Everyone.</summary>
     public int? CaptionRgb { get; set; }
     public int? CaptionTextRgb { get; set; }
     /// <summary>Διεργασίες που ΔΕΝ αγγίζονται (π.χ. "chrome.exe", "game.exe"). Συγκρίνεται χωρίς διάκριση πεζών/κεφαλαίων· το «.exe» είναι προαιρετικό.</summary>
     public List<string> ExcludedProcesses { get; set; } = new();
 
-    public bool AnyWindowEffect => ActiveBorder || Corners != CornerStyle.Default || DarkTitle != DarkTitleBars.Off || Backdrop != BackdropStyle.Default || CaptionRgb != null || CaptionTextRgb != null;
+    public bool AnyWindowEffect => ExplorerGlass || ActiveBorder || Corners != CornerStyle.Default || DarkTitle != DarkTitleBars.Off || Backdrop != BackdropStyle.Default || CaptionRgb != null || CaptionTextRgb != null;
 
     public static string NormalizeProcess(string name)
     {
@@ -48,6 +56,7 @@ public interface IDwmWindows
     IntPtr Foreground { get; }
     /// <summary>Όνομα εκτελέσιμου του παραθύρου (π.χ. "chrome.exe"), ή null αν δεν είναι γνωστό.</summary>
     string? ProcessName(IntPtr hwnd) => null;
+    bool IsExplorerWindow(IntPtr hwnd) => false;
     void SetCaptionColor(IntPtr hwnd, int colorRef) { }        // 0x00BBGGRR ή 0xFFFFFFFF = προεπιλογή
     void SetCaptionTextColor(IntPtr hwnd, int colorRef) { }
 }
@@ -89,7 +98,8 @@ public sealed class WindowEffectsEngine
     public void Apply(EffectsSettings s)
     {
         var old = Settings;
-        Settings = s;
+        // The UI mutates the live settings in place: retain an independent previous snapshot.
+        Settings = s.Snapshot();
 
         // Παράθυρα: πρώτα καθάρισε ό,τι δεν ισχύει πια, μετά εφάρμοσε.
         foreach (var h in _touched.ToList())
@@ -98,6 +108,7 @@ public sealed class WindowEffectsEngine
             if (old.Corners != CornerStyle.Default && s.Corners == CornerStyle.Default) _dwm.SetCorner(h, 0);
             if (old.DarkTitle != DarkTitleBars.Off && s.DarkTitle == DarkTitleBars.Off) _dwm.SetDarkTitle(h, _systemIsDark());
             if (old.Backdrop != BackdropStyle.Default && s.Backdrop == BackdropStyle.Default) _dwm.SetBackdrop(h, 0);
+            if (old.ExplorerGlass && !s.ExplorerGlass && s.Backdrop == BackdropStyle.Default && _dwm.IsExplorerWindow(h)) _dwm.SetBackdrop(h, 0);
             if (old.ActiveBorder && !s.ActiveBorder) _dwm.SetBorderColor(h, ColorDefault);
             if (old.CaptionRgb != null && s.CaptionRgb == null) _dwm.SetCaptionColor(h, ColorDefault);
             if (old.CaptionTextRgb != null && s.CaptionTextRgb == null) _dwm.SetCaptionTextColor(h, ColorDefault);
@@ -135,7 +146,12 @@ public sealed class WindowEffectsEngine
             _dwm.SetDarkTitle(h, s.DarkTitle == DarkTitleBars.On || _systemIsDark());
             touched = true;
         }
-        if (s.Backdrop != BackdropStyle.Default)
+        if (s.ExplorerGlass && _dwm.IsExplorerWindow(h))
+        {
+            _dwm.SetBackdrop(h, 3); // DWMSBT_TRANSIENTWINDOW (Acrylic), not Explorer content injection
+            touched = true;
+        }
+        else if (s.Backdrop != BackdropStyle.Default)
         {
             _dwm.SetBackdrop(h, s.Backdrop switch { BackdropStyle.None => 1, BackdropStyle.Mica => 2, BackdropStyle.Acrylic => 3, BackdropStyle.Tabbed => 4, _ => 0 });
             touched = true;
@@ -215,6 +231,14 @@ public sealed class RealDwmWindows : IDwmWindows
         { "Progman", "WorkerW", "Shell_TrayWnd", "Shell_SecondaryTrayWnd", "NotifyIconOverflowWindow", "TopLevelWindowForOverflowXamlIsland", "XamlExplorerHostIslandWindow", "Windows.UI.Core.CoreWindow" };
 
     public IntPtr Foreground => GetForegroundWindow();
+    public bool IsExplorerWindow(IntPtr h)
+    {
+        if (!IsEligible(h)) return false;
+        var name = new StringBuilder(128);
+        GetClassName(h, name, name.Capacity);
+        return name.ToString() is "CabinetWClass" or "ExploreWClass" &&
+            string.Equals(ProcessName(h), "explorer.exe", StringComparison.OrdinalIgnoreCase);
+    }
     public bool IsAlive(IntPtr h) => IsWindow(h);
 
     public IReadOnlyList<IntPtr> TopLevelWindows()
