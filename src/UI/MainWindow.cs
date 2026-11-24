@@ -2613,6 +2613,7 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
             var panel = CreatePagePanel();
             AddText(panel, LocalizationManager.T("Personalization.Intro"));
             BuildWindowsAppearance(panel);   // Windows look, themes, safety (2.6.0): the same Personalization tab, no sub-tab
+            BuildEcosystemStudios(panel); // Shared P3/P4/P5 controls, backed by the Opsis Core contracts
 
             // ---------- Unified Opsis ecosystem: core modules, gallery, recovery ----------
             var coreCard = AddCardSection(panel, LocalizationManager.CurrentLanguage == "el"
