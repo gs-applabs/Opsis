@@ -99,6 +99,32 @@ public static class AppearancePresets
         AtomicFile.WriteAllText(path, JsonSerializer.Serialize(preset, Json));
     }
 
+    /// <summary>Export validated, data-only JSON without changing the desktop.</summary>
+    public static void ExportPortable(string name, string destination)
+    {
+        var preset = Read(name);
+        if (!string.Equals(Path.GetExtension(destination), ".json", StringComparison.OrdinalIgnoreCase))
+            throw new ArgumentException("Appearance exports must use .json.", nameof(destination));
+        if (File.Exists(destination))
+            throw new IOException("The destination already exists.");
+        Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(destination))!);
+        AtomicFile.WriteAllText(destination, JsonSerializer.Serialize(preset, Json));
+    }
+
+    /// <summary>Import untrusted data only after schema/size/value validation. Never apply it automatically.</summary>
+    public static string ImportPortable(string source)
+    {
+        if (!string.Equals(Path.GetExtension(source), ".json", StringComparison.OrdinalIgnoreCase))
+            throw new ArgumentException("Appearance imports must use .json.", nameof(source));
+        if (new FileInfo(source).Length > 32 * 1024)
+            throw new InvalidDataException("Appearance preset exceeds 32 KB.");
+        var preset = JsonSerializer.Deserialize<Preset>(AtomicFile.ReadAllText(source))
+            ?? throw new InvalidDataException("Invalid appearance preset JSON.");
+        Validate(preset);
+        SavePortable(preset);
+        return preset.Name;
+    }
+
     public static Preset Read(string name)
     {
         var path = FilePath(name);
@@ -141,6 +167,8 @@ public static class AppearancePresets
         var before = Capture("Rollback");
         // Validate the entire preset before touching any Windows or Opsis settings.
         Validate(target);
+        if (Equivalent(before, target)) return; // No writes for an unchanged profile.
+        OpsisRecoveryHub.Snapshot("Before appearance preset: " + target.Name);
         try { ApplyCore(target); }
         catch
         {
@@ -153,20 +181,48 @@ public static class AppearancePresets
         }
     }
 
+    /// <summary>Side-effect-free value comparison; preset names are metadata only.</summary>
+    public static bool Equivalent(Preset a, Preset b) =>
+        a.HideFileExt == b.HideFileExt && a.Hidden == b.Hidden &&
+        a.CompactMode == b.CompactMode && a.ExplorerLaunchTo == b.ExplorerLaunchTo &&
+        (!TaskbarViewProfiles.IsWindows11 ||
+            (a.TaskbarAlignment == b.TaskbarAlignment && a.TaskbarWidgets == b.TaskbarWidgets &&
+             a.TaskbarTaskView == b.TaskbarTaskView && a.TaskbarSearch == b.TaskbarSearch)) &&
+        a.HotCornersEnabled == b.HotCornersEnabled && a.TopLeft == b.TopLeft &&
+        a.TopRight == b.TopRight && a.BottomLeft == b.BottomLeft &&
+        a.BottomRight == b.BottomRight && a.DwellMs == b.DwellMs &&
+        a.EdgePixels == b.EdgePixels && a.PauseOnFullscreen == b.PauseOnFullscreen;
+
     private static void ApplyCore(Preset p)
     {
-        ExplorerViewProfiles.ApplyOption("HideFileExt", p.HideFileExt);
-        ExplorerViewProfiles.ApplyOption("Hidden", p.Hidden);
-        ExplorerViewProfiles.ApplyOption("UseCompactMode", p.CompactMode);
-        ExplorerViewProfiles.ApplyOption("LaunchTo", p.ExplorerLaunchTo);
+        // Only changed options are written; no needless SSD or registry activity.
+        if (ExplorerViewProfiles.ReadOption("HideFileExt") != p.HideFileExt)
+            ExplorerViewProfiles.ApplyOption("HideFileExt", p.HideFileExt);
+        if (ExplorerViewProfiles.ReadOption("Hidden") != p.Hidden)
+            ExplorerViewProfiles.ApplyOption("Hidden", p.Hidden);
+        if (ExplorerViewProfiles.ReadOption("UseCompactMode") != p.CompactMode)
+            ExplorerViewProfiles.ApplyOption("UseCompactMode", p.CompactMode);
+        if (ExplorerViewProfiles.ReadOption("LaunchTo") != p.ExplorerLaunchTo)
+            ExplorerViewProfiles.ApplyOption("LaunchTo", p.ExplorerLaunchTo);
         if (TaskbarViewProfiles.IsWindows11)
         {
-            TaskbarViewProfiles.ApplyOption("TaskbarAl", p.TaskbarAlignment);
-            TaskbarViewProfiles.ApplyOption("TaskbarDa", p.TaskbarWidgets);
-            TaskbarViewProfiles.ApplyOption("ShowTaskViewButton", p.TaskbarTaskView);
-            TaskbarViewProfiles.ApplyOption("SearchboxTaskbarMode", p.TaskbarSearch);
+            if (TaskbarViewProfiles.ReadOption("TaskbarAl") != p.TaskbarAlignment)
+                TaskbarViewProfiles.ApplyOption("TaskbarAl", p.TaskbarAlignment);
+            if (TaskbarViewProfiles.ReadOption("TaskbarDa") != p.TaskbarWidgets)
+                TaskbarViewProfiles.ApplyOption("TaskbarDa", p.TaskbarWidgets);
+            if (TaskbarViewProfiles.ReadOption("ShowTaskViewButton") != p.TaskbarTaskView)
+                TaskbarViewProfiles.ApplyOption("ShowTaskViewButton", p.TaskbarTaskView);
+            if (TaskbarViewProfiles.ReadOption("SearchboxTaskbarMode") != p.TaskbarSearch)
+                TaskbarViewProfiles.ApplyOption("SearchboxTaskbarMode", p.TaskbarSearch);
         }
         var s = AppSettings.Load();
+        bool changed = s.HotCornersEnabled != p.HotCornersEnabled ||
+            s.HotCornerTopLeft != p.TopLeft || s.HotCornerTopRight != p.TopRight ||
+            s.HotCornerBottomLeft != p.BottomLeft || s.HotCornerBottomRight != p.BottomRight ||
+            s.HotCornerDwellMilliseconds != p.DwellMs ||
+            s.HotCornerEdgePixels != p.EdgePixels ||
+            s.HotCornersPauseOnFullscreen != p.PauseOnFullscreen;
+        if (!changed) return;
         s.HotCornersEnabled = p.HotCornersEnabled;
         s.HotCornerTopLeft = p.TopLeft; s.HotCornerTopRight = p.TopRight;
         s.HotCornerBottomLeft = p.BottomLeft; s.HotCornerBottomRight = p.BottomRight;

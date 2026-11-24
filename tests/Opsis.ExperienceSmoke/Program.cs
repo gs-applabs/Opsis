@@ -13,10 +13,10 @@ void Check(bool condition, string description)
 }
 try
 {
-    Check(MotionDesk.UI.OpsisStartButtonArt.Styles.Length == 6 &&
+    Check(MotionDesk.UI.OpsisStartButtonArt.Styles.Length == 11 &&
         MotionDesk.UI.OpsisStartButtonArt.IsValid("Opsis Glass") &&
         !MotionDesk.UI.OpsisStartButtonArt.IsValid("not-a-design"),
-        "P1 Start button gallery has six validated design choices");
+        "P1 Start button gallery has eleven validated design choices");
     Check(StartStudioPreferences.Read().StartButtonStyle == "Opsis Glass",
         "existing users default to the Opsis Glass emblem");
     StartStudioPreferences.SetStartButton("Aurora");
@@ -33,7 +33,13 @@ try
             MotionDesk.UI.OpsisStartButtonArt.Draw(g,
                 new System.Drawing.Rectangle(0, 0, 64, 64), design);
     }
-    Check(true, "all six P1 button designs render on the Windows GDI+ runner");
+    Check(true, "all eleven P1/P2 button designs render on the Windows GDI+ runner");
+    StartStudioPreferences.SetStartButton("Win11 Glass");
+    Check(StartStudioPreferences.Read().StartButtonStyle == "Win11 Glass",
+        "P2 rounded-square Windows 11 Start button persists");
+    Check(MotionDesk.UI.OpsisStartButtonArt.IsValid("Win11 Sharp") &&
+        MotionDesk.UI.OpsisStartButtonArt.IsValid("Opsis Square"),
+        "P2 sharp and rounded square Start variants are available");
     StartStudioPreferences.SetStartButton("Opsis Glass");
     Check(OpsisPluginPackageAudit.Classify("OpsisNewsCrawler.OpsisPlugin.dll",
               new Version(1, 0, 0, 0)) == "CompatibleABI",
@@ -106,6 +112,32 @@ try
     Check(rejected, "planned modules cannot be activated as implemented");
     OpsisModCore.SetOption("widgets.opsis", "category", "Weather");
     Check(OpsisModCore.Read().Options["widgets.opsis"]["category"] == "Weather", "typed module options persisted");
+
+    var unchangedAppearance = new AppearancePresets.Preset { Name = "Sample" };
+    var sameAppearance = new AppearancePresets.Preset { Name = "Different name" };
+    Check(AppearancePresets.Equivalent(unchangedAppearance, sameAppearance),
+        "P2 appearance equivalent comparison ignores metadata and avoids needless writes");
+    sameAppearance.Hidden = 1;
+    Check(!AppearancePresets.Equivalent(unchangedAppearance, sameAppearance),
+        "P2 appearance change detection notices Explorer changes");
+
+    var portableSource = Path.Combine(folder, "P2 portable source.json");
+    var portable = new AppearancePresets.Preset { Name = "P2 portable test" };
+    AppearancePresets.SavePortable(portable);
+    AppearancePresets.ExportPortable(portable.Name, portableSource);
+    Check(File.Exists(portableSource), "P2 portable JSON export created");
+    var exportJson = File.ReadAllText(portableSource);
+    Check(exportJson.Contains("P2 portable test"), "P2 export preserves validated preset");
+    AppearancePresets.Delete(portable.Name);
+    Check(AppearancePresets.ImportPortable(portableSource) == portable.Name,
+        "P2 validated portable import round-trip without applying settings");
+    var unsafeSource = Path.Combine(folder, "P2 unsafe.json");
+    File.WriteAllText(unsafeSource, """{"Schema":98,"Name":"invalid"}""");
+    bool invalidImportRejected = false;
+    try { AppearancePresets.ImportPortable(unsafeSource); }
+    catch (InvalidDataException) { invalidImportRejected = true; }
+    Check(invalidImportRejected, "P2 imported JSON rejects unexpected schema");
+    AppearancePresets.Delete(portable.Name);
 
     var scene = new WeatherSceneComposer.Scene {
         Name = "Athens Dawn", Weather = "Rain", Time = "Dawn",
