@@ -34,8 +34,9 @@ jobs:
         shell: pwsh
         run: |
           $env:OPSIS_APPDATA = Join-Path $env:RUNNER_TEMP 'opsis-selftests'
-          & .\publish\Opsis.exe --run-selftest
-          if ($LASTEXITCODE -ne 0) { throw "Opsis self-test failed: $LASTEXITCODE" }
+          # Opsis.exe is a GUI (WinExe) program: a plain call does not wait for it and leaves $LASTEXITCODE empty, so wait for it and read the real exit code
+          $selftest = Start-Process -FilePath (Resolve-Path .\publish\Opsis.exe).Path -ArgumentList '--run-selftest' -Wait -PassThru
+          if ($selftest.ExitCode -ne 0) { throw "Opsis self-test failed: $($selftest.ExitCode)" }
           node --test
           if ($LASTEXITCODE -ne 0) { throw "Wallpaper JavaScript tests failed: $LASTEXITCODE" }
       - name: Record reproducible toolchain and installer SHA-256
