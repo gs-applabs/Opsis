@@ -26,9 +26,9 @@ public static class OpsisScreensaverStudio
     {
         if (p == null || p.Schema != 1 ||
             p.Mode is not ("Clock" or "StaticImage" or "ClockAndImage") ||
-            p.DimPercent is < 0 or > 75 || p.ImagePath.Length > 2048)
+            p.DimPercent is < 0 or > 75 || p.ImagePath == null || p.ImagePath.Length > 2048)
             throw new InvalidDataException("Invalid screensaver scene.");
-        if (p.Mode is "StaticImage" or "ClockAndImage" &&
+        if ((p.Mode is "StaticImage" or "ClockAndImage") &&
             (!Path.IsPathFullyQualified(p.ImagePath) ||
              Path.GetExtension(p.ImagePath).ToLowerInvariant() is not (".jpg" or ".jpeg" or ".png" or ".webp" or ".bmp")))
             throw new InvalidDataException("Select a local, supported image format.");
