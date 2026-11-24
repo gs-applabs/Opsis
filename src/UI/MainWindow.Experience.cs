@@ -316,6 +316,23 @@ public sealed partial class MainWindow
             "One coherent entry point for native Start preferences, Opsis taskbar layout and supported Explorer options. Reversible profiles, no Windows binary injection.",
             "Ενιαίος χώρος για Start, σχεδίαση γραμμής εργασιών Opsis και υποστηριζόμενες επιλογές Explorer. Αναστρέψιμα προφίλ, χωρίς επεμβάσεις σε αρχεία Windows."));
         AddButtonGrid(shellDesignerCard,
+            (StudioText("Scan Windhawk/Rainmeter conflicts", "Έλεγχος συμβατότητας mods"), (_, _) =>
+            {
+                try
+                {
+                    var results = OpsisModCompatibility.Scan();
+                    var message = results.Count == 0
+                        ? StudioText("No known competing shell tools detected in installed applications or processes.",
+                            "Δεν εντοπίστηκαν γνωστά εργαλεία Shell στις εγκατεστημένες εφαρμογές ή διεργασίες.")
+                        : string.Join(Environment.NewLine + Environment.NewLine,
+                            results.Select(f => f.Product + " [" + f.Risk + "] — " + f.Area +
+                                Environment.NewLine + f.Advice));
+                    MessageBox.Show(this, message, "Opsis Shell Compatibility",
+                        MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+                catch (Exception ex) { MessageBox.Show(this, ex.Message, "Opsis Compatibility",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error); }
+            }),
             (StudioText("Taskbar visual designer", "Οπτικός σχεδιαστής Taskbar"), (_, _) =>
             {
                 try { using var designer = new OpsisTaskbarDesignerForm(); designer.ShowDialog(this); }
