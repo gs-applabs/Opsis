@@ -9,8 +9,8 @@ namespace MotionDesk.Services
     /// <summary>Native Windows controls for P0 mouse and screen saver; no shell hooks.</summary>
     public static class DesktopEffects
     {
-        private const uint GetMouseTrails = 0x005E;
-        private const uint SetMouseTrails = 0x005D;
+        private const uint SpiGetMouseTrails = 0x005E;
+        private const uint SpiSetMouseTrails = 0x005D;
         private const uint PersistAndBroadcast = 0x03;
         [DllImport("user32.dll", EntryPoint = "SystemParametersInfoW", SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
@@ -19,7 +19,7 @@ namespace MotionDesk.Services
         public static int GetMouseTrails()
         {
             int value = 0;
-            if (!Spi(GetMouseTrails, 0, ref value, 0))
+            if (!Spi(SpiGetMouseTrails, 0, ref value, 0))
                 throw new System.ComponentModel.Win32Exception(Marshal.GetLastWin32Error());
             return value;
         }
@@ -29,7 +29,7 @@ namespace MotionDesk.Services
             if (count != 0 && (count < 2 || count > 16))
                 throw new ArgumentOutOfRangeException(nameof(count));
             int unused = 0;
-            if (!Spi(SetMouseTrails, (uint)count, ref unused, PersistAndBroadcast))
+            if (!Spi(SpiSetMouseTrails, (uint)count, ref unused, PersistAndBroadcast))
                 throw new System.ComponentModel.Win32Exception(Marshal.GetLastWin32Error());
         }
 

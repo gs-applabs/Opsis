@@ -14,8 +14,6 @@ namespace MotionDesk.Services
         private string _candidate = "";
         private long _enteredAt;
         private bool _fired;
-        private const int Edge = 5;
-        private const int DwellMs = 700;
         public HotCornersService(Action openOpsis)
         {
             _openOpsis = openOpsis;
@@ -33,14 +31,17 @@ namespace MotionDesk.Services
                 Reset();
                 return;
             }
+            if (settings.HotCornersPauseOnFullscreen && IsForegroundFullscreen()) { Reset(); return; }
             var p = Cursor.Position;
+            var edge = Math.Clamp(settings.HotCornerEdgePixels, 2, 20);
+            var dwell = Math.Clamp(settings.HotCornerDwellMilliseconds, 300, 2500);
             var screen = Screen.AllScreens.FirstOrDefault(s => s.Bounds.Contains(p));
             if (screen == null) { Reset(); return; }
             var b = screen.Bounds;
-            var top = p.Y - b.Top < Edge;
-            var bottom = b.Bottom - 1 - p.Y < Edge;
-            var left = p.X - b.Left < Edge;
-            var right = b.Right - 1 - p.X < Edge;
+            var top = p.Y - b.Top < edge;
+            var bottom = b.Bottom - 1 - p.Y < edge;
+            var left = p.X - b.Left < edge;
+            var right = b.Right - 1 - p.X < edge;
             var corner = top && left ? "TopLeft" : top && right ? "TopRight"
                 : bottom && left ? "BottomLeft" : bottom && right ? "BottomRight" : "";
             if (corner != _candidate)
@@ -49,7 +50,7 @@ namespace MotionDesk.Services
                 _enteredAt = Environment.TickCount64;
                 _fired = false;
             }
-            if (corner == "" || _fired || Environment.TickCount64 - _enteredAt < DwellMs) return;
+            if (corner == "" || _fired || Environment.TickCount64 - _enteredAt < dwell) return;
             _fired = true;
             var action = corner switch
             {
@@ -65,6 +66,29 @@ namespace MotionDesk.Services
                 case "TaskView": SendWindowsShortcut(0x09); break; // Win+Tab
             }
         }
+
+        // Avoid intrusive corner activation while a fullscreen app or game is in focus.
+        private static bool IsForegroundFullscreen()
+        {
+            var foreground = GetForegroundWindow();
+            if (foreground == IntPtr.Zero || foreground == GetShellWindow()) return false;
+            if (!GetWindowRect(foreground, out var rect)) return false;
+            foreach (var screen in Screen.AllScreens)
+            {
+                var b = screen.Bounds;
+                if (rect.Left <= b.Left && rect.Top <= b.Top &&
+                    rect.Right >= b.Right && rect.Bottom >= b.Bottom)
+                    return true;
+            }
+            return false;
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct WindowRectangle { public int Left, Top, Right, Bottom; }
+        [DllImport("user32.dll")] private static extern IntPtr GetForegroundWindow();
+        [DllImport("user32.dll")] private static extern IntPtr GetShellWindow();
+        [DllImport("user32.dll")] [return: MarshalAs(UnmanagedType.Bool)]
+        private static extern bool GetWindowRect(IntPtr handle, out WindowRectangle rect);
 
         private void Reset() { _candidate = ""; _fired = false; }
         private static void SendWindowsShortcut(byte key)
