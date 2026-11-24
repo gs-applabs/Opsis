@@ -55,7 +55,9 @@ namespace MotionDesk.Widgets
                 if (!File.Exists(path) || new FileInfo(path).Length > 256 * 1024) return null;
                 var m = JsonSerializer.Deserialize<WallpaperManifest>(File.ReadAllText(path), Options);
                 if (m == null) return null;
-                m.Properties = m.Properties.Where(p => p.Key.Length > 0 && p.Key.Length <= 64).Take(40).ToList();
+                m.Properties = (m.Properties ?? new()).Where(p => p != null && !string.IsNullOrWhiteSpace(p.Key) && p.Key.Length <= 64)
+                    .Where(p => p.Type != "slider" || (double.IsFinite(p.Min) && double.IsFinite(p.Max) && p.Max >= p.Min && double.IsFinite(p.Step) && p.Step > 0))
+                    .DistinctBy(p => p.Key, StringComparer.Ordinal).Take(40).ToList();
                 return m;
             }
             catch (Exception) { return null; }
@@ -77,7 +79,7 @@ namespace MotionDesk.Widgets
                 string v = GetValue(s, source, p);
                 d[p.Key] = p.Type switch
                 {
-                    "slider" => double.TryParse(v, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var n) ? n : p.Min,
+                    "slider" => double.TryParse(v, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var n) && double.IsFinite(n) ? Math.Clamp(n, p.Min, p.Max) : p.Min,
                     "checkbox" => v.Equals("true", StringComparison.OrdinalIgnoreCase),
                     _ => v,
                 };
