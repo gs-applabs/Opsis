@@ -64,6 +64,38 @@ public sealed partial class MainWindow
         AddTile(library, "Particles", StudioText("Particles", "Σωματίδια"), StudioText("Floating particles", "Αιωρούμενα σωματίδια"), null);
         page.Controls.Add(weatherDepth);
         page.Controls.Add(library);
+        AddSection(page, StudioText("Installed wallpaper add-ons", "Εγκατεστημένα πρόσθετα φόντων"));
+        var packControls = new FlowLayoutPanel { AutoSize = true, WrapContents = true };
+        var categoryPicker = new ComboBox { Width = 195, DropDownStyle = ComboBoxStyle.DropDownList };
+        var previousPackPage = new Button { Text = "‹", AutoSize = true };
+        var nextPackPage = new Button { Text = "›", AutoSize = true };
+        var packCount = new Label { AutoSize = true, Margin = new Padding(5, 8, 5, 3) };
+        var importPack = StudioButton(StudioText("Install image pack", "Εγκατάσταση πακέτου"), () =>
+        {
+            using var picker = new OpenFileDialog { Filter = "Opsis image packs (*.zip)|*.zip", CheckFileExists = true };
+            if (picker.ShowDialog(this) != DialogResult.OK) return;
+            if (MessageBox.Show(this, StudioText("Install data-only wallpapers from this ZIP? No files will be executed.", "Εγκατάσταση μόνο εικόνων από αυτό το ZIP; Δεν θα εκτελεστεί κανένα αρχείο."), "Opsis", MessageBoxButtons.YesNo) != DialogResult.Yes) return;
+            try
+            {
+                int count = OpsisEcosystemGallery.ImportWallpaperPack(picker.FileName);
+                MessageBox.Show(this, count + " wallpaper images installed.", "Opsis");
+                ShowWallpaper();
+            }
+            catch (Exception ex) { MessageBox.Show(this, ex.Message, "Opsis", MessageBoxButtons.OK, MessageBoxIcon.Warning); }
+        }, 195);
+        packControls.Controls.AddRange([categoryPicker, previousPackPage, nextPackPage, packCount, importPack]);
+        page.Controls.Add(packControls);
+        var addonGrid = NewGrid();
+        page.Controls.Add(addonGrid);
+        var addonItems = OpsisEcosystemGallery.Discover().Where(x => x.Type.Equals("wallpaper", StringComparison.OrdinalIgnoreCase) &&
+            Path.GetExtension(x.AssetPath).ToLowerInvariant() is ".jpg" or ".jpeg" or ".png").ToArray();
+        var addonTiles = new List<(WallpaperTile Tile, OpsisEcosystemGallery.Item Item)>();
+        int packPage = 0;
+        const int PackPageSize = 18;
+        categoryPicker.Items.Add(StudioText("All categories", "Όλες οι κατηγορίες"));
+        foreach (var category in addonItems.Select(x => x.Category).Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(x => x))
+            categoryPicker.Items.Add(category);
+        categoryPicker.SelectedIndex = 0;
 
         int lastLayoutWidth = 0;
         void ResizeTiles()
@@ -77,15 +109,17 @@ public sealed partial class MainWindow
             page.SuspendLayout();
             featured.SuspendLayout();
             library.SuspendLayout();
+            addonGrid.SuspendLayout();
             try
             {
-                featured.MaximumSize = library.MaximumSize = new Size(area, 0);
-                foreach (var tile in tiles) tile.Size = new Size(width, Math.Max(145, (width - 14) * 9 / 16 + 61));
+                featured.MaximumSize = library.MaximumSize = addonGrid.MaximumSize = new Size(area, 0);
+                foreach (var tile in tiles.Concat(addonTiles.Select(x => x.Tile))) tile.Size = new Size(width, Math.Max(145, (width - 14) * 9 / 16 + 61));
             }
             finally
             {
                 featured.ResumeLayout();
                 library.ResumeLayout();
+                addonGrid.ResumeLayout();
                 page.ResumeLayout();
             }
         }
@@ -99,7 +133,40 @@ public sealed partial class MainWindow
                 : StudioText("Enable wallpaper", "Ενεργοποίηση φόντου");
             details.Text = mode == "Weather" ? StudioText("Weather settings", "Ρυθμίσεις Weather") : StudioText("Wallpaper settings", "Ρυθμίσεις φόντου");
             foreach (var tile in tiles) tile.SetActive(host.IsEnabled && tile.Mode == mode);
+            var imagePath = WallpaperSettings.Load().ImagePath;
+            foreach (var tile in addonTiles) tile.Tile.SetActive(host.IsEnabled && mode == "Image" && string.Equals(imagePath, tile.Item.AssetPath, StringComparison.OrdinalIgnoreCase));
         }
+
+        void DrawAddonPage()
+        {
+            var filtered = addonItems.Where(x => categoryPicker.SelectedIndex == 0 ||
+                string.Equals(x.Category, categoryPicker.SelectedItem?.ToString(), StringComparison.OrdinalIgnoreCase)).ToArray();
+            int pages = Math.Max(1, (filtered.Length + PackPageSize - 1) / PackPageSize);
+            packPage = Math.Clamp(packPage, 0, pages - 1);
+            addonGrid.SuspendLayout();
+            try
+            {
+                foreach (var old in addonTiles) old.Tile.Dispose();
+                addonTiles.Clear();
+                foreach (var item in filtered.Skip(packPage * PackPageSize).Take(PackPageSize))
+                {
+                    var tile = new WallpaperTile("Image", item.Title, item.Category, null, externalPoster: item.AssetPath);
+                    tile.Click += (_, _) =>
+                    {
+                        try { OpsisEcosystemGallery.ApplyStaticWallpaper(item); Sync(); }
+                        catch (Exception ex) { MessageBox.Show(this, ex.Message, "Opsis", MessageBoxButtons.OK, MessageBoxIcon.Warning); }
+                    };
+                    addonTiles.Add((tile, item)); addonGrid.Controls.Add(tile);
+                }
+            }
+            finally { addonGrid.ResumeLayout(); }
+            packCount.Text = filtered.Length == 0 ? StudioText("No add-ons installed", "Δεν υπάρχουν πρόσθετα") : $"{packPage + 1}/{pages} • {filtered.Length}";
+            previousPackPage.Enabled = packPage > 0; nextPackPage.Enabled = packPage + 1 < pages;
+            lastLayoutWidth = 0; ResizeTiles(); Sync();
+        }
+        categoryPicker.SelectedIndexChanged += (_, _) => { packPage = 0; DrawAddonPage(); };
+        previousPackPage.Click += (_, _) => { packPage--; DrawAddonPage(); };
+        nextPackPage.Click += (_, _) => { packPage++; DrawAddonPage(); };
 
         void OnWallpaperChanged()
         {
@@ -111,6 +178,7 @@ public sealed partial class MainWindow
         host.StateChanged += OnWallpaperChanged;
         page.Disposed += (_, _) => host.StateChanged -= OnWallpaperChanged;
         page.SizeChanged += (_, _) => ResizeTiles();
+        DrawAddonPage();
         Sync();
         SetPage("Page.Wallpaper.Title", page);
         ResizeTiles();
@@ -152,7 +220,7 @@ public sealed partial class MainWindow
 
         internal string Mode { get; }
 
-        internal WallpaperTile(string mode, string title, string subtitle, string? asset, bool animate)
+        internal WallpaperTile(string mode, string title, string subtitle, string? asset, bool animate = false, string? externalPoster = null)
         {
             Mode = mode;
             Text = title;
@@ -173,7 +241,8 @@ public sealed partial class MainWindow
                 _posterPath = Path.Combine(folder, asset + ".jpg");
                 if (animate) _previewPath = Path.Combine(folder, asset + ".preview.jpg");
             }
-            _builtIn = BuiltInWallpaperPreview.Create(mode);
+            if (externalPoster != null) _posterPath = externalPoster;
+            _builtIn = externalPoster == null ? BuiltInWallpaperPreview.Create(mode) : null;
             _timer.Interval = _builtIn?.Animated == true ? 50 : 100;
             _timer.Tick += (_, _) =>
             {
@@ -194,8 +263,10 @@ public sealed partial class MainWindow
         {
             try
             {
+                if (new FileInfo(path).Length > 32L * 1024 * 1024) return null;
                 using var original = Image.FromFile(path);
-                return width > 0 ? new Bitmap(original, width, original.Height * width / original.Width) : new Bitmap(original);
+                if (original.Width <= 0 || original.Height <= 0 || (long)original.Width * original.Height > 40_000_000) return null;
+                return width > 0 ? new Bitmap(original, width, Math.Clamp((int)((long)original.Height * width / original.Width), 1, 960)) : new Bitmap(original);
             }
             catch (Exception ex) when (ex is IOException or ArgumentException or System.Runtime.InteropServices.ExternalException) { return null; }
         }

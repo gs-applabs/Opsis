@@ -286,6 +286,25 @@ try
         } }
     }));
     Check(OpsisEcosystemGallery.Discover().Any(x => x.PluginId == "example.plugin"), "plugin wallpaper contribution discovered");
+    var addonZip = Path.Combine(folder, "addon-fixture.zip");
+    using (var zip = System.IO.Compression.ZipFile.Open(addonZip, System.IO.Compression.ZipArchiveMode.Create))
+    {
+        using (var writer = new StreamWriter(zip.CreateEntry("opsis-contributions.json").Open()))
+            writer.Write(JsonSerializer.Serialize(new OpsisEcosystemGallery.Manifest { PluginId = "fixture.images", Version = "1.0.0",
+                Contributions = new() { new() { Id = "image1", Type = "wallpaper", Title = "Fixture image", Category = "Test", Asset = "images/fixture.png" } } }));
+        using var png = new System.Drawing.Bitmap(8, 8);
+        using var pngData = new MemoryStream();
+        png.Save(pngData, System.Drawing.Imaging.ImageFormat.Png);
+        using var entry = zip.CreateEntry("images/fixture.png").Open();
+        pngData.Position = 0; pngData.CopyTo(entry);
+    }
+    Check(OpsisEcosystemGallery.ImportWallpaperPack(addonZip) == 1 &&
+        OpsisEcosystemGallery.Discover().Any(x => x.PluginId == "fixture.images" && x.Category == "Test"),
+        "data-only wallpaper pack imported and categorized without applying wallpaper");
+    bool duplicatePackRejected = false;
+    try { OpsisEcosystemGallery.ImportWallpaperPack(addonZip); }
+    catch (InvalidDataException) { duplicatePackRejected = true; }
+    Check(duplicatePackRejected, "duplicate gallery pack identity rejected");
     var overlapFolder = Path.Combine(folder, "gallery-packs", "example-override");
     Directory.CreateDirectory(overlapFolder);
     File.WriteAllText(Path.Combine(overlapFolder, "cover.webp"), "updated fixture");
