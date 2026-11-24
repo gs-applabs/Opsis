@@ -217,6 +217,40 @@ namespace MotionDesk.UI
             };
             statesPreview.Click += (_, _) => ShowThemeReadabilityPreview();
             card.Controls.Add(statesPreview);
+#if SIGNATURE_COMPOSITION_PREVIEW
+            var materialEditor = new Opsis.UI.FlatButton
+            {
+                Text = StudioText("Signature Glass material editor…", "Επεξεργασία υλικού Signature Glass…"),
+                AutoSize = false, Width = 380, Height = 38
+            };
+            materialEditor.Click += (_, _) =>
+            {
+                var staged = AppSettings.Peek().Glass.Clone();
+                using var dialog = new Form
+                {
+                    Text = "Signature Glass", StartPosition = FormStartPosition.CenterParent,
+                    Size = new Size(780, 700), MinimumSize = new Size(580, 480),
+                    BackColor = UiTheme.Background, ForeColor = UiTheme.TextPrimary,
+                    Font = UiTheme.FontBody
+                };
+                using var editor = new Opsis.UI.GlassSettingsPage(staged, false) { Dock = DockStyle.Fill };
+                var actions = new FlowLayoutPanel { Dock = DockStyle.Bottom, Height = 55, FlowDirection = FlowDirection.RightToLeft, Padding = new Padding(8) };
+                var save = new Opsis.UI.FlatButton { Text = StudioText("Apply", "Εφαρμογή"), Width = 130, Height = 34, DialogResult = DialogResult.OK };
+                var cancel = new Opsis.UI.FlatButton { Text = StudioText("Cancel", "Ακύρωση"), Width = 130, Height = 34, DialogResult = DialogResult.Cancel };
+                actions.Controls.Add(save); actions.Controls.Add(cancel);
+                dialog.Controls.Add(editor); dialog.Controls.Add(actions);
+                dialog.AcceptButton = save; dialog.CancelButton = cancel;
+                if (dialog.ShowDialog(this) != DialogResult.OK) return;
+                var app = AppSettings.Load();
+                Opsis.UI.GlassMaterialProfiles.ApplyTo(app.Glass, staged);
+                app.WallpaperAccentEnabled = staged.AdaptiveAccent;
+                // Do not switch shell replacement modes or override reduced-effects preferences.
+                app.Save();
+                ThemeManager.RefreshOpsisAccent();
+                GlassService.Refresh();
+            };
+            card.Controls.Add(materialEditor);
+#endif
             foreach (var t in GearWinThemes.All)
             {
                 var row = new FlowLayoutPanel { AutoSize = true, WrapContents = false, Margin = new Padding(0, 0, 0, 2) };
