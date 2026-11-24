@@ -22,6 +22,7 @@ namespace MotionDesk.Services
 
         private static GlassLevel _level = GlassLevel.Solid; private static string _reason = ""; private static DateTime _decidedAt;
         private static HardwareInfo? _hw;
+        internal static event Action? PolicyChanged;
 
         /// <summary>What is used right now and why (for the settings page).</summary>
         public static string Describe() { Decide(); return GlassPolicy.Describe(_level, _reason); }
@@ -31,6 +32,7 @@ namespace MotionDesk.Services
         {
             if ((DateTime.UtcNow - _decidedAt).TotalMilliseconds < 800) return;
             _decidedAt = DateTime.UtcNow;
+            var previous = _level;
             try
             {
                 var s = AppSettings.Peek(); var act = AppActivity.Snapshot; _hw ??= HardwareInfo.Detect();
@@ -39,6 +41,7 @@ namespace MotionDesk.Services
                 (_level, _reason) = GlassPolicy.Decide(GlassPolicy.ParseMode(s.GpuGlassMode, s.UseGpuGlass), inp);
             }
             catch (Exception) { _level = GlassLevel.Solid; _reason = "could not read the computer's state"; }
+            if (previous != _level) PolicyChanged?.Invoke();
         }
 
         /// <summary>True while the GPU glass may be used: the policy says Full or Frosted (no static default: the choice comes from the computer and follows the load live).</summary>
@@ -160,6 +163,8 @@ namespace MotionDesk.Services
             form.Disposed += (_, _) => Dispose();
             MotionDesk.UI.ThemeManager.Changed += OnTheme;
             MotionDesk.UI.ThemeManager.Repainted += OnTheme;
+            GlassService.PolicyChanged += OnPolicyChanged;
+            form.HandleDestroyed += (_, _) => Remove();
             _reseat.Tick += (_, _) =>
             {
                 if (_id >= 0 && !_disposed && _f.Visible && !PaneIsBelow())
@@ -190,6 +195,8 @@ namespace MotionDesk.Services
         [DllImport("user32.dll")] private static extern IntPtr GetWindow(IntPtr hwnd, uint command);
         [DllImport("user32.dll", CharSet = CharSet.Unicode)] private static extern int GetClassName(IntPtr hwnd, System.Text.StringBuilder result, int length);
         [DllImport("user32.dll")] private static extern bool GetWindowRect(IntPtr hwnd, out NativeRect result);
+
+        private void OnPolicyChanged() => QueueSync();
 
         private void OnTheme() { if (_disposed || _f.IsDisposed) return; if (_f.InvokeRequired) { try { _f.BeginInvoke(new Action(Sync)); } catch (InvalidOperationException) { } } else Sync(); }
 
@@ -238,7 +245,7 @@ namespace MotionDesk.Services
             if (!_disposed) PaneChanged?.Invoke();
         }
 
-        public void Dispose() { if (_disposed) return; _disposed = true; MotionDesk.UI.ThemeManager.Changed -= OnTheme; MotionDesk.UI.ThemeManager.Repainted -= OnTheme; Remove(); _reseat.Dispose(); }
+        public void Dispose() { if (_disposed) return; _disposed = true; MotionDesk.UI.ThemeManager.Changed -= OnTheme; MotionDesk.UI.ThemeManager.Repainted -= OnTheme; GlassService.PolicyChanged -= OnPolicyChanged; Remove(); _reseat.Dispose(); }
     }
 
     /// <summary>
