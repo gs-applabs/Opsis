@@ -2041,6 +2041,31 @@ namespace MotionDesk.UI
             host.Controls.Add(ComboRow("Wallpaper.WindSimLabel", WindSimIds, "Wallpaper.Wind.", settings.WindSimulation, id => WallpaperHostEngine.Instance.SetWindSimulation(id)));
             host.Controls.Add(ComboRow("Wallpaper.TimeSimLabel", TimeSimIds, "Wallpaper.Time.", settings.TimeSimulation, id => WallpaperHostEngine.Instance.SetTimeSimulation(id)));
 
+            // Spatial Weather renderer: opt-in, independent of the existing 2D scene.
+            var spatialRow = new FlowLayoutPanel { AutoSize = true, WrapContents = false, Margin = new Padding(0, 5, 0, 8) };
+            spatialRow.Controls.Add(new Label { Text = StudioText("Weather scene depth", "Βάθος καιρού / σκηνής"),
+                Width = 190, Height = 30, TextAlign = ContentAlignment.MiddleLeft,
+                ForeColor = UiTheme.TextSecondary, Font = UiTheme.FontBody });
+            var spatialModes = new[] { "Off", "2.5D", "3D" };
+            var spatialLabels = new[] {
+                StudioText("Off — classic 2D", "Κλειστό — κλασικό 2D"),
+                StudioText("2.5D — parallax", "2.5D — παράλλαξη βάθους"),
+                StudioText("3D — WebGL2 atmosphere", "3D — ατμόσφαιρα WebGL2")
+            };
+            var spatialPicker = new FlatComboBox { Width = 330 };
+            var currentSpatial = Array.IndexOf(spatialModes, settings.WeatherSpatialMode);
+            spatialPicker.SetItems(spatialLabels, spatialLabels[Math.Max(0, currentSpatial)]);
+            spatialPicker.SelectedIndexChanged += (_, _) =>
+            {
+                if (spatialPicker.SelectedIndex is >= 0 and < 3)
+                    WallpaperHostEngine.Instance.SetWeatherSpatialMode(spatialModes[spatialPicker.SelectedIndex]);
+            };
+            spatialRow.Controls.Add(spatialPicker);
+            host.Controls.Add(spatialRow);
+            AddText(host, StudioText(
+                "3D needs WebGL2 hardware support and is reduced on low-power profiles; the normal 2D engine remains the automatic fallback.",
+                "Το 3D χρειάζεται WebGL2 και περιορίζεται στα προφίλ χαμηλής κατανάλωσης. Ο κλασικός 2D renderer παραμένει διαθέσιμος ως fallback."));
+
             var glass = new FlatToggle { RowWidth = 700, Text = LocalizationManager.T("Wallpaper.WeatherGlass"), Checked = settings.WeatherGlass, BackColor = UiTheme.PageBackground, Margin = new Padding(0, 6, 0, 10) };
             glass.CheckedChanged += (_, _) => WallpaperHostEngine.Instance.SetWeatherGlass(glass.Checked);
             host.Controls.Add(glass);
