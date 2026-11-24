@@ -40,20 +40,24 @@ internal static class Program
                           c.style='position:fixed;inset:0;z-index:10000'; document.body.appendChild(c);
                           WeatherWallpaper.resize(c.width,c.height);
                           OpsisWeatherSpatial.setMode('3D');
-                          WeatherWallpaper.setConfig({realistic:true,landmarkId:'{{id}}',spatialMode:'3D',timeSim:'Day',weatherSim:'Clear'});
-                          let sample=null;
-                          const original=WebGL2RenderingContext.prototype.drawArrays;
-                          WebGL2RenderingContext.prototype.drawArrays=function(mode,first,count) {
-                            original.call(this,mode,first,count);
-                            if(mode===this.TRIANGLES) {
-                              const px=new Uint8Array(4);
-                              this.readPixels(this.drawingBufferWidth>>1,this.drawingBufferHeight>>2,1,1,this.RGBA,this.UNSIGNED_BYTE,px);
-                              sample={rgba:[...px],error:this.getError(),count};
+                          WeatherWallpaper.setConfig({realistic:true,landmarks:true,reducedMotion:false,landmarkId:'{{id}}',spatialMode:'3D',timeSim:'Day',weatherSim:'Clear'});
+                          let sample=null, requested=null;
+                          const renderer=window.OpsisWeatherSpatial;
+                          const update=renderer.update;
+                          renderer.update=(...args)=>{
+                            requested={quality:args[2],reduced:args[3],id:args[4]?.id,mode:renderer.mode()};
+                            const surface=update(...args);
+                            if (surface) {
+                              const gl=surface.getContext('webgl2'), px=new Uint8Array(4);
+                              gl.readPixels(gl.drawingBufferWidth>>1,gl.drawingBufferHeight>>2,1,1,gl.RGBA,gl.UNSIGNED_BYTE,px);
+                              sample={rgba:[...px],error:gl.getError()};
                             }
+                            return surface;
                           };
-                          try { WeatherWallpaper.draw(c.getContext('2d'),.033,{id:'High'}); } finally { WebGL2RenderingContext.prototype.drawArrays=original; }
-                          return sample?.rgba[3]===255 && sample.error===0 ? true :
-                            {sample, supported:OpsisWeatherSpatial.supported(),status:OpsisWeatherSpatial.failureReason()};
+                          try { WeatherWallpaper.draw(c.getContext('2d'),.033,{id:'High'}); }
+                          finally { renderer.update=update; }
+                          return requested?.id==='{{id}}' && sample?.rgba[3]===255 && sample.error===0 ? true :
+                            {sample,requested,location:OpsisLandmarks.byId('{{id}}'),size:[c.width,c.height],status:renderer.failureReason()};
                         })()
                         """);
                     if (result != "true") throw new Exception($"Missing 3D foreground for {id}: {result}");
