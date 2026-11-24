@@ -84,7 +84,8 @@ namespace MotionDesk.Services
             var snapshot = engine.Snapshot();
             var toggles = new (string Name, Func<MotionDesk.Appearance.Look, bool?> Read)[]
             {
-                ("Settings.TransparencyEffects", x => x.Transparency),
+                // this switch writes the real Windows setting (WindowsSystemSettings), while the isolated engine of the audit keeps its values in memory: read the real one
+                ("Settings.TransparencyEffects", x => WindowsSystemSettings.GetTransparencyEffectsEnabled()),
                 ("Win.AccentSurfaces", x => x.AccentOnSurfaces),
                 ("Win.Centered", x => x.TaskbarCentered),
                 ("Win.TbSearch", x => x.ShowSearch),
