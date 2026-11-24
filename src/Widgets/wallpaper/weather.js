@@ -1570,9 +1570,15 @@ function draw(target, dt, profile) {
     if (shoot) { shoot.life += dt; if (shoot.life >= shoot.dur) shoot = null; }
 
     // ---- sky canvas
-    const photograph = onPhoto();
-    const cityPhoto = photograph && !photoState.landscape;
     const graded = drawSkyLayer(sky, t, sr, ss);
+    const location = cfg.realistic && cfg.spatialMode === '3D' && resolveLandmark();
+    const mesh = window.OpsisWeatherSpatial?.update(dt,
+        { rain: S.rain, snow: S.snow, windX: S.windX, seconds: animTime },
+        profile?.id || 'Balanced', cfg.reducedMotion === true,
+        location ? { id: location.id, city: landmarkScene.city, ambient: sky.amb,
+            horizon: graded.hor, fog: S.fog, snowCover: S.snowCover, lightSide: t < (sr + ss) / 2 ? -1 : 1 } : null);
+    const photograph = !mesh && onPhoto();
+    const cityPhoto = photograph && !photoState.landscape;
     drawStarsLayer(sky, 1 - S.cloud * 0.8 - S.fog * 0.5);
     drawMilkyWay(sky);
     const moon = drawMoonLayer(t, sr, ss, 1, cityPhoto);
@@ -1587,7 +1593,7 @@ function draw(target, dt, profile) {
     if (cfg.realistic) window.OpsisWeatherAtmosphere?.drawSky(skyCtx, W, HORIZON, sky, graded, celest, S);
     if (flash > 0) { skyCtx.fillStyle = `rgba(200,215,255,${flash * 0.55})`; skyCtx.fillRect(0, 0, W, HORIZON); }
     drawBolt(skyCtx);
-    if (!photograph) drawHillsLayer(sky, graded);
+    if (!mesh && !photograph) drawHillsLayer(sky, graded);
 
     // ---- composite
     // Ξ”Ξ™ΞΞ΅ΞΞ©Ξ£Ξ— "Ο„ΞΏ ΞµΟ†Ξ­ Ο„Ο‰Ξ½ ΟƒΟ„Ξ±Ξ³ΟΞ½Ο‰Ξ½ ΟƒΟ„Ξ·Ξ½ ΞΏΞΈΟΞ½Ξ· Ξ΄ΞµΞ½ Ξ»ΞµΞΉΟ„ΞΏΟ…ΟΞ³ΞµΞ―": Ο„ΞΏ updateGlass (Ο€ΞΏΟ… Ξ“Ξ•ΞΞ™Ξ–Ξ•Ξ™ Ο„ΞΏ
@@ -1608,7 +1614,7 @@ function draw(target, dt, profile) {
     c2.globalAlpha = 1; c2.globalCompositeOperation = 'source-over';
     // 2.5D: independent distant-sky parallax, with slight overscan to avoid edge gaps.
     // The land/photo, rain, fog and glass remain at their original screen depth.
-    if ((cfg.spatialMode === '2.5D' || cfg.spatialMode === '3D') && tierLevel() >= 1) {
+    if (cfg.spatialMode === '2.5D' && !cfg.reducedMotion && tierLevel() >= 1) {
         const pad = Math.max(2, W * 0.014);
         const drift = Math.sin(animTime * 0.15) * pad * 0.34;
         c2.drawImage(skyCv, -pad + drift, 0, W + 2 * pad, HORIZON);
@@ -1616,7 +1622,8 @@ function draw(target, dt, profile) {
         c2.drawImage(skyCv, 0, 0);
     }
     drawBirds(c2, dt, sky, cityPhoto);
-    if (photograph) drawScenePhoto(c2, sky, graded);
+    if (mesh) c2.drawImage(mesh, 0, 0, W, H);
+    else if (photograph) drawScenePhoto(c2, sky, graded);
     else if (onLand()) {
         drawLand(c2, sky, graded);
         const city = activeCity();
@@ -1635,12 +1642,6 @@ function draw(target, dt, profile) {
     drawSnow(c2, dt, sky.amb);
     if (flash > 0) { c2.fillStyle = `rgba(210,222,255,${flash * 0.35})`; c2.fillRect(0, 0, W, H); }
     drawVignette(c2);
-
-    // Independent projected weather particles. WebGL2 failure leaves the 2D
-    // renderer untouched and invisible fallback is deliberate.
-    window.OpsisWeatherSpatial?.update(dt,
-        { rain: S.rain, snow: S.snow, windX: S.windX, seconds: animTime },
-        profile?.id || 'Balanced', cfg.reducedMotion === true);
 
     if (useGlass) {
         target.setTransform(1, 0, 0, 1, 0, 0);

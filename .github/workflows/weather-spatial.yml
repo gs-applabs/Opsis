@@ -47,6 +47,14 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           if (!(Test-Path publish/widgets/wallpaper/weather-spatial.js)) { throw 'Spatial renderer missing from publish directory' }
           Compress-Archive -Path publish/* -DestinationPath Opsis-Weather-25D-3D-${{ matrix.os }}.zip -Force
+      - name: Capture published Weather scenes in WebView2
+        run: dotnet run --project tests/weather-spatial/WebViewSmoke.csproj -c Release -- publish/widgets/wallpaper weather-captures
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: weather-webview2-captures-${{ matrix.os }}
+          path: weather-captures/*.png
+          if-no-files-found: warn
       - name: Save renderer artifact
         uses: actions/upload-artifact@v4
         if: always()

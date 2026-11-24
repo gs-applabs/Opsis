@@ -49,3 +49,20 @@ test('reduced motion and low-power profiles skip GPU allocation', () => {
   spatial.update(.016,{rain:1},'Battery',false);
   assert.equal(created,0);
 });
+
+test('both quality tiers build complete finite triangles for every Greek scene and manual landmark', () => {
+  const folder=path.join(__dirname,'../../src/Widgets/wallpaper');
+  const context={window:{}};
+  vm.runInNewContext(fs.readFileSync(path.join(folder,'weather-landscape.js'),'utf8'),context);
+  const {build}=context.window.OpsisWeatherLandscape;
+  const cities=['capitals','islands'].flatMap(name=>JSON.parse(fs.readFileSync(path.join(folder,'scenes',name+'.json'))));
+  const manual=['rioantirrio','patras-lighthouse','nafplio-bourtzi','mountain-lake'];
+  for (const city of [...cities,...manual.map(id=>({id}))]) {
+    const balanced=build(city.id,city,false), high=build(city.id,city,true);
+    assert.ok(balanced.length>0 && high.length>balanced.length,city.id);
+    for(const data of [balanced,high]) {
+      assert.equal(data.length%18,0,city.id);
+      assert.ok(data.every(Number.isFinite),city.id);
+    }
+  }
+});
