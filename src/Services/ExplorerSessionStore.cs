@@ -29,10 +29,32 @@ public static class ExplorerSessionStore
     public static string[] Normalize(IEnumerable<string> paths) =>
         paths.Where(IsLocalFolderPath).Select(Path.GetFullPath).Distinct(StringComparer.OrdinalIgnoreCase).Take(MaximumFolders).ToArray();
 
-    public static string[] Capture()
+    /// <summary>Longest time the UI waits for the Shell automation: an Explorer that does not answer must never freeze Opsis.</summary>
+    public const int CaptureTimeoutMs = 5000;
+
+    /// <summary>Captures the open Explorer folders on a dedicated, short-lived STA thread bounded by <see cref="CaptureTimeoutMs"/>.</summary>
+    public static string[] Capture() => Capture(CaptureCore, CaptureTimeoutMs);
+
+    /// <summary>Runs <paramref name="work"/> on a background STA thread and gives up after <paramref name="timeoutMs"/> (the thread is abandoned, never joined for ever).</summary>
+    public static string[] Capture(Func<string[]> work, int timeoutMs)
     {
         if (SafeModeService.IsSafeMode || WindowsUpdateGuard.RequiresReview)
             throw new InvalidOperationException("Compatibility review required.");
+        string[]? result = null; Exception? failure = null;
+        var thread = new System.Threading.Thread(() =>
+        {
+            try { result = work(); }
+            catch (Exception e) { failure = e; }
+        }) { IsBackground = true, Name = "Opsis Explorer capture" };
+        thread.SetApartmentState(System.Threading.ApartmentState.STA);
+        thread.Start();
+        if (!thread.Join(timeoutMs)) throw new TimeoutException("Explorer did not answer within " + timeoutMs / 1000 + " s.");
+        if (failure != null) System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(failure).Throw();
+        return result ?? Array.Empty<string>();
+    }
+
+    private static string[] CaptureCore()
+    {
         var type = Type.GetTypeFromProgID("Shell.Application") ?? throw new PlatformNotSupportedException("Shell automation unavailable.");
         object? shell = null, windows = null;
         var locations = new List<string>();

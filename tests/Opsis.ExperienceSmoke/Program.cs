@@ -328,6 +328,17 @@ try
     Check(OpsisEcosystemGallery.ImportWallpaperPack(addonZip) == 1 &&
         OpsisEcosystemGallery.Discover().Any(x => x.PluginId == "fixture.images" && x.Category == "Test"),
         "data-only wallpaper pack imported and categorized without applying wallpaper");
+    {
+        // Explorer capture is bounded: a Shell automation that never answers times out instead of freezing the UI
+        var clock = System.Diagnostics.Stopwatch.StartNew();
+        bool timedOut = false;
+        try { ExplorerSessionStore.Capture(() => { System.Threading.Thread.Sleep(60000); return Array.Empty<string>(); }, 300); }
+        catch (TimeoutException) { timedOut = true; }
+        Check(timedOut && clock.ElapsedMilliseconds < 5000, "Explorer capture times out instead of hanging");
+        bool sta = false;
+        ExplorerSessionStore.Capture(() => { sta = System.Threading.Thread.CurrentThread.GetApartmentState() == System.Threading.ApartmentState.STA; return Array.Empty<string>(); }, 3000);
+        Check(sta, "Explorer capture runs on an STA worker");
+    }
     var localFolder = Path.GetTempPath().TrimEnd(Path.DirectorySeparatorChar);
     Check(ExplorerSessionStore.IsLocalFolderPath(localFolder) &&
         !ExplorerSessionStore.IsLocalFolderPath(@"\\server\share") &&
