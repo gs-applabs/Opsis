@@ -71,21 +71,37 @@ namespace MotionDesk.Widgets
             };
         }
 
+        /// <summary>Profile folder for a set of browser arguments (same arguments = same folder).</summary>
+        internal static string UserDataFolder(string browserArguments, string? localAppData = null)
+        {
+            using var sha = System.Security.Cryptography.SHA256.Create();
+            string key = Convert.ToHexString(sha.ComputeHash(System.Text.Encoding.UTF8.GetBytes(browserArguments)))[..8].ToLowerInvariant();
+            return Path.Combine(localAppData ?? Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Opsis", "WebView2", "p" + key);
+        }
+
         private static async Task<CoreWebView2Environment> CreateEnvironmentAsyncCore()
         {
             // (LocalApplicationData, όχι ApplicationData/AppPaths.AppDataFolder: cache δεδομένα του
             // WebView2 runtime, όχι ρυθμίσεις χρήστη — σωστά τοπικό/μη-roaming, ξαναδημιουργείται
             // αβλαβώς αν χαθεί, οπότε δεν χρειάζεται μετάβαση από το παλιό όνομα.)
-            string userDataFolder = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                "Opsis", "WebView2");
+            // Browser arguments are part of the environment: WebView2 refuses to start a second environment on the SAME user-data folder with DIFFERENT arguments while another process uses it
+            // (HRESULT 0x8007139F). Another Opsis edition (Opsis Studio / another build) running at the same time did exactly that to the wallpaper: "WebView2 not ready", for ever.
+            // The folder is therefore keyed by the arguments, so only processes with identical arguments share a profile.
+            const string args = "--disable-features=msSmartScreenProtection,Translate,msEdgeSync --disable-background-networking " +
+                "--disable-renderer-backgrounding --disable-backgrounding-occluded-windows --autoplay-policy=no-user-gesture-required";
+            string userDataFolder = UserDataFolder(args);
             Directory.CreateDirectory(userDataFolder);
             // Λιγότερη μνήμη/CPU σε αδύναμα συστήματα: χωρίς background networking/sync/translate, χωρίς renderer
             // backgrounding (το wallpaper είναι πίσω από όλα, τα Windows θα το "κοιμίζανε").
-            var options = new CoreWebView2EnvironmentOptions(
-                "--disable-features=msSmartScreenProtection,Translate,msEdgeSync --disable-background-networking " +
-                "--disable-renderer-backgrounding --disable-backgrounding-occluded-windows --autoplay-policy=no-user-gesture-required");
-            return await CoreWebView2Environment.CreateAsync(null, userDataFolder, options).ConfigureAwait(true);
+            var options = new CoreWebView2EnvironmentOptions(args);
+            try { return await CoreWebView2Environment.CreateAsync(null, userDataFolder, options).ConfigureAwait(true); }
+            catch (Exception ex)
+            {
+                MotionDesk.Services.AttachLog.Write("WebView2 environment failed: " + ex.GetType().Name + ": " + ex.Message + " - retrying with a private profile");
+                string own = Path.Combine(userDataFolder, "private-" + Environment.ProcessId);
+                Directory.CreateDirectory(own);
+                return await CoreWebView2Environment.CreateAsync(null, own, options).ConfigureAwait(true);
+            }
         }
     }
 }
