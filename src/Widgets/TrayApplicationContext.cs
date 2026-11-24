@@ -212,7 +212,14 @@ namespace MotionDesk.Widgets
                 {
                     try
                     {
-                        if ((++_experienceChecks % 15) == 0) WindowsUpdateGuard.EvaluateStartup();
+                        if ((++_experienceChecks % 15) == 0)
+                        {
+                            WindowsUpdateGuard.EvaluateStartup();
+                            // Opsis-only accent; no Windows registry writes and only
+                            // one settings save when the actual color changes.
+                            try { WallpaperAccentEngine.RefreshIfChanged(); }
+                            catch (Exception e) { RotatingLogger.Write("Wallpaper accent refresh: " + e.Message); }
+                        }
                         OpsisAutomationStudio.ExecuteDue(false);
                     }
                     catch (Exception e) { RotatingLogger.Write("Opsis experience check: " + e.Message); }
