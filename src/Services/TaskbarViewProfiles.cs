@@ -189,6 +189,14 @@ namespace MotionDesk.Services
             return (SHAppBarMessage(4, ref data).ToUInt64() & 1) != 0 ? 1 : 0;
         }
 
+        /// <summary>True when the native taskbar window exists (Explorer is running): the state is neither read nor written without it.</summary>
+        public static bool ShellPresent => FindWindow("Shell_TrayWnd", null) != IntPtr.Zero;
+
+        private static void RequireShell()
+        {
+            if (!ShellPresent) throw new InvalidOperationException("Native taskbar is not available (Explorer is not running).");
+        }
+
         private static void SetAutoHide(int value)
         {
             var data = AppBar();
@@ -208,11 +216,22 @@ namespace MotionDesk.Services
             {
                 CheckWritable();
                 if (AppSettings.Peek().ReplaceWindowsTaskbar) throw new InvalidOperationException("Turn off Opsis taskbar replacement first.");
+                RequireShell();
                 int before = ReadAutoHide();
                 if (before == value) return;
+                bool wroteBackup = false;
                 if (!File.Exists(AutoHideBackup))
+                {
                     AtomicFile.WriteAllText(AutoHideBackup, JsonSerializer.Serialize(before));
-                SetAutoHide(value);
+                    wroteBackup = true;
+                }
+                try { SetAutoHide(value); }
+                catch
+                {
+                    // a backup written for a change that never happened would later "restore" a state the user changed on purpose
+                    if (wroteBackup) { try { File.Delete(AutoHideBackup); } catch (IOException) { } }
+                    throw;
+                }
             }
         }
 
@@ -226,7 +245,9 @@ namespace MotionDesk.Services
                 int original = JsonSerializer.Deserialize<int>(AtomicFile.ReadAllText(AutoHideBackup));
                 if (original is not (0 or 1)) throw new InvalidDataException("Invalid auto-hide backup.");
                 if (AppSettings.Peek().ReplaceWindowsTaskbar) throw new InvalidOperationException("Turn off Opsis taskbar replacement first.");
+                RequireShell();
                 if (ReadAutoHide() != original) SetAutoHide(original);
+                File.Delete(AutoHideBackup); // restored: the next change takes a fresh backup of the then-current state
             }
         }
 
