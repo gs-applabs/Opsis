@@ -206,6 +206,74 @@ public sealed partial class MainWindow
                 catch (Exception ex) { MessageBox.Show(this, ex.Message, "Opsis Theme Bundle", MessageBoxButtons.OK, MessageBoxIcon.Error); }
             }));
 
+        var menuCard = AddCardSection(panel, StudioText("P3 — Context Menu Studio", "P3 — Μενού δεξιού κλικ"));
+        AddText(menuCard, StudioText(
+            "An optional Opsis launcher on Windows desktop and Explorer folder background menus. HKCU only; no DLL extension, system-file edits or Explorer restart.",
+            "Προαιρετική εντολή Opsis στο δεξί κλικ της επιφάνειας εργασίας και του Explorer. Μόνο HKCU, χωρίς DLL, αλλαγές αρχείων Windows ή επανεκκίνηση Explorer."));
+        var contextStatus = new Label { AutoSize = true, ForeColor = UiTheme.TextSecondary,
+            Text = OpsisContextMenuStudio.Describe() };
+        menuCard.Controls.Add(contextStatus);
+        AddButtonGrid(menuCard,
+            (StudioText("Enable Opsis context menu", "Ενεργοποίηση μενού Opsis"), (_, _) =>
+            {
+                try
+                {
+                    if (MessageBox.Show(this, StudioText("Add Opsis Desktop Studio to your right-click menus?",
+                        "Να προστεθεί το Opsis στο δεξί κλικ;"), "Opsis Context Menu",
+                        MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes) return;
+                    OpsisContextMenuStudio.Enable();
+                    contextStatus.Text = OpsisContextMenuStudio.Describe();
+                }
+                catch (Exception ex) { MessageBox.Show(this, ex.Message, "Context Menu Studio", MessageBoxButtons.OK, MessageBoxIcon.Error); }
+            }),
+            (StudioText("Remove Opsis context menu", "Αφαίρεση μενού Opsis"), (_, _) =>
+            {
+                try
+                {
+                    OpsisContextMenuStudio.Disable();
+                    contextStatus.Text = OpsisContextMenuStudio.Describe();
+                }
+                catch (Exception ex) { MessageBox.Show(this, ex.Message, "Context Menu Studio", MessageBoxButtons.OK, MessageBoxIcon.Error); }
+            }));
+
+        var accentCard = AddCardSection(panel, StudioText("P4 — Wallpaper Dynamic Accent", "P4 — Δυναμικά χρώματα Wallpaper"));
+        AddText(accentCard, StudioText(
+            "Extract a balanced accent from a local image wallpaper, apply to the shared Opsis palette, without changing Windows system accent. Explicit user activation only.",
+            "Εξαγωγή χρώματος από το ενεργό τοπικό wallpaper και εφαρμογή στην κοινή παλέτα Opsis, χωρίς αλλαγή χρωμάτων Windows. Μόνο με επιλογή χρήστη."));
+        var accentValue = new Label { AutoSize = true, ForeColor = UiTheme.TextPrimary,
+            Text = AppSettings.Load().WallpaperAccentEnabled
+                ? AppSettings.Load().WallpaperAccentHex
+                : StudioText("Disabled", "Ανενεργό") };
+        accentCard.Controls.Add(accentValue);
+        AddButtonGrid(accentCard,
+            (StudioText("Preview image accent", "Προεπισκόπηση χρώματος"), (_, _) =>
+            {
+                try
+                {
+                    var hex = WallpaperAccentEngine.PreviewCurrent();
+                    accentValue.Text = hex + StudioText(" (preview only)", " (μόνο προεπισκόπηση)");
+                }
+                catch (Exception ex) { MessageBox.Show(this, ex.Message, "Opsis Dynamic Accent", MessageBoxButtons.OK, MessageBoxIcon.Error); }
+            }),
+            (StudioText("Apply image accent", "Εφαρμογή χρώματος"), (_, _) =>
+            {
+                try
+                {
+                    WallpaperAccentEngine.ApplyCurrent();
+                    accentValue.Text = AppSettings.Load().WallpaperAccentHex;
+                }
+                catch (Exception ex) { MessageBox.Show(this, ex.Message, "Opsis Dynamic Accent", MessageBoxButtons.OK, MessageBoxIcon.Error); }
+            }),
+            (StudioText("Restore default accent", "Επαναφορά χρώματος"), (_, _) =>
+            {
+                try
+                {
+                    WallpaperAccentEngine.Disable();
+                    accentValue.Text = StudioText("Disabled", "Ανενεργό");
+                }
+                catch (Exception ex) { MessageBox.Show(this, ex.Message, "Opsis Dynamic Accent", MessageBoxButtons.OK, MessageBoxIcon.Error); }
+            }));
+
         var windowCard = AddCardSection(panel, StudioText("P3 — Window Rules", "P3 — Κανόνες παραθύρων"));
         AddText(windowCard, StudioText(
             "Control position and always-on-top for explicitly named applications. Only the foreground window is inspected, no global hooks or DLL injection. All original positions are restored on exit.",
