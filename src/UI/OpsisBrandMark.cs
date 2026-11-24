@@ -44,16 +44,55 @@ internal static class OpsisBrandMark
             using var disc = new GraphicsPath();
             disc.AddEllipse(3,3,94,94);
             g.SetClip(disc, CombineMode.Intersect);
-            using var dark = new SolidBrush(Color.FromArgb(7,27,45));
-            g.FillPath(dark,disc);
+            using var body = new LinearGradientBrush(new Rectangle(0,0,100,100),
+                Color.FromArgb(66,106,140), Color.FromArgb(6,22,37), 65f);
+            g.FillPath(body,disc);
             using var blue = Blue();
-            using var blueBrush = new LinearGradientBrush(new Rectangle(0,0,100,100),
-                Color.FromArgb(19,185,255), Color.FromArgb(0,103,219), 57f);
-            g.FillPath(blueBrush,blue);
             using var ribbon = Ribbon();
+            using var shadow = new SolidBrush(Color.FromArgb(175,0,16,34));
+            var shadowState = g.Save();
+            g.TranslateTransform(0,1.5f);
+            g.FillPath(shadow,blue);
+            g.Restore(shadowState);
+            using var blueBrush = new LinearGradientBrush(new Rectangle(0,0,100,100),
+                Color.FromArgb(199,247,255), Color.FromArgb(64,200,255), 65f);
+            blueBrush.InterpolationColors = new ColorBlend {
+                Colors = new[]{Color.FromArgb(199,247,255), Color.FromArgb(56,199,255),
+                    Color.FromArgb(0,142,232), Color.FromArgb(7,85,190),
+                    Color.FromArgb(0,142,232), Color.FromArgb(64,200,255)},
+                Positions = new[]{0f,.12f,.35f,.64f,.84f,1f}
+            };
+            g.FillPath(blueBrush,blue);
+            using var bevel = new Pen(Color.FromArgb(100,109,215,255),.55f) { LineJoin=LineJoin.Round };
+            g.DrawPath(bevel,blue);
+            shadowState = g.Save();
+            g.TranslateTransform(1.1f,1.5f);
+            g.FillPath(shadow,ribbon);
+            g.Restore(shadowState);
             using var whiteBrush = new LinearGradientBrush(new Rectangle(0,0,100,100),
-                Color.White, Color.FromArgb(217,242,255), 57f);
+                Color.White, Color.FromArgb(144,184,213), 65f);
+            whiteBrush.InterpolationColors = new ColorBlend {
+                Colors = new[]{Color.White,Color.FromArgb(248,253,255),Color.FromArgb(210,230,243),
+                    Color.White,Color.FromArgb(144,184,213)},
+                Positions = new[]{0f,.3f,.55f,.73f,1f}
+            };
             g.FillPath(whiteBrush,ribbon);
+            using var ribbonEdge = new Pen(Color.FromArgb(190,242,251,255),.38f) { LineJoin=LineJoin.Round };
+            g.DrawPath(ribbonEdge,ribbon);
+            using var specular = new GraphicsPath();
+            specular.AddBezier(6,36,10,16,29,5,50,4);
+            specular.AddBezier(50,4,70,4,87,15,94,32);
+            specular.AddBezier(94,32,74,24,55,26,39,33);
+            specular.AddBezier(39,33,25,39,14,40,6,36); specular.CloseFigure();
+            using var gloss = new LinearGradientBrush(new Rectangle(0,0,100,42),
+                Color.FromArgb(100,255,255,255),Color.FromArgb(0,188,240,255),90f);
+            g.FillPath(gloss,specular);
+            using var rim = new Pen(Color.FromArgb(165,170,231,255),.9f);
+            g.DrawEllipse(rim,3.8f,3.8f,92.4f,92.4f);
+            using var shineArc = new Pen(Color.FromArgb(195,235,251,255),.75f) { StartCap=LineCap.Round,EndCap=LineCap.Round };
+            g.DrawArc(shineArc,6,6,88,88,213,56);
+            using var lowerArc = new Pen(Color.FromArgb(170,90,226,255),.75f) { StartCap=LineCap.Round,EndCap=LineCap.Round };
+            g.DrawArc(lowerArc,4,4,92,92,20,50);
             if (animate)
             {
                 float position = (float)(0.5-0.5*Math.Cos(seconds*0.9));
