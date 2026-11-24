@@ -3811,10 +3811,20 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
             _currentPageKey = "Theme";
             var panel = CreatePagePanel();
             var card = AddCardSection(panel, OpsisStrings.T("ui.theme.title"));
-            string[] modes = { "Follow", "Light", "Dark", "Teal", "Midnight", "Forest", "Dawn", "Contrast" };
-            string[] labels = { LocalizationManager.T("Settings.ThemeFollow"), LocalizationManager.T("Settings.ThemeLight"), LocalizationManager.T("Settings.ThemeDark"), "Opsis teal", "Midnight", "Forest", "Dawn", "High contrast" };
+            string[] modes = { "Follow", "Light", "Dark", "Teal", "Midnight", "Forest", "Dawn", "Contrast", "SignatureGlass" };
+            string[] labels = { LocalizationManager.T("Settings.ThemeFollow"), LocalizationManager.T("Settings.ThemeLight"), LocalizationManager.T("Settings.ThemeDark"), "Opsis teal", "Midnight", "Forest", "Dawn", "High contrast", "Signature Glass" };
             int idx = Array.IndexOf(modes, AppSettings.Load().ThemeMode); if (idx < 0) idx = 0;
             FxCombo(card, LocalizationManager.T("Settings.Theme"), labels, labels[idx], v => ThemeManager.SetMode(modes[Math.Max(0, Array.IndexOf(labels, v))]));
+            var applySignature = new HoverButton { Text = StudioText("Apply Signature Glass to desktop surfaces", "Signature Glass σε widgets και επιφάνειες"),
+                AutoSize = true, MinimumSize = new Size(260, 36), BackColor = UiTheme.SurfaceHover, ForeColor = UiTheme.TextPrimary, Cursor = Cursors.Hand };
+            applySignature.Click += (_, _) =>
+            {
+                if (MessageBox.Show(this, StudioText("Apply the shared appearance to widgets, DeskStrip and containers? This replaces their current material settings.",
+                    "Εφαρμογή κοινής εμφάνισης σε widgets, DeskStrip και containers; Θα αντικατασταθούν οι τρέχουσες ρυθμίσεις υλικών τους."),
+                    "Signature Glass", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
+                    DesktopMaterials.ApplySignature();
+            };
+            card.Controls.Add(applySignature);
             AddSkinSelector(card, this);
             BuildGearThemeCards(panel);
             _pageTitle.Text = OpsisStrings.T("ui.theme.title");
@@ -5767,8 +5777,22 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
             var state = g.Save();
             g.SmoothingMode = SmoothingMode.AntiAlias;
             using var shape = UiTheme.RoundedPath(bounds, Math.Min(bounds.Width, bounds.Height) / 2);
-            using var brush = new SolidBrush(fill);
-            g.FillPath(brush, shape);
+            if (AppSettings.Peek().ThemeMode == "SignatureGlass" && !SystemInformation.HighContrast)
+            {
+                using var glass = new System.Drawing.Drawing2D.LinearGradientBrush(bounds,
+                    Color.FromArgb(Math.Min(255, fill.R + 24), Math.Min(255, fill.G + 32), Math.Min(255, fill.B + 38)),
+                    fill, System.Drawing.Drawing2D.LinearGradientMode.Vertical);
+                g.FillPath(glass, shape);
+                var rimBounds = Rectangle.Inflate(bounds, -1, -1);
+                using var rimPath = UiTheme.RoundedPath(rimBounds, Math.Min(rimBounds.Width, rimBounds.Height) / 2);
+                using var rimPen = new Pen(Color.FromArgb(150, 126, 219, 255), 1f);
+                g.DrawPath(rimPen, rimPath);
+            }
+            else
+            {
+                using var brush = new SolidBrush(fill);
+                g.FillPath(brush, shape);
+            }
             if (button.FlatAppearance.BorderSize > 0)
             {
                 var border = Rectangle.Inflate(bounds, -1, -1);
