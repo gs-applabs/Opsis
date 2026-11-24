@@ -27,6 +27,7 @@ public sealed class OpsisWidgetVisualDesignerForm : Form
     private bool _dragging, _updating;
     private Point _startMouse;
     private Point _startElement;
+    private Font? _previewFont;
 
     public OpsisWidgetVisualDesignerForm(OpsisWidgetDesigner.Layout layout)
     {
@@ -144,6 +145,7 @@ public sealed class OpsisWidgetVisualDesignerForm : Form
         _x.ValueChanged += (_, _) => RefreshPosition();
         _y.ValueChanged += (_, _) => RefreshPosition();
         _canvas.Resize += (_, _) => RefreshPosition();
+        FormClosed += (_, _) => _previewFont?.Dispose();
         RefreshPreview();
     }
 
@@ -170,12 +172,15 @@ public sealed class OpsisWidgetVisualDesignerForm : Form
             "CPU" => "CPU 37%", "RAM" => "RAM 62%",
             "Battery" => "Battery 85%", _ => _text.Text
         };
-        if (ColorTranslator.FromHtml("#00D2FF") is Color)
+        try { _element.ForeColor = ColorTranslator.FromHtml(_color.Text); }
+        catch (ArgumentException) { _element.ForeColor = UiTheme.TextSecondary; }
+        if (_previewFont == null || Math.Abs(_previewFont.Size - (float)_fontSize.Value) > 0.05f)
         {
-            try { _element.ForeColor = ColorTranslator.FromHtml(_color.Text); }
-            catch (ArgumentException) { _element.ForeColor = UiTheme.TextSecondary; }
+            var oldFont = _previewFont;
+            _previewFont = new Font("Segoe UI Variable Display", (float)_fontSize.Value, FontStyle.Regular);
+            _element.Font = _previewFont;
+            oldFont?.Dispose();
         }
-        _element.Font = new Font("Segoe UI Variable Display", (float)_fontSize.Value, FontStyle.Regular);
         _element.BorderStyle = _border.Checked ? BorderStyle.FixedSingle : BorderStyle.None;
         _element.Width = Math.Min(290, Math.Max(190, _canvas.Width / 3));
         RefreshPosition();
