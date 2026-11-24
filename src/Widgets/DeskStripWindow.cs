@@ -100,6 +100,8 @@ namespace MotionDesk.Widgets
         // 2.6.0 GPU glass: when on, this window is a LAYERED per-pixel-alpha window that only draws icons / dots (transparent background); the glass itself is a pane of
         // Opsis.Glass directly below it (real transparency, live refraction of what is behind). When off or unavailable everything is as before (DWM blur).
         private bool _wantGpu;
+        private Action? _glassPolicyHandler;
+        private int _policyRefreshQueued;
         private int _glassPane = -1;
         private LayeredSurface? _layered;
         private bool _layeredDirty;
@@ -143,6 +145,13 @@ namespace MotionDesk.Widgets
             Microsoft.Win32.SystemEvents.DisplaySettingsChanged += OnScreenChanged;
             Microsoft.Win32.SystemEvents.UserPreferenceChanged += OnScreenChanged;
             Action look = () => { if (IsHandleCreated && !IsDisposed) try { BeginInvoke(() => { RefreshMaterial(); ApplyLayout(animate: false); Invalidate(); }); } catch (Exception) { } };
+            _glassPolicyHandler = () =>
+            {
+                if (IsDisposed || Disposing || !IsHandleCreated || Interlocked.Exchange(ref _policyRefreshQueued, 1) != 0) return;
+                try { BeginInvoke(() => { Interlocked.Exchange(ref _policyRefreshQueued, 0); if (!IsDisposed && !Disposing) RefreshMaterial(); }); }
+                catch (InvalidOperationException) { Interlocked.Exchange(ref _policyRefreshQueued, 0); }
+            };
+            GlassService.PolicyChanged += _glassPolicyHandler;
             MotionDesk.UI.ThemeManager.Changed += look; MotionDesk.UI.ThemeManager.Repainted += look;                       // live: theme / tint / glass changes repaint the open strip
             FormClosed += (_, _) =>
             {
@@ -962,6 +971,7 @@ namespace MotionDesk.Widgets
         {
             if (disposing)
             {
+                if (_glassPolicyHandler != null) { GlassService.PolicyChanged -= _glassPolicyHandler; _glassPolicyHandler = null; }
                 _layeredTimer.Stop(); _layeredTimer.Dispose(); _layered?.Dispose();
                 if (_glassPane >= 0) { GlassService.ExistingManager?.RemovePane(_glassPane); _glassPane = -1; }
             }
@@ -996,14 +1006,20 @@ namespace MotionDesk.Widgets
             var tint = material.UsesCustom ? material.Color : Color.FromArgb(32, 34, 40);
             int alpha = material.UsesCustom ? material.Opacity * 255 / 100 : 102;
             int abgr = (alpha << 24) | (tint.B << 16) | (tint.G << 8) | tint.R;
-            var accent = new ACCENT_POLICY { AccentState = Low || material.Mode == "Solid" ? 0 : 3, GradientColor = abgr };
-            BackColor = material.Mode == "Solid" || Low && material.UsesCustom ? tint : Color.FromArgb(20, 20, 20);
+            bool solid = Low || material.Mode == "Solid" || GlassService.Level == GlassLevel.Solid;
+            var accent = new ACCENT_POLICY { AccentState = solid ? 0 : 3, GradientColor = abgr };
+            BackColor = SystemInformation.HighContrast ? SystemColors.Window : solid && material.UsesCustom ? tint : Color.FromArgb(20, 20, 20);
             int size = Marshal.SizeOf(accent);
             IntPtr ptr = Marshal.AllocHGlobal(size);
-            Marshal.StructureToPtr(accent, ptr, false);
-            var data = new WINDOWCOMPOSITIONATTRIBDATA { Attribute = 19, SizeOfData = size, Data = ptr };
-            SetWindowCompositionAttribute(Handle, ref data);
-            Marshal.FreeHGlobal(ptr);
+            try
+            {
+                Marshal.StructureToPtr(accent, ptr, false);
+                var data = new WINDOWCOMPOSITIONATTRIBDATA { Attribute = 19, SizeOfData = size, Data = ptr };
+                SetWindowCompositionAttribute(Handle, ref data);
+            }
+            catch (DllNotFoundException) { }
+            catch (EntryPointNotFoundException) { }
+            finally { Marshal.FreeHGlobal(ptr); }
         }
 
         private DesktopMaterial? _shownMaterial;
@@ -1018,7 +1034,9 @@ namespace MotionDesk.Widgets
                 if (_glassPane >= 0) GlassService.ExistingManager?.RemovePane(_glassPane);
                 _glassPane = -1;
                 _wantGpu = gpu;
+                _shownMaterial = null;
                 _layeredDirty = false;
+                if (!gpu) { _layeredTimer.Stop(); _layered?.Dispose(); _layered = null; }
                 RecreateHandle();
                 UpdateRegion();
                 Invalidate();
