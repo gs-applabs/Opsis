@@ -1,5 +1,6 @@
 using System;
 using System.Drawing;
+using System.Linq;
 using System.Windows.Forms;
 using MotionDesk.Services;
 using MotionDesk.Widgets;
@@ -143,7 +144,9 @@ public sealed class OpsisTaskbarDesignerForm : Form
         if (_preview.IsDisposed || _preview.Width < 120) return;
         // Disposing a child removes it from ControlCollection; do not mutate
         // a collection while iterating its enumerator.
-        while (_preview.Controls.Count > 0) _preview.Controls[0].Dispose();
+        var oldControls = _preview.Controls.Cast<Control>().ToArray();
+        _preview.Controls.Clear();
+        foreach (var control in oldControls) control.Dispose();
         _preview.BackColor = UiTheme.NavBackground;
         var items = new[] { "Opsis", "Explorer", "Browser" };
         var total = items.Length * ((int)_width.Value + (int)_gap.Value * 2);
