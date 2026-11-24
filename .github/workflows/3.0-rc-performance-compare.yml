@@ -1,0 +1,80 @@
+name: Opsis 2.8 versus 3.0 RC resource comparison
+on:
+  push:
+    branches: [test/3.0.0.3200-rc-vm-audit]
+  pull_request:
+    branches: [feat/p2-win11-square-start-presets]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  resource-compare:
+    runs-on: windows-2025
+    timeout-minutes: 80
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: candidate
+      - uses: actions/checkout@v4
+        with:
+          ref: release/2.8.0.2510
+          path: baseline
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 11.0.x
+      - name: Publish 2.8 and real 3.0 RC side-by-side under identical toolchain
+        run: |
+          foreach ($flavor in @('baseline','candidate')) {
+            Push-Location $flavor
+            try {
+              dotnet restore Opsis.csproj --disable-parallel
+              if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+              $props = if ($flavor -eq 'candidate') { '-p:OpsisAppVersion=3.0.0.3200' } else { '-p:OpsisAppVersion=2.8.0.2510' }
+              dotnet publish Opsis.csproj -c Release -r win-x64 --self-contained false -o publish -m:1 $props -p:UseSharedCompilation=false -nodeReuse:false
+              if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+              if (!(Test-Path publish/Opsis.exe)) { throw "$flavor binary missing" }
+            } finally { Pop-Location }
+          }
+      - name: Five independent executable self-test samples per candidate
+        run: |
+          New-Item -ItemType Directory -Path evidence -Force | Out-Null
+          $all = @()
+          foreach ($flavor in @('baseline','candidate')) {
+            $exe = (Resolve-Path "$flavor/publish/Opsis.exe").Path
+            foreach ($n in 1..5) {
+              $env:OPSIS_APPDATA = Join-Path $env:RUNNER_TEMP ("OpsisPerf-" + $flavor + "-" + $n)
+              New-Item -ItemType Directory -Force -Path $env:OPSIS_APPDATA | Out-Null
+              $sw = [Diagnostics.Stopwatch]::StartNew()
+              $process = Start-Process -FilePath $exe -ArgumentList '--run-selftest' -PassThru
+              $peak = 0L
+              while (!$process.HasExited) {
+                try { $process.Refresh(); $peak = [Math]::Max($peak, [long]$process.WorkingSet64) } catch {}
+                Start-Sleep -Milliseconds 40
+              }
+              $sw.Stop()
+              if ($process.ExitCode -ne 0) { throw "$flavor sample $n self-test failed: $($process.ExitCode)" }
+              $all += [pscustomobject]@{ flavor=$flavor; sample=$n; elapsedMs=$sw.Elapsed.TotalMilliseconds; observedPeakWorkingSetMiB=[math]::Round($peak/1MB,2) }
+            }
+          }
+          $all | ConvertTo-Json -Depth 5 | Set-Content evidence/core-comparison.json -Encoding utf8
+          $all | Group-Object flavor | ForEach-Object {
+            $group = $_.Group
+            [pscustomobject]@{
+              flavor=$_.Name
+              averageMs=[math]::Round(($group | Measure-Object elapsedMs -Average).Average,1)
+              averageObservedPeakMiB=[math]::Round(($group | Measure-Object observedPeakWorkingSetMiB -Average).Average,1)
+            }
+          } | Tee-Object -Variable summary | Format-Table
+          $summary | ConvertTo-Json -Depth 4 | Set-Content evidence/core-comparison-summary.json -Encoding utf8
+          Write-Host 'Self-test benchmarks only: does not prove interactive GUI CPU, GPU or memory gains.'
+      - name: Upload measured raw samples
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: opsis28-vs-30-rc-performance
+          path: evidence/**
+          retention-days: 7
+          if-no-files-found: warn
