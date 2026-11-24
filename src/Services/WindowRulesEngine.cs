@@ -53,9 +53,9 @@ public sealed class WindowRulesEngine : IDisposable
     public void Start() => _timer.Start();
     public void Stop() => _timer.Stop();
 
-    private static void Validate(Rule rule)
+    private static void Validate(Rule? rule)
     {
-        if (rule.Process.Length is < 1 or > 60 ||
+        if (rule == null || string.IsNullOrWhiteSpace(rule.Process) || rule.Process.Length > 60 ||
             rule.Process.Any(x => !char.IsAsciiLetterOrDigit(x) && x is not ('-' or '_' or '.')) ||
             Protected.Contains(rule.Process) ||
             rule.Width is < 300 or > 10000 || rule.Height is < 240 or > 10000 ||
@@ -71,9 +71,10 @@ public sealed class WindowRulesEngine : IDisposable
             if (new FileInfo(ConfigPath).Length > 128 * 1024) throw new InvalidDataException("Window rules exceed size limit.");
             var rules = JsonSerializer.Deserialize<List<Rule>>(AtomicFile.ReadAllText(ConfigPath))
                 ?? throw new InvalidDataException("Invalid Window Rules file.");
-            if (rules.Count > 100 || rules.GroupBy(x => x.Process, StringComparer.OrdinalIgnoreCase).Any(g => g.Count() > 1))
-                throw new InvalidDataException("Duplicate/excessive Window Rules.");
+            if (rules.Count > 100) throw new InvalidDataException("Excessive Window Rules.");
             foreach (var rule in rules) Validate(rule);
+            if (rules.GroupBy(x => x.Process, StringComparer.OrdinalIgnoreCase).Any(g => g.Count() > 1))
+                throw new InvalidDataException("Duplicate Window Rules.");
             Cached = rules;
             return rules.Select(Copy).ToArray();
         }
@@ -86,9 +87,10 @@ public sealed class WindowRulesEngine : IDisposable
 
     public static void Save(IReadOnlyList<Rule> rules)
     {
-        if (rules.Count > 100 || rules.GroupBy(x => x.Process, StringComparer.OrdinalIgnoreCase).Any(g => g.Count() > 1))
-            throw new InvalidDataException("Too many or duplicate window rules.");
+        if (rules.Count > 100) throw new InvalidDataException("Too many window rules.");
         foreach (var rule in rules) Validate(rule);
+        if (rules.GroupBy(x => x.Process, StringComparer.OrdinalIgnoreCase).Any(g => g.Count() > 1))
+            throw new InvalidDataException("Duplicate window rules.");
         lock (Gate)
         {
             Directory.CreateDirectory(Path.GetDirectoryName(ConfigPath)!);
