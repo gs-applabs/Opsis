@@ -379,6 +379,59 @@ public sealed partial class MainWindow
                 catch (Exception ex) { MessageBox.Show(this, ex.Message, "Opsis Dynamic Accent", MessageBoxButtons.OK, MessageBoxIcon.Error); }
             }));
 
+        var cursorCard = AddCardSection(panel, StudioText("P4 — Cursor FX Studio", "P4 — Εφέ δείκτη ποντικιού"));
+        AddText(cursorCard, StudioText(
+            "Optional halo and click ripple around the pointer. No mouse hooks or shell DLL injection. Pauses in fullscreen and on battery when configured.",
+            "Προαιρετική φωτεινή άλω και κύκλος στο κλικ. Χωρίς hooks ή DLL injection, με παύση σε πλήρη οθόνη και λειτουργία μπαταρίας."));
+        var cursorStyle = new ComboBox { Width = 160, DropDownStyle = ComboBoxStyle.DropDownList };
+        cursorStyle.Items.AddRange(new object[] { "Halo", "Ripple", "Both" });
+        cursorStyle.SelectedItem = AppSettings.Load().CursorFxStyle;
+        if (cursorStyle.SelectedIndex < 0) cursorStyle.SelectedItem = "Both";
+        var cursorIntensity = new NumericUpDown
+        {
+            Minimum = 20, Maximum = 100, Increment = 5, Width = 82,
+            Value = Math.Clamp(AppSettings.Load().CursorFxIntensity, 20, 100)
+        };
+        var cursorRow = new FlowLayoutPanel { Width = 720, AutoSize = true };
+        cursorRow.Controls.Add(new Label { Text = StudioText("Effect", "Εφέ"), AutoSize = true,
+            Margin = new Padding(5, 9, 1, 0), ForeColor = UiTheme.TextPrimary });
+        cursorRow.Controls.Add(cursorStyle);
+        cursorRow.Controls.Add(new Label { Text = StudioText("Intensity", "Ένταση"), AutoSize = true,
+            Margin = new Padding(5, 9, 1, 0), ForeColor = UiTheme.TextPrimary });
+        cursorRow.Controls.Add(cursorIntensity);
+        cursorCard.Controls.Add(cursorRow);
+        AddButtonGrid(cursorCard,
+            (StudioText("Enable Cursor FX", "Ενεργοποίηση εφέ"), (_, _) =>
+            {
+                try
+                {
+                    if (SafeModeService.IsSafeMode || WindowsUpdateGuard.RequiresReview)
+                        throw new InvalidOperationException("Windows compatibility review is required.");
+                    var s = AppSettings.Load();
+                    s.CursorFxStyle = cursorStyle.SelectedItem?.ToString() ?? "Both";
+                    s.CursorFxIntensity = (int)cursorIntensity.Value;
+                    s.Save();
+                    OpsisFeatureSwitcher.Set("cursor.effects", true);
+                }
+                catch (Exception ex) { MessageBox.Show(this, ex.Message, "Opsis Cursor FX", MessageBoxButtons.OK, MessageBoxIcon.Error); }
+            }),
+            (StudioText("Disable Cursor FX", "Απενεργοποίηση εφέ"), (_, _) =>
+            {
+                try { OpsisFeatureSwitcher.Set("cursor.effects", false); }
+                catch (Exception ex) { MessageBox.Show(this, ex.Message, "Opsis Cursor FX", MessageBoxButtons.OK, MessageBoxIcon.Error); }
+            }),
+            (StudioText("Apply effect settings", "Εφαρμογή ρυθμίσεων"), (_, _) =>
+            {
+                try
+                {
+                    var s = AppSettings.Load();
+                    s.CursorFxStyle = cursorStyle.SelectedItem?.ToString() ?? "Both";
+                    s.CursorFxIntensity = (int)cursorIntensity.Value;
+                    s.Save();
+                }
+                catch (Exception ex) { MessageBox.Show(this, ex.Message, "Opsis Cursor FX", MessageBoxButtons.OK, MessageBoxIcon.Error); }
+            }));
+
         var windowCard = AddCardSection(panel, StudioText("P3 — Window Rules", "P3 — Κανόνες παραθύρων"));
         AddText(windowCard, StudioText(
             "Control position and always-on-top for explicitly named applications. Only the foreground window is inspected, no global hooks or DLL injection. All original positions are restored on exit.",
