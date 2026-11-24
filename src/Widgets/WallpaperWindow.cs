@@ -254,6 +254,7 @@ namespace MotionDesk.Widgets
                 weatherSim = settings.WeatherSimulation,
                 timeSim = settings.TimeSimulation,
                 weatherGlass = settings.WeatherGlass,
+                signatureWeatherCard = AppSettings.Peek().ThemeMode == "SignatureGlass" && !SystemInformation.HighContrast,
                 weatherSpatialMode = settings.WeatherSpatialMode is "2.5D" or "3D"
                     ? settings.WeatherSpatialMode : "Off",
                 rainLandscapeIntensity = Math.Clamp(settings.RainLandscapeIntensity, 0, 200) / 100.0,
