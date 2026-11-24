@@ -1,0 +1,30 @@
+name: Exact Opsis 3.0 RC source export
+on:
+  push:
+    branches: [archive/3.0.0.3200-rc-7a055f1]
+permissions:
+  contents: read
+jobs:
+  source:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: 7a055f1e7fab4c9ae18d21c9b9692dbc37c1b469
+      - name: Create exact full tracked source ZIP
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "7a055f1e7fab4c9ae18d21c9b9692dbc37c1b469"
+          mkdir -p out
+          git archive --format=zip --prefix=Opsis-3.0.0.3200-RC/ -o out/Opsis-3.0.0.3200-RC-source.zip HEAD
+          git rev-parse HEAD > out/COMMIT.txt
+          (cd out && sha256sum Opsis-3.0.0.3200-RC-source.zip > Opsis-3.0.0.3200-RC-source.zip.sha256)
+          python -c "import zipfile; z=zipfile.ZipFile('out/Opsis-3.0.0.3200-RC-source.zip'); assert z.testzip() is None; assert 'Opsis-3.0.0.3200-RC/Opsis.csproj' in z.namelist(); print(len(z.namelist()))"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Opsis-3.0.0.3200-RC-exact-source-7a055f1
+          path: out/
+          if-no-files-found: error
+          retention-days: 30
