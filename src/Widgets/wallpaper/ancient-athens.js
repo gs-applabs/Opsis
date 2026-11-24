@@ -62,25 +62,29 @@
         const key = [dayImage.src,width,height].join('|');
         if (darkAcropolisKey === key) return darkAcropolis;
         darkAcropolisKey = key;
+        // A 1080p color/mask patch is sufficient for a softly feathered light correction.
+        // Do not allocate two extra full-resolution 4K canvases on each monitor.
+        const scale = Math.min(1, 1920 / width, 1080 / height);
+        const pw = Math.max(1, Math.round(width * scale)), ph = Math.max(1, Math.round(height * scale));
         const overlay = document.createElement('canvas');
-        overlay.width = width; overlay.height = height;
+        overlay.width = pw; overlay.height = ph;
         const painter = overlay.getContext('2d');
         if (!painter) return null;
         painter.filter = 'brightness(0.17) saturate(0.44) contrast(0.91)';
-        cover(painter, dayImage, width, height);
+        cover(painter, dayImage, pw, ph);
         painter.filter = 'none';
         const mask = document.createElement('canvas');
-        mask.width = width; mask.height = height;
+        mask.width = pw; mask.height = ph;
         const mc = mask.getContext('2d');
         if (!mc) return null;
-        const b = atlas(dayImage, width, height);
+        const b = atlas(dayImage, pw, ph);
         const silhouette = [
             [.200,.515],[.241,.455],[.267,.398],[.259,.330],[.320,.320],
             [.327,.296],[.425,.287],[.476,.259],[.480,.194],[.604,.197],
             [.625,.279],[.732,.320],[.782,.435],[.810,.509],[.709,.565],
             [.612,.566],[.525,.611],[.401,.606],[.287,.551]
         ];
-        mc.filter = 'blur(' + Math.max(5, Math.round(width * .007)) + 'px)';
+        mc.filter = 'blur(' + Math.max(4, Math.round(pw * .007)) + 'px)';
         mc.fillStyle = 'white'; mc.beginPath();
         silhouette.forEach(([x,y],i) => i ? mc.lineTo(b.x+x*b.w,b.y+y*b.h) :
             mc.moveTo(b.x+x*b.w,b.y+y*b.h));
@@ -163,7 +167,7 @@
                 cover(g,image,width,height);
                 if (name === 'night' && daylight?.image) {
                     const patch=acropolisPatch(daylight.image,width,height);
-                    if(patch) { g.globalAlpha=opacity;g.drawImage(patch,0,0); }
+                    if(patch) { g.globalAlpha=opacity;g.drawImage(patch,0,0,width,height); }
                 }
             }
             if (base.image && overlay.image && base.image !== overlay.image) {
