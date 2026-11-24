@@ -207,7 +207,15 @@ namespace MotionDesk.Widgets
             if (!safeMode && AppSettings.Load().QuickHideDoubleClickEnabled) DesktopIconVisibilityEngine.Instance.Start();
             else DesktopIconVisibilityEngine.Instance.RestoreIfHidden();
             AppActivity.Start();
-            if (!safeMode && !reviewRequired && AppSettings.Load().WindowRulesEnabled) WindowRulesEngine.Instance.Start();
+            if (!safeMode && !reviewRequired)
+            {
+                if (AppSettings.Load().WindowRulesEnabled) WindowRulesEngine.Instance.Start();
+                if (AppSettings.Load().CursorFxEnabled)
+                {
+                    try { MotionDesk.UI.OpsisCursorFx.Start(); }
+                    catch (Exception e) { RotatingLogger.Write("Cursor FX startup: " + e.Message); }
+                }
+            }
             // No background thread or I/O during idle except a once-per-minute rule check.
             // Build fingerprint is read only every 15 minutes; no Windows file hashing in the timer.
             if (!safeMode)
@@ -649,6 +657,7 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
             try { MotionDesk.Appearance.AppearanceService.Instance.Stop(); } catch (Exception) { }   // taskbar look and window effects always go back to Windows
             _hotkeys.Dispose();
             _experienceTimer.Stop(); _experienceTimer.Dispose();
+            MotionDesk.UI.OpsisCursorFx.Stop();
             WindowRulesEngine.Instance.Dispose();
             _hotCorners.Dispose();
             _taskbarWatcher.Dispose();
