@@ -9,6 +9,10 @@ internal static class Program
     {
         var wallpaper = Path.GetFullPath(args[0]);
         var results = Directory.CreateDirectory(args[1]);
+        // Hosted Windows runners have no dedicated GPU. SwiftShader exercises the
+        // WebView2 WebGL2 implementation and never changes Opsis runtime options.
+        Environment.SetEnvironmentVariable("WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS",
+            "--use-gl=angle --use-angle=swiftshader --enable-unsafe-swiftshader");
         Application.EnableVisualStyles();
         using var form = new Form { ClientSize = new Size(960, 540) };
         using var web = new WebView2 { Dock = DockStyle.Fill };
@@ -37,12 +41,19 @@ internal static class Program
                           WeatherWallpaper.resize(c.width,c.height);
                           OpsisWeatherSpatial.setMode('3D');
                           WeatherWallpaper.setConfig({realistic:true,landmarkId:'{{id}}',spatialMode:'3D',timeSim:'Day',weatherSim:'Clear'});
-                          WeatherWallpaper.draw(c.getContext('2d'),.033,{id:'High'});
-                          const gl=document.getElementById('opsis-weather-spatial')?.getContext('webgl2');
-                          if (!gl) return false;
-                          const pixel=new Uint8Array(4);
-                          gl.readPixels(gl.drawingBufferWidth>>1,gl.drawingBufferHeight>>2,1,1,gl.RGBA,gl.UNSIGNED_BYTE,pixel);
-                          return pixel[3]===255 && gl.getError()===gl.NO_ERROR;
+                          let sample=null;
+                          const original=WebGL2RenderingContext.prototype.drawArrays;
+                          WebGL2RenderingContext.prototype.drawArrays=function(mode,first,count) {
+                            original.call(this,mode,first,count);
+                            if(mode===this.TRIANGLES) {
+                              const px=new Uint8Array(4);
+                              this.readPixels(this.drawingBufferWidth>>1,this.drawingBufferHeight>>2,1,1,this.RGBA,this.UNSIGNED_BYTE,px);
+                              sample={rgba:[...px],error:this.getError(),count};
+                            }
+                          };
+                          try { WeatherWallpaper.draw(c.getContext('2d'),.033,{id:'High'}); } finally { WebGL2RenderingContext.prototype.drawArrays=original; }
+                          return sample?.rgba[3]===255 && sample.error===0 ? true :
+                            {sample, supported:OpsisWeatherSpatial.supported(),status:OpsisWeatherSpatial.failureReason()};
                         })()
                         """);
                     if (result != "true") throw new Exception($"Missing 3D foreground for {id}: {result}");

@@ -76,6 +76,7 @@ void main() {
 let landscapeUniforms, particleUniforms;
 let meshProgram=null, meshBuffer=null, meshCount=0, meshKey='';
 let gl = null, canvas = null, program = null, buffer = null, count = 0;
+let failureReason = '';
 let mode = 'Off', blocked = false, reduced = false;
 let seed = 0x4f505349;
 function random() { seed = (Math.imul(seed, 1664525) + 1013904223) | 0; return (seed >>> 0) / 4294967296; }
@@ -124,6 +125,7 @@ function init() {
     canvas.addEventListener('webglcontextrestored', dispose);
     return true;
   } catch (e) {
+    failureReason = e.message;
     blocked = true; gl=null; program=null; buffer=null; canvas.remove(); canvas=null;
     return false;
   }
@@ -220,7 +222,7 @@ function dispose() {
   landscapeUniforms=particleUniforms=null;
   meshKey=''; meshProgram=meshBuffer=null; meshCount=0;
   if (canvas) canvas.remove();
-  gl=null; canvas=null; program=null; buffer=null; count=0; blocked=false;
+  gl=null; canvas=null; program=null; buffer=null; count=0; blocked=false; failureReason='';
 }
-root.OpsisWeatherSpatial = { setMode, update, dispose, supported: () => !blocked, mode:() => mode };
+root.OpsisWeatherSpatial = { setMode, update, dispose, failureReason: () => failureReason, supported: () => !blocked, mode:() => mode };
 })(window);
