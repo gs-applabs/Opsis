@@ -67,7 +67,7 @@ public static class WallpaperGalleryCatalog
                         if (normalized is "ancientathens" or "athens" or "ancientathenscore") continue;
                         string category = Categories.FirstOrDefault(c =>
                             string.Equals(c, manifest.Category, StringComparison.OrdinalIgnoreCase)) ?? "Abstract";
-                        string? poster = new[] { "poster.webp", "poster.png", "poster.jpg" }
+                        string? poster = new[] { "poster.png", "poster.jpg", "poster.webp" }
                             .Select(file => Path.Combine(directory, file))
                             .FirstOrDefault(file => SafeExisting(file, false) && new FileInfo(file).Length is > 0 and <= 16 * 1024 * 1024);
                         if (poster is null) continue;
