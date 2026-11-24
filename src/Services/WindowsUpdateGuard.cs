@@ -52,6 +52,24 @@ public static class WindowsUpdateGuard
         }
     }
 
+    // An initial baseline and each changed Windows build trigger one asynchronous
+    // read-only inventory of six known shell files. Idle sessions do not hash
+    // system files repeatedly, avoiding extra SSD traffic or startup latency.
+    private static void ScheduleShellInventory()
+    {
+        if (AppSettings.IsIsolatedForTests()) return;
+        _ = System.Threading.Tasks.Task.Run(() =>
+        {
+            try
+            {
+                var impact = OpsisRecoveryHub.InspectUpdateImpact();
+                RotatingLogger.Write("Windows shell inventory: " + impact);
+            }
+            catch (Exception e) when (e is IOException or UnauthorizedAccessException or InvalidDataException)
+            { RotatingLogger.Write("Windows shell inventory failed: " + e.Message); }
+        });
+    }
+
     /// <summary>
     /// Called on startup before plugins and shell replacements. No full-disk scan;
     /// writes only on first install or when a Windows update changes the fingerprint.
@@ -66,6 +84,7 @@ public static class WindowsUpdateGuard
             {
                 state.LastApprovedFingerprint = fingerprint;
                 Save(state);
+                ScheduleShellInventory();
                 return false;
             }
             if (state.LastApprovedFingerprint == fingerprint && string.IsNullOrEmpty(state.PendingFingerprint))
@@ -80,6 +99,7 @@ public static class WindowsUpdateGuard
             state.PendingFingerprint = fingerprint;
             state.DetectedUtc = DateTime.UtcNow;
             Save(state);
+            ScheduleShellInventory();
             return true;
         }
     }
