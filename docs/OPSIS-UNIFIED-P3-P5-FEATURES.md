@@ -20,19 +20,19 @@ All current and future additions use common application storage, theming and rec
 
 | Item | Status in codebase |
 |---|---|
-| Taskbar Designer | Native settings and Opsis replacement already exist; advanced visual designer still planned |
-| Explorer Studio 2.0 | Individual Explorer settings exist; richer toolbar/tab customization planned |
+| Taskbar Designer | Native Opsis Taskbar Designer for classic/compact/glass, alignment, width, gap and opacity; Windows taskbar remains untouched |
+| Explorer Studio 2.0 | Visual reversible HKCU options (extensions, hidden items, compact spacing, startup location); toolbar/tab control remains planned |
 | Context Menu Studio | Added opt-in, HKCU-only, owner-validated Opsis launcher on Explorer/desktop background context menus |
 | Window Rules Engine | Added: foreground-only positioning/topmost with rollback and safe defaults |
 | Advanced Snap Layouts | Existing AutoTile and layouts; additional custom editing can be extended |
 | Desktop Spaces | Existing VirtualWorkspaces |
 | Profile Scheduler | Implemented in Automation Studio for scenes and appearance presets |
 | Dynamic Accent Engine | Implemented: source-image color extraction or Weather scene palette, Opsis-only theme refresh every 15 minutes when enabled |
-| Animated Taskbar Effects | Planned |
+| Animated Taskbar Effects | Optional slow active-button pulse on Opsis replacement bar; advanced Acrylic/Mica motion effects remain planned |
 | Icon Pack Manager 2.0 | Existing IconAtlas and icon-pack import |
 | Cursor FX Studio | Implemented opt-in halo/ripple overlay without hooks or injection; pauses in fullscreen and optional battery mode |
 | Advanced Lock Screen | Existing settings; more advanced visual content planned |
-| Screen Saver Creator | Windows native controls exist; dedicated creator planned |
+| Screen Saver Creator | Native clock/image scene preset builder and fullscreen preview; standalone Windows .scr registration remains planned |
 | Theme Marketplace | Offline plugin/Gallery contributions including validated `.opsis-theme` import; online marketplace still planned |
 | Theme Import / Export | Data-only `.opsis-theme` ZIP for Appearance Preset and Weather Scene, importable from plugins/Gallery with integrity checks and overwrite protection |
 | Multi-monitor Studio | Existing per-monitor wallpaper/profile and topology services |
@@ -40,7 +40,7 @@ All current and future additions use common application storage, theming and rec
 | GPU Effects Manager | Existing GPU/performance monitoring; advanced per-effect tuning planned |
 | Wallpaper Scene Composer | Implemented for existing Weather parameters |
 | Weather Scene Rules | Available as safe Automation Studio rules |
-| Widget Designer | Native Widget Layout Studio implemented for Clock/Date/Text/CPU/RAM/Battery; advanced drag-and-drop remains planned |
+| Widget Designer | Native drag-and-drop position editor, preview, save/as, Clock/Date/Text/CPU/RAM/Battery bindings |
 | Widget Data Sources | Native CPU/RAM/Battery bindings in Widget Layout Studio; shared plugin contribution manifests; richer online data sources remain planned |
 | Command Palette 2.0 | Existing Opsis Command Palette; deeper cross-plugin command indexing planned |
 | Desktop Diagnostics | Existing diagnostics + new update impact hash inventory |
@@ -102,3 +102,28 @@ The importers do not execute Windhawk mods, install third-party Rainmeter DLLs o
 ## New Cursor FX Studio (native, opt-in)
 
 `src/UI/OpsisCursorFx.cs` provides a tiny transparent click-through WinForms overlay showing a pointer halo, a fading click ripple, or both. It does not need Windhawk binaries, external mod injections, or Windows shell modification. Style and intensity are stored in `AppSettings`, exposed through the common Personalization page and the `OpsisFeatureSwitcher` module adapter, disabled by default. A 50ms timer runs only while explicitly enabled. Wallpaper rendering and widget plugins are independent. The overlay suppresses on foreground fullscreen windows and when operating on battery according to pause settings. All configuration/compatibility reads are cached to avoid frequent SSD writes. Native pointer trails remain a separate Windows setting.
+
+
+## Follow-up: staged native Shell Studio and screensaver implementation
+
+Implemented in `feat/p3-p5-unified-experience` after the initial P3–P5 delivery:
+
+1. **Start Studio layouts**: list, tiles and compact presentation, optional grouping by Start Menu folder; pinned shortcuts persist in `start-studio.json`. This is a launcher, NOT a Windows Start-menu injection/replacement.
+2. **Opsis Taskbar Designer**: separate visual editor for classic/compact/glass look, approximate left/center arrangement, item width/gaps, opacity, optional low-frequency active button pulse, show/hide Task View and clock. It operates on the **Opsis ReplacementTaskbar** only, never patches native Windows taskbar. The 5-second read cache avoids repeated settings-file polling; profile is backed up by Recovery Hub.
+3. **Explorer Studio 2.0 — safe subset**: editor for the four explicit HKCU preferences already supported by `ExplorerViewProfiles`. Preserves backup and supports original settings restore. Does not inject into the Explorer toolbar or tabs.
+4. **External shell mod coexistence**: read-only scan of well-known installed/running shell products (StartAllBack, ExplorerPatcher, Windhawk, Rainmeter, TranslucentTB) that returns advisory risk classes. Unknown individual Windhawk mod configurations are **not** assumed to be verified safe.
+5. **Screensaver Studio — safe preview**: native fullscreen clock, static wallpaper image, or clock-with-image scene; dimming, seconds and user-triggered preview. Does not register a .scr file or change Windows screen saver settings without a separate supported installer.
+6. **Safety and tests**: all scene/profile files are in common Opsis recovery. Windows smoke adds invalid-schema rejection, complete Taskbar and Start style roundtrips, mod coexistence analysis, screensaver validation and real STA Win32 handle construction for Shell and Screensaver Studio.
+
+### Delivery / test gate
+
+GitHub-hosted Windows 2022/2025 workflows are configured for build, executable self-test, regression and Inno installer full lifecycle, with separate plugin compatibility. These latest jobs have been queued; **a queued workflow is not a passed test**. Do not issue production release/merge until the latest head passes and Windows 11 interactive GUI/high-DPI/multi-monitor checks are completed.
+
+### Still not delivered from initial 30-item list
+
+- True Windows Start replacement, low-level StartAllBack/ExplorerPatcher/Windhawk shell equivalents.
+- Full Explorer toolbar/tab command replacement and universal context menu editor.
+- General-purpose Rainmeter Lua/plugin/measure runtime.
+- True per-element Acrylic/Mica taskbar animation and arbitrarily configurable native Windows taskbar.
+- Native Windows .scr installer screensaver, online Theme Marketplace, complete dynamic profile automation and richer cross-plugin command registry.
+- Full 3D weather landmarks are isolated in PR #8, not merged into this branch.
