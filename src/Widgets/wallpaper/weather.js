@@ -893,6 +893,7 @@ function startScenePhoto(id) {
     photoState.key = '';
     photoState.lights = null;
     photoState.skyMask = null;
+    photoState.fineMask = null;
     const image = photoState.img = new Image();
     image.onload = () => {
         if (photoState.img !== image) return;
@@ -920,7 +921,13 @@ function drawScenePhoto(c2, sky, graded) {
     const x = bounds?.x ?? 0, y = bounds?.y ?? H - h;
     const amb = clamp(sky.amb, 0, 1), night = clamp(1 - amb / 0.35, 0, 1), fog = clamp(S.fog, 0, 1), glow = clamp(sky.glow || 0, 0, 1);
     const look = cfg.realistic || photoState.landscape ? atmosphere?.photoGrade(amb, glow, S) : null;
-    const key = [w, h, H, Number(Boolean(look)), Math.round(amb * 14), Math.round(night * 8), Math.round(fog * 10),
+    const refine = cfg.spatialMode === '2.5D' && photoState.skyMask &&
+        !cfg.skyEdits?.[window.OpsisLandmarks.photoScene(photoState.id)?.file];
+    if (refine && !photoState.fineMask) {
+        try { photoState.fineMask = window.OpsisSkyMask.refinePhotoSky(photoState.img, photoState.skyMask); }
+        catch { photoState.fineMask = photoState.skyMask; }
+    }
+    const key = [w, h, H, Number(Boolean(refine)), Number(Boolean(look)), Math.round(amb * 14), Math.round(night * 8), Math.round(fog * 10),
         Math.round(glow * 4), Math.round(S.snowCover * 4), look ? Math.round((S.rain + S.storm) * 8) : 0].join('/');
     if (photoState.key !== key) {
         const resolution = Math.min(1, 3072 / Math.max(w, h));
@@ -950,7 +957,7 @@ function drawScenePhoto(c2, sky, graded) {
             o.rect(0, 0, cacheW, Math.max(0, (HORIZON - y) * cacheH / h));
             o.clip();
             o.globalCompositeOperation = 'destination-out';
-            o.drawImage(photoState.skyMask, 0, 0, cacheW, cacheH);
+            o.drawImage(refine ? photoState.fineMask : photoState.skyMask, 0, 0, cacheW, cacheH);
             o.restore();
         }
         o.globalCompositeOperation = 'source-over'; photoState.key = key;
@@ -1662,7 +1669,7 @@ window.WeatherWallpaper = {
         W = H = 0;
         skyCv = skyCtx = cloudCv = cloudCtx = sceneCv = sceneCtx = reflCv = reflCtx = null;
         Object.assign(photoState, { id: '', key: '', ready: false, lightsReady: false,
-            img: null, lights: null, skyMask: null, canvas: null });
+            img: null, lights: null, skyMask: null, fineMask: null, canvas: null });
     },
     draw: (ctx2, dt, profile) => draw(ctx2, Math.min(dt, 0.1), profile),
     // info overlay helpers (clock / date / temperature drawn by index.html)
