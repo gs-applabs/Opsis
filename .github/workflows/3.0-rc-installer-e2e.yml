@@ -1,0 +1,79 @@
+name: Opsis 3.0 RC installer Windows VM E2E
+on:
+  push:
+    branches: [test/3.0.0.3200-rc-vm-audit]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  rc-installer:
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 85
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-2022, windows-2025]
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 11.0.x
+      - name: Enforce baseline and publish 3.0 RC binaries
+        run: |
+          python tests/integration/check_baseline_and_release.py
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          dotnet restore Opsis.csproj --disable-parallel
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          dotnet publish Opsis.csproj -c Release -r win-x64 --self-contained false -o publish -m:1 -p:OpsisAppVersion=3.0.0.3200 -p:UseSharedCompilation=false -nodeReuse:false
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $ver = (Get-Item publish/Opsis.exe).VersionInfo.FileVersion
+          if ($ver -ne '3.0.0.3200') { throw "Incorrect RC version $ver" }
+      - name: Download verified official Inno Setup 7
+        run: |
+          $url = 'https://github.com/jrsoftware/issrc/releases/download/is-7_1_1/innosetup-7.1.1-x64.exe'
+          $file = Join-Path $env:RUNNER_TEMP 'inno.exe'
+          Invoke-WebRequest -Uri $url -OutFile $file
+          $sig = Get-AuthenticodeSignature $file
+          if ($sig.Status -ne 'Valid' -or $sig.SignerCertificate.Subject -notmatch 'Pyrsys B\.V\.') {
+            throw 'Unexpected Inno Setup Authenticode signature'
+          }
+          $dir = Join-Path $env:RUNNER_TEMP 'Inno7'
+          $proc = Start-Process -FilePath $file -ArgumentList ('/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /DIR="' + $dir + '"') -Wait -PassThru
+          if ($proc.ExitCode -ne 0) { throw "Inno installer failed: $($proc.ExitCode)" }
+          "ISCC_EXE=$(Join-Path $dir 'ISCC.exe')" >> $env:GITHUB_ENV
+      - name: Compile actual 3.0 installer and verify binary version
+        run: |
+          & $env:ISCC_EXE installer.iss
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $installer = @(Get-ChildItem Output -Filter 'OpsisSetup-3.0.0.3200.exe')
+          if ($installer.Count -ne 1) { throw 'Missing 3.0.0.3200 RC installer' }
+          "OPSIS_RC_INSTALLER=$($installer[0].FullName)" >> $env:GITHUB_ENV
+          Get-FileHash $installer[0].FullName -Algorithm SHA256 |
+            Format-List | Out-File Output/rc-installer-sha256.txt
+      - name: Clean install, in-place reinstall, silent uninstall
+        run: |
+          $target = Join-Path $env:RUNNER_TEMP 'Opsis-RC-E2E'
+          $args = '/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /DIR="' + $target + '"'
+          foreach ($pass in @('clean','reinstall')) {
+            $p = Start-Process -FilePath $env:OPSIS_RC_INSTALLER -ArgumentList $args -Wait -PassThru
+            if ($p.ExitCode -ne 0) { throw "$pass failed: $($p.ExitCode)" }
+            $exe = Join-Path $target 'Opsis.exe'
+            if (!(Test-Path $exe)) { throw "Installed exe missing after $pass" }
+            if ((Get-Item $exe).VersionInfo.FileVersion -ne '3.0.0.3200') { throw 'Version regression' }
+          }
+          $uninstall = @(Get-ChildItem $target -Filter 'unins*.exe' | Select-Object -First 1)
+          if ($uninstall.Count -ne 1) { throw 'Uninstaller missing' }
+          $p = Start-Process $uninstall[0].FullName -ArgumentList '/VERYSILENT /SUPPRESSMSGBOXES /NORESTART' -Wait -PassThru
+          if ($p.ExitCode -ne 0) { throw "Uninstall failed: $($p.ExitCode)" }
+          if (Test-Path (Join-Path $target 'Opsis.exe')) { throw 'Uninstall left executable' }
+      - name: Upload diagnostic checksums only, not an unapproved release
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: opsis30-rc-installer-e2e-${{ matrix.os }}
+          path: Output/rc-installer-sha256.txt
+          if-no-files-found: warn
+          retention-days: 7
