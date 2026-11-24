@@ -57,7 +57,7 @@ public static class OpsisFeatureSwitcher
                 case "windows.window-rules":
                     s.WindowRulesEnabled = enabled; s.Save();
                     if (enabled) WindowRulesEngine.Instance.Start();
-                    else WindowRulesEngine.Instance.Restore();
+                    else { WindowRulesEngine.Instance.Stop(); WindowRulesEngine.Instance.Restore(); }
                     break;
                 case "automation.studio":
                     s.OpsisAutomationsEnabled = enabled; s.Save(); break;
