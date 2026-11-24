@@ -91,6 +91,13 @@ try
     WindowsUpdateGuard.ApproveCurrentBuild();
     Check(!WindowsUpdateGuard.RequiresReview, "user approval clears hold");
 
+    Check(OpsisFeatureSwitcher.CanSwitch("windows.hot-corners"), "core module has operational hot corner adapter");
+    Check(!OpsisFeatureSwitcher.CanSwitch("start.shell-replacement"), "planned Start replacement not switchable");
+    OpsisFeatureSwitcher.Set("windows.hot-corners", true);
+    Check(AppSettings.Load().HotCornersEnabled && OpsisFeatureSwitcher.IsEnabled("windows.hot-corners"),
+        "core enabled a real Hot Corners service preference");
+    OpsisFeatureSwitcher.Set("windows.hot-corners", false);
+    Check(!AppSettings.Load().HotCornersEnabled, "core restored Hot Corners opt-out");
     var plugin = Path.Combine(folder, "plugins", "example-plugin");
     Directory.CreateDirectory(plugin);
     File.WriteAllText(Path.Combine(plugin, "cover.webp"), "fixture");
