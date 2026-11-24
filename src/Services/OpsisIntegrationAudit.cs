@@ -19,7 +19,8 @@ public static class OpsisIntegrationAudit
     public sealed record Report(
         string BaselineVersion, string TargetVersion, DateTime InspectedUtc,
         IReadOnlyList<BaselineFeature> Baseline, int RegisteredModules,
-        IReadOnlyList<PluginEntry> LoadedPlugins, int GalleryContributions,
+        IReadOnlyList<PluginEntry> LoadedPlugins, IReadOnlyList<string> InstalledPluginFolders,
+        int AwaitingPluginApprovals, int GalleryContributions,
         IReadOnlyList<Collision> Collisions);
 
     // Verified from the release/2.8.0.2510 source files, not guessed from the
@@ -121,7 +122,9 @@ public static class OpsisIntegrationAudit
             external = Array.Empty<OpsisModCompatibility.Finding>();
         }
         return new Report("2.8.0.2510", "3.0.0.3200", DateTime.UtcNow,
-            Baseline28, OpsisModCore.Catalog.Count, plugins, assets.Count,
+            Baseline28, OpsisModCore.Catalog.Count, plugins,
+            CandidatePluginFolders(), PluginHost.Instance.PendingApprovals.Count,
+            assets.Count,
             Evaluate(OpsisModCore.Catalog.Select(x => x.Id), plugins,
                 OpsisEcosystemGallery.ContributionOrigins(),
                 s.ReplaceWindowsTaskbar, external, WindowsUpdateGuard.RequiresReview));
