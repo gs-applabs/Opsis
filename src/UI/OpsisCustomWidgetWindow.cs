@@ -44,11 +44,27 @@ public sealed class OpsisCustomWidgetWindow : Form
 
     private void UpdateText()
     {
-        _content.Text = _layout.Binding switch
+        try
         {
-            "Clock" => DateTime.Now.ToString("HH:mm:ss"),
-            "Date" => DateTime.Now.ToString("dddd, dd MMMM yyyy"),
-            _ => _layout.Text
-        };
+            var system = _layout.Binding is "CPU" or "RAM"
+                ? AdvancedSystemMonitorService.Instance.GetSnapshot() : null;
+            _content.Text = _layout.Binding switch
+            {
+                "Clock" => DateTime.Now.ToString("HH:mm:ss"),
+                "Date" => DateTime.Now.ToString("dddd, dd MMMM yyyy"),
+                "CPU" => $"CPU {system?.CpuPercent ?? 0:0.0}%",
+                "RAM" => system != null && system.TotalMemoryMb > 0
+                    ? $"RAM {(system.TotalMemoryMb - system.AvailableMemoryMb) / system.TotalMemoryMb * 100:0.0}%"
+                    : "RAM —",
+                "Battery" => SystemInformation.PowerStatus.BatteryLifePercent is >= 0 and <= 1
+                    ? $"Battery {SystemInformation.PowerStatus.BatteryLifePercent * 100:0}%"
+                    : "Battery —",
+                _ => _layout.Text
+            };
+        }
+        catch (Exception)
+        {
+            _content.Text = _layout.Binding + " —";
+        }
     }
 }
