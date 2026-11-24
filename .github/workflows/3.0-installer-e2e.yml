@@ -98,13 +98,14 @@ jobs:
           Get-FileHash -Path $env:OPSIS_SETUP -Algorithm SHA256 |
             ForEach-Object { "$($_.Hash)  $(Split-Path $_.Path -Leaf)" } |
             Out-File -FilePath Output/SHA256SUMS.txt -Encoding utf8
-      - name: Preserve installer and validation output
+      # The installer is only a pre-release test specimen. Do not publish an
+      # executable carrying the still-stable 2.8 version as if it were final 3.0.
+      - name: Preserve validation hashes only (no release installer)
         uses: actions/upload-artifact@v4
         if: always()
         with:
           name: opsis30-installer-preview-${{ matrix.os }}
           path: |
-            Output/OpsisSetup-*.exe
             Output/SHA256SUMS.txt
           if-no-files-found: warn
           retention-days: 7
