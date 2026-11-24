@@ -26,6 +26,8 @@ public sealed partial class MainWindow
             if (settings.FollowWindowsAccent) colors = colors with { Accent = theme.AccentCyan };
             _windowPalette = colors;
         }
+        OpsisUiTokens.Skin = _windowPalette;
+        Opsis.UI.OpsisTheme.NotifyChanged();
         if (_windowPalette != previous)
             foreach (Control page in _content.Controls)
                 ApplySkinColors(page, previous ?? ColorsFromTheme(theme));

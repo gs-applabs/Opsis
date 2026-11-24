@@ -21,7 +21,14 @@ public sealed partial class MainWindow
 
     private void BuildSelectedChrome()
     {
-        if (_usesStudio) BuildStudioChrome();
+        if (_usesStudio)
+        {
+            BuildStudioChrome();
+            _headerWaveTimer?.Dispose();
+            _headerWaveTimer = new System.Windows.Forms.Timer { Interval = HardwareProfileService.ScaleDecorativeInterval(45) };
+            _headerWaveTimer.Tick += (_, _) => { _headerWaveT += 0.03; _header.Invalidate(); };
+            _headerWaveTimer.Start();
+        }
         else
         {
             BuildChrome();
@@ -114,11 +121,12 @@ public sealed partial class MainWindow
         if (!top) EnableWheelPassthrough(_studioNavigation);
         _studioNavigation.ClientSizeChanged += (_, _) => SizeStudioNavigation();
 
-        _header = new Panel { Dock = DockStyle.Fill, Margin = Padding.Empty, Padding = new Padding(rail ? 16 : 12, 0, 12, 0) };
+        // 2.8.0.2510: the moving wave lines behind the page title (they were only in the classic chrome, so the Studio skin looked static)
+        _header = new HeaderWavePanel(() => _headerWaveT) { Dock = DockStyle.Fill, Margin = Padding.Empty, Padding = new Padding(rail ? 16 : 12, 0, 12, 0) };
         _pageTitle = new Label
         {
             Dock = DockStyle.Fill, Font = UiTheme.FontSubheading, TextAlign = ContentAlignment.MiddleLeft,
-            AutoEllipsis = true, UseMnemonic = false
+            AutoEllipsis = true, UseMnemonic = false, BackColor = Color.Transparent
         };
         _headerRule = new Panel { Dock = DockStyle.Bottom, Height = 1 };
         _header.Controls.AddRange([_pageTitle, _headerRule]);
