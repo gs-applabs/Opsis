@@ -297,6 +297,7 @@ namespace MotionDesk
             try { MotionDesk.UI.GlassBlur.SetTaskbarTranslucency(Services.WindowsSystemSettings.GetTransparencyEffectsEnabled()); } catch (Exception) { }
 
             ApplicationConfiguration.Initialize();
+            MotionDesk.UI.SecondaryWindowStyler.Install();
             Application.Run(new TrayApplicationContext(desktopAction));
         }
 
