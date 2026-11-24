@@ -37,7 +37,12 @@ public static class OpsisContextMenuStudio
             !string.Equals(Path.GetFileName(candidate), "Opsis.exe", StringComparison.OrdinalIgnoreCase) ||
             !File.Exists(candidate) || candidate.Contains('"'))
             throw new InvalidOperationException("A trusted installed Opsis.exe is required for shell integration.");
-        return Path.GetFullPath(candidate);
+        var full = Path.GetFullPath(candidate);
+        var installed = Path.GetFullPath(DefaultExecutable);
+        if (!string.Equals(full, installed, StringComparison.OrdinalIgnoreCase) &&
+            !AppSettings.IsIsolatedForTests())
+            throw new InvalidOperationException("Only the current installed Opsis executable can be registered.");
+        return full;
     }
 
     public static string DefaultExecutable => Path.Combine(AppContext.BaseDirectory, "Opsis.exe");
