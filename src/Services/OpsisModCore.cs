@@ -51,7 +51,7 @@ public static class OpsisModCore
         new ModuleDefinition("desktop.command-palette", "Desktop", "Opsis Command Palette", Array.Empty<string>(), Array.Empty<string>(), 19041, true),
         new ModuleDefinition("desktop.lock-screen", "Desktop", "Lock Screen settings", Array.Empty<string>(), Array.Empty<string>(), 19041, true),
         new ModuleDefinition("cursor.trails", "Mouse", "Native pointer trails", Array.Empty<string>(), Array.Empty<string>(), 19041, true),
-        new ModuleDefinition("cursor.effects", "Mouse", "Custom Ripple/Spotlight FX (planned)", Array.Empty<string>(), Array.Empty<string>()),
+        new ModuleDefinition("cursor.effects", "Mouse", "Cursor Halo/Ripple FX overlay", Array.Empty<string>(), Array.Empty<string>(), 19041, true),
         new ModuleDefinition("screensaver.native", "Desktop", "Windows Screen Saver controls", Array.Empty<string>(), Array.Empty<string>(), 19041, true),
         new ModuleDefinition("screensaver.creator", "Desktop", "Opsis Screen Saver Creator (planned)", Array.Empty<string>(), Array.Empty<string>()),
         new ModuleDefinition("theme.appearance-presets", "Themes", "Appearance Presets", Array.Empty<string>(), Array.Empty<string>(), 19041, true),
