@@ -100,9 +100,9 @@ public sealed class AppearancePreviewForm : Form
                 if (visual.Segmented)
                 {
                     bool vertical = box.Height > box.Width;
-                    int count = 4;
-                    int segment = Math.Max(1, (vertical ? scaled.Height : scaled.Width) / count);
-                    for (int i = 0; i < count; i++)
+                    int segmentCount = 4;
+                    int segment = Math.Max(1, (vertical ? scaled.Height : scaled.Width) / segmentCount);
+                    for (int i = 0; i < segmentCount; i++)
                         g.FillRectangle(accent, vertical ?
                             new Rectangle(scaled.Left, scaled.Top + i * segment, scaled.Width, Math.Max(1, segment - 1)) :
                             new Rectangle(scaled.Left + i * segment, scaled.Top, Math.Max(1, segment - 1), scaled.Height));

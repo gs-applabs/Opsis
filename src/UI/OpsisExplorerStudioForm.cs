@@ -47,6 +47,31 @@ public sealed class OpsisExplorerStudioForm : Form
         options.Controls.Add(_statusBar); options.Controls.Add(_sync); options.Controls.Add(_handlers);
         options.Controls.Add(new Label { Text = "Open Explorer at / Εκκίνηση Explorer", AutoSize = true });
         options.Controls.Add(_home);
+        var commands = new FlowLayoutPanel { AutoSize = true, WrapContents = true, Width = 480 };
+        foreach (var target in new[] { ("This PC", "shell:MyComputerFolder"), ("Home", "shell:HomeFolder"),
+            ("Downloads", "shell:Downloads"), ("Recycle Bin", "shell:RecycleBinFolder") })
+        {
+            var button = new Button { AutoSize = true, Text = target.Item1 };
+            button.Click += (_, _) =>
+            {
+                try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(target.Item2) { UseShellExecute = true }); }
+                catch (Exception ex) { MessageBox.Show(this, ex.Message, Text); }
+            };
+            commands.Controls.Add(button);
+        }
+        options.Controls.Add(new Label { AutoSize = true, Text = "Explorer shortcuts / Συντομεύσεις (not native command bar)" });
+        options.Controls.Add(commands);
+        var tabs = new Button { AutoSize = true, Text = "Open folder in Explorer / Άνοιγμα φακέλου" };
+        tabs.Click += (_, _) =>
+        {
+            using var picker = new FolderBrowserDialog();
+            if (picker.ShowDialog(this) != DialogResult.OK) return;
+            try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(picker.SelectedPath) { UseShellExecute = true }); }
+            catch (Exception ex) { MessageBox.Show(this, ex.Message, Text); }
+        };
+        options.Controls.Add(tabs);
+        options.Controls.Add(new Label { AutoSize = true, MaximumSize = new Size(490, 0),
+            Text = "Windows 11 tabs: Ctrl+T new tab · Ctrl+W close · Ctrl+Tab next. Native tab styling is not available here." });
         Controls.Add(options);
 
         _preview.BackColor = UiTheme.Surface;

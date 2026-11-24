@@ -60,6 +60,25 @@ public sealed class StartStudioForm : Form
         var nativeStart = new Button { Text = "Windows Start / Έναρξη Windows", AutoSize = true, Height = 30 };
         nativeStart.Click += (_, _) => { using var dialog = new NativeStartSettingsForm(); dialog.ShowDialog(this); };
         _toolbar.Controls.Add(nativeStart);
+        var power = new Button { Text = "Power menu / Τροφοδοσία", AutoSize = true, Height = 30 };
+        power.Click += (_, _) =>
+        {
+            try
+            {
+                using var dialog = new Form { Text = "Opsis Start power menu", StartPosition = FormStartPosition.CenterParent,
+                    ClientSize = new System.Drawing.Size(320, 250) };
+                var list = new CheckedListBox { Dock = DockStyle.Fill, CheckOnClick = true };
+                var selected = StartStudioPreferences.Read().PowerActions;
+                foreach (var action in StartStudioPreferences.AvailablePowerActions)
+                    list.Items.Add(action, selected.Contains(action));
+                var save = new Button { Text = "Save / Αποθήκευση", Dock = DockStyle.Bottom, Height = 36, DialogResult = DialogResult.OK };
+                dialog.Controls.Add(list); dialog.Controls.Add(save); dialog.AcceptButton = save;
+                if (dialog.ShowDialog(this) == DialogResult.OK)
+                    StartStudioPreferences.SetPowerActions(list.CheckedItems.Cast<string>().ToArray());
+            }
+            catch (Exception ex) { MessageBox.Show(this, ex.Message, Text); }
+        };
+        _toolbar.Controls.Add(power);
         _toolbar.Height = 120;
         _toolbar.AutoScroll = true;
         Controls.Add(_toolbar);

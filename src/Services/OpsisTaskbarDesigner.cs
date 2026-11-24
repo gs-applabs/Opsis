@@ -29,6 +29,8 @@ public static class OpsisTaskbarDesigner
         public int OpacityPercent { get; set; } = 100;
         public bool ShowTaskView { get; set; } = true;
         public bool ShowClock { get; set; } = true;
+        public string ThumbnailStyle { get; set; } = "Off"; // Off | Compact | Large
+        public static bool IsThumbnailStyle(string? value) => value is "Off" or "Compact" or "Large";
         public bool ActiveButtonAnimation { get; set; } = false;
         public int AnimationIntervalMs { get; set; } = 300;
     }
@@ -44,7 +46,7 @@ public static class OpsisTaskbarDesigner
         ButtonWidth = p.ButtonWidth, ButtonGap = p.ButtonGap,
         OpacityPercent = p.OpacityPercent, ShowTaskView = p.ShowTaskView,
         ShowClock = p.ShowClock, ActiveButtonAnimation = p.ActiveButtonAnimation,
-        AnimationIntervalMs = p.AnimationIntervalMs,
+        AnimationIntervalMs = p.AnimationIntervalMs, ThumbnailStyle = p.ThumbnailStyle,
         Edge = p.Edge, Floating = p.Floating, Segmented = p.Segmented, DynamicSize = p.DynamicSize,
         EdgeMargin = p.EdgeMargin, LengthPercent = p.LengthPercent, Thickness = p.Thickness
     };
@@ -53,6 +55,7 @@ public static class OpsisTaskbarDesigner
     {
         if (p == null || p.Schema != 1 || string.IsNullOrWhiteSpace(p.Name) || p.Name.Length > 60 ||
             p.Style is not ("Classic" or "Compact" or "Glass") ||
+            !Profile.IsThumbnailStyle(p.ThumbnailStyle) ||
             p.Alignment is not ("Left" or "Center") ||
             p.Edge is not ("Native" or "Top" or "Bottom" or "Left" or "Right") ||
             p.EdgeMargin is < 0 or > 32 || p.LengthPercent is < 40 or > 100 || p.Thickness is < 36 or > 112 ||

@@ -12,6 +12,7 @@ public sealed class OpsisTaskbarDesignerForm : Form
 {
     private readonly OpsisTaskbarDesigner.Profile _profile = OpsisTaskbarDesigner.Read();
     private readonly ComboBox _style = new() { DropDownStyle = ComboBoxStyle.DropDownList, Width = 145 };
+    private readonly ComboBox _thumbnail = new() { DropDownStyle = ComboBoxStyle.DropDownList, Width = 130 };
     private readonly ComboBox _edge = new() { DropDownStyle = ComboBoxStyle.DropDownList, Width = 130 };
     private readonly CheckBox _floating = new() { Text = "Floating", AutoSize = true };
     private readonly CheckBox _segmented = new() { Text = "Segmented", AutoSize = true };
@@ -51,6 +52,8 @@ public sealed class OpsisTaskbarDesignerForm : Form
         _style.Items.AddRange(new object[] { "Classic", "Compact", "Glass" });
         _alignment.Items.AddRange(new object[] { "Left", "Center" });
         _edge.Items.AddRange(new object[] { "Native", "Top", "Bottom", "Left", "Right" });
+        _thumbnail.Items.AddRange(new object[] { "Off", "Compact", "Large" });
+        _thumbnail.SelectedItem = _profile.ThumbnailStyle;
         LoadGeometry(_profile);
         _style.SelectedItem = _profile.Style;
         _alignment.SelectedItem = _profile.Alignment;
@@ -71,6 +74,7 @@ public sealed class OpsisTaskbarDesignerForm : Form
         grid.Controls.Add(_clock);
         grid.Controls.Add(_animate);
         grid.Controls.Add(Labeled("Pulse ms", _speed));
+        grid.Controls.Add(Labeled("Window preview", _thumbnail));
         grid.Controls.Add(Labeled("Edge / Πλευρά", _edge));
         grid.Controls.Add(Labeled("Margin", _margin));
         grid.Controls.Add(Labeled("Length %", _length));
@@ -99,6 +103,7 @@ public sealed class OpsisTaskbarDesignerForm : Form
         _clock.CheckedChanged += (_, _) => Redraw();
         _animate.CheckedChanged += (_, _) => Redraw();
         _speed.ValueChanged += (_, _) => Redraw();
+        _thumbnail.SelectedIndexChanged += (_, _) => Redraw();
         _edge.SelectedIndexChanged += (_, _) => Redraw();
         _margin.ValueChanged += (_, _) => Redraw();
         _length.ValueChanged += (_, _) => Redraw();
@@ -129,6 +134,7 @@ public sealed class OpsisTaskbarDesignerForm : Form
             _opacity.Value = defaults.OpacityPercent;
             _taskView.Checked = defaults.ShowTaskView; _clock.Checked = defaults.ShowClock;
             _animate.Checked = defaults.ActiveButtonAnimation; _speed.Value = defaults.AnimationIntervalMs;
+            _thumbnail.SelectedItem = defaults.ThumbnailStyle;
             LoadGeometry(defaults);
         };
         system.Click += (_, _) => TaskbarViewProfiles.OpenWindowsTaskbarSettings();
@@ -165,6 +171,7 @@ public sealed class OpsisTaskbarDesignerForm : Form
         _profile.ShowClock = _clock.Checked;
         _profile.ActiveButtonAnimation = _animate.Checked;
         _profile.AnimationIntervalMs = (int)_speed.Value;
+        _profile.ThumbnailStyle = _thumbnail.SelectedItem?.ToString() ?? "Off";
         _profile.Edge = _edge.SelectedItem?.ToString() ?? "Native";
         _profile.Floating = _floating.Checked; _profile.Segmented = _segmented.Checked; _profile.DynamicSize = _dynamic.Checked;
         _profile.EdgeMargin = (int)_margin.Value; _profile.LengthPercent = (int)_length.Value;

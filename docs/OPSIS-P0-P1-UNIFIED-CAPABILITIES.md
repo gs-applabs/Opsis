@@ -30,11 +30,11 @@ Benchmark criteria: same workload, resolution and DPI; CPU/GPU, memory, GDI hand
 | 5 | P1 | Floating Taskbar | Opsis-owned floating geometry added; VM pending |
 | 6 | P1 | Segmented Taskbar | transparent gaps in existing Opsis bar; VM pending |
 | 7 | P1 | Dynamic Taskbar sizing | existing Opsis bar adaptive length and configurable thickness; native dynamic height pending |
-| 8 | P1 | Custom Start power menus | verify DesktopLauncher; native integration pending |
-| 9 | P1 | Explorer Command Bar customization | pending |
-| 10 | P1 | Advanced Explorer tabs | pending |
-| 11 | P1 | Taskbar thumbnail customization | pending; DeskFlip is separate |
-| 12 | P1 | System Tray Icon Studio | existing Windows tray access is not a styler; pending |
+| 8 | P1 | Custom Start power menus | Opsis Start configurable fixed power actions with confirmation; native menu integration pending |
+| 9 | P1 | Explorer Command Bar customization | Explorer Studio shortcuts added; actual native bar editing pending |
+| 10 | P1 | Advanced Explorer tabs | folder launch and keyboard guidance only; native tab management pending |
+| 11 | P1 | Taskbar thumbnail customization | Opsis taskbar on-demand DWM preview with Off/Compact/Large; native thumbnail styling pending |
+| 12 | P1 | System Tray Icon Studio | Opsis NotifyIcon style selection added; other Windows tray icons remain untouched |
 | 13 | P2 | Notification Center Styler | pending |
 | 14 | P2 | Quick Settings Styler | pending |
 | 15 | P2 | Volume Flyout customization | pending; existing audio controls do not equal native flyout styling |
@@ -58,3 +58,6 @@ Existing Start Studio now opens a native Windows Start preferences dialog, separ
 Documented HKCU options added to existing Explorer and Taskbar services, with additive backup migration retaining the original first four values; original backups remain readable. Start/Explorer/Taskbar native XAML styling is NOT implemented. Existing Opsis replacement bar supports explicit four-edge companion placement, floating margins/length, color-key segmented gaps, adaptive length and thickness. Uses existing timer, controls and designer; detached variants stay inside Windows work area and do not relocate or hide native taskbar. AppearancePresets captures additive optional Opsis geometry and Start artwork; older presets do not overwrite these fields. New tests cover geometry and allowlists, not visual certification. Sources: Microsoft Windows settings reference and common settings reference. No production version bump. Remaining P0 Windhawk portable/live detection and full native styling remain blocked on real desktop validation. P1 8–12 and P2 13–17 remain pending.
 
 RC run 45460763639 (commit 5432484): shell/experience smoke completed, including Rainmeter, Windhawk, guard, native Start allowlist and DeskFlip; full UI smoke failed because AppearancePreviewForm is deliberately a custom-painted canvas and one disclosure label, not a three-child form. Replaced the generic count assertion only for that form with explicit canvas dimensions/accessibility and disclosure checks; screenshot test retained. Shared preset preview now renders detached geometry using the real calculation and captures the five new native options as optional fields. Subsequent CI still pending.
+
+### P1 8–12 increment
+Fixed CS0136 in AppearancePreviewForm from run 45461452851 (segmentCount). Start power actions use fixed allowlist, no forced shutdown, explicit confirmation except lock. Explorer shortcuts use shell targets, no claim of native command bar or advanced tab implementation. Existing taskbar supports explicit right-click compositor preview, one live DWM thumbnail, no capture bitmap or new polling; disabled by default. Existing NotifyIcon has three persistent styles and native Settings link; no third-party icon manipulation. Smoke assertions do not execute power actions. Actual Windows VM validation pending; P0 native XAML, portable Windhawk and P1 native features remain outstanding.

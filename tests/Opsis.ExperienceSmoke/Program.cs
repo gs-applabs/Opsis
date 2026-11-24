@@ -434,6 +434,15 @@ try
     Check(TaskbarViewProfiles.IsValid("TaskbarGlomLevel", 2) && !TaskbarViewProfiles.IsValid("TaskbarGlomLevel", 3) &&
         ExplorerViewProfiles.IsValid("ShowStatusBar", 0) && !ExplorerViewProfiles.IsValid("ShowStatusBar", 2),
         "native Explorer and Taskbar options validate without touching registry");
+    Check(OpsisTaskbarDesigner.Profile.IsThumbnailStyle("Large") && !OpsisTaskbarDesigner.Profile.IsThumbnailStyle("Unknown"),
+        "taskbar thumbnail preferences use fixed allowlist");
+    Check(StartStudioPreferences.ValidPowerActions(new[] { "Lock", "Restart" }) &&
+        !StartStudioPreferences.ValidPowerActions(new[] { "Restart", "Restart" }) &&
+        !StartStudioPreferences.ValidPowerActions(new[] { "custom.exe" }),
+        "power menu allows only known distinct actions without executing power operations");
+    StartStudioPreferences.SetPowerActions(new[] { "Lock" });
+    Check(StartStudioPreferences.Read().PowerActions.SequenceEqual(new[] { "Lock" }), "power menu preference roundtrip");
+    StartStudioPreferences.SetPowerActions(StartStudioPreferences.AvailablePowerActions.ToArray());
     Check(OpsisTaskbarDesigner.ButtonHeight(taskbar, false, 44) == 38,
         "taskbar designer calculates horizontal button geometry");
     rejected = false;

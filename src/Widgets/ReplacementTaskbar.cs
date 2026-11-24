@@ -85,6 +85,7 @@ internal sealed class ReplacementTaskbar : Form
 
     internal static void Stop()
     {
+        TaskbarWindowPreview.CloseCurrent();
         if (_timer == null) return;
         _timer.Dispose();
         _timer = null;
@@ -213,7 +214,7 @@ internal sealed class ReplacementTaskbar : Form
         _clock.BackColor = UiTheme.Surface;
         _taskView.ForeColor = UiTheme.TextPrimary;
         _taskView.BackColor = UiTheme.Surface;
-        string key = $"{_startArtStyle}|{vertical}|{Width}|{Height}|{_visual.Segmented}|{active}|{_visual.Style}|{_visual.Alignment}|{_visual.ButtonWidth}|{_visual.ButtonGap}|{_visual.ShowTaskView}|{_visual.ShowClock}|{_visual.ActiveButtonAnimation}|{_visual.AnimationIntervalMs}|{UiTheme.TextPrimary.ToArgb()}|{UiTheme.Surface.ToArgb()}|" +
+        string key = $"{_startArtStyle}|{vertical}|{Width}|{Height}|{_visual.Segmented}|{_visual.ThumbnailStyle}|{active}|{_visual.Style}|{_visual.Alignment}|{_visual.ButtonWidth}|{_visual.ButtonGap}|{_visual.ShowTaskView}|{_visual.ShowClock}|{_visual.ActiveButtonAnimation}|{_visual.AnimationIntervalMs}|{UiTheme.TextPrimary.ToArgb()}|{UiTheme.Surface.ToArgb()}|" +
             string.Join('|', pins) + "|" + string.Join('|', list.Select(window => $"{window.Handle}:{window.Title}"));
         if (_content == key)
         {
@@ -259,7 +260,7 @@ internal sealed class ReplacementTaskbar : Form
                 {
                     if (WinApi.GetForegroundWindow() == window.Handle) WinApi.Minimize(window.Handle);
                     else WinApi.BringToFront(window.Handle);
-                }, window.Handle == active);
+                }, window.Handle == active, window.Handle);
             }
         }
         finally
@@ -270,7 +271,7 @@ internal sealed class ReplacementTaskbar : Form
         }
     }
 
-    private void AddItem(string label, Action click, bool active)
+    private void AddItem(string label, Action click, bool active, IntPtr window = default)
     {
         var item = new Button { Text = label, AutoEllipsis = true, AccessibleName = label,
             Width = _vertical ? Math.Max(24, Width - 2 * Math.Max(3, _visual.ButtonGap) - 2) : _visual.ButtonWidth,
@@ -280,6 +281,14 @@ internal sealed class ReplacementTaskbar : Form
         item.FlatAppearance.BorderSize = active ? 1 : 0;
         if (active) _activeItem = item;
         item.Click += (_, _) => click();
+        if (window != IntPtr.Zero && _visual.ThumbnailStyle != "Off")
+        {
+            var menu = new ContextMenuStrip();
+            menu.Items.Add("Window preview / Προεπισκόπηση", null, (_, _) =>
+                TaskbarWindowPreview.Open(window, label, item.RectangleToScreen(item.ClientRectangle), _visual.ThumbnailStyle));
+            item.ContextMenuStrip = menu;
+            item.Disposed += (_, _) => menu.Dispose();
+        }
         _apps.Controls.Add(item);
     }
 

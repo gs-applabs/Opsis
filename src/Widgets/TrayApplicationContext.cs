@@ -183,6 +183,25 @@ namespace MotionDesk.Widgets
             };
 
             _trayIcon.DoubleClick += (s, e) => ShowMainWindow();
+            // Reuse the current NotifyIcon; no added background process or timer.
+            var trayStudio = new ToolStripMenuItem("Opsis tray icon / Εικονίδιο Opsis");
+            foreach (var option in new[] { "Original", "Information", "Shield" })
+            {
+                var entry = new ToolStripMenuItem(option);
+                entry.Click += (_, _) =>
+                {
+                    try
+                    {
+                        OpsisModCore.SetOption("control.opsis-center", "tray-icon", option);
+                        ApplyTrayIconStyle();
+                    }
+                    catch (Exception ex) { MessageBox.Show(ex.Message, "Opsis"); }
+                };
+                trayStudio.DropDownItems.Add(entry);
+            }
+            trayStudio.DropDownItems.Add("Windows taskbar / notification area", null, (_, _) => TaskbarViewProfiles.OpenWindowsTaskbarSettings());
+            contextMenu.Items.Insert(1, trayStudio);
+            ApplyTrayIconStyle();
 
             _alertTimer = new System.Windows.Forms.Timer { Interval = 5000 };
             _alertTimer.Tick += (_, _) => UsageAlertTick();
@@ -695,6 +714,24 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
             DesktopIconVisibilityEngine.Instance.Stop();
             _trayIcon.Visible = false;
             Application.Exit();
+        }
+
+        private void ApplyTrayIconStyle()
+        {
+            try
+            {
+                var state = OpsisModCore.Read();
+                string? style = null;
+                if (state.Options.TryGetValue("control.opsis-center", out var options))
+                    options.TryGetValue("tray-icon", out style);
+                _trayIcon.Icon = style switch
+                {
+                    "Information" => System.Drawing.SystemIcons.Information,
+                    "Shield" => System.Drawing.SystemIcons.Shield,
+                    _ => MotionDesk.UI.AppWindowIcon.Value
+                };
+            }
+            catch (Exception ex) { RotatingLogger.Write("Tray icon style: " + ex.Message); }
         }
 
         private void ChooseWallpaperFolder()

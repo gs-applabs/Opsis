@@ -16,8 +16,25 @@ public static class StartStudioPreferences
         // Native Opsis launcher presentation; does not replace Windows Start.
         public string DisplayStyle { get; set; } = "List"; // List | Tiles | Compact
         public bool GroupByFolder { get; set; } = true;
+        public string[] PowerActions { get; set; } = new[] { "Lock", "Sign out", "Restart", "Shut down" };
         public string StartButtonStyle { get; set; } = "Opsis Glass"; // Safe, Opsis-owned taskbar only
     }
+    public static IReadOnlyList<string> AvailablePowerActions { get; } = Array.AsReadOnly(new[] { "Lock", "Sign out", "Restart", "Shut down" });
+    public static bool ValidPowerActions(string[]? actions) => actions != null && actions.Length <= AvailablePowerActions.Count &&
+        actions.Distinct(StringComparer.Ordinal).Count() == actions.Length && actions.All(AvailablePowerActions.Contains);
+    public static void SetPowerActions(string[] actions)
+    {
+        if (!ValidPowerActions(actions)) throw new InvalidDataException("Unsupported power action.");
+        lock (Gate)
+        {
+            var data = Read();
+            if (data.PowerActions.SequenceEqual(actions)) return;
+            data.PowerActions = actions.ToArray();
+            Directory.CreateDirectory(Path.GetDirectoryName(Config)!);
+            AtomicFile.WriteAllText(Config, JsonSerializer.Serialize(data, new JsonSerializerOptions { WriteIndented = true }));
+        }
+    }
+
     private static readonly object Gate = new();
     private static string Config => Path.Combine(AppPaths.AppDataFolder, "start-studio.json");
 
@@ -47,7 +64,7 @@ public static class StartStudioPreferences
             if (data.Schema != 1 || data.PinnedShortcuts?.Count > 250 ||
                 data.PinnedShortcuts == null || data.PinnedShortcuts.Any(p => !SafePath(p)) ||
                 data.DisplayStyle is not ("List" or "Tiles" or "Compact") ||
-                !MotionDesk.UI.OpsisStartButtonArt.IsValid(data.StartButtonStyle))
+                !ValidPowerActions(data.PowerActions) || !MotionDesk.UI.OpsisStartButtonArt.IsValid(data.StartButtonStyle))
                 throw new InvalidDataException("Invalid pinned shortcut metadata.");
             return data;
         }
