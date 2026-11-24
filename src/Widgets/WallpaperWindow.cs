@@ -994,6 +994,60 @@ namespace MotionDesk.Widgets
         // Ακριβές "στιγμιότυπο" του ΠΡΑΓΜΑΤΙΚΑ αποδομένου wallpaper (waves/video + το overlay
         // ρολογιού κ.λπ.) για χρήση ως εικόνα οθόνης κλειδώματος — όχι ξαναζωγραφισμένο αντίγραφο,
         // αλλά literal screenshot του WebView2 μέσω της επίσημης CapturePreview API.
+#if SIGNATURE_COMPOSITION_PREVIEW
+        private Bitmap? _signatureFrame;
+        private bool _signatureCaptureBusy;
+        private long _signatureNextCapture;
+
+        // One bounded in-memory image per wallpaper window, never a desktop screenshot.
+        // Called on the wallpaper UI thread. Capture is demand-driven and rate-limited.
+        internal async Task<Bitmap?> CaptureSignatureCropAsync(Rectangle desktopBounds)
+        {
+            var screen = TargetScreen.Bounds;
+            if (!screen.Contains(desktopBounds) || desktopBounds.Width < 1 || desktopBounds.Height < 1 ||
+                IsDisposed || Disposing || !Visible || _paused || AppActivity.IsPausedFor(TargetScreen))
+                return null;
+            long now = Environment.TickCount64;
+            if (!_signatureCaptureBusy && now >= _signatureNextCapture && _webView?.CoreWebView2 is { } core &&
+                screen.Width <= 4096 && screen.Height <= 4096 && (long)screen.Width * screen.Height <= 8388608)
+            {
+                _signatureCaptureBusy = true;
+                _signatureNextCapture = now + 2000;
+                try
+                {
+                    using var stream = new MemoryStream();
+                    await core.CapturePreviewAsync(Microsoft.Web.WebView2.Core.CoreWebView2CapturePreviewImageFormat.Png, stream);
+                    if (IsDisposed || Disposing || !Visible || _paused || stream.Length > 48L * 1024 * 1024) return null;
+                    stream.Position = 0;
+                    using var decoded = Image.FromStream(stream);
+                    double fit = Math.Min(1d, 1280d / Math.Max(decoded.Width, decoded.Height));
+                    var next = new Bitmap(Math.Max(1,(int)(decoded.Width*fit)), Math.Max(1,(int)(decoded.Height*fit)));
+                    try { using var g = Graphics.FromImage(next); g.DrawImage(decoded, 0, 0, next.Width, next.Height); }
+                    catch { next.Dispose(); throw; }
+                    _signatureFrame?.Dispose();
+                    _signatureFrame = next;
+                }
+                catch (Exception) { _signatureFrame?.Dispose(); _signatureFrame = null; }
+                finally { _signatureCaptureBusy = false; }
+            }
+            if (IsDisposed || Disposing || !Visible || _paused || _signatureFrame is not { } frame ||
+                !TargetScreen.Bounds.Equals(screen)) return null;
+            var source = new RectangleF(
+                (desktopBounds.X-screen.X) * frame.Width/(float)screen.Width,
+                (desktopBounds.Y-screen.Y) * frame.Height/(float)screen.Height,
+                desktopBounds.Width * frame.Width/(float)screen.Width,
+                desktopBounds.Height * frame.Height/(float)screen.Height);
+            double scale = Math.Min(1d, 1024d / Math.Max(desktopBounds.Width, desktopBounds.Height));
+            var crop = new Bitmap(Math.Max(1,(int)(desktopBounds.Width*scale)), Math.Max(1,(int)(desktopBounds.Height*scale)));
+            try
+            {
+                using var g = Graphics.FromImage(crop);
+                g.DrawImage(frame, new RectangleF(0,0,crop.Width,crop.Height), source, GraphicsUnit.Pixel);
+                return crop;
+            }
+            catch { crop.Dispose(); return null; }
+        }
+#endif
         public async Task<bool> CapturePngAsync(string filePath)
         {
             var webView = _webView;
@@ -1230,6 +1284,9 @@ namespace MotionDesk.Widgets
                 _bridge = null;
                 _webView?.Dispose();
                 _webView = null;
+#if SIGNATURE_COMPOSITION_PREVIEW
+                _signatureFrame?.Dispose(); _signatureFrame = null;
+#endif
             }
             base.Dispose(disposing);
         }
@@ -1581,6 +1638,14 @@ namespace MotionDesk.Widgets
         // MD roadmap item: ακριβές στιγμιότυπο του τρέχοντος wallpaper (waves/βίντεο + overlay) για
         // χρήση ως εικόνα οθόνης κλειδώματος — από την οθόνη με το WallpaperWindow που είναι όντως
         // ορατό αυτή τη στιγμή (Screen.PrimaryScreen όταν υπάρχει, αλλιώς το πρώτο διαθέσιμο).
+#if SIGNATURE_COMPOSITION_PREVIEW
+        internal async Task<Bitmap?> CaptureSignatureCropAsync(Rectangle bounds)
+        {
+            if (!Active || UserPaused) return null;
+            var target = _windows.FirstOrDefault(w => !w.IsDisposed && w.Visible && w.TargetScreen.Bounds.Contains(bounds));
+            return target == null ? null : await target.CaptureSignatureCropAsync(bounds);
+        }
+#endif
         public async Task<bool> CaptureSnapshotAsync(string filePath)
         {
             var target = _windows.FirstOrDefault(w => !w.IsDisposed && w.Visible && w.TargetScreen.Primary)
