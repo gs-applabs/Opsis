@@ -26,7 +26,28 @@ internal sealed class ReplacementTaskbar : Form
 
     internal static void RefreshSettings()
     {
-        if (SafeModeService.IsSafeMode || !AppSettings.Load().ReplaceWindowsTaskbar) { Stop(); return; }
+        if (SafeModeService.IsSafeMode || WindowsUpdateGuard.RequiresReview ||
+            !AppSettings.Load().ReplaceWindowsTaskbar) { Stop(); return; }
+        // A single taskbar owner is essential. StartAllBack/ExplorerPatcher can
+        // already own the Windows shell, so Opsis does NOT stack a second
+        // overlay over them. This is read-only; user/vendor files are untouched.
+        try
+        {
+            var external = OpsisModCompatibility.Scan();
+            if (!OpsisIntegrationAudit.TaskbarOverlayAllowed(true, external, false))
+            {
+                RotatingLogger.Write("Opsis taskbar held: competing shell replacement detected: " +
+                    string.Join(", ", external.Where(x => x.Risk == "High").Select(x => x.Product)));
+                Stop();
+                return;
+            }
+        }
+        catch (Exception ex)
+        {
+            RotatingLogger.Write("Opsis taskbar compatibility scan unavailable: " + ex.Message);
+            Stop(); // fail closed, leave the normal Windows taskbar running.
+            return;
+        }
         if (_timer == null)
         {
             _timer = new System.Windows.Forms.Timer { Interval = 950 };
