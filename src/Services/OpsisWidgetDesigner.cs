@@ -24,6 +24,10 @@ public static class OpsisWidgetDesigner
         public int Height { get; set; } = 135;
         public int OpacityPercent { get; set; } = 95;
         public bool AlwaysOnTop { get; set; } = false;
+        // Position of the primary label inside the widget canvas (0..100 percent).
+        public int ContentXPercent { get; set; } = 50;
+        public int ContentYPercent { get; set; } = 50;
+        public bool ShowWidgetBorder { get; set; } = true;
     }
 
     private static readonly object Sync = new();
@@ -46,7 +50,8 @@ public static class OpsisWidgetDesigner
             !int.TryParse(layout.AccentHex.AsSpan(1), System.Globalization.NumberStyles.HexNumber,
                 System.Globalization.CultureInfo.InvariantCulture, out _) ||
             layout.FontSize is < 12 or > 80 || layout.Width is < 190 or > 1200 ||
-            layout.Height is < 80 or > 700 || layout.OpacityPercent is < 60 or > 100)
+            layout.Height is < 80 or > 700 || layout.OpacityPercent is < 60 or > 100 ||
+            layout.ContentXPercent is < 0 or > 100 || layout.ContentYPercent is < 0 or > 100)
             throw new InvalidDataException("Unsupported widget layout field.");
     }
 
@@ -80,6 +85,31 @@ public static class OpsisWidgetDesigner
         if (!string.Equals(layout.Name, name.Trim(), StringComparison.Ordinal))
             throw new InvalidDataException("Widget name mismatch.");
         return layout;
+    }
+
+    /// <summary>Save a visual edit only to the selected existing layout, after backup.</summary>
+    public static void Update(string existingName, Layout changed)
+    {
+        Validate(changed);
+        if (!string.Equals(existingName, changed.Name, StringComparison.Ordinal))
+            throw new InvalidOperationException("Use Save As to rename a widget layout.");
+        lock (Sync)
+        {
+            var file = FileFor(existingName);
+            if (!File.Exists(file)) throw new FileNotFoundException("Widget design not found.", file);
+            OpsisRecoveryHub.Snapshot("Before updating widget " + existingName);
+            AtomicFile.WriteAllText(file, JsonSerializer.Serialize(changed, new JsonSerializerOptions { WriteIndented = true }));
+        }
+    }
+
+    /// <summary>Pure geometry calculation for canvas/editor, no OS handles.</summary>
+    public static (int X, int Y) Position(int canvasWidth, int canvasHeight,
+        int contentWidth, int contentHeight, int xPercent, int yPercent)
+    {
+        var w = Math.Max(0, canvasWidth - contentWidth);
+        var h = Math.Max(0, canvasHeight - contentHeight);
+        return ((int)Math.Round(w * Math.Clamp(xPercent, 0, 100) / 100.0),
+                (int)Math.Round(h * Math.Clamp(yPercent, 0, 100) / 100.0));
     }
 
     public static void Delete(string name) => File.Delete(FileFor(name));
