@@ -62,7 +62,13 @@ internal static class Program
                     screenshot.Save(Path.Combine(output, title + "-" + size.Width + "x" + size.Height + ".png"));
                 }
                 var controls = AllControls(form).ToArray();
-                Verify(controls.Length >= 3, title + " child control tree");
+                if (form is AppearancePreviewForm)
+                {
+                    Verify(controls.Length == 2 && controls.Any(c => c.AccessibleName == "Appearance preview canvas" && c.Width > 0 && c.Height > 0)
+                        && controls.Any(c => c is Label && c.Text.Contains("Visual simulation", StringComparison.Ordinal)),
+                        title + " custom canvas and disclosure label");
+                }
+                else Verify(controls.Length >= 3, title + " child control tree");
                 Verify(controls.All(c => c.Width >= 0 && c.Height >= 0), title + " nonnegative control sizes");
                 measured.Add(new { title, controlCount = controls.Length, preferredSize = form.PreferredSize.ToString() });
             }
