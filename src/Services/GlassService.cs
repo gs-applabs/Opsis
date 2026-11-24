@@ -115,7 +115,7 @@ namespace MotionDesk.Services
                     BlurSigma = material.Blur / 5f,
                     CornerRadius = material.Radius, Gloss = material.Refraction / 200f, Rim = material.Rim / 100f
                 };
-            var g = AppSettings.Load().Glass;
+            var g = AppSettings.Peek().Glass;
             Color tint;
             try { tint = ColorTranslator.FromHtml(g.TintColor); } catch (Exception) { tint = Color.FromArgb(0x99, 0xCC, 0xFF); }
             return new OpsisGlass.GlassStyle
@@ -219,15 +219,15 @@ namespace MotionDesk.Services
             Func<OpsisGlass.GlassStyle, OpsisGlass.GlassStyle>? tintOverride = null)
         {
             _f = form; _radius = cornerRadius; _wants = wants; _surface = surface; _cornerOverride = cornerOverride; _tintOverride = tintOverride;
-            form.HandleCreated += (_, _) => Sync();
-            form.LocationChanged += (_, _) => QueueSync();
-            form.SizeChanged += (_, _) => QueueSync();
-            form.VisibleChanged += (_, _) => Sync();
-            form.Disposed += (_, _) => Dispose();
+            form.HandleCreated += HandleCreated;
+            form.LocationChanged += GeometryChanged;
+            form.SizeChanged += GeometryChanged;
+            form.VisibleChanged += HandleCreated;
+            form.Disposed += FormDisposed;
             MotionDesk.UI.ThemeManager.Changed += OnTheme;
             MotionDesk.UI.ThemeManager.Repainted += OnTheme;
             GlassService.PolicyChanged += OnPolicyChanged;
-            form.HandleDestroyed += (_, _) => { Interlocked.Exchange(ref _syncQueued, 0); Remove(); };
+            form.HandleDestroyed += HandleDestroyed;
             _reseat.Tick += (_, _) =>
             {
 #if SIGNATURE_COMPOSITION_PREVIEW
@@ -238,6 +238,11 @@ namespace MotionDesk.Services
 #endif
             };
         }
+
+        private void HandleCreated(object? sender, EventArgs e) => Sync();
+        private void GeometryChanged(object? sender, EventArgs e) => QueueSync();
+        private void FormDisposed(object? sender, EventArgs e) => Dispose();
+        private void HandleDestroyed(object? sender, EventArgs e) { Interlocked.Exchange(ref _syncQueued, 0); Remove(); }
 
         private void QueueSync()
         {
@@ -268,7 +273,7 @@ namespace MotionDesk.Services
 
         public void Sync()
         {
-            if (_disposed || _f.IsDisposed || !_f.IsHandleCreated) return;
+            if (_disposed || _f.IsDisposed || _f.Disposing || !_f.IsHandleCreated) return;
 #if SIGNATURE_COMPOSITION_PREVIEW
             if (!_f.Visible) { Remove(); return; }
             // Reuse the existing reseat timer for policy and z-order changes;
@@ -346,7 +351,23 @@ namespace MotionDesk.Services
             if (!_disposed && _f.IsHandleCreated && !_f.Disposing) PaneChanged?.Invoke();
         }
 
-        public void Dispose() { if (_disposed) return; _disposed = true; MotionDesk.UI.ThemeManager.Changed -= OnTheme; MotionDesk.UI.ThemeManager.Repainted -= OnTheme; GlassService.PolicyChanged -= OnPolicyChanged; Remove(); _reseat.Dispose(); }
+        public void Dispose()
+        {
+            if (_disposed) return;
+            _disposed = true;
+            _f.HandleCreated -= HandleCreated;
+            _f.LocationChanged -= GeometryChanged;
+            _f.SizeChanged -= GeometryChanged;
+            _f.VisibleChanged -= HandleCreated;
+            _f.Disposed -= FormDisposed;
+            _f.HandleDestroyed -= HandleDestroyed;
+            MotionDesk.UI.ThemeManager.Changed -= OnTheme;
+            MotionDesk.UI.ThemeManager.Repainted -= OnTheme;
+            GlassService.PolicyChanged -= OnPolicyChanged;
+            Remove();
+            _reseat.Dispose();
+            PaneChanged = null;
+        }
     }
 
     /// <summary>
