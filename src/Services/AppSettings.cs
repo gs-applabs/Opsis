@@ -191,6 +191,9 @@ namespace MotionDesk.Services
         public string HotCornerTopRight { get; set; } = "None";
         public string HotCornerBottomLeft { get; set; } = "None";
         public string HotCornerBottomRight { get; set; } = "None";
+        // Keep the user's original Windows mouse trails value for a genuine restore.
+        public int? MouseTrailsOriginalCount { get; set; }
+
 
 
         /// <summary>2.6.0: the shared Glass theme choices (Opsis.UI.GlassSettings): Solid by default.</summary>
