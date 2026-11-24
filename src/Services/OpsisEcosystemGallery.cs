@@ -80,14 +80,27 @@ public static class OpsisEcosystemGallery
     /// </summary>
     public static OpsisWidgetDesigner.Layout ReadWidgetContribution(Item item)
     {
+        var extension = Path.GetExtension(item.AssetPath);
         if (!string.Equals(item.Type, "widget", StringComparison.OrdinalIgnoreCase) ||
-            !string.Equals(Path.GetExtension(item.AssetPath), ".json", StringComparison.OrdinalIgnoreCase))
-            throw new InvalidDataException("This is not a declarative Opsis widget.");
+            extension is not (".json" or ".ini"))
+            throw new InvalidDataException("Only native JSON or supported Rainmeter INI widget metadata is permitted.");
         var selected = Discover().FirstOrDefault(x => x.Id == item.Id &&
             string.Equals(x.PluginId, item.PluginId, StringComparison.OrdinalIgnoreCase) &&
             string.Equals(x.AssetPath, item.AssetPath, StringComparison.OrdinalIgnoreCase));
         if (selected == null || new FileInfo(selected.AssetPath).Length > 32 * 1024)
             throw new InvalidDataException("Widget contribution missing or too large.");
+        if (string.Equals(extension, ".ini", StringComparison.OrdinalIgnoreCase))
+        {
+            var imported = OpsisRainmeterSkinImporter.PreviewFile(selected.AssetPath);
+            var data = new OpsisWidgetDesigner.Layout
+            {
+                Name = imported.Name, Binding = imported.Binding, Text = imported.Text,
+                AccentHex = imported.AccentHex, FontSize = imported.FontSize,
+                Width = imported.Width, Height = imported.Height
+            };
+            OpsisWidgetDesigner.Validate(data);
+            return data;
+        }
         var widget = JsonSerializer.Deserialize<OpsisWidgetDesigner.Layout>(
             File.ReadAllText(selected.AssetPath))
             ?? throw new InvalidDataException("Widget contribution not valid JSON.");
