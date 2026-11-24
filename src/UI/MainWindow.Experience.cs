@@ -57,6 +57,22 @@ public sealed partial class MainWindow
                 try { WindowsProtectionService.OpenProtectionSettings(); }
                 catch (Exception ex) { MessageBox.Show(this, ex.Message, "Windows Protection", MessageBoxButtons.OK, MessageBoxIcon.Error); }
             }),
+            (StudioText("Archive original Windows shell files", "Backup αυθεντικών αρχείων Shell"), async (_, _) =>
+            {
+                if (MessageBox.Show(this,
+                    StudioText("Archive a small, verified set of original Windows shell binaries for audit? The copies must never be manually pasted over live system files.",
+                        "Να αποθηκευτεί μικρό σύνολο αυθεντικών αρχείων Shell με ελέγχους SHA-256; Δεν πρέπει να αντιγραφούν χειροκίνητα πάνω σε ενεργά αρχεία Windows."),
+                    "Opsis Recovery Hub", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes) return;
+                try
+                {
+                    var inventory = await System.Threading.Tasks.Task.Run(OpsisRecoveryHub.BackupMonitoredWindowsOriginals);
+                    MessageBox.Show(this, "Archived " + inventory.Files.Count(x => x.Available) +
+                        " files in " + OpsisRecoveryHub.Root + "\\WindowsOriginals" +
+                        Environment.NewLine + "Use Windows DISM/SFC or System Restore for actual repair.",
+                        "Opsis Recovery Hub", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+                catch (Exception ex) { MessageBox.Show(this, ex.Message, "Opsis Recovery Hub", MessageBoxButtons.OK, MessageBoxIcon.Error); }
+            }),
             (StudioText("Create restore point", "Δημιουργία σημείου επαναφοράς"), async (_, _) =>
             {
                 if (MessageBox.Show(this,
