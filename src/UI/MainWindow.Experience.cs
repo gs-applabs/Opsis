@@ -280,6 +280,37 @@ public sealed partial class MainWindow
                 catch (Exception ex) { MessageBox.Show(this, ex.Message, "Opsis Widget Studio", MessageBoxButtons.OK, MessageBoxIcon.Error); }
             }));
 
+        AddButtonGrid(widgetCard,
+            (StudioText("Import Rainmeter INI", "Εισαγωγή Rainmeter INI"), (_, _) =>
+            {
+                using var chooser = new OpenFileDialog
+                {
+                    Filter = "Rainmeter skin (*.ini)|*.ini",
+                    CheckFileExists = true
+                };
+                if (chooser.ShowDialog(this) != DialogResult.OK) return;
+                try
+                {
+                    var info = OpsisRainmeterSkinImporter.PreviewFile(chooser.FileName);
+                    var message = StudioText(
+                        "Only one built-in String/Time meter is supported. Script, plugin and dynamic expressions are rejected.",
+                        "Υποστηρίζεται μία εγγενής ετικέτα String/Time. Scripts, plugins και δυναμικές εκφράσεις απορρίπτονται.") +
+                        Environment.NewLine + info.Name + " · " + info.Binding + " · " + info.AccentHex +
+                        Environment.NewLine + StudioText("Import this safe, data-only widget?",
+                            "Να εισαχθεί ως ασφαλές widget δεδομένων;");
+                    if (MessageBox.Show(this, message, "Opsis / Rainmeter", MessageBoxButtons.YesNo,
+                        MessageBoxIcon.Question) != DialogResult.Yes) return;
+                    var name = OpsisRainmeterSkinImporter.Import(chooser.FileName);
+                    RefreshWidgets();
+                    widgetPicker.SelectedItem = name;
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show(this, ex.Message, "Opsis Rainmeter Import",
+                        MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            }));
+
         var menuCard = AddCardSection(panel, StudioText("P3 — Context Menu Studio", "P3 — Μενού δεξιού κλικ"));
         AddText(menuCard, StudioText(
             "An optional Opsis launcher on Windows desktop and Explorer folder background menus. HKCU only; no DLL extension, system-file edits or Explorer restart.",
