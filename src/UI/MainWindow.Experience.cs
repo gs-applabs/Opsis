@@ -206,6 +206,68 @@ public sealed partial class MainWindow
                 catch (Exception ex) { MessageBox.Show(this, ex.Message, "Opsis Theme Bundle", MessageBoxButtons.OK, MessageBoxIcon.Error); }
             }));
 
+        var widgetCard = AddCardSection(panel, StudioText("P4 — Widget Layout Studio", "P4 — Στούντιο σχεδίασης Widget"));
+        AddText(widgetCard, StudioText(
+            "Build reusable native desktop clocks, dates and labels. This initial safe designer uses the common Opsis theme without independent plugin services.",
+            "Δημιούργησε επαναχρησιμοποιήσιμα ρολόγια, ημερομηνίες και ετικέτες. Χρησιμοποιείται το κοινό θέμα Opsis, χωρίς ξεχωριστές υπηρεσίες plugins."));
+        var widgetName = new TextBox { Width = 150, PlaceholderText = StudioText("Widget name", "Όνομα widget") };
+        var widgetBinding = new ComboBox { Width = 110, DropDownStyle = ComboBoxStyle.DropDownList };
+        widgetBinding.Items.AddRange(new object[] { "Clock", "Date", "Text" }); widgetBinding.SelectedIndex = 0;
+        var widgetText = new TextBox { Width = 150, PlaceholderText = StudioText("Static text", "Στατικό κείμενο") };
+        var widgetHex = new TextBox { Width = 86, Text = "#00D2FF" };
+        var widgetFont = new NumericUpDown { Width = 68, Minimum = 12, Maximum = 80, Value = 30 };
+        var widgetPicker = new ComboBox { Width = 150, DropDownStyle = ComboBoxStyle.DropDownList };
+        var widgetRow = new FlowLayoutPanel { Width = 720, AutoSize = true, WrapContents = true };
+        foreach (var part in new Control[] { widgetName, widgetBinding, widgetText, widgetHex, widgetFont, widgetPicker })
+            widgetRow.Controls.Add(part);
+        widgetCard.Controls.Add(widgetRow);
+        var widgetInfo = new Label { AutoSize = true, ForeColor = UiTheme.TextSecondary,
+            Text = StudioText("Widget preview is a native WinForms window.", "Η προεπισκόπηση widget είναι εγγενές παράθυρο WinForms.") };
+        widgetCard.Controls.Add(widgetInfo);
+        void RefreshWidgets()
+        {
+            var current = widgetPicker.SelectedItem?.ToString();
+            widgetPicker.Items.Clear();
+            foreach (var name in OpsisWidgetDesigner.List()) widgetPicker.Items.Add(name);
+            if (current != null && widgetPicker.Items.Contains(current)) widgetPicker.SelectedItem = current;
+            else if (widgetPicker.Items.Count > 0) widgetPicker.SelectedIndex = 0;
+        }
+        RefreshWidgets();
+        AddButtonGrid(widgetCard,
+            (StudioText("Save widget", "Αποθήκευση widget"), (_, _) =>
+            {
+                try
+                {
+                    var layout = new OpsisWidgetDesigner.Layout
+                    {
+                        Name = widgetName.Text.Trim(), Binding = widgetBinding.SelectedItem?.ToString() ?? "Clock",
+                        Text = widgetText.Text, AccentHex = widgetHex.Text.Trim(),
+                        FontSize = (int)widgetFont.Value
+                    };
+                    OpsisWidgetDesigner.Save(layout);
+                    RefreshWidgets(); widgetPicker.SelectedItem = layout.Name;
+                }
+                catch (Exception ex) { MessageBox.Show(this, ex.Message, "Opsis Widget Studio", MessageBoxButtons.OK, MessageBoxIcon.Error); }
+            }),
+            (StudioText("Open widget", "Άνοιγμα widget"), (_, _) =>
+            {
+                if (widgetPicker.SelectedItem is not string selected) return;
+                try
+                {
+                    var window = new OpsisCustomWidgetWindow(OpsisWidgetDesigner.Read(selected));
+                    window.Show(this);
+                }
+                catch (Exception ex) { MessageBox.Show(this, ex.Message, "Opsis Widget Studio", MessageBoxButtons.OK, MessageBoxIcon.Error); }
+            }),
+            (StudioText("Delete widget", "Διαγραφή widget"), (_, _) =>
+            {
+                if (widgetPicker.SelectedItem is not string selected) return;
+                if (MessageBox.Show(this, selected + "?", "Opsis Widget Studio",
+                    MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes) return;
+                try { OpsisWidgetDesigner.Delete(selected); RefreshWidgets(); }
+                catch (Exception ex) { MessageBox.Show(this, ex.Message, "Opsis Widget Studio", MessageBoxButtons.OK, MessageBoxIcon.Error); }
+            }));
+
         var menuCard = AddCardSection(panel, StudioText("P3 — Context Menu Studio", "P3 — Μενού δεξιού κλικ"));
         AddText(menuCard, StudioText(
             "An optional Opsis launcher on Windows desktop and Explorer folder background menus. HKCU only; no DLL extension, system-file edits or Explorer restart.",
