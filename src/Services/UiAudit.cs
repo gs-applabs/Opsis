@@ -109,7 +109,7 @@ namespace MotionDesk.Services
                         HangTrace.Mark("audit: pumped, reading");
                         var afterToggle = engine.ReadCurrent();
                         HangTrace.Mark("audit: read");
-                        if (read(afterToggle) != !original) problems.Add("[Taskbar] Windows did not apply " + name);
+                        if (read(afterToggle) != !original) problems.Add("[Taskbar] Windows did not apply " + name + " (wanted " + !original + ", read " + (read(afterToggle)?.ToString() ?? "null") + ", EnableTransparency=" + (Microsoft.Win32.Registry.GetValue(@"HKEY_CURRENT_USERSoftwareMicrosoftWindowsCurrentVersionThemesPersonalize", "EnableTransparency", "missing")?.ToString() ?? "null") + ")");
                     }
                     finally
                     {
