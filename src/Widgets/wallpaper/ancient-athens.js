@@ -46,6 +46,7 @@
     }
     const cache = new Map();
     let lastFrame, blended, blendedContext, darkAcropolis, darkAcropolisKey = '', lastDrawAt = 0;
+    let skyMask, skyMaskKey = '', foreground, foregroundKey = '';
     const atlas = (image, width, height) => {
         const scale = Math.max(width / image.naturalWidth, height / image.naturalHeight);
         const w = image.naturalWidth * scale, h = image.naturalHeight * scale;
@@ -118,7 +119,7 @@
         // Select the original only when it can cover the canvas at its native resolution.
         const highResolution = width > 1376 || height > 768;
         const wanted = new Set([state.from, state.to]);
-        if (wanted.has('night')) wanted.add('day');
+        wanted.add('day'); // stable skyline reference for the shared Weather renderer
         for (const [name, frame] of cache)
             if (!wanted.has(name) || frame.highResolution !== highResolution) cache.delete(name);
         for (const name of wanted) {
@@ -139,6 +140,7 @@
         blended = blendedContext = darkAcropolis = null;
         darkAcropolisKey = '';
         lastDrawAt = 0;
+        skyMask = foreground = null; skyMaskKey = foregroundKey = '';
         window.OpsisAncientAthensFx?.clear();
     }
     function setWeather(data) { return window.OpsisAncientAthensFx?.setWeather(data) ?? false; }
@@ -146,14 +148,14 @@
         const date = options.now instanceof Date ? options.now : new Date();
         const { base, overlay, daylight, blend, from, to } = frames(width, height, date, selection);
         const primary = base.image || overlay.image;
-        if (!primary) return;
+        if (!primary) return false;
         if (!blended || blended.width !== width || blended.height !== height) {
             blended = document.createElement('canvas');
             blended.width = width; blended.height = height;
             blendedContext = blended.getContext('2d');
             lastFrame = null;
         }
-        if (!blendedContext) return;
+        if (!blendedContext) return false;
         const key=[width,height,primary.src,base.image?.src,overlay.image?.src,
             daylight?.image?.src,Math.round(blend*300),from,to].join('|');
         if (force || lastFrame !== key) {
@@ -180,6 +182,46 @@
             g.restore();
             lastFrame = key;
         }
+        // In the common Weather pipeline the photographs supply ONLY the foreground.
+        // The original sky (including any baked moon) is removed, not overpainted.
+        if (options.sharedWeather) {
+            const reference = daylight?.image;
+            if (!reference || !window.OpsisSkyMask) return false;
+            if (skyMaskKey !== reference.src) {
+                skyMaskKey = reference.src; skyMask = null; foregroundKey = '';
+                try {
+                    const coarse = window.OpsisSkyMask.detect(reference, reference.src);
+                    skyMask = coarse && (window.OpsisSkyMask.refinePhotoSky?.(reference, coarse) || coarse);
+                } catch { /* an invalid mask must not erase the monument */ }
+            }
+            if (!skyMask) return false;
+            if (!foreground || foreground.width !== width || foreground.height !== height) {
+                foreground = document.createElement('canvas');
+                foreground.width = width; foreground.height = height; foregroundKey = '';
+            }
+            const horizon = options.horizon ?? height;
+            const weather = options.weather || {};
+            const shade = Math.round(Math.min(.30, (weather.cloud || 0)*.12 + (weather.storm || 0)*.18)*32)/32;
+            const fk = key + '|' + horizon + '|' + shade;
+            if (foregroundKey !== fk) {
+                const g = foreground.getContext('2d');
+                if (!g) return false;
+                g.clearRect(0,0,width,height);
+                g.drawImage(blended,0,0);
+                if (shade > 0) {
+                    g.globalCompositeOperation='source-atop';
+                    g.fillStyle='rgba(38,49,69,'+shade+')';g.fillRect(0,0,width,height);
+                }
+                g.save();g.beginPath();g.rect(0,0,width,horizon);g.clip();
+                g.globalCompositeOperation='destination-out';
+                const b=atlas(reference,width,height);
+                g.drawImage(skyMask,b.x,b.y,b.w,b.h);
+                g.restore();g.globalCompositeOperation='source-over';
+                foregroundKey=fk;
+            }
+            ctx.drawImage(foreground,0,0);
+            return true;
+        }
         ctx.save();ctx.setTransform(1,0,0,1,0,0);
         ctx.globalCompositeOperation='source-over';ctx.globalAlpha=1;
         ctx.drawImage(blended,0,0);
@@ -187,12 +229,13 @@
         const now=date.getTime();
         const dt=lastDrawAt ? Math.max(0,Math.min(1,(now-lastDrawAt)/1000)) : .04;
         lastDrawAt=now;
-        window.OpsisAncientAthensFx?.render(ctx,width,height,{
+        if (!options.noEffects) window.OpsisAncientAthensFx?.render(ctx,width,height,{
             date,minutes:localMinutes(date),sr:sunrise,ss:sunset,
             selection,reducedMotion:options.reducedMotion===true,
             lowPower:options.lowPower===true,delta:dt
         });
         ctx.restore();
+        return true;
     }
     window.OpsisAncientAthens = { phaseAt, prepare, release, setWeather, draw };
 })();
