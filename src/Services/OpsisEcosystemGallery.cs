@@ -152,8 +152,8 @@ public static class OpsisEcosystemGallery
     }
 
     /// <summary>
-    /// Install an explicitly chosen signed-by-content (SHA-256 manifest) declarative
-    /// theme bundle from the same plugin Gallery. Does not auto-apply settings.
+    /// Install an explicitly chosen declarative theme with SHA-256 integrity checks;
+    /// hashes are NOT a digital publisher signature. Does not auto-apply settings.
     /// </summary>
     public static string InstallThemeContribution(Item item)
     {
