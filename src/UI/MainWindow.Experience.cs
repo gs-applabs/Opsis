@@ -380,7 +380,7 @@ public sealed partial class MainWindow
         {
             using var chooser = new OpenFileDialog
             {
-                Filter = "Images (*.jpg;*.jpeg;*.png;*.webp;*.bmp)|*.jpg;*.jpeg;*.png;*.webp;*.bmp"
+                Filter = "Images (*.jpg;*.jpeg;*.png;*.bmp)|*.jpg;*.jpeg;*.png;*.bmp"
             };
             if (chooser.ShowDialog(this) == DialogResult.OK) saverImage.Text = chooser.FileName;
         };
