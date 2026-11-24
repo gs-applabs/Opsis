@@ -1288,12 +1288,14 @@ namespace MotionDesk.Widgets
             _monitorTimer = new System.Windows.Forms.Timer { Interval = 1000 };
             _monitorTimer.Tick += (_, _) => ReconcileMonitors();
             _monitorTimer.Start();
+            PluginHost.Instance.NotifyCrawlerP0EnvironmentChanged();
         }
 
         public void Disable()
         {
             UpdateSettings(settings => settings.StartEnabled = false);
             CloseForExit();
+            PluginHost.Instance.NotifyCrawlerP0EnvironmentChanged();
         }
 
         internal void CloseForExit()
@@ -1369,13 +1371,19 @@ namespace MotionDesk.Widgets
 
         public void UpdateSettings(Action<DeskStripSettings> change)
         {
-            if (_window is { IsDisposed: false }) { _window.UpdateSettings(change); return; }
+            if (_window is { IsDisposed: false })
+            {
+                _window.UpdateSettings(change);
+                PluginHost.Instance.NotifyCrawlerP0EnvironmentChanged();
+                return;
+            }
             var s = GetSettings(); change(s);
             try
             {
                 string p = Path.Combine(AppPaths.AppDataFolder, "deskstrip", "config.json");
                 Directory.CreateDirectory(Path.GetDirectoryName(p)!);
                 AtomicFile.WriteAllText(p, JsonSerializer.Serialize(s));
+                PluginHost.Instance.NotifyCrawlerP0EnvironmentChanged();
             }
             catch (IOException) { }
         }

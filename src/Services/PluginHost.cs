@@ -336,6 +336,14 @@ namespace MotionDesk.Services
             PushCrawlerP0Environment(plugin);
         }
 
+        /// <summary>Notify only active Crawler plugins when DeskStrip ownership changes.
+        /// No polling, registry modifications, or callbacks to unrelated plugins.</summary>
+        public void NotifyCrawlerP0EnvironmentChanged()
+        {
+            foreach (var entry in Snap().Where(p => p.Started))
+                PushCrawlerP0Environment(entry.Plugin);
+        }
+
         private static readonly Func<double, double, System.Threading.Tasks.Task<string>> SharedCrawlerWeather =
             (latitude, longitude) => WeatherService.GetWallpaperWeatherJsonAsync(latitude, longitude);
 
