@@ -63,6 +63,7 @@ jobs:
           $env:OPSIS_AUDIT_RESOURCE_CYCLES = '3'
           $output = Join-Path $env:GITHUB_WORKSPACE 'audit-result'
           New-Item -ItemType Directory -Force $output | Out-Null
+          $env:OPSIS_TRACE = Join-Path $output 'trace.txt'     # hang hunting: the last line shows where the UI thread stopped
           $process = Start-Process .\publish\Opsis.exe -ArgumentList @('--ui-audit', ('"' + $output + '"')) -PassThru
           if (-not $process.WaitForExit(480000)) {
             Stop-Process -Id $process.Id -Force
