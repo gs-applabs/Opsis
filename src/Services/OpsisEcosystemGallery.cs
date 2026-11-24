@@ -59,6 +59,41 @@ public static class OpsisEcosystemGallery
         yield return (Path.Combine(AppPaths.AppDataFolder, "gallery-packs"), "gallery-pack");
     }
 
+    private static readonly HashSet<string> ImageExtensions = new(StringComparer.OrdinalIgnoreCase)
+        { ".png", ".jpg", ".jpeg", ".webp", ".gif", ".bmp" };
+
+    private static bool HasLinkedPathComponents(string root, string file)
+    {
+        var relative = Path.GetRelativePath(root, file);
+        var current = root;
+        foreach (var part in relative.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar))
+        {
+            current = Path.Combine(current, part);
+            if ((File.GetAttributes(current) & FileAttributes.ReparsePoint) != 0) return true;
+        }
+        return false;
+    }
+
+    /// <summary>Apply only a selected, verified static image contribution. Never execute plugin code.</summary>
+    public static void ApplyStaticWallpaper(Item item)
+    {
+        if (!string.Equals(item.Type, "wallpaper", StringComparison.OrdinalIgnoreCase) ||
+            !ImageExtensions.Contains(Path.GetExtension(item.AssetPath)))
+            throw new InvalidDataException("Only static image wallpaper contributions can be applied here.");
+        var discovered = Discover().FirstOrDefault(x => x.Id == item.Id && x.PluginId == item.PluginId &&
+            string.Equals(x.AssetPath, item.AssetPath, StringComparison.OrdinalIgnoreCase));
+        if (discovered == null) throw new InvalidDataException("Wallpaper contribution no longer exists.");
+        if (new FileInfo(discovered.AssetPath).Length > 64L * 1024 * 1024)
+            throw new InvalidDataException("Wallpaper image too large.");
+        OpsisRecoveryHub.Snapshot("Before applying Gallery wallpaper " + item.Id);
+        var wallpaper = MotionDesk.Widgets.WallpaperSettings.Load();
+        wallpaper.Mode = "Image";
+        wallpaper.ImagePath = discovered.AssetPath;
+        wallpaper.Save();
+        MotionDesk.Widgets.WallpaperHostEngine.Instance.Enable();
+        MotionDesk.Widgets.WallpaperHostEngine.Instance.RefreshAll();
+    }
+
     public static IReadOnlyList<Item> Discover()
     {
         var results = new Dictionary<string, Item>(StringComparer.OrdinalIgnoreCase);
@@ -84,7 +119,7 @@ public static class OpsisEcosystemGallery
                         var filename = Path.GetFullPath(Path.Combine(dir, item.Asset.Replace('/', Path.DirectorySeparatorChar)));
                         var basePath = Path.GetFullPath(dir) + Path.DirectorySeparatorChar;
                         if (!filename.StartsWith(basePath, StringComparison.OrdinalIgnoreCase) || !File.Exists(filename)) continue;
-                        if ((File.GetAttributes(filename) & FileAttributes.ReparsePoint) != 0 ||
+                        if (HasLinkedPathComponents(dir, filename) ||
                             new FileInfo(filename).Length > 500L * 1024 * 1024) continue;
                         var key = manifest.PluginId + ":" + item.Id;
                         if (results.ContainsKey(key)) continue;
