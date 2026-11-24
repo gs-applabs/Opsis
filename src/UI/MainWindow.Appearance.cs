@@ -30,9 +30,9 @@ namespace MotionDesk.UI
                 var adv = new StudioAdvancedSection(); adv.AddControl(inner); card.Controls.Add(adv);
                 return inner;
             }
-            void Fail(Exception ex) => MessageBox.Show(this, ex.Message, T("Nav.Personalization"), MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            void Fail(Exception ex) { MotionDesk.Services.HangTrace.Mark("Fail dialog: " + ex.Message); MessageBox.Show(this, ex.Message, T("Nav.Personalization"), MessageBoxButtons.OK, MessageBoxIcon.Warning); MotionDesk.Services.HangTrace.Mark("Fail dialog closed"); }
             // every change: the user's original values are saved first (once), then the change is made; a failure is shown, never thrown
-            void Do(Action change, bool rebuild = false) { try { svc.Backup(); change(); } catch (Exception ex) { Fail(ex); } if (rebuild) Rebuild(); }
+            void Do(Action change, bool rebuild = false) { MotionDesk.Services.HangTrace.Mark("Do: backup"); try { svc.Backup(); MotionDesk.Services.HangTrace.Mark("Do: change"); change(); MotionDesk.Services.HangTrace.Mark("Do: changed"); } catch (Exception ex) { Fail(ex); } if (rebuild) { MotionDesk.Services.HangTrace.Mark("Do: rebuild"); Rebuild(); MotionDesk.Services.HangTrace.Mark("Do: rebuilt"); } }
 
             AddText(panel, T("Win.Intro"));
             if (svc.Started && !svc.EngineActive) AddText(panel, T("Win.EngineBusy"));

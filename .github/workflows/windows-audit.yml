@@ -60,7 +60,7 @@ jobs:
           $output = Join-Path $env:GITHUB_WORKSPACE 'audit-result'
           New-Item -ItemType Directory -Force $output | Out-Null
           $process = Start-Process .\publish\Opsis.exe -ArgumentList @('--ui-audit', ('"' + $output + '"')) -PassThru
-          if (-not $process.WaitForExit(1500000)) {
+          if (-not $process.WaitForExit(480000)) {
             Stop-Process -Id $process.Id -Force
             throw 'Opsis audit timed out'
           }
