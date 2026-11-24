@@ -131,12 +131,36 @@ internal sealed class ReplacementTaskbar : Form
         _start.Text = "Opsis";
         _start.AccessibleName = MainWindow.StudioText("Start", "Έναρξη");
         _start.Click += (_, _) => DesktopLauncher.OpenStart(Bounds);
+        _start.Paint += (_, e) =>
+        {
+            if (!_visual.StartGlassIcon) return;
+            float size = Math.Max(12, Math.Min(_start.ClientSize.Width, _start.ClientSize.Height) - 6);
+            OpsisBrandMark.Draw(e.Graphics, new RectangleF(
+                (_start.ClientSize.Width-size)/2f, (_start.ClientSize.Height-size)/2f, size, size));
+        };
         _taskView.Text = "▣";
         _taskView.AccessibleName = MainWindow.StudioText("Task View", "Προβολή εργασιών");
         _taskView.Click += (_, _) => VirtualWorkspaces.OpenTaskView();
         _clock.AccessibleName = MainWindow.StudioText("Clock and calendar", "Ρολόι και ημερολόγιο");
         _clock.Click += (_, _) => TrayApplicationContext.OpenPage?.Invoke("Widgets");
         var menu = new ContextMenuStrip();
+        var glassStart = new ToolStripMenuItem(MainWindow.StudioText("Glass Opsis Start button", "Γυάλινο κουμπί Έναρξης Opsis"));
+        glassStart.Click += (_, _) =>
+        {
+            try
+            {
+                var profile = OpsisTaskbarDesigner.Read();
+                profile.StartGlassIcon = !profile.StartGlassIcon;
+                OpsisTaskbarDesigner.Save(profile);
+                RefreshBars();
+            }
+            catch (Exception ex)
+            {
+                RotatingLogger.Write("Start button appearance: " + ex.Message);
+            }
+        };
+        menu.Opening += (_, _) => glassStart.Checked = _visual.StartGlassIcon;
+        menu.Items.Add(glassStart);
         menu.Items.Add(MainWindow.StudioText("DeskStrip settings", "Ρυθμίσεις DeskStrip"), null, (_, _) => TrayApplicationContext.OpenPage?.Invoke("DeskStrip"));
         menu.Items.Add(MainWindow.StudioText("Open Windows notification area", "Περιοχή ειδοποιήσεων Windows"), null, (_, _) =>
         {
@@ -176,6 +200,7 @@ internal sealed class ReplacementTaskbar : Form
         catch (Exception e) { RotatingLogger.Write("Taskbar visual profile: " + e.Message); _visual = OpsisTaskbarDesigner.Default; }
         BackColor = UiTheme.NavBackground;
         Opacity = _visual.Style == "Glass" ? _visual.OpacityPercent / 100.0 : 1.0;
+        _start.Text = _visual.StartGlassIcon ? "" : "Opsis";
         _start.BackColor = UiTheme.Surface;
         _start.ForeColor = UiTheme.TextPrimary;
         _clock.Text = DateTime.Now.ToString(vertical ? "HH:mm" : "ddd  HH:mm");
@@ -183,7 +208,7 @@ internal sealed class ReplacementTaskbar : Form
         _clock.BackColor = UiTheme.Surface;
         _taskView.ForeColor = UiTheme.TextPrimary;
         _taskView.BackColor = UiTheme.Surface;
-        string key = $"{vertical}|{active}|{_visual.Style}|{_visual.Alignment}|{_visual.ButtonWidth}|{_visual.ButtonGap}|{_visual.ShowTaskView}|{_visual.ShowClock}|{_visual.ActiveButtonAnimation}|{_visual.AnimationIntervalMs}|{UiTheme.TextPrimary.ToArgb()}|{UiTheme.Surface.ToArgb()}|" +
+        string key = $"{vertical}|{active}|{_visual.Style}|{_visual.Alignment}|{_visual.ButtonWidth}|{_visual.ButtonGap}|{_visual.ShowTaskView}|{_visual.ShowClock}|{_visual.StartGlassIcon}|{_visual.ActiveButtonAnimation}|{_visual.AnimationIntervalMs}|{UiTheme.TextPrimary.ToArgb()}|{UiTheme.Surface.ToArgb()}|" +
             string.Join('|', pins) + "|" + string.Join('|', list.Select(window => $"{window.Handle}:{window.Title}"));
         if (_content == key)
         {
@@ -192,6 +217,7 @@ internal sealed class ReplacementTaskbar : Form
             return;
         }
         _content = key;
+        _start.Invalidate();
         _vertical = vertical;
         _start.Dock = _taskView.Dock = vertical ? DockStyle.Top : DockStyle.Left;
         _clock.Dock = vertical ? DockStyle.Bottom : DockStyle.Right;
