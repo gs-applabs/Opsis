@@ -121,6 +121,45 @@
         return canvas;
     }
 
+    // Refine catalogue outlines at photo resolution. The coarse profile narrows
+    // the search so blue sea and white facades cannot become a second sky.
+    function refinePhotoSky(image, coarse) {
+        if (!coarse?.opsisRows) return coarse;
+        const c=document.createElement('canvas');
+        c.width=Math.min(image.naturalWidth,1600);
+        c.height=Math.round(image.naturalHeight*c.width/image.naturalWidth);
+        const g=c.getContext('2d',{willReadFrequently:true});
+        g.drawImage(image,0,0,c.width,c.height);
+        const rgb=g.getImageData(0,0,c.width,c.height).data;
+        const mask=g.createImageData(c.width,c.height);
+        const scale=c.height/coarse.height;
+        const edges=new Uint16Array(c.width);
+        for(let x=0;x<c.width;x++) {
+            const prior=coarse.opsisRows[Math.floor(x*coarse.width/c.width)];
+            if (!prior) continue;
+            const top=Math.max(3,Math.round((prior-3)*scale));
+            const limit=Math.min(c.height-3,Math.round((prior+10)*scale));
+            let edge=Math.round(prior*scale), best=3;
+            for(let y=top;y<=limit;y++) {
+                const above=((y-2)*c.width+x)*4, below=((y+1)*c.width+x)*4;
+                // Daylight skies are brighter than the distant skyline beneath them.
+                const drop=(rgb[above]-rgb[below])*.22+(rgb[above+1]-rgb[below+1])*.54+(rgb[above+2]-rgb[below+2])*.24;
+                const score=drop-.18*Math.abs(y-prior*scale);
+                if(score>best) { edge=y; best=score; }
+            }
+            edges[x]=edge;
+        }
+        for(let x=0;x<c.width;x++) {
+            if (!edges[x]) continue;
+            const nearby=edges.slice(Math.max(0,x-4),Math.min(c.width,x+5)).sort();
+            const edge=nearby[Math.floor(nearby.length/2)];
+            for(let y=0;y<edge;y++) mask.data[(y*c.width+x)*4+3]=255;
+            mask.data[(edge*c.width+x)*4+3]=128;
+        }
+        g.putImageData(mask,0,0);
+        return c;
+    }
+
     function outline(g, mask, bounds) {
         if (!mask?.opsisRows || !bounds) return;
         const rows = mask.opsisRows;
@@ -141,5 +180,5 @@
     }
 
     if (typeof module !== 'undefined') module.exports = { skyline };
-    else window.OpsisSkyMask = { detect, outline };
+    else window.OpsisSkyMask = { detect, outline, refinePhotoSky };
 })();
