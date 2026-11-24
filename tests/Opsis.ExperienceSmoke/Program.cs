@@ -158,6 +158,25 @@ try
     OpsisWidgetDesigner.Save(widget);
     Check(OpsisWidgetDesigner.List().Contains("Clock Demo"), "native widget layout appears in Gallery storage");
     Check(OpsisWidgetDesigner.Read("Clock Demo").Binding == "Clock", "native widget layout roundtrip");
+    var edit = OpsisWidgetDesigner.Read("Clock Demo");
+    edit.ContentXPercent = 75;
+    edit.ContentYPercent = 20;
+    edit.ShowWidgetBorder = false;
+    OpsisWidgetDesigner.Update("Clock Demo", edit);
+    var updatedWidget = OpsisWidgetDesigner.Read("Clock Demo");
+    Check(updatedWidget.ContentXPercent == 75 && updatedWidget.ContentYPercent == 20,
+        "visual drag positions are persisted");
+    Check(!updatedWidget.ShowWidgetBorder, "widget border preference survives save");
+    var origin = OpsisWidgetDesigner.Position(400, 200, 100, 50, 0, 0);
+    var far = OpsisWidgetDesigner.Position(400, 200, 100, 50, 100, 100);
+    Check(origin == (0, 0) && far == (300, 150), "visual editor geometry covers entire canvas");
+    Check(OpsisWidgetDesigner.Position(20, 15, 80, 30, 70, 60) == (0, 0),
+        "visual editor clamps small canvas without negative positions");
+    rejected = false;
+    try { OpsisWidgetDesigner.Validate(new OpsisWidgetDesigner.Layout { Name = "Bad Coordinates", ContentXPercent = 120 }); }
+    catch (InvalidDataException) { rejected = true; }
+    Check(rejected, "invalid widget drag coordinates rejected");
+
     rejected = false;
     try { OpsisWidgetDesigner.Validate(new OpsisWidgetDesigner.Layout { Name = "../escape", Binding = "Clock" }); }
     catch (ArgumentException) { rejected = true; }
