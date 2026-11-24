@@ -1,0 +1,250 @@
+using System;
+using System.Drawing;
+using System.Linq;
+using System.Windows.Forms;
+using MotionDesk.Services;
+using MotionDesk.Widgets;
+
+namespace MotionDesk.UI;
+
+public sealed partial class MainWindow
+{
+    /// <summary>All studios use the same page/theme, settings and recovery services.</summary>
+    private void BuildEcosystemStudios(Panel panel)
+    {
+        var guard = AddCardSection(panel, StudioText("P3 — Windows Compatibility Guard", "P3 — Έλεγχος συμβατότητας Windows"));
+        AddText(guard, StudioText(
+            "Opsis remembers the approved Windows build and pauses risky shell activation after a feature update. Wallpapers and independent widgets remain usable. Windows-protected files are never overwritten.",
+            "Το Opsis θυμάται την εγκεκριμένη έκδοση Windows και αναστέλλει επεμβατικές λειτουργίες Shell μετά από ενημέρωση. Τα ανεξάρτητα widgets και wallpapers συνεχίζουν. Δεν αντικαθίστανται προστατευμένα αρχεία Windows."));
+        var guardStatus = new Label { AutoSize = true, ForeColor = UiTheme.TextPrimary, Margin = new Padding(8) };
+        guard.Controls.Add(guardStatus);
+        void RefreshGuard()
+        {
+            try
+            {
+                var state = WindowsUpdateGuard.Read();
+                guardStatus.Text = (WindowsUpdateGuard.RequiresReview
+                    ? StudioText("Action required: review Windows changes", "Απαιτείται έλεγχος αλλαγών Windows")
+                    : StudioText("Compatibility baseline approved", "Εγκεκριμένη βάση συμβατότητας")) +
+                    Environment.NewLine + "Current: " + OpsisRecoveryHub.WindowsFingerprint() +
+                    Environment.NewLine + "Last approved: " + state.LastApprovedFingerprint;
+            }
+            catch (Exception ex) { guardStatus.Text = "Guard: " + ex.Message; }
+        }
+        RefreshGuard();
+        AddButtonGrid(guard,
+            (StudioText("Inspect Windows changes", "Έλεγχος αλλαγών Windows"), (_, _) =>
+            {
+                try
+                {
+                    MessageBox.Show(this, OpsisRecoveryHub.InspectUpdateImpact(),
+                        "Opsis Compatibility Guard", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    RefreshGuard();
+                }
+                catch (Exception ex) { MessageBox.Show(this, ex.Message, "Opsis Guard", MessageBoxButtons.OK, MessageBoxIcon.Error); }
+            }),
+            (StudioText("Approve current build", "Έγκριση τρέχουσας έκδοσης"), (_, _) =>
+            {
+                if (MessageBox.Show(this,
+                    StudioText("Only approve after checking Explorer, Taskbar, widgets and plugins. No system file will be modified. Proceed?",
+                        "Ενέκρινε μόνο αφού ελέγξεις Explorer, Taskbar, widgets και plugins. Δεν αλλάζουν αρχεία συστήματος. Συνέχεια;"),
+                    "Opsis Compatibility Guard", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes) return;
+                try { WindowsUpdateGuard.ApproveCurrentBuild(); RefreshGuard(); }
+                catch (Exception ex) { MessageBox.Show(this, ex.Message, "Opsis Guard", MessageBoxButtons.OK, MessageBoxIcon.Error); }
+            }),
+            (StudioText("System Protection settings", "Ρυθμίσεις Προστασίας Συστήματος"), (_, _) =>
+            {
+                try { WindowsProtectionService.OpenProtectionSettings(); }
+                catch (Exception ex) { MessageBox.Show(this, ex.Message, "Windows Protection", MessageBoxButtons.OK, MessageBoxIcon.Error); }
+            }),
+            (StudioText("Create restore point", "Δημιουργία σημείου επαναφοράς"), async (_, _) =>
+            {
+                if (MessageBox.Show(this,
+                    StudioText("Ask Windows to create a restore point? This may require UAC, enabled System Protection and may be limited to one per 24 hours.",
+                        "Να ζητηθεί σημείο επαναφοράς Windows; Απαιτείται πιθανώς UAC και ενεργή Προστασία Συστήματος· ισχύουν χρονικοί περιορισμοί."),
+                    "Windows System Restore", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes) return;
+                try
+                {
+                    var exitCode = await WindowsProtectionService.RequestSystemRestorePointAsync();
+                    MessageBox.Show(this, exitCode == 0
+                        ? StudioText("Windows accepted the restore point command.", "Τα Windows δέχθηκαν την εντολή σημείου επαναφοράς.")
+                        : StudioText("Windows reported failure: ", "Τα Windows ανέφεραν αποτυχία: ") + exitCode,
+                        "Windows System Restore", MessageBoxButtons.OK,
+                        exitCode == 0 ? MessageBoxIcon.Information : MessageBoxIcon.Warning);
+                }
+                catch (Exception ex) { MessageBox.Show(this, ex.Message, "Windows System Restore", MessageBoxButtons.OK, MessageBoxIcon.Error); }
+            }));
+
+        var sceneCard = AddCardSection(panel, StudioText("P4 — Weather Scene Composer", "P4 — Συνθέτης σκηνών καιρού"));
+        AddText(sceneCard, StudioText(
+            "Combine existing weather, hour, wind and Greek landmark controls into reusable scenes. No extra renderer or background service.",
+            "Συνδύασε καιρό, ώρα, άνεμο και ελληνικά τοπία σε επαναχρησιμοποιήσιμες σκηνές του υπάρχοντος renderer."));
+        var sceneName = new TextBox { Width = 170, PlaceholderText = StudioText("Scene name", "Όνομα σκηνής") };
+        var scenePicker = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 180 };
+        var weather = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 140 };
+        weather.Items.AddRange(new object[] { "Auto", "Clear", "PartlyCloudy", "Cloudy", "Drizzle", "Rain", "HeavyRain", "Thunderstorm", "Snow", "Fog" });
+        var hour = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 110 };
+        hour.Items.AddRange(new object[] { "Auto", "Dawn", "Day", "Dusk", "Night" });
+        var wind = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 130 };
+        wind.Items.AddRange(new object[] { "Auto", "Calm", "LightBreeze", "FreshBreeze", "Strong", "Gale" });
+        var landmark = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 190 };
+        landmark.Items.Add("Auto"); landmark.Items.Add("Off");
+        foreach (var entry in LandmarkCatalog.Scenes) landmark.Items.Add(entry.Id);
+        var currentWallpaper = WallpaperSettings.Load();
+        weather.SelectedItem = currentWallpaper.WeatherSimulation;
+        hour.SelectedItem = currentWallpaper.TimeSimulation;
+        wind.SelectedItem = currentWallpaper.WindSimulation;
+        landmark.SelectedItem = currentWallpaper.WeatherLandmarkId;
+        if (weather.SelectedIndex < 0) weather.SelectedIndex = 0;
+        if (hour.SelectedIndex < 0) hour.SelectedIndex = 0;
+        if (wind.SelectedIndex < 0) wind.SelectedIndex = 0;
+        if (landmark.SelectedIndex < 0) landmark.SelectedIndex = 0;
+        var sceneRow = new FlowLayoutPanel { Width = 720, AutoSize = true, WrapContents = true };
+        foreach (var control in new Control[] { sceneName, scenePicker, weather, hour, wind, landmark })
+            sceneRow.Controls.Add(control);
+        sceneCard.Controls.Add(sceneRow);
+        var sceneSummary = new Label { Width = 720, AutoSize = true, ForeColor = UiTheme.TextSecondary };
+        sceneCard.Controls.Add(sceneSummary);
+        void RefreshScenes()
+        {
+            var current = scenePicker.SelectedItem?.ToString();
+            scenePicker.Items.Clear();
+            foreach (var s in WeatherSceneComposer.List()) scenePicker.Items.Add(s);
+            if (current != null && scenePicker.Items.Contains(current)) scenePicker.SelectedItem = current;
+            else if (scenePicker.Items.Count > 0) scenePicker.SelectedIndex = 0;
+        }
+        void ShowScenePreview()
+        {
+            sceneSummary.Text = $"Weather: {weather.SelectedItem}  |  Time: {hour.SelectedItem}  |  Wind: {wind.SelectedItem}  |  Landmark: {landmark.SelectedItem}";
+        }
+        foreach (var picker in new[] { weather, hour, wind, landmark })
+            picker.SelectedIndexChanged += (_, _) => ShowScenePreview();
+        ShowScenePreview();
+        RefreshScenes();
+        AddButtonGrid(sceneCard,
+            (StudioText("Save scene", "Αποθήκευση σκηνής"), (_, _) =>
+            {
+                try
+                {
+                    var created = WeatherSceneComposer.Capture(sceneName.Text);
+                    created.Weather = weather.SelectedItem?.ToString() ?? "Auto";
+                    created.Time = hour.SelectedItem?.ToString() ?? "Auto";
+                    created.Wind = wind.SelectedItem?.ToString() ?? "Auto";
+                    created.Landmark = landmark.SelectedItem?.ToString() ?? "Auto";
+                    WeatherSceneComposer.Save(created); RefreshScenes(); scenePicker.SelectedItem = created.Name;
+                }
+                catch (Exception ex) { MessageBox.Show(this, ex.Message, "Weather Scene Composer", MessageBoxButtons.OK, MessageBoxIcon.Error); }
+            }),
+            (StudioText("Apply selected scene", "Εφαρμογή σκηνής"), (_, _) =>
+            {
+                if (scenePicker.SelectedItem is not string selected) return;
+                if (MessageBox.Show(this, selected + "?", "Weather Scene Composer",
+                    MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes) return;
+                try { WeatherSceneComposer.Apply(selected); }
+                catch (Exception ex) { MessageBox.Show(this, ex.Message, "Weather Scene Composer", MessageBoxButtons.OK, MessageBoxIcon.Error); }
+            }),
+            (StudioText("Delete scene", "Διαγραφή σκηνής"), (_, _) =>
+            {
+                if (scenePicker.SelectedItem is not string selected) return;
+                if (MessageBox.Show(this, selected + "?", "Weather Scene Composer",
+                    MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes) return;
+                try { WeatherSceneComposer.Delete(selected); RefreshScenes(); }
+                catch (Exception ex) { MessageBox.Show(this, ex.Message, "Weather Scene Composer", MessageBoxButtons.OK, MessageBoxIcon.Error); }
+            }));
+
+        var automationCard = AddCardSection(panel, StudioText("P5 — Automation Studio", "P5 — Στούντιο αυτοματισμών"));
+        AddText(automationCard, StudioText(
+            "Local schedules only. Rules are disabled by default and never execute shell commands, arbitrary scripts or downloaded code.",
+            "Τοπικοί αυτοματισμοί με ασφαλείς ενέργειες. Αρχικά ανενεργοί, χωρίς αυθαίρετα scripts ή εντολές συστήματος."));
+        var enabledToggle = new CheckBox { AutoSize = true, Margin = new Padding(8),
+            Text = StudioText("Enable scheduled automations", "Ενεργοποίηση προγραμματισμένων αυτοματισμών"),
+            Checked = AppSettings.Load().OpsisAutomationsEnabled, ForeColor = UiTheme.TextPrimary };
+        enabledToggle.CheckedChanged += (_, _) =>
+        {
+            try { var s = AppSettings.Load(); s.OpsisAutomationsEnabled = enabledToggle.Checked; s.Save(); }
+            catch (Exception ex) { MessageBox.Show(this, ex.Message, "Automation Studio", MessageBoxButtons.OK, MessageBoxIcon.Error); }
+        };
+        automationCard.Controls.Add(enabledToggle);
+        var ruleName = new TextBox { Width = 160, PlaceholderText = StudioText("Rule name", "Όνομα κανόνα") };
+        var trigger = new ComboBox { Width = 112, DropDownStyle = ComboBoxStyle.DropDownList };
+        trigger.Items.AddRange(new object[] { "Startup", "DailyAt", "WeekdayAt" }); trigger.SelectedIndex = 1;
+        var time = new DateTimePicker { Width = 110, Format = DateTimePickerFormat.Custom, CustomFormat = "HH:mm", ShowUpDown = true };
+        var action = new ComboBox { Width = 150, DropDownStyle = ComboBoxStyle.DropDownList };
+        action.Items.AddRange(new object[] { "Scene", "AppearancePreset", "ThemeMode", "HotCorners" });
+        action.SelectedIndex = 2;
+        var target = new ComboBox { Width = 170, DropDownStyle = ComboBoxStyle.DropDownList };
+        void RefreshTargets()
+        {
+            target.Items.Clear();
+            var values = action.SelectedItem?.ToString() switch
+            {
+                "Scene" => WeatherSceneComposer.List(),
+                "AppearancePreset" => AppearancePresets.List(),
+                "ThemeMode" => new[] { "Follow", "Light", "Dark" },
+                "HotCorners" => new[] { "Off", "On" },
+                _ => Array.Empty<string>()
+            };
+            foreach (var item in values) target.Items.Add(item);
+            if (target.Items.Count > 0) target.SelectedIndex = 0;
+        }
+        action.SelectedIndexChanged += (_, _) => RefreshTargets();
+        RefreshTargets();
+        var ruleEditor = new FlowLayoutPanel { Width = 720, AutoSize = true, WrapContents = true };
+        foreach (var control in new Control[] { ruleName, trigger, time, action, target })
+            ruleEditor.Controls.Add(control);
+        automationCard.Controls.Add(ruleEditor);
+        var rulesBox = new ListBox { Width = 690, Height = 130 };
+        automationCard.Controls.Add(rulesBox);
+        void RefreshRules()
+        {
+            var configuration = OpsisAutomationStudio.Read();
+            rulesBox.Items.Clear();
+            foreach (var rule in configuration.Rules)
+                rulesBox.Items.Add((rule.Enabled ? "● " : "○ ") + rule.Name + "  |  " +
+                    rule.Trigger + " " + rule.Hour.ToString("00") + ":" + rule.Minute.ToString("00") +
+                    "  → " + rule.Action + " / " + rule.Target);
+        }
+        try { RefreshRules(); }
+        catch (Exception ex) { rulesBox.Items.Add("Error: " + ex.Message); }
+        AddButtonGrid(automationCard,
+            (StudioText("Add rule", "Προσθήκη κανόνα"), (_, _) =>
+            {
+                try
+                {
+                    var conf = OpsisAutomationStudio.Read();
+                    conf.Rules.Add(new OpsisAutomationStudio.Rule
+                    {
+                        Name = ruleName.Text.Trim(), Enabled = false,
+                        Trigger = trigger.SelectedItem?.ToString() ?? "DailyAt",
+                        Hour = time.Value.Hour, Minute = time.Value.Minute,
+                        Action = action.SelectedItem?.ToString() ?? "ThemeMode",
+                        Target = target.SelectedItem?.ToString() ?? ""
+                    });
+                    OpsisAutomationStudio.Save(conf); RefreshRules();
+                }
+                catch (Exception ex) { MessageBox.Show(this, ex.Message, "Automation Studio", MessageBoxButtons.OK, MessageBoxIcon.Error); }
+            }),
+            (StudioText("Enable / disable rule", "Ενεργοποίηση / απενεργοποίηση"), (_, _) =>
+            {
+                if (rulesBox.SelectedIndex < 0) return;
+                try
+                {
+                    var conf = OpsisAutomationStudio.Read();
+                    conf.Rules[rulesBox.SelectedIndex].Enabled = !conf.Rules[rulesBox.SelectedIndex].Enabled;
+                    OpsisAutomationStudio.Save(conf); RefreshRules();
+                }
+                catch (Exception ex) { MessageBox.Show(this, ex.Message, "Automation Studio", MessageBoxButtons.OK, MessageBoxIcon.Error); }
+            }),
+            (StudioText("Remove rule", "Διαγραφή κανόνα"), (_, _) =>
+            {
+                if (rulesBox.SelectedIndex < 0) return;
+                try
+                {
+                    var conf = OpsisAutomationStudio.Read();
+                    conf.Rules.RemoveAt(rulesBox.SelectedIndex);
+                    OpsisAutomationStudio.Save(conf); RefreshRules();
+                }
+                catch (Exception ex) { MessageBox.Show(this, ex.Message, "Automation Studio", MessageBoxButtons.OK, MessageBoxIcon.Error); }
+            }));
+    }
+}
