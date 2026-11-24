@@ -2710,6 +2710,50 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                 }
             }));
 
+            // ---------- P0: Explorer View Profiles ----------
+            var explorerCard = AddCardSection(panel,
+                LocalizationManager.CurrentLanguage == "el" ? "Explorer — Προφίλ προβολής" : "Explorer — View profiles");
+            AddText(explorerCard, LocalizationManager.CurrentLanguage == "el"
+                ? "Προφίλ παραγωγικότητας: εμφανίζει επεκτάσεις και κρυφά αρχεία, ενεργοποιεί συμπαγή προβολή και ανοίγει στην επιλογή Αυτός ο υπολογιστής. Αποθηκεύεται αντίγραφο των προηγούμενων ρυθμίσεων πριν την πρώτη αλλαγή. Ορισμένες αλλαγές εφαρμόζονται στο επόμενο παράθυρο Explorer."
+                : "Productivity profile: shows extensions and hidden files, uses compact view and opens This PC. Original settings are backed up before the first change. Some options apply to newly opened Explorer windows.");
+            AddButtonGrid(explorerCard,
+                (LocalizationManager.CurrentLanguage == "el" ? "Εφαρμογή προφίλ" : "Apply profile", (_, _) =>
+                {
+                    if (MessageBox.Show(this,
+                        LocalizationManager.CurrentLanguage == "el"
+                            ? "Να εφαρμοστεί το προφίλ προβολής Explorer; Οι προηγούμενες ρυθμίσεις θα αποθηκευτούν."
+                            : "Apply the Explorer view profile? Previous settings will be backed up.",
+                        "Opsis — Explorer", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes) return;
+                    try
+                    {
+                        ExplorerViewProfiles.ApplyProductivity();
+                        _statusLabel.Text = LocalizationManager.CurrentLanguage == "el"
+                            ? "Το προφίλ Explorer εφαρμόστηκε." : "Explorer profile applied.";
+                    }
+                    catch (Exception ex) { MessageBox.Show(this, ex.Message, "Opsis — Explorer", MessageBoxButtons.OK, MessageBoxIcon.Error); }
+                }),
+                (LocalizationManager.CurrentLanguage == "el" ? "Επαναφορά προηγούμενων" : "Restore previous settings", (_, _) =>
+                {
+                    if (!ExplorerViewProfiles.HasBackup)
+                    {
+                        MessageBox.Show(this, LocalizationManager.CurrentLanguage == "el"
+                            ? "Δεν υπάρχει προηγούμενο αντίγραφο ρυθμίσεων." : "No previous settings backup exists.",
+                            "Opsis — Explorer", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        return;
+                    }
+                    if (MessageBox.Show(this, LocalizationManager.CurrentLanguage == "el"
+                        ? "Να επαναφερθούν οι αποθηκευμένες ρυθμίσεις Explorer;"
+                        : "Restore the saved Explorer settings?", "Opsis — Explorer",
+                        MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes) return;
+                    try
+                    {
+                        ExplorerViewProfiles.Restore();
+                        _statusLabel.Text = LocalizationManager.CurrentLanguage == "el"
+                            ? "Οι προηγούμενες ρυθμίσεις Explorer επανήλθαν." : "Previous Explorer settings restored.";
+                    }
+                    catch (Exception ex) { MessageBox.Show(this, ex.Message, "Opsis — Explorer", MessageBoxButtons.OK, MessageBoxIcon.Error); }
+                }));
+
             // ---------- DeskCursors ----------
             var cursorCard = AddCardSection(panel, LocalizationManager.T("Personalization.SectionDeskCursors"));
             AddText(cursorCard, LocalizationManager.T("Personalization.DeskCursorsIntro"));
