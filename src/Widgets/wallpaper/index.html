@@ -74,7 +74,7 @@ function applyReducedMotion() {
     document.body.classList.toggle('reduced-motion', reduced);
     if (reduced) videoLayers.forEach(v => { if (!v.paused) v.pause(); });
 }
-reducedMotionQuery.addEventListener?.('change', () => { applyReducedMotion(); cancelWaveLoop(); if (!isPaused && canvas.style.display !== 'none') waveLoopHandle = requestAnimationFrame(waveLoop); });
+reducedMotionQuery.addEventListener?.('change', () => { applyReducedMotion(); sendSignaturePolicy(); cancelWaveLoop(); if (!isPaused && canvas.style.display !== 'none') waveLoopHandle = requestAnimationFrame(waveLoop); });
 videoLayers.forEach(v => v.addEventListener('play', () => { if (reduceWallpaperMotion()) v.pause(); }));
 
 // Πραγματικό DSP (όχι μόνο ανάλυση/visualizer) πάνω στον ΔΙΚΟ ΜΑΣ ήχο του wallpaper video, μέσω
@@ -196,7 +196,7 @@ window.addEventListener('resize', () => { resizeCanvas(); lastFrameTime = 0; });
 resizeCanvas();
 
 // 2.4.0: the C# side sends ONE profile (cfg.perf, from PerformanceProfile) that follows the hardware tier and the dynamic scaling; it is updated live by opsisSetPerf.
-window.opsisSetPerf = p => { cfg.perf = p; adaptiveScale = 1; resetFrameStats(); applyReducedMotion(); resizeCanvas(); };
+window.opsisSetPerf = p => { cfg.perf = p; adaptiveScale = 1; resetFrameStats(); applyReducedMotion(); resizeCanvas(); sendSignaturePolicy(); };
 function perfProfile() {
     if (cfg.perf && cfg.perf.targetFps && cfg.performanceMode !== 'Battery') return cfg.perf;
     switch (cfg.performanceMode) {
@@ -864,6 +864,7 @@ const mediaImg = document.getElementById('mediaImg');
 const mediaFrame = document.getElementById('mediaFrame');
 let mediaSrc = '';
 function hideMedia() {
+    resetSignatureFrame();
     mediaImg.style.display = 'none'; mediaImg.removeAttribute('src');
     mediaFrame.style.display = 'none'; mediaFrame.removeAttribute('src');
     mediaSrc = '';
@@ -875,8 +876,12 @@ async function startMedia() {
     const isImg = cfg.mode === 'Image';
     const src = isImg ? cfg.imageUri : cfg.pageUri;
     if (!src) { startWaves(); return; }
-    if (isPaused) { hideMedia(); return; }
+    if (isPaused) {
+        if (isSignatureFrame() && signatureReady && mediaSrc === src) return;
+        hideMedia(); return;
+    }
     if (isImg) {
+        resetSignatureFrame();
         mediaFrame.style.display = 'none'; mediaFrame.removeAttribute('src');
         mediaImg.style.objectFit = cfg.imageFit === 'Contain' ? 'contain' : 'cover';
         // A panoramic photo is cropped independently by the two selected displays.
@@ -895,13 +900,53 @@ async function startMedia() {
         mediaImg.style.display = 'block';
     } else {
         mediaImg.style.display = 'none'; mediaImg.removeAttribute('src');
-        if (mediaSrc !== src) { localFrameReady = false; mediaFrame.src = src; mediaSrc = src; }
+        if (mediaSrc !== src) { resetSignatureFrame(); mediaFrame.src = src; mediaSrc = src; }
         mediaFrame.style.display = 'block';
     }
 }
 
 // ---- API for local web wallpapers: the page in the frame talks to Opsis only through window messages ----
 let localFrameReady = false;
+let signatureReady = false, signaturePauseTimer = 0, signaturePauseSeq = 0;
+function resetSignatureFrame() {
+    signatureReady = false; localFrameReady = false;
+    clearTimeout(signaturePauseTimer); signaturePauseTimer = 0;
+    signaturePauseSeq++;
+}
+function isSignatureFrame() {
+    if (!cfg.pageLocal || cfg.mode !== 'Page' || !localFrameReady) return false;
+    try {
+        const url = new URL(cfg.pageUri);
+        return url.protocol === 'file:' && /\/wallpapers\/(?:packs\/opsis-100|samples)\/opsis-glass-signature\/index\.html$/i.test(decodeURIComponent(url.pathname));
+    } catch { return false; }
+}
+function sendSignaturePolicy() {
+    if (!isSignatureFrame() || !signatureReady) return;
+    const p = cfg.perf || {};
+    const low = cfg.performanceMode === 'Battery' || cfg.performanceMode === 'Low Power';
+    postToFrame({opsis:true,type:'host-policy',policy:{
+        targetFps:Math.min(low ? 15 : 30, Number(p.targetFps) || 30),
+        renderScale:Math.min(low ? .6 : 1, Number(p.renderScale) || 1),
+        pixelBudget:Math.min(low ? 921600 : 8294400, Number(p.pixelBudget) || 8294400),
+        reducedMotion:reduceWallpaperMotion()
+    }});
+}
+function pauseSignatureFrame() {
+    if (!isSignatureFrame() || !signatureReady) return false;
+    clearTimeout(signaturePauseTimer);
+    const seq = ++signaturePauseSeq;
+    postToFrame({opsis:true,type:'pause',paused:true,seq});
+    signaturePauseTimer = setTimeout(() => {
+        if (isPaused && seq === signaturePauseSeq) hideMedia();
+    },500);
+    return true;
+}
+function resumeSignatureFrame() {
+    if (!isSignatureFrame() || !signatureReady) return;
+    clearTimeout(signaturePauseTimer); signaturePauseTimer=0;
+    postToFrame({opsis:true,type:'pause',paused:false,seq:++signaturePauseSeq});
+    sendSignaturePolicy();
+}
 function postToFrame(msg) {
     if (!cfg.pageLocal || !localFrameReady) return;
     try { mediaFrame.contentWindow?.postMessage(msg, '*'); } catch (e) { /* frame gone */ }
@@ -913,6 +958,7 @@ window.opsisSendProps = async () => {
     try { postToFrame({ opsis: true, type: 'props', props: JSON.parse(await b.GetPagePropertiesJson()) }); } catch (e) { /* ignore */ }
 };
 mediaFrame.addEventListener('load', () => {
+    resetSignatureFrame();
     localFrameReady = cfg.pageLocal && mediaFrame.getAttribute('src') === cfg.pageUri;
     if (!localFrameReady) return;
     postToFrame({ opsis: true, type: 'hello', version: 1 });
@@ -920,7 +966,16 @@ mediaFrame.addEventListener('load', () => {
 });
 window.addEventListener('message', (e) => {
     const d = e.data;
-    if (!d || d.opsis !== 'subscribe' || e.source !== mediaFrame.contentWindow || !localFrameReady || !cfg.pageLocal || (e.origin !== 'null' && e.origin !== 'file://')) return;
+    if (!d || e.source !== mediaFrame.contentWindow || !localFrameReady || !cfg.pageLocal || (e.origin !== 'null' && e.origin !== 'file://')) return;
+    if (isSignatureFrame() && d.opsis === 'signature-capabilities' && d.version === 1) {
+        signatureReady = true; sendSignaturePolicy();
+        if (isPaused) pauseSignatureFrame();
+        return;
+    }
+    if (isSignatureFrame() && signatureReady && d.opsis === 'signature-paused' && d.seq === signaturePauseSeq && isPaused) {
+        clearTimeout(signaturePauseTimer); signaturePauseTimer=0; return;
+    }
+    if (d.opsis !== 'subscribe') return;
     try { const b = bridge(); if (b) b.SetSubscription(!!d.audio, !!d.gpu, !!d.pointer); } catch (x) { /* ignore */ }
 });
 
@@ -1063,7 +1118,7 @@ async function doRefresh() {
     const wasAthens = previousMode === 'Ancient Athens';
     const previousScale = cfg.perf?.renderScale;
     try { cfg = JSON.parse(await b.GetWaveConfigJson()); } catch (e) { /* keep previous cfg */ }
-    applyReducedMotion();
+    applyReducedMotion(); sendSignaturePolicy();
     if (previousMode !== cfg.mode) studioTime = 0;
     const scaleReset = !cfg.perf?.adaptive && adaptiveScale !== 1;
     if (previousMode !== cfg.mode || scaleReset) { adaptiveScale = 1; resetFrameStats(); }
@@ -1163,11 +1218,11 @@ window.motionDeskSetPaused = (paused) => {
     if (paused) {
         cancelWaveLoop();
         activeVideo().pause();
-        if (cfg.mode === 'Image' || cfg.mode === 'Page') hideMedia();
+        if (cfg.mode === 'Image' || (cfg.mode === 'Page' && !pauseSignatureFrame())) hideMedia();
         stopPolling();
     } else {
         if (cfg.mode === 'Video') { activeVideo().play().catch(() => {}); }
-        else if (cfg.mode === 'Image' || cfg.mode === 'Page') { startMedia(); }
+        else if (cfg.mode === 'Image' || cfg.mode === 'Page') { startMedia(); resumeSignatureFrame(); }
         else if (cfg.mode === 'Desktop') { /* static picture, nothing to restart */ }
         else if (!waveLoopHandle && !waveWakeTimer) { waveLoopHandle = requestAnimationFrame(waveLoop); }
         startPolling();
