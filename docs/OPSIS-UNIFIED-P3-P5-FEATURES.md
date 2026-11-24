@@ -22,26 +22,26 @@ All current and future additions use common application storage, theming and rec
 |---|---|
 | Taskbar Designer | Native settings and Opsis replacement already exist; advanced visual designer still planned |
 | Explorer Studio 2.0 | Individual Explorer settings exist; richer toolbar/tab customization planned |
-| Context Menu Studio | Planned |
+| Context Menu Studio | Added opt-in, HKCU-only, owner-validated Opsis launcher on Explorer/desktop background context menus |
 | Window Rules Engine | Added: foreground-only positioning/topmost with rollback and safe defaults |
 | Advanced Snap Layouts | Existing AutoTile and layouts; additional custom editing can be extended |
 | Desktop Spaces | Existing VirtualWorkspaces |
 | Profile Scheduler | Implemented in Automation Studio for scenes and appearance presets |
-| Dynamic Accent Engine | Planned |
+| Dynamic Accent Engine | Implemented: source-image color extraction or Weather scene palette, Opsis-only theme refresh every 15 minutes when enabled |
 | Animated Taskbar Effects | Planned |
 | Icon Pack Manager 2.0 | Existing IconAtlas and icon-pack import |
 | Cursor FX Studio | Native pointer trails exist; ripple/spotlight animations planned |
 | Advanced Lock Screen | Existing settings; more advanced visual content planned |
 | Screen Saver Creator | Windows native controls exist; dedicated creator planned |
-| Theme Marketplace | Local plugin/Gallery contributions; online marketplace planned |
-| Theme Import / Export | Data-only `.opsis-theme` ZIP for Appearance Preset and Weather Scene with validation and overwrite protection |
+| Theme Marketplace | Offline plugin/Gallery contributions including validated `.opsis-theme` import; online marketplace still planned |
+| Theme Import / Export | Data-only `.opsis-theme` ZIP for Appearance Preset and Weather Scene, importable from plugins/Gallery with integrity checks and overwrite protection |
 | Multi-monitor Studio | Existing per-monitor wallpaper/profile and topology services |
 | Performance Auto-Tuner | Existing performance profiles and adaptive wallpaper scaling |
 | GPU Effects Manager | Existing GPU/performance monitoring; advanced per-effect tuning planned |
 | Wallpaper Scene Composer | Implemented for existing Weather parameters |
 | Weather Scene Rules | Available as safe Automation Studio rules |
-| Widget Designer | Planned |
-| Widget Data Sources | Existing Widget host and plugin feeds; standardized contribution manifest added |
+| Widget Designer | Native Widget Layout Studio implemented for Clock/Date/Text/CPU/RAM/Battery; advanced drag-and-drop remains planned |
+| Widget Data Sources | Native CPU/RAM/Battery bindings in Widget Layout Studio; shared plugin contribution manifests; richer online data sources remain planned |
 | Command Palette 2.0 | Existing Opsis Command Palette; deeper cross-plugin command indexing planned |
 | Desktop Diagnostics | Existing diagnostics + new update impact hash inventory |
 | Compatibility Guard | New update review service |
@@ -68,3 +68,18 @@ Windows Resource Protection files must NOT be replaced by dragging or copying st
 CI: `.github/workflows/p3-p5-unified.yml`, matrix Windows Server 2022 / 2025, .NET 11, isolated experience smoke tests, P1/P2 regression and portable publish.
 
 Remaining release gates: Windows 11 desktop UI/manual screenshot testing, multi-monitor/high DPI, protected Windows shell behavior, System Restore UAC, real wallpaper shader resources and full plugin-integration certification. Do not label all 30 features complete until their planned components have actual implementation and runtime tests.
+
+
+## Additional completed integrations after first P3–P5 baseline
+
+- `OpsisContextMenuStudio`: named, reversible context menu entries for the Opsis launcher, restricted to HKCU and an Opsis ownership marker. No shell extension DLL is loaded.
+- `WallpaperAccentEngine`: samples color from local image wallpapers or selects a time-sensitive Weather scene color; applies to Opsis theme tokens rather than Windows registry. Opt-in refreshing every 15 minutes, and no file writes when unchanged.
+- `OpsisWidgetDesigner` + `OpsisCustomWidgetWindow`: declarative user widgets with Clock, Date, Text, CPU, RAM and Battery data. All use the same host process and monitoring APIs; no third-party script engines.
+- `OpsisFeatureSwitcher`: safe, real operational adapters for selected modules, backed by the shared catalog and Settings/Recovery, rather than a metadata-only on/off label.
+- `OpsisEcosystemGallery`: installed theme packs and native declarative widgets from plugins join contributed static wallpapers in the same typed, categorized Gallery.
+- `OpsisRecoveryHub`: includes native Explorer/Taskbar original-setting backups, wallpaper, app settings, themes, widget designs, Window Rules and automation rules. A one-shot post-update shell hash inventory writes a durable change report, with no full-disk scans during normal idle.
+- `Opsis P3-P5 Windows installer integration`: automated Inno Setup build, clean install, in-place reinstall and silent uninstall in both GitHub Windows VM images.
+
+## Remaining gaps / strict release qualification
+
+Full shell patching and Start replacement, pixel-accurate Taskbar Designer, direct Rainmeter skin execution, third-party Windhawk mod integration, deep Explorer context-menu rewriting, a drag-and-drop visual widget layout canvas, cursor click animations, independent 3D screensaver executables and a downloadable online marketplace are **not** complete. The native widget studio is a safe preset-based creator, not yet a free-position drag-and-drop designer. Changes must pass the current head CI and real Windows 11 desktop interaction tests before merge or release.
