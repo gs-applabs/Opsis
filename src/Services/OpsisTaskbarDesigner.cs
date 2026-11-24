@@ -41,7 +41,7 @@ public static class OpsisTaskbarDesigner
 
     public static void Validate(Profile? p)
     {
-        if (p == null || p.Schema != 1 || p.Name.Length is < 1 or > 60 ||
+        if (p == null || p.Schema != 1 || string.IsNullOrWhiteSpace(p.Name) || p.Name.Length > 60 ||
             p.Style is not ("Classic" or "Compact" or "Glass") ||
             p.Alignment is not ("Left" or "Center") ||
             p.ButtonWidth is < 72 or > 240 || p.ButtonGap is < 0 or > 20 ||
