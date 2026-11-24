@@ -99,7 +99,8 @@ jobs:
         run: |
           $contracts = @('publish/OpsisNewsCrawler.Plugin.Abstractions.dll',
                          'plugin-crawler/OpsisNewsCrawler.Plugin.Abstractions.dll',
-                         'plugin-chronikologio/OpsisNewsCrawler.Plugin.Abstractions.dll',
+                         # Chronikologio deliberately compiles with Private=false:
+                         # its runtime contract is the host's default-context DLL.
                          '_compat/crawler/libs/OpsisNewsCrawler.Plugin.Abstractions.dll',
                          '_compat/chronikologio/libs/OpsisNewsCrawler.Plugin.Abstractions.dll')
           $uis = @('publish/Opsis.UI.dll',
