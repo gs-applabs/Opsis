@@ -103,6 +103,25 @@ try
         } }
     }));
     Check(OpsisEcosystemGallery.Discover().Any(x => x.PluginId == "example.plugin"), "plugin wallpaper contribution discovered");
+    // A second contributor may supply a non-executable native widget layout.
+    File.WriteAllText(Path.Combine(plugin, "clock.json"), JsonSerializer.Serialize(new OpsisWidgetDesigner.Layout
+    {
+        Name = "Plugin Clock", Binding = "Clock", AccentHex = "#44BBDD"
+    }));
+    File.WriteAllText(Path.Combine(plugin, "opsis-contributions.json"), JsonSerializer.Serialize(new
+    {
+        Schema = 1, PluginId = "example.plugin", Name = "Example",
+        Contributions = new[] {
+            new { Id = "city-wallpaper", Type = "wallpaper", Category = "Greece",
+                Title = "Athens", Asset = "cover.webp", Author = "Test", Description = "Fixture" },
+            new { Id = "clock-preview", Type = "widget", Category = "Clock",
+                Title = "Plugin Clock", Asset = "clock.json", Author = "Test", Description = "Native widget" }
+        }
+    }));
+    var pluginWidget = OpsisEcosystemGallery.Discover().Single(x => x.Type == "widget" && x.PluginId == "example.plugin");
+    Check(OpsisEcosystemGallery.ReadWidgetContribution(pluginWidget).Binding == "Clock",
+        "safe plugin widget contribution instantiated as native layout");
+
 
     var widget = new OpsisWidgetDesigner.Layout {
         Name = "Clock Demo", Binding = "Clock", AccentHex = "#00D2FF", FontSize = 30
