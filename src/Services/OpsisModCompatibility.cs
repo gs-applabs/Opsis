@@ -63,7 +63,7 @@ public static class OpsisModCompatibility
                             names.Add(name);
                     }
                 }
-                catch (Exception e) when (e is UnauthorizedAccessException or System.Security.SecurityException)
+                catch (Exception e) when (e is UnauthorizedAccessException or System.Security.SecurityException or System.IO.IOException)
                 { RotatingLogger.Write("Optional shell mod inventory inaccessible: " + e.Message); }
             }
         }
