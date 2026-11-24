@@ -3923,11 +3923,32 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                 ("WorkProfile", string.Format(profileFmt, "Work")),
                 ("GamingProfile", string.Format(profileFmt, "Gaming")),
                 ("FocusProfile", string.Format(profileFmt, "Focus")),
+                ("OpsisTaskbarDesigner", StudioText("Taskbar Visual Designer", "Οπτικός σχεδιαστής Taskbar")),
+                ("OpsisExplorerStudio", StudioText("Explorer Studio", "Στούντιο Explorer")),
+                ("OpsisStartStudio", StudioText("Start Studio", "Στούντιο Έναρξης")),
+                ("OpsisScreensaverStudio", StudioText("Screensaver Studio", "Στούντιο προφύλαξης οθόνης")),
+                ("OpsisEcosystem", StudioText("Unified Opsis Mod and Plugin Gallery", "Κοινή Gallery mods και plugins")),
             };
             // Οι σελίδες των plugin (π.χ. News Crawler) εμφανίζονται κι εδώ.
             var commandList = commandDefs.ToList();
             foreach (var pluginPage in Services.PluginHost.Instance.GetNavigationItems())
                 commandList.Add(("plugin:" + pluginPage.Key, Services.PluginHost.TitleOf(pluginPage)));
+            // Command Palette 2.0: all implemented core modules are searchable
+            // alongside plugin page commands; planned modules are not advertised
+            // as executable, and Gallery metadata never executes third-party code.
+            foreach (var module in OpsisModCore.Catalog.Where(x => x.HasNativeImplementation))
+                commandList.Add(("feature:" + module.Id, "Opsis · " + module.Label));
+            var galleryCommands = new Dictionary<string, OpsisEcosystemGallery.Item>(StringComparer.OrdinalIgnoreCase);
+            try
+            {
+                foreach (var asset in OpsisEcosystemGallery.Discover().Take(150))
+                {
+                    var id = "gallery:" + asset.PluginId + ":" + asset.Id;
+                    galleryCommands.TryAdd(id, asset);
+                    commandList.Add((id, "Gallery · " + asset.Title + " (" + asset.Category + ")"));
+                }
+            }
+            catch (Exception ex) { RotatingLogger.Write("Command Gallery indexing: " + ex.Message); }
             // v2.0.0 (t35, "Start Menu replacement" σε ασφαλή μορφή): το Ctrl+K γίνεται και app
             // launcher — ΧΩΡΙΣ να πειράζει το πραγματικό Start. Πρώτα οι καρφιτσωμένες της taskbar,
             // μετά οι συντομεύσεις του Start Menu· Enter τις εκκινεί (όπως ένα διπλό-κλικ σε .lnk).
@@ -4005,6 +4026,35 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                     case "Personalization": NavigateTo("Personalization"); break; case "Settings": NavigateTo("Settings"); break;
                     case "About": NavigateTo("About"); break;
                     case "AudioEnhancement": NavigateTo("AudioEnhancement"); break;
+                    case "OpsisTaskbarDesigner":
+                        using (var form = new OpsisTaskbarDesignerForm()) form.ShowDialog(this);
+                        break;
+                    case "OpsisExplorerStudio":
+                        using (var form = new OpsisExplorerStudioForm()) form.ShowDialog(this);
+                        break;
+                    case "OpsisStartStudio":
+                        using (var form = new StartStudioForm()) form.ShowDialog(this);
+                        break;
+                    case "OpsisScreensaverStudio":
+                    case "OpsisEcosystem": NavigateTo("Personalization"); break;
+                    case string featureId when featureId.StartsWith("feature:", StringComparison.Ordinal):
+                        NavigateTo("Personalization"); break;
+                    case string galleryId when galleryId.StartsWith("gallery:", StringComparison.Ordinal):
+                        if (galleryCommands.TryGetValue(galleryId, out var asset))
+                        {
+                            if (asset.Type.Equals("widget", StringComparison.OrdinalIgnoreCase))
+                                new OpsisCustomWidgetWindow(OpsisEcosystemGallery.ReadWidgetContribution(asset)).Show(this);
+                            else if (asset.Type.Equals("wallpaper", StringComparison.OrdinalIgnoreCase) &&
+                                MessageBox.Show(this, StudioText("Apply this plugin wallpaper?", "Εφαρμογή αυτού του wallpaper;"),
+                                    "Opsis Gallery", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
+                                OpsisEcosystemGallery.ApplyStaticWallpaper(asset);
+                            else if (asset.Type.Equals("theme", StringComparison.OrdinalIgnoreCase) &&
+                                MessageBox.Show(this, StudioText("Import this theme?", "Εισαγωγή αυτού του θέματος;"),
+                                    "Opsis Gallery", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
+                                OpsisEcosystemGallery.InstallThemeContribution(asset);
+                            else NavigateTo("Personalization");
+                        }
+                        break;
                     case string pluginId when pluginId.StartsWith("plugin:", StringComparison.Ordinal): NavigateTo(pluginId); break;
                     case string appId when appId.StartsWith("app:", StringComparison.Ordinal):
                         if (appByLabel.TryGetValue(appId[4..], out var appPath) && MotionDesk.Services.SafeLaunch.IsAllowed(appPath))
