@@ -155,7 +155,7 @@ internal sealed class ReplacementTaskbar : Form
                 Math.Min(14, pins.Count) + localWindows.Length);
             if (bounds.Width < 24 || bounds.Height < 24) { bar.Hide(); continue; }
             if (bar.Bounds != bounds) bar.Bounds = bounds;
-            if (AppActivity.IsFullscreenOn(screen)) { bar.Hide(); continue; }
+            if (AppActivity.IsFullscreenOn(screen)) { bar.Hide(); TaskbarWindowPreview.CloseCurrent(); OpsisVolumeFlyout.CloseCurrent(); continue; }
             if (!bar.Visible) bar.Show();
             bar.ApplyState(pins, localWindows, active, effective);
             // Keep the overlay above Explorer without raising it over an open Start panel or another app.

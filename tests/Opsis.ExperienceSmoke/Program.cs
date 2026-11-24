@@ -434,6 +434,11 @@ try
     Check(TaskbarViewProfiles.IsValid("TaskbarGlomLevel", 2) && !TaskbarViewProfiles.IsValid("TaskbarGlomLevel", 3) &&
         ExplorerViewProfiles.IsValid("ShowStatusBar", 0) && !ExplorerViewProfiles.IsValid("ShowStatusBar", 2),
         "native Explorer and Taskbar options validate without touching registry");
+    Check(OpsisModCompatibility.ResolveWindhawkDisabled(1, 1, 0, false) == false &&
+        OpsisModCompatibility.ResolveWindhawkDisabled(0, 0, 1, false) == false &&
+        OpsisModCompatibility.ResolveWindhawkDisabled(0, 1, 0, true) == true &&
+        OpsisModCompatibility.ResolveWindhawkDisabled(null, null, null, false) == null,
+        "Windhawk user scope and revoked mods follow upstream disabled semantics");
     Check(OpsisTaskbarDesigner.ValidGesture("Quick settings") && !OpsisTaskbarDesigner.ValidGesture("run.exe") &&
         OpsisTaskbarDesigner.ValidVolumeStyle("Compact") && !OpsisTaskbarDesigner.ValidVolumeStyle("unknown"),
         "P2 gesture and sound styles have fixed allowlists");

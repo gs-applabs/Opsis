@@ -16,6 +16,7 @@ internal sealed class OpsisVolumeFlyout : Form
     private readonly CheckBox _mute = new() { Text = "Mute / Σίγαση", Dock = DockStyle.Top };
     private readonly Label _status = new() { Dock = DockStyle.Top, Height = 48, AutoEllipsis = true };
     private bool _loading;
+    private string? _deviceId;
 
     internal static void CloseCurrent() { _current?.Close(); _current = null; }
     internal static void Open(Rectangle anchor, string style)
@@ -52,6 +53,7 @@ internal sealed class OpsisVolumeFlyout : Form
             using var device = enumerator.GetDefaultAudioEndpoint(DataFlow.Render, Role.Multimedia);
             _volume.Value = Math.Clamp((int)Math.Round(device.AudioEndpointVolume.MasterVolumeLevelScalar * 100), 0, 100);
             _mute.Checked = device.AudioEndpointVolume.Mute;
+            _deviceId = device.ID;
             _status.Text = device.FriendlyName;
             _volume.Enabled = _mute.Enabled = true;
         }
@@ -66,7 +68,7 @@ internal sealed class OpsisVolumeFlyout : Form
             using var enumerator = new MMDeviceEnumerator();
             using var device = enumerator.GetDefaultAudioEndpoint(DataFlow.Render, Role.Multimedia);
             // Avoid writing an old device's settings to a new device after a switch.
-            if (!string.Equals(device.FriendlyName, _status.Text, StringComparison.Ordinal)) { Reload(); return; }
+            if (!string.Equals(device.ID, _deviceId, StringComparison.Ordinal)) { Reload(); return; }
             var endpoint = device.AudioEndpointVolume;
             if (Math.Abs(endpoint.MasterVolumeLevelScalar - _volume.Value / 100f) > .005f)
                 endpoint.MasterVolumeLevelScalar = _volume.Value / 100f;

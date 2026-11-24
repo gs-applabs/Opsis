@@ -22,6 +22,7 @@ public sealed class DeskFlipOverlay : Form
     private float _position, _transitionFrom, _target;
     private long _transitionStarted;
     private bool _closing;
+    private static readonly System.Threading.SemaphoreSlim CaptureGate = new(1, 1);
 
     private sealed record Entry(IntPtr Handle, string Title, Bitmap? Snapshot);
 
@@ -41,7 +42,7 @@ public sealed class DeskFlipOverlay : Form
         BackColor = Color.FromArgb(20, 35, 49);
         _desktop = _style == "Compact list" ? null : CaptureDesktop(Bounds);
         foreach (var window in CandidateWindows())
-            _entries.Add(new Entry(window, GetTitle(window), _style == "Compact list" ? null : CaptureWindow(window)));
+            _entries.Add(new Entry(window, GetTitle(window), null));
         int front = _entries.FindIndex(e => e.Handle == foreground);
         _selection = _entries.Count > 1 ? (Math.Max(front, 0) + 1) % _entries.Count : 0;
         _position = _target = _selection;
@@ -55,6 +56,35 @@ public sealed class DeskFlipOverlay : Form
         base.OnShown(e);
         Activate();
         Focus();
+        if (_style != "Compact list") _ = PopulateSnapshotsAsync();
+    }
+
+    // PrintWindow can block even after WM_NULL succeeds. Keep at most one
+    // capture worker globally; a hung third-party window never blocks Opsis UI
+    // or causes additional capture workers to accumulate.
+    private async System.Threading.Tasks.Task PopulateSnapshotsAsync()
+    {
+        if (!CaptureGate.Wait(0)) return;
+        try
+        {
+            for (int i = 0; i < _entries.Count && !_closing && !IsDisposed; i++)
+            {
+                var handle = _entries[i].Handle;
+                var image = await System.Threading.Tasks.Task.Run(() => CaptureWindow(handle));
+                if (_closing || IsDisposed || i >= _entries.Count)
+                {
+                    image?.Dispose();
+                    return;
+                }
+                if (image != null)
+                {
+                    _entries[i] = _entries[i] with { Snapshot = image };
+                    Invalidate();
+                }
+            }
+        }
+        catch (Exception ex) { RotatingLogger.Write("DeskFlip snapshot worker: " + ex.Message); }
+        finally { CaptureGate.Release(); }
     }
 
     protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
@@ -328,6 +358,7 @@ public sealed class DeskFlipOverlay : Form
     {
         if (disposing)
         {
+            _closing = true;
             _timer.Dispose();
             foreach (var entry in _entries) entry.Snapshot?.Dispose();
             _entries.Clear();
