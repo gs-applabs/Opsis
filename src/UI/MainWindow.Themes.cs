@@ -238,12 +238,31 @@ namespace MotionDesk.UI
                 var save = new Opsis.UI.FlatButton { Text = StudioText("Apply", "Εφαρμογή"), Width = 130, Height = 34, DialogResult = DialogResult.OK };
                 var cancel = new Opsis.UI.FlatButton { Text = StudioText("Cancel", "Ακύρωση"), Width = 130, Height = 34, DialogResult = DialogResult.Cancel };
                 actions.Controls.Add(save); actions.Controls.Add(cancel);
+                var applyDesktop = new CheckBox { AutoSize = true, Text = StudioText("Apply to desktop surfaces", "Εφαρμογή στις επιφάνειες desktop"), ForeColor = UiTheme.TextPrimary, Checked = false };
+                actions.Controls.Add(applyDesktop);
                 dialog.Controls.Add(editor); dialog.Controls.Add(actions);
                 dialog.AcceptButton = save; dialog.CancelButton = cancel;
                 if (dialog.ShowDialog(this) != DialogResult.OK) return;
                 var app = AppSettings.Load();
                 Opsis.UI.GlassMaterialProfiles.ApplyTo(app.Glass, staged);
                 app.WallpaperAccentEnabled = staged.AdaptiveAccent;
+                if (applyDesktop.Checked)
+                {
+                    // Explicit opt-in. Reuse the existing three material slots; preserve typography.
+                    DesktopMaterial Convert(DesktopMaterial? old) => ((old ?? new DesktopMaterial()) with
+                    {
+                        Mode = staged.ModeValue == Opsis.UI.GlassMode.Solid ? "Solid" : "Custom",
+                        Tint = staged.TintColor, Opacity = staged.ModeValue == Opsis.UI.GlassMode.Solid ? 100 : Math.Clamp(staged.Intensity, 0, 100),
+                        Blur = staged.Blur, Radius = staged.CornerRadius, Refraction = Math.Clamp(staged.Glossy, 0, 100) * 2,
+                        Rim = staged.RimLight
+                    }).Normalized();
+                    app.ContainerMaterial = Convert(app.ContainerMaterial);
+                    app.DeskStripMaterial = Convert(app.DeskStripMaterial);
+                    app.WidgetMaterial = Convert(app.WidgetMaterial);
+                    app.WidgetsThemeMode = "Transparent";
+                    app.WidgetsTintPercent = staged.ModeValue == Opsis.UI.GlassMode.Solid ? 100 : 0;
+                    app.WidgetsTintColor = "Material";
+                }
                 // Do not switch shell replacement modes or override reduced-effects preferences.
                 app.Save();
                 ThemeManager.RefreshOpsisAccent();
