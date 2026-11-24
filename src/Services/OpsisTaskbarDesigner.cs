@@ -21,6 +21,7 @@ public static class OpsisTaskbarDesigner
         public int OpacityPercent { get; set; } = 100;
         public bool ShowTaskView { get; set; } = true;
         public bool ShowClock { get; set; } = true;
+        public bool StartGlassIcon { get; set; } = false;
         public bool ActiveButtonAnimation { get; set; } = false;
         public int AnimationIntervalMs { get; set; } = 300;
     }
@@ -35,7 +36,7 @@ public static class OpsisTaskbarDesigner
         Schema = p.Schema, Name = p.Name, Style = p.Style, Alignment = p.Alignment,
         ButtonWidth = p.ButtonWidth, ButtonGap = p.ButtonGap,
         OpacityPercent = p.OpacityPercent, ShowTaskView = p.ShowTaskView,
-        ShowClock = p.ShowClock, ActiveButtonAnimation = p.ActiveButtonAnimation,
+        ShowClock = p.ShowClock, StartGlassIcon = p.StartGlassIcon, ActiveButtonAnimation = p.ActiveButtonAnimation,
         AnimationIntervalMs = p.AnimationIntervalMs
     };
 
