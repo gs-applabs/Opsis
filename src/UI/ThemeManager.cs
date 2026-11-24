@@ -170,7 +170,15 @@ namespace MotionDesk.UI
                 "Dark" => UiPalette.Dark(settings.DarkIntensity),
                 _ => IsWindowsLightTheme() ? UiPalette.Light() : UiPalette.Dark(settings.DarkIntensity),
             };
-            if (settings.FollowWindowsAccent && GetWindowsAccentColor() is Color accent)
+            if (settings.WallpaperAccentEnabled && TryParseWallpaperAccent(settings.WallpaperAccentHex) is Color wallpaperAccent)
+            {
+                p.AccentCyan = wallpaperAccent;
+                p.AccentBlue = Color.FromArgb(
+                    Math.Max(0, (int)(wallpaperAccent.R * 0.68)),
+                    Math.Max(0, (int)(wallpaperAccent.G * 0.68)),
+                    Math.Max(0, (int)(wallpaperAccent.B * 0.68)));
+            }
+            else if (settings.FollowWindowsAccent && GetWindowsAccentColor() is Color accent)
             {
                 p.AccentCyan = accent;
                 // Δεν υπάρχει ένα "δεύτερο" accent χρώμα στα Windows — παράγουμε το AccentBlue
@@ -179,6 +187,21 @@ namespace MotionDesk.UI
                 p.AccentBlue = Color.FromArgb(255, (int)(accent.R * 0.65), (int)(accent.G * 0.65), (int)(accent.B * 0.65));
             }
             return p;
+        }
+
+        private static Color? TryParseWallpaperAccent(string? hex)
+        {
+            if (hex == null || hex.Length != 7 || hex[0] != '#') return null;
+            if (!int.TryParse(hex.AsSpan(1), System.Globalization.NumberStyles.HexNumber,
+                System.Globalization.CultureInfo.InvariantCulture, out int value)) return null;
+            return Color.FromArgb((value >> 16) & 255, (value >> 8) & 255, value & 255);
+        }
+
+        /// <summary>Rebuild shared palette following an explicitly selected Opsis-only wallpaper accent.</summary>
+        public static void RefreshOpsisAccent()
+        {
+            Current = Resolve(AppSettings.Load().ThemeMode);
+            Changed?.Invoke();
         }
 
         // Κάθε widget
