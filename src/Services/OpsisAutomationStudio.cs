@@ -58,6 +58,8 @@ public static class OpsisAutomationStudio
     {
         if (conf.Schema != 1 || conf.Rules == null || conf.Rules.Count > 100)
             throw new InvalidDataException("Unsupported automations schema or count.");
+        if (conf.Rules.Any(r => r == null || string.IsNullOrWhiteSpace(r.Id) || string.IsNullOrWhiteSpace(r.Name) || r.Target == null))
+            throw new InvalidDataException("Incomplete automation rule.");
         if (conf.Rules.Select(r => r.Id).Distinct(StringComparer.OrdinalIgnoreCase).Count() != conf.Rules.Count)
             throw new InvalidDataException("Duplicate rule identifiers.");
         foreach (var r in conf.Rules)
