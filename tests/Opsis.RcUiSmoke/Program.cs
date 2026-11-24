@@ -89,13 +89,55 @@ internal static class Program
                     var controls = AllControls(shell).ToArray();
                     Verify(controls.Length > 10, "sidebar page " + key + " renders control tree");
                     var scrollables = controls.OfType<ScrollableControl>().Where(c => c.AutoScroll).ToArray();
+                    var buttons = controls.OfType<ButtonBase>().ToArray();
+                    var inputs = controls.OfType<TextBoxBase>().Count() +
+                                 controls.OfType<ComboBox>().Count() +
+                                 controls.OfType<NumericUpDown>().Count();
                     pageTimings.Add(new { page = key, elapsedMs = elapsed.Elapsed.TotalMilliseconds,
-                        controls = controls.Length, scrollingContainers = scrollables.Length,
+                        controls = controls.Length, clickableButtons = buttons.Length, settingsInputs = inputs, scrollingContainers = scrollables.Length,
                         visibleScrollbars = scrollables.Count(c => c.VerticalScroll.Visible) });
                     using var screenshot = new Bitmap(1280, 800);
                     shell.DrawToBitmap(screenshot, new Rectangle(0, 0, 1280, 800));
                     var safeKey = string.Concat(key.Where(char.IsLetterOrDigit));
                     screenshot.Save(Path.Combine(output, "sidebar-page-" + safeKey + ".png"));
+                }
+                // Validate the sidebar width animation and scroll container in the real shell.
+                var navField = typeof(MainWindow).GetField("_nav",
+                    System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+                var navPanel = navField?.GetValue(shell) as FlowLayoutPanel;
+                if (navPanel != null)
+                {
+                    Verify(navPanel.ClientSize.Width > 30, "sidebar navigation occupies usable width");
+                    var sideField = typeof(MainWindow).GetField("_sidebar",
+                        System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+                    var sidebarPanel = sideField?.GetValue(shell) as Panel;
+                    var toggle = typeof(MainWindow).GetMethod("ToggleSidebarCollapsed",
+                        System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+                    if (sidebarPanel != null && toggle != null)
+                    {
+                        var beforeWidth = sidebarPanel.Width;
+                        toggle.Invoke(shell, null);
+                        for (int t = 0; t < 45; t++)
+                        {
+                            Application.DoEvents();
+                            System.Threading.Thread.Sleep(12);
+                        }
+                        var changedWidth = sidebarPanel.Width;
+                        Verify(changedWidth != beforeWidth, "sidebar collapse transition reaches different width");
+                        using (var screenshot = new Bitmap(1280, 800))
+                        {
+                            shell.DrawToBitmap(screenshot, new Rectangle(0, 0, 1280, 800));
+                            screenshot.Save(Path.Combine(output, "sidebar-collapsed.png"));
+                        }
+                        toggle.Invoke(shell, null);
+                        for (int t = 0; t < 45; t++)
+                        {
+                            Application.DoEvents();
+                            System.Threading.Thread.Sleep(12);
+                        }
+                        Verify(sidebarPanel.Width == beforeWidth,
+                            "sidebar expand returns to original width");
+                    }
                 }
                 measured.Add(new { title = "MainWindow pages", controlCount = pageKeys.Length, measurements = pageTimings });
                 shell.Close();
