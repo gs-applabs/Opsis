@@ -47,13 +47,13 @@ public sealed class OpsisCustomWidgetWindow : Form
         try
         {
             var system = _layout.Binding is "CPU" or "RAM"
-                ? AdvancedSystemMonitorService.Instance.GetSnapshot() : null;
+                ? AdvancedSystemMonitorService.Instance.GetSnapshot() : default;
             _content.Text = _layout.Binding switch
             {
                 "Clock" => DateTime.Now.ToString("HH:mm:ss"),
                 "Date" => DateTime.Now.ToString("dddd, dd MMMM yyyy"),
-                "CPU" => $"CPU {system?.CpuPercent ?? 0:0.0}%",
-                "RAM" => system != null && system.TotalMemoryMb > 0
+                "CPU" => $"CPU {system.CpuPercent:0.0}%",
+                "RAM" => system.TotalMemoryMb > 0
                     ? $"RAM {(system.TotalMemoryMb - system.AvailableMemoryMb) / system.TotalMemoryMb * 100:0.0}%"
                     : "RAM —",
                 "Battery" => SystemInformation.PowerStatus.BatteryLifePercent is >= 0 and <= 1
