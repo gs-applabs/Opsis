@@ -39,8 +39,8 @@ public static class OpsisEcosystemGallery
         string PluginId, string Id, string Type, string Category, string Title,
         string Author, string Description, string AssetPath, string Origin);
 
-    private static bool SafeToken(string value) =>
-        value.Length is >= 1 and <= 80 &&
+    private static bool SafeToken(string? value) =>
+        value != null && value.Length is >= 1 and <= 80 &&
         value.All(x => char.IsAsciiLetterOrDigit(x) || x is '.' or '_' or '-');
 
     private static bool SafeRelative(string value)
@@ -113,9 +113,11 @@ public static class OpsisEcosystemGallery
                         manifest.Contributions?.Count > 100) continue;
                     foreach (var item in manifest.Contributions ?? new List<Contribution>())
                     {
-                        if (!SafeToken(item.Id) || !Types.Contains(item.Type) ||
-                            !SafeRelative(item.Asset) || item.Title.Length is < 1 or > 120 ||
-                            item.Category.Length is < 1 or > 60) continue;
+                        if (item == null || !SafeToken(item.Id) || !Types.Contains(item.Type) ||
+                            !SafeRelative(item.Asset) || string.IsNullOrWhiteSpace(item.Title) ||
+                            item.Title.Length > 120 || string.IsNullOrWhiteSpace(item.Category) ||
+                            item.Category.Length > 60 || (item.Author?.Length ?? 0) > 120 ||
+                            (item.Description?.Length ?? 0) > 1024) continue;
                         var filename = Path.GetFullPath(Path.Combine(dir, item.Asset.Replace('/', Path.DirectorySeparatorChar)));
                         var basePath = Path.GetFullPath(dir) + Path.DirectorySeparatorChar;
                         if (!filename.StartsWith(basePath, StringComparison.OrdinalIgnoreCase) || !File.Exists(filename)) continue;
