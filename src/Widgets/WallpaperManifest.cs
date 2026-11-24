@@ -35,6 +35,11 @@ namespace MotionDesk.Widgets
         public const string FileName = "opsis-wallpaper.json";
         public string Name { get; set; } = "";
         public string Author { get; set; } = "";
+        public string WallpaperId { get; set; } = "";
+        public string Category { get; set; } = "";
+        public string Collection { get; set; } = "";
+        public string NameEl { get; set; } = "";
+        public string DescriptionEl { get; set; } = "";
         public string Description { get; set; } = "";
         public List<WallpaperProperty> Properties { get; set; } = new();
 
