@@ -2816,6 +2816,80 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                 }));
 
 
+            // ---------- P1: granular native shell controls ----------
+            var shellAdvancedCard = AddCardSection(panel, LocalizationManager.CurrentLanguage == "el"
+                ? "P1 — Προηγμένες ρυθμίσεις Explorer και Taskbar"
+                : "P1 — Advanced Explorer and Taskbar");
+            AddText(shellAdvancedCard, LocalizationManager.CurrentLanguage == "el"
+                ? "Αλλάζεις κάθε επιλογή ξεχωριστά. Οι αρχικές τιμές αποθηκεύονται στο ίδιο αντίγραφο ασφαλείας με τα προφίλ P0. Καμία τροποποίηση αρχείων συστήματος."
+                : "Configure each setting independently. Original settings use the same backup as P0 presets. System files remain untouched.");
+
+            void AddShellOption(string label, string[] choices, int[] values, Func<int> read, Action<int> apply, bool enabled = true)
+            {
+                var line = new FlowLayoutPanel { Width = 720, Height = 42, FlowDirection = FlowDirection.LeftToRight, WrapContents = false };
+                line.Controls.Add(new Label { Text = label, Width = 275, Height = 30,
+                    TextAlign = ContentAlignment.MiddleLeft, ForeColor = UiTheme.TextPrimary });
+                var picker = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 280, Enabled = enabled };
+                picker.Items.AddRange(choices);
+                try
+                {
+                    var value = read();
+                    var found = Array.IndexOf(values, value);
+                    picker.SelectedIndex = found >= 0 ? found : 0;
+                }
+                catch { picker.SelectedIndex = 0; picker.Enabled = false; }
+                // No registry writes on selection: only the explicit Apply button commits a change.
+                line.Controls.Add(picker);
+                var button = new Button { Text = LocalizationManager.CurrentLanguage == "el" ? "Εφαρμογή" : "Apply",
+                    Width = 105, Height = 29, Enabled = picker.Enabled };
+                button.Click += (_, _) =>
+                {
+                    if (picker.SelectedIndex < 0) return;
+                    var chosen = values[picker.SelectedIndex];
+                    if (MessageBox.Show(this, label + ": " + choices[picker.SelectedIndex] + "?",
+                        "Opsis — P1", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes) return;
+                    try { apply(chosen); _statusLabel.Text = "Opsis — " + label + " updated."; }
+                    catch (Exception ex) { MessageBox.Show(this, ex.Message, "Opsis — P1", MessageBoxButtons.OK, MessageBoxIcon.Error); }
+                };
+                line.Controls.Add(button);
+                shellAdvancedCard.Controls.Add(line);
+            }
+
+            bool isEl = LocalizationManager.CurrentLanguage == "el";
+            AddShellOption(isEl ? "Explorer: επεκτάσεις αρχείων" : "Explorer: file extensions",
+                isEl ? new[] { "Εμφάνιση", "Απόκρυψη" } : new[] { "Show", "Hide" },
+                new[] { 0, 1 }, () => ExplorerViewProfiles.ReadOption("HideFileExt"),
+                value => ExplorerViewProfiles.ApplyOption("HideFileExt", value));
+            AddShellOption(isEl ? "Explorer: κρυφά αρχεία" : "Explorer: hidden files",
+                isEl ? new[] { "Εμφάνιση", "Απόκρυψη" } : new[] { "Show", "Hide" },
+                new[] { 1, 2 }, () => ExplorerViewProfiles.ReadOption("Hidden"),
+                value => ExplorerViewProfiles.ApplyOption("Hidden", value));
+            AddShellOption(isEl ? "Explorer: συμπαγής προβολή" : "Explorer: compact view",
+                isEl ? new[] { "Ενεργή", "Ανενεργή" } : new[] { "On", "Off" },
+                new[] { 1, 0 }, () => ExplorerViewProfiles.ReadOption("UseCompactMode"),
+                value => ExplorerViewProfiles.ApplyOption("UseCompactMode", value));
+            AddShellOption(isEl ? "Explorer: αρχικός φάκελος" : "Explorer: launch location",
+                isEl ? new[] { "Αυτός ο υπολογιστής", "Αρχική" } : new[] { "This PC", "Home" },
+                new[] { 1, 2 }, () => ExplorerViewProfiles.ReadOption("LaunchTo"),
+                value => ExplorerViewProfiles.ApplyOption("LaunchTo", value));
+            AddShellOption(isEl ? "Taskbar: στοίχιση" : "Taskbar: alignment",
+                isEl ? new[] { "Αριστερά", "Κέντρο" } : new[] { "Left", "Center" },
+                new[] { 0, 1 }, () => TaskbarViewProfiles.ReadOption("TaskbarAl"),
+                value => TaskbarViewProfiles.ApplyOption("TaskbarAl", value), TaskbarViewProfiles.IsWindows11);
+            AddShellOption(isEl ? "Taskbar: Widgets" : "Taskbar: Widgets",
+                isEl ? new[] { "Απόκρυψη", "Εμφάνιση" } : new[] { "Hide", "Show" },
+                new[] { 0, 1 }, () => TaskbarViewProfiles.ReadOption("TaskbarDa"),
+                value => TaskbarViewProfiles.ApplyOption("TaskbarDa", value), TaskbarViewProfiles.IsWindows11);
+            AddShellOption(isEl ? "Taskbar: Προβολή εργασιών" : "Taskbar: Task View",
+                isEl ? new[] { "Απόκρυψη", "Εμφάνιση" } : new[] { "Hide", "Show" },
+                new[] { 0, 1 }, () => TaskbarViewProfiles.ReadOption("ShowTaskViewButton"),
+                value => TaskbarViewProfiles.ApplyOption("ShowTaskViewButton", value), TaskbarViewProfiles.IsWindows11);
+            AddShellOption(isEl ? "Taskbar: Αναζήτηση" : "Taskbar: Search",
+                isEl ? new[] { "Κρυφή", "Εικονίδιο", "Εικονίδιο και ετικέτα", "Πλαίσιο" }
+                     : new[] { "Hidden", "Icon", "Icon and label", "Box" },
+                new[] { 0, 1, 3, 2 }, () => TaskbarViewProfiles.ReadOption("SearchboxTaskbarMode"),
+                value => TaskbarViewProfiles.ApplyOption("SearchboxTaskbarMode", value), TaskbarViewProfiles.IsWindows11);
+
             // ---------- P0 Hot Corners ----------
             var cornersCard = AddCardSection(panel, LocalizationManager.CurrentLanguage == "el" ? "Hot Corners — Γωνίες οθόνης" : "Hot Corners");
             AddText(cornersCard, LocalizationManager.CurrentLanguage == "el"
