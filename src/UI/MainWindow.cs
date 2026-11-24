@@ -2614,6 +2614,151 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
             AddText(panel, LocalizationManager.T("Personalization.Intro"));
             BuildWindowsAppearance(panel);   // Windows look, themes, safety (2.6.0): the same Personalization tab, no sub-tab
 
+            // ---------- Unified Opsis ecosystem: core modules, gallery, recovery ----------
+            var coreCard = AddCardSection(panel, LocalizationManager.CurrentLanguage == "el"
+                ? "Opsis Core — Ενιαίο οικοσύστημα" : "Opsis Core — Unified ecosystem");
+            AddText(coreCard, LocalizationManager.CurrentLanguage == "el"
+                ? "Όλες οι λειτουργίες και τα πρόσθετα εμφανίζονται στον ίδιο κατάλογο. Οι ρυθμίσεις αρθρώματος ελέγχονται για συμβατότητα· δεν εκτελούν αυτόματα κώδικα ή αλλαγές Windows. Οι μη υλοποιημένες δυνατότητες εμφανίζονται ως σχεδιαζόμενες."
+                : "All capabilities and plugin contributions share a catalog. Module switches validate compatibility and do not run arbitrary code or change Windows settings. Unimplemented features are marked as planned.");
+            var coreCatalog = new ListView
+            {
+                Width = 720, Height = 250, View = View.Details, FullRowSelect = true,
+                HideSelection = false, MultiSelect = false
+            };
+            coreCatalog.Columns.Add(LocalizationManager.CurrentLanguage == "el" ? "Ομάδα" : "Group", 120);
+            coreCatalog.Columns.Add(LocalizationManager.CurrentLanguage == "el" ? "Λειτουργία" : "Capability", 355);
+            coreCatalog.Columns.Add(LocalizationManager.CurrentLanguage == "el" ? "Υλοποίηση" : "Implementation", 185);
+            foreach (var module in OpsisModCore.Catalog.OrderBy(x => x.Group).ThenBy(x => x.Label))
+            {
+                var row = new ListViewItem(module.Group);
+                row.SubItems.Add(module.Label);
+                row.SubItems.Add(module.HasNativeImplementation ? "Built-in" : "Planned");
+                row.Tag = module;
+                coreCatalog.Items.Add(row);
+            }
+            coreCard.Controls.Add(coreCatalog);
+            AddButtonGrid(coreCard,
+                (LocalizationManager.CurrentLanguage == "el" ? "Στοιχεία αρθρώματος" : "Module details", (_, _) =>
+                {
+                    if (coreCatalog.SelectedItems.Count != 1 ||
+                        coreCatalog.SelectedItems[0].Tag is not OpsisModCore.ModuleDefinition module) return;
+                    var state = OpsisModCore.Read();
+                    bool flag = state.Enabled.TryGetValue(module.Id, out var enabled) && enabled;
+                    var info = "ID: " + module.Id + Environment.NewLine +
+                        "Group: " + module.Group + Environment.NewLine +
+                        "Native implementation: " + module.HasNativeImplementation + Environment.NewLine +
+                        "Recorded opt-in: " + flag + Environment.NewLine +
+                        "Dependencies: " + string.Join(", ", module.Requires) + Environment.NewLine +
+                        "Conflicts: " + string.Join(", ", module.Conflicts) + Environment.NewLine +
+                        "Module preferences are metadata; the corresponding settings remain under their original sections.";
+                    MessageBox.Show(this, info, "Opsis Core", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }),
+                (LocalizationManager.CurrentLanguage == "el" ? "Έλεγχος συμβατότητας" : "Check compatibility", (_, _) =>
+                {
+                    try
+                    {
+                        var issues = OpsisModCore.Validate(OpsisModCore.Read(), Environment.OSVersion.Version.Build,
+                            SafeModeService.IsSafeMode);
+                        MessageBox.Show(this, issues.Count == 0
+                            ? "No catalog conflicts detected." : string.Join(Environment.NewLine, issues),
+                            "Opsis Core", MessageBoxButtons.OK,
+                            issues.Count == 0 ? MessageBoxIcon.Information : MessageBoxIcon.Warning);
+                    }
+                    catch (Exception ex) { MessageBox.Show(this, ex.Message, "Opsis Core", MessageBoxButtons.OK, MessageBoxIcon.Error); }
+                }));
+
+            var ecosystemCard = AddCardSection(panel, LocalizationManager.CurrentLanguage == "el"
+                ? "Προσθήκες οικοσυστήματος — Gallery" : "Ecosystem contributions — Gallery");
+            AddText(ecosystemCard, LocalizationManager.CurrentLanguage == "el"
+                ? "Διαβάζει δηλωμένα περιεχόμενα plugins από τους φακέλους εγκατάστασης και από τη Gallery, χωρίς να εκτελεί το πρόσθετο."
+                : "Discovers declared wallpaper, widget, theme and related plugin assets without executing a plugin.");
+            var ecosystemList = new ListView
+            {
+                Width = 720, Height = 190, View = View.Details, FullRowSelect = true
+            };
+            ecosystemList.Columns.Add(LocalizationManager.CurrentLanguage == "el" ? "Τύπος" : "Type", 135);
+            ecosystemList.Columns.Add(LocalizationManager.CurrentLanguage == "el" ? "Κατηγορία" : "Category", 155);
+            ecosystemList.Columns.Add(LocalizationManager.CurrentLanguage == "el" ? "Περιεχόμενο" : "Contribution", 315);
+            ecosystemCard.Controls.Add(ecosystemList);
+            void RefreshContributions()
+            {
+                ecosystemList.Items.Clear();
+                foreach (var item in OpsisEcosystemGallery.Discover())
+                {
+                    var line = new ListViewItem(item.Type);
+                    line.SubItems.Add(item.Category);
+                    line.SubItems.Add(item.Title + " [" + item.PluginId + "]");
+                    line.Tag = item;
+                    ecosystemList.Items.Add(line);
+                }
+            }
+            try { RefreshContributions(); }
+            catch (Exception ex) { RotatingLogger.Write("Ecosystem Gallery discovery: " + ex.Message); }
+            AddButtonGrid(ecosystemCard,
+                (LocalizationManager.CurrentLanguage == "el" ? "Ανανέωση προσθηκών" : "Refresh contributions", (_, _) =>
+                {
+                    try { RefreshContributions(); }
+                    catch (Exception ex) { MessageBox.Show(this, ex.Message, "Opsis Gallery", MessageBoxButtons.OK, MessageBoxIcon.Error); }
+                }),
+                (LocalizationManager.CurrentLanguage == "el" ? "Πληροφορίες περιεχομένου" : "Contribution information", (_, _) =>
+                {
+                    if (ecosystemList.SelectedItems.Count != 1 ||
+                        ecosystemList.SelectedItems[0].Tag is not OpsisEcosystemGallery.Item item) return;
+                    MessageBox.Show(this, item.Title + Environment.NewLine + item.Description +
+                        Environment.NewLine + "Type: " + item.Type + " / " + item.Category +
+                        Environment.NewLine + "Plugin: " + item.PluginId +
+                        Environment.NewLine + "Local asset: " + item.AssetPath,
+                        "Opsis Gallery", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }));
+
+            var recoveryCard = AddCardSection(panel, LocalizationManager.CurrentLanguage == "el"
+                ? "Recovery Hub — Ασφάλεια και Windows Updates" : "Recovery Hub — Safety and Windows Updates");
+            AddText(recoveryCard, LocalizationManager.CurrentLanguage == "el"
+                ? "Ενιαίος φάκελος για αντίγραφα ρυθμίσεων Opsis. Τα αρχεία των Windows ελέγχονται με hashes και εκδόσεις, αλλά δεν αντικαθίστανται ούτε επαναφέρονται με απλή αντιγραφή."
+                : "Unified Opsis settings snapshots. Windows shell files are checked by version and hash but are never overwritten or restored by simple file copy.");
+            AddButtonGrid(recoveryCard,
+                (LocalizationManager.CurrentLanguage == "el" ? "Backup ρυθμίσεων" : "Back up settings", (_, _) =>
+                {
+                    try
+                    {
+                        var snapshot = OpsisRecoveryHub.Snapshot("Manual user backup");
+                        MessageBox.Show(this, "Snapshot: " + snapshot.Id +
+                            Environment.NewLine + "Files: " + snapshot.Files.Count +
+                            Environment.NewLine + "Path: " + OpsisRecoveryHub.Root,
+                            "Opsis Recovery Hub", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    }
+                    catch (Exception ex) { MessageBox.Show(this, ex.Message, "Opsis Recovery Hub", MessageBoxButtons.OK, MessageBoxIcon.Error); }
+                }),
+                (LocalizationManager.CurrentLanguage == "el" ? "Έλεγχος Windows Update" : "Check Windows Update impact", (_, _) =>
+                {
+                    try
+                    {
+                        var message = OpsisRecoveryHub.InspectUpdateImpact();
+                        MessageBox.Show(this, message, "Opsis Windows Compatibility", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    }
+                    catch (Exception ex) { MessageBox.Show(this, ex.Message, "Opsis Windows Compatibility", MessageBoxButtons.OK, MessageBoxIcon.Error); }
+                }),
+                (LocalizationManager.CurrentLanguage == "el" ? "Επαναφορά backup Opsis" : "Restore Opsis backup", (_, _) =>
+                {
+                    try
+                    {
+                        var snapshots = OpsisRecoveryHub.List();
+                        if (snapshots.Count == 0)
+                        {
+                            MessageBox.Show(this, "No saved Opsis snapshots.", "Opsis Recovery Hub",
+                                MessageBoxButtons.OK, MessageBoxIcon.Information); return;
+                        }
+                        var latest = snapshots[0];
+                        if (MessageBox.Show(this, "Restore most recent Opsis settings? " + latest.Id +
+                            Environment.NewLine + "Current settings will be saved first. Restart Opsis afterwards.",
+                            "Opsis Recovery Hub", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes) return;
+                        OpsisRecoveryHub.RestoreOwnedSettings(latest.Id);
+                        MessageBox.Show(this, "Opsis settings restored. Restart the app to reload them.",
+                            "Opsis Recovery Hub", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    }
+                    catch (Exception ex) { MessageBox.Show(this, ex.Message, "Opsis Recovery Hub", MessageBoxButtons.OK, MessageBoxIcon.Error); }
+                }));
+
             // ---------- IconAtlas ----------
             var iconCard = AddCardSection(panel, LocalizationManager.T("Personalization.SectionIconAtlas"));
             AddText(iconCard, LocalizationManager.T("Personalization.IconAtlasIntro"));
