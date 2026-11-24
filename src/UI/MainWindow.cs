@@ -2701,6 +2701,17 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                     try { RefreshContributions(); }
                     catch (Exception ex) { MessageBox.Show(this, ex.Message, "Opsis Gallery", MessageBoxButtons.OK, MessageBoxIcon.Error); }
                 }),
+                (LocalizationManager.CurrentLanguage == "el" ? "Άνοιγμα widget plugin" : "Open contributed widget", (_, _) =>
+                {
+                    if (ecosystemList.SelectedItems.Count != 1 ||
+                        ecosystemList.SelectedItems[0].Tag is not OpsisEcosystemGallery.Item item) return;
+                    try
+                    {
+                        var layout = OpsisEcosystemGallery.ReadWidgetContribution(item);
+                        new OpsisCustomWidgetWindow(layout).Show(this);
+                    }
+                    catch (Exception ex) { MessageBox.Show(this, ex.Message, "Opsis Gallery", MessageBoxButtons.OK, MessageBoxIcon.Error); }
+                }),
                 (LocalizationManager.CurrentLanguage == "el" ? "Ορισμός ως wallpaper" : "Set as wallpaper", (_, _) =>
                 {
                     if (ecosystemList.SelectedItems.Count != 1 ||
