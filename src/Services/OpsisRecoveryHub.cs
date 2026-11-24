@@ -36,6 +36,7 @@ public static class OpsisRecoveryHub
     public static string Root => Path.Combine(AppPaths.AppDataFolder, "RecoveryHub");
     private static string SnapshotsRoot => Path.Combine(Root, "snapshots");
     private static string InventoryFile => Path.Combine(Root, "system-inventory.json");
+    private static string ImpactReportFile => Path.Combine(Root, "windows-update-impact.txt");
 
     public static string WindowsFingerprint()
     {
@@ -262,6 +263,14 @@ public static class OpsisRecoveryHub
         return inventory;
     }
 
+    public static string ReadLastUpdateImpact()
+    {
+        if (!File.Exists(ImpactReportFile)) return "No prior Windows shell change report recorded.";
+        if (new FileInfo(ImpactReportFile).Length > 64 * 1024)
+            throw new InvalidDataException("Update impact report too large.");
+        return File.ReadAllText(ImpactReportFile);
+    }
+
     public static string InspectUpdateImpact()
     {
         var previous = File.Exists(InventoryFile)
@@ -277,6 +286,13 @@ public static class OpsisRecoveryHub
             if (before == null || before.Sha256 != item.Sha256 || before.Version != item.Version)
                 messages.Add("Changed: " + item.Name + " (" + (before?.Version ?? "unknown") + " -> " + item.Version + ")");
         }
-        return messages.Count == 0 ? "No monitored Windows shell changes detected." : string.Join(Environment.NewLine, messages);
+        var report = messages.Count == 0 ? "No monitored Windows shell changes detected."
+            : "Recorded UTC " + DateTime.UtcNow.ToString("O") + Environment.NewLine +
+              string.Join(Environment.NewLine, messages);
+        // Keep the last meaningful update report; repeated checks against an
+        // already-updated baseline must not erase evidence of the prior change.
+        if (messages.Count > 0)
+            AtomicFile.WriteAllText(ImpactReportFile, report);
+        return report;
     }
 }
