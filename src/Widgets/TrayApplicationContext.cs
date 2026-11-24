@@ -201,7 +201,7 @@ namespace MotionDesk.Widgets
             if (!safeMode && AppSettings.Load().QuickHideDoubleClickEnabled) DesktopIconVisibilityEngine.Instance.Start();
             else DesktopIconVisibilityEngine.Instance.RestoreIfHidden();
             AppActivity.Start();
-            if (!safeMode && !reviewRequired) WindowRulesEngine.Instance.Start();
+            if (!safeMode && !reviewRequired && AppSettings.Load().WindowRulesEnabled) WindowRulesEngine.Instance.Start();
             // No background thread or I/O during idle except a once-per-minute rule check.
             // Build fingerprint is read only every 15 minutes; no Windows file hashing in the timer.
             if (!safeMode)
