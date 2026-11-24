@@ -66,6 +66,40 @@ internal static class Program
                 Verify(controls.All(c => c.Width >= 0 && c.Height >= 0), title + " nonnegative control sizes");
                 measured.Add(new { title, controlCount = controls.Length, preferredSize = form.PreferredSize.ToString() });
             }
+            // Exercise every registered sidebar navigation button, capture the
+            // real main window and record layout/scroll properties for each page.
+            using (var shell = new MainWindow())
+            {
+                shell.Size = new Size(1280, 800);
+                shell.Show();
+                Application.DoEvents();
+                var pageKeys = shell.PageKeys.ToArray();
+                Verify(pageKeys.Length >= 12, "main sidebar exposes expected native pages");
+                var pageTimings = new System.Collections.Generic.List<object>();
+                foreach (var key in pageKeys)
+                {
+                    var elapsed = Stopwatch.StartNew();
+                    shell.NavigateTo(key);
+                    for (int tick = 0; tick < 6; tick++)
+                    {
+                        Application.DoEvents();
+                        System.Threading.Thread.Sleep(15);
+                    }
+                    elapsed.Stop();
+                    var controls = AllControls(shell).ToArray();
+                    Verify(controls.Length > 10, "sidebar page " + key + " renders control tree");
+                    var scrollables = controls.OfType<ScrollableControl>().Where(c => c.AutoScroll).ToArray();
+                    pageTimings.Add(new { page = key, elapsedMs = elapsed.Elapsed.TotalMilliseconds,
+                        controls = controls.Length, scrollingContainers = scrollables.Length,
+                        visibleScrollbars = scrollables.Count(c => c.VerticalScroll.Visible) });
+                    using var screenshot = new Bitmap(1280, 800);
+                    shell.DrawToBitmap(screenshot, new Rectangle(0, 0, 1280, 800));
+                    var safeKey = string.Concat(key.Where(char.IsLetterOrDigit));
+                    screenshot.Save(Path.Combine(output, "sidebar-page-" + safeKey + ".png"));
+                }
+                measured.Add(new { title = "MainWindow pages", controlCount = pageKeys.Length, measurements = pageTimings });
+                shell.Close();
+            }
             // GDI+/WinForms repeated construction stress; bounded memory observation.
             for (int i = 0; i < 80; i++)
             {
