@@ -35,6 +35,7 @@ public static class OpsisModCore
         new ModuleDefinition("safety.recovery-hub", "Safety", "Opsis Recovery Hub", Array.Empty<string>(), Array.Empty<string>(), 19041, true),
         new ModuleDefinition("system.diagnostics", "Safety", "Desktop Diagnostics", Array.Empty<string>(), Array.Empty<string>(), 19041, true),
         new ModuleDefinition("start.launcher", "Start", "Start Studio with tiles/folders/pins", Array.Empty<string>(), Array.Empty<string>(), 19041, true),
+        new ModuleDefinition("start.native-preferences", "Start", "Native Windows Start preferences (current user)", Array.Empty<string>(), Array.Empty<string>(), 22000, true),
         new ModuleDefinition("start.shell-replacement", "Start", "Custom Windows Start replacement (planned)", Array.Empty<string>(), new[] { "start.external-replacement" }, 22000),
         new ModuleDefinition("taskbar.native", "Taskbar", "Windows Taskbar options", Array.Empty<string>(), Array.Empty<string>(), 22000, true),
         new ModuleDefinition("taskbar.opsis-replacement", "Taskbar", "Opsis Replacement Taskbar", Array.Empty<string>(), new[] { "taskbar.external-replacement" }, 19041, true),

@@ -23,7 +23,7 @@ Benchmark criteria: same workload, resolution and DPI; CPU/GPU, memory, GDI hand
 
 | ID | Priority | Task | Verified baseline / current work |
 |---:|---|---|---|
-| 1 | P0 | Full native Start Menu customization | Start Studio is an Opsis launcher, not native Start; native integration pending |
+| 1 | P0 | Full native Start Menu customization | Native Start current-user settings editor added (layout, all pins, recommendations), first-change backup and restore; advanced native styling and actual Win11 rendering pending |
 | 2 | P0 | Advanced Explorer Styler | ExplorerViewProfiles + Explorer Studio; native visual styling pending |
 | 3 | P0 | Native Taskbar customization | TaskbarViewProfiles has four HKCU settings; full native visual controls pending |
 | 4 | P1 | Taskbar on all screen edges | ReplacementTaskbar follows native bounds; independent native placement pending |
@@ -50,3 +50,6 @@ CI evidence: RC run 45389933784 and comparison 45389933797, installer 4538993393
 
 ### P0 18/19 — runtime isolation increment
 No new service or timer. Existing 60-second experience timer checks persisted review and refreshes opted-in taskbar conflict scan; Windows fingerprint interval remains 15 minutes. Explicit configured competing taskbar style/geometry mods hold Opsis overlay without changing Windhawk; unknown mods remain advisory. Portable configuration and actual injection still not certified. Existing WindowsUpdateGuard now fails closed on unreadable or invalid state, latches before writes, and clears on successful user approval. Runtime stop is best-effort; in-process plugin DLLs remain resident, so restart is required after approval. Existing preferences are not overwritten. Runtime isolation does not prove native Shell modification compatibility. CI must pass before claiming completion.
+
+### P0 task 1 — native Start increment
+Existing Start Studio now opens a native Windows Start preferences dialog, separate from its Opsis overlay styles. Uses the three documented current-user DWORD preferences Start_Layout, ShowAllPinsList, Start_IrisRecommendations; explicit confirmation, no-op suppression, allowlist, original-value/missing-value backup and best-effort rollback. Native Start and folder settings use official ms-settings URIs. No forced group policy, pin database edits, process injection, or automatic Explorer restart. Windows 11 interactive behavior (including newest Start layout and policy constraints) not yet verified; full native visual styler still pending. Microsoft references: https://learn.microsoft.com/en-us/windows/apps/develop/settings/settings-windows-11 and https://learn.microsoft.com/en-us/windows/apps/develop/launch/launch-settings. Fixed over-escaped Rainmeter smoke fixtures rather than weakening importer validation. Prior RC run 45460131412 passed update guard assertions but failed at Rainmeter fixture. Previous installer and resource workflows passed; not evidence for this commit.

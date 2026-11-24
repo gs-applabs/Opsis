@@ -57,6 +57,11 @@ public sealed class StartStudioForm : Form
             "This button design applies to the Opsis Replacement Taskbar. Native Windows Start stays unchanged.",
             "Opsis Start Button", MessageBoxButtons.OK, MessageBoxIcon.Information);
         _toolbar.Controls.Add(_startPreview);
+        var nativeStart = new Button { Text = "Windows Start / Έναρξη Windows", AutoSize = true, Height = 30 };
+        nativeStart.Click += (_, _) => { using var dialog = new NativeStartSettingsForm(); dialog.ShowDialog(this); };
+        _toolbar.Controls.Add(nativeStart);
+        _toolbar.Height = 120;
+        _toolbar.AutoScroll = true;
         Controls.Add(_toolbar);
         Controls.Add(_info);
         _pinnedOnly.CheckedChanged += (_, _) => RefreshResults();

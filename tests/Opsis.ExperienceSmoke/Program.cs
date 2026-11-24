@@ -111,6 +111,9 @@ try
         "Windhawk per-mod detection deduplicates, excludes disabled and holds competing taskbar styling");
     Check(!OpsisIntegrationAudit.TaskbarOverlayAllowed(true, windhawkMods, false), "configured competing taskbar mod prevents simultaneous Opsis overlay");
     Check(!OpsisModCompatibility.EvaluateWindhawkMods(new (string Id, bool? Disabled)[] { ("windows-11-taskbar-styler", true) }).Any(), "disabled competing Windhawk mod does not block Opsis");
+    Check(NativeStartPreferences.IsValid("Start_Layout", 2) && !NativeStartPreferences.IsValid("Start_Layout", 3) &&
+        NativeStartPreferences.IsValid("ShowAllPinsList", 1) && !NativeStartPreferences.IsValid("unregistered", 1),
+        "native Start preference allowlist validates values without modifying runner registry");
     Check(OpsisModCore.Catalog.Count >= 10, "unified module catalog available");
     Check(OpsisModCore.Read().Enabled.Count == 0, "module flags disabled by default");
     OpsisModCore.SetModule("windows.hot-corners", true, 22631, false);
@@ -327,19 +330,19 @@ try
         "safe plugin widget contribution instantiated as native layout");
 
 
-    const string supportedRainmeter = "[Rainmeter]\\nUpdate=1000\\n[MeasureClock]\\nMeasure=Time\\nFormat=%H:%M\\n[MeterClock]\\nMeter=String\\nMeasureName=MeasureClock\\nFontColor=64,160,224\\nFontSize=28\\nW=350\\nH=160";
-    var rainPreview = OpsisRainmeterSkinImporter.PreviewIni(supportedRainmeter.Replace("\\\\n", "\\n"), "Converted Clock");
+    const string supportedRainmeter = "[Rainmeter]\nUpdate=1000\n[MeasureClock]\nMeasure=Time\nFormat=%H:%M\n[MeterClock]\nMeter=String\nMeasureName=MeasureClock\nFontColor=64,160,224\nFontSize=28\nW=350\nH=160";
+    var rainPreview = OpsisRainmeterSkinImporter.PreviewIni(supportedRainmeter, "Converted Clock");
     Check(rainPreview.Binding == "Clock" && rainPreview.AccentHex == "#40A0E0",
         "Rainmeter built-in Time/clock INI mapped to native Opsis widget");
     var rainFile = Path.Combine(folder, "Converted Clock.ini");
-    File.WriteAllText(rainFile, supportedRainmeter.Replace("\\\\n", "\\n"));
+    File.WriteAllText(rainFile, supportedRainmeter);
     Check(OpsisRainmeterSkinImporter.Import(rainFile) == "Converted Clock",
         "safe Rainmeter INI import writes widget layout");
     rejected = false;
     try
     {
         OpsisRainmeterSkinImporter.PreviewIni(
-            "[Rainmeter]\\nUpdate=1000\\n[MeasureScript]\\nMeasure=Plugin\\nPlugin=RunCommand\\n[MeterA]\\nMeter=String\\nMeasureName=MeasureScript".Replace("\\\\n", "\\n"),
+            "[Rainmeter]\nUpdate=1000\n[MeasureScript]\nMeasure=Plugin\nPlugin=RunCommand\n[MeterA]\nMeter=String\nMeasureName=MeasureScript",
             "Blocked");
     }
     catch (InvalidDataException) { rejected = true; }
@@ -348,7 +351,7 @@ try
     try
     {
         OpsisRainmeterSkinImporter.PreviewIni(
-            "[MeterA]\\nMeter=String\\nText=[!Execute \"notepad.exe\"]".Replace("\\\\n", "\\n"),
+            "[MeterA]\nMeter=String\nText=[!Execute \"notepad.exe\"]",
             "Blocked");
     }
     catch (InvalidDataException) { rejected = true; }
@@ -357,7 +360,7 @@ try
     try
     {
         OpsisRainmeterSkinImporter.PreviewIni(
-            "[MeterA]\\nMeter=String\\nText=Hello\\n[MeterB]\\nMeter=String\\nText=World".Replace("\\\\n", "\\n"),
+            "[MeterA]\nMeter=String\nText=Hello\n[MeterB]\nMeter=String\nText=World",
             "Two Meters");
     }
     catch (InvalidDataException) { rejected = true; }
@@ -373,7 +376,7 @@ try
     try
     {
         OpsisRainmeterSkinImporter.PreviewIni(
-            "[MeterA]\\nMeter=String\\nText=Hello\\nPlugin=RunCommand".Replace("\\\\n", "\\n"),
+            "[MeterA]\nMeter=String\nText=Hello\nPlugin=RunCommand",
             "Extra Commands");
     }
     catch (InvalidDataException) { rejected = true; }
