@@ -30,7 +30,7 @@ All current and future additions use common application storage, theming and rec
 | Dynamic Accent Engine | Implemented: source-image color extraction or Weather scene palette, Opsis-only theme refresh every 15 minutes when enabled |
 | Animated Taskbar Effects | Planned |
 | Icon Pack Manager 2.0 | Existing IconAtlas and icon-pack import |
-| Cursor FX Studio | Native pointer trails exist; ripple/spotlight animations planned |
+| Cursor FX Studio | Implemented opt-in halo/ripple overlay without hooks or injection; pauses in fullscreen and optional battery mode |
 | Advanced Lock Screen | Existing settings; more advanced visual content planned |
 | Screen Saver Creator | Windows native controls exist; dedicated creator planned |
 | Theme Marketplace | Offline plugin/Gallery contributions including validated `.opsis-theme` import; online marketplace still planned |
@@ -97,3 +97,8 @@ Full shell patching and Start replacement, pixel-accurate Taskbar Designer, dire
 ### Current integration boundaries
 
 The importers do not execute Windhawk mods, install third-party Rainmeter DLLs or alter protected Explorer/Taskbar code. Rich Rainmeter syntax remains unsupported and must report an explicit validation error. Full visual customization of the native Windows Start/Taskbar and context-menu command extensions remains future work. No final release or installer should be published without passing the latest Windows build, security and installer workflows.
+
+
+## New Cursor FX Studio (native, opt-in)
+
+`src/UI/OpsisCursorFx.cs` provides a tiny transparent click-through WinForms overlay showing a pointer halo, a fading click ripple, or both. It does not need Windhawk binaries, external mod injections, or Windows shell modification. Style and intensity are stored in `AppSettings`, exposed through the common Personalization page and the `OpsisFeatureSwitcher` module adapter, disabled by default. A 50ms timer runs only while explicitly enabled. Wallpaper rendering and widget plugins are independent. The overlay suppresses on foreground fullscreen windows and when operating on battery according to pause settings. All configuration/compatibility reads are cached to avoid frequent SSD writes. Native pointer trails remain a separate Windows setting.
