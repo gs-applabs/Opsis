@@ -67,7 +67,13 @@ namespace MotionDesk.Widgets
             PluginHost.Instance.NavigationRequested += key => ShowMainWindow("plugin:" + key);
             // Plugins from user-writable folders run code inside Opsis: ask once, show the content hash, remember the approval (plugin-trust.json).
             // (the approval question is NOT asked while starting: see PluginHost.ConsiderFolder / ResolvePending)
-            if (!safeMode) { PluginHost.Instance.StartAll(); SchedulePluginApproval(); try { MotionDesk.Appearance.AppearanceService.Instance.Start(); } catch (Exception) { } }
+            if (!safeMode)
+            {
+                if (!reviewRequired) { PluginHost.Instance.StartAll(); SchedulePluginApproval(); }
+                else RotatingLogger.Write("Optional plugins held until Windows build compatibility review and Opsis restart.");
+                try { MotionDesk.Appearance.AppearanceService.Instance.Start(); }
+                catch (Exception e) { RotatingLogger.Write("Appearance service: " + e.Message); }
+            }
             // Start-up before the other start-up apps: switched on ONCE after the first run when Start with Windows is on (Settings can turn it off; never repeated)
             try
             {
