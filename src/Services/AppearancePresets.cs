@@ -89,6 +89,16 @@ public static class AppearancePresets
         AtomicFile.WriteAllText(path, JsonSerializer.Serialize(p, Json));
     }
 
+    /// <summary>Import validated, data-only preset without applying system settings.</summary>
+    public static void SavePortable(Preset preset)
+    {
+        Validate(preset);
+        Directory.CreateDirectory(Folder);
+        var path = FilePath(preset.Name);
+        if (File.Exists(path)) throw new IOException("Appearance preset already exists.");
+        AtomicFile.WriteAllText(path, JsonSerializer.Serialize(preset, Json));
+    }
+
     public static Preset Read(string name)
     {
         var path = FilePath(name);
