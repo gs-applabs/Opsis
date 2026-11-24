@@ -250,12 +250,17 @@ try
     Check(WindowsUpdateGuard.EvaluateStartup(), "changed Windows build triggers review");
     Check(WindowsUpdateGuard.RequiresReview, "hold persists after change");
     WindowsUpdateGuard.ApproveCurrentBuild();
-    Check(!WindowsUpdateGuard.RequiresReview && !WindowsUpdateGuard.RuntimeHold, "user approval clears hold");
+    Check(WindowsUpdateGuard.RuntimeHold && WindowsUpdateGuard.RequiresReview && WindowsUpdateGuard.RestartRequired, "user approval keeps the process latch until restart");
+    Check(string.IsNullOrEmpty(WindowsUpdateGuard.Read().PendingFingerprint), "approval is persisted");
+    WindowsUpdateGuard.ResetProcessLatchForTests();
+    Check(!WindowsUpdateGuard.RequiresReview && !WindowsUpdateGuard.RuntimeHold, "after a restart the approved build is no longer held");
     File.WriteAllText(stateFile, "{ malformed");
     Check(WindowsUpdateGuard.RequiresReview && WindowsUpdateGuard.RuntimeHold, "malformed guard state fails closed");
     File.WriteAllText(stateFile, JsonSerializer.Serialize(new WindowsUpdateGuard.State { LastApprovedFingerprint = OpsisRecoveryHub.WindowsFingerprint() }));
     WindowsUpdateGuard.ApproveCurrentBuild();
-    Check(!WindowsUpdateGuard.RequiresReview, "explicit approval after valid state restored clears runtime latch");
+    Check(WindowsUpdateGuard.RequiresReview && WindowsUpdateGuard.RestartRequired, "explicit approval after a repaired state still waits for a restart");
+    WindowsUpdateGuard.ResetProcessLatchForTests();
+    Check(!WindowsUpdateGuard.RequiresReview, "restart clears the latch once the state is valid");
 
     var windowsInventory = OpsisRecoveryHub.InspectWindowsShell();
     Check(windowsInventory.Files.Count == 6, "Windows shell file inventory includes six monitored binaries");

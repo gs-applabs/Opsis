@@ -22,6 +22,7 @@ public static class WindowsUpdateGuard
 
     private static readonly object Gate = new();
     private static volatile bool _runtimeHold;
+    private static volatile bool _restartRequired;
     public static bool RuntimeHold => _runtimeHold;
     private static string StateFile => Path.Combine(OpsisRecoveryHub.Root, "update-guard.json");
 
@@ -158,7 +159,19 @@ public static class WindowsUpdateGuard
             state.PendingFingerprint = "";
             state.DetectedUtc = null;
             Save(state);
-            _runtimeHold = false;
+            // The approval is persisted, but plugins and shell replacements may already have been held (or partly started) in this process:
+            // the process-level latch stays until Opsis is restarted, so nothing is enabled automatically after the approval.
+            if (_runtimeHold) _restartRequired = true;
         }
+    }
+
+    /// <summary>True after the user approved a build while the process was holding shell features: Opsis must be restarted before they come back.</summary>
+    public static bool RestartRequired => _restartRequired;
+
+    /// <summary>Tests only (isolated settings): simulates a fresh process.</summary>
+    public static void ResetProcessLatchForTests()
+    {
+        if (!AppSettings.IsIsolatedForTests()) throw new InvalidOperationException("Only available in an isolated test run.");
+        _runtimeHold = false; _restartRequired = false;
     }
 }
