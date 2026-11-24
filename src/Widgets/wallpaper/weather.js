@@ -1606,7 +1606,15 @@ function draw(target, dt, profile) {
     }
     c2.setTransform(1, 0, 0, 1, 0, 0);
     c2.globalAlpha = 1; c2.globalCompositeOperation = 'source-over';
-    c2.drawImage(skyCv, 0, 0);
+    // 2.5D: independent distant-sky parallax, with slight overscan to avoid edge gaps.
+    // The land/photo, rain, fog and glass remain at their original screen depth.
+    if ((cfg.spatialMode === '2.5D' || cfg.spatialMode === '3D') && tierLevel() >= 1) {
+        const pad = Math.max(2, W * 0.014);
+        const drift = Math.sin(animTime * 0.15) * pad * 0.34;
+        c2.drawImage(skyCv, -pad + drift, 0, W + 2 * pad, HORIZON);
+    } else {
+        c2.drawImage(skyCv, 0, 0);
+    }
     drawBirds(c2, dt, sky, cityPhoto);
     if (photograph) drawScenePhoto(c2, sky, graded);
     else if (onLand()) {
@@ -1628,6 +1636,12 @@ function draw(target, dt, profile) {
     if (flash > 0) { c2.fillStyle = `rgba(210,222,255,${flash * 0.35})`; c2.fillRect(0, 0, W, H); }
     drawVignette(c2);
 
+    // Independent projected weather particles. WebGL2 failure leaves the 2D
+    // renderer untouched and invisible fallback is deliberate.
+    window.OpsisWeatherSpatial?.update(dt,
+        { rain: S.rain, snow: S.snow, windX: S.windX, seconds: animTime },
+        profile?.id || 'Balanced', cfg.reducedMotion === true);
+
     if (useGlass) {
         target.setTransform(1, 0, 0, 1, 0, 0);
         target.drawImage(sceneCv, 0, 0);
@@ -1638,6 +1652,7 @@ function draw(target, dt, profile) {
 window.WeatherWallpaper = {
     setConfig, setWeather, resize,
     release() {
+        window.OpsisWeatherSpatial?.dispose();
         W = H = 0;
         skyCv = skyCtx = cloudCv = cloudCtx = sceneCv = sceneCtx = reflCv = reflCtx = null;
         Object.assign(photoState, { id: '', key: '', ready: false, lightsReady: false,
