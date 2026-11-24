@@ -212,7 +212,7 @@ public sealed partial class MainWindow
             "Δημιούργησε επαναχρησιμοποιήσιμα ρολόγια, ημερομηνίες και ετικέτες. Χρησιμοποιείται το κοινό θέμα Opsis, χωρίς ξεχωριστές υπηρεσίες plugins."));
         var widgetName = new TextBox { Width = 150, PlaceholderText = StudioText("Widget name", "Όνομα widget") };
         var widgetBinding = new ComboBox { Width = 110, DropDownStyle = ComboBoxStyle.DropDownList };
-        widgetBinding.Items.AddRange(new object[] { "Clock", "Date", "Text" }); widgetBinding.SelectedIndex = 0;
+        widgetBinding.Items.AddRange(new object[] { "Clock", "Date", "Text", "CPU", "RAM", "Battery" }); widgetBinding.SelectedIndex = 0;
         var widgetText = new TextBox { Width = 150, PlaceholderText = StudioText("Static text", "Στατικό κείμενο") };
         var widgetHex = new TextBox { Width = 86, Text = "#00D2FF" };
         var widgetFont = new NumericUpDown { Width = 68, Minimum = 12, Maximum = 80, Value = 30 };
