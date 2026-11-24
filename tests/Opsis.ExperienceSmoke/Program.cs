@@ -215,6 +215,32 @@ try
     Check(rejected, "Rainmeter unknown executable meter property refused");
 
 
+    var taskbar = OpsisTaskbarDesigner.Read();
+    Check(taskbar.Style == "Classic", "new Opsis taskbar defaults to non-invasive Classic visual style");
+    taskbar.Style = "Glass";
+    taskbar.Alignment = "Center";
+    taskbar.ButtonWidth = 155;
+    taskbar.ButtonGap = 7;
+    taskbar.OpacityPercent = 78;
+    OpsisTaskbarDesigner.Save(taskbar);
+    Check(OpsisTaskbarDesigner.Read().ButtonWidth == 155 &&
+          OpsisTaskbarDesigner.Read().Alignment == "Center",
+        "taskbar visual profile round-trips without writing Windows registry");
+    Check(OpsisTaskbarDesigner.ButtonHeight(taskbar, false, 44) == 38,
+        "taskbar designer calculates horizontal button geometry");
+    rejected = false;
+    try { OpsisTaskbarDesigner.Validate(new OpsisTaskbarDesigner.Profile { Style = "ShellPatch" }); }
+    catch (InvalidDataException) { rejected = true; }
+    Check(rejected, "taskbar designer rejects undocumented shell modification styles");
+    StartStudioPreferences.SetDisplay("Tiles", true);
+    Check(StartStudioPreferences.Read().DisplayStyle == "Tiles" &&
+          StartStudioPreferences.Read().GroupByFolder,
+        "Start Studio presentation and categories persist");
+    rejected = false;
+    try { StartStudioPreferences.SetDisplay("InjectedStart", false); }
+    catch (ArgumentOutOfRangeException) { rejected = true; }
+    Check(rejected, "Start Studio refuses unsupported third-party shell mode");
+
     var widget = new OpsisWidgetDesigner.Layout {
         Name = "Clock Demo", Binding = "Clock", AccentHex = "#00D2FF", FontSize = 30
     };
@@ -286,6 +312,8 @@ try
     Check(snapshot.Files.Any(x => x.RelativePath == "automations.json"), "recovery saved automations");
     Check(snapshot.Files.Any(x => x.RelativePath.StartsWith("weather-scenes/", StringComparison.Ordinal)), "recovery saved scenes");
     Check(snapshot.Files.Any(x => x.RelativePath.StartsWith("widget-designs/", StringComparison.Ordinal)), "recovery saved widget designs");
+    Check(snapshot.Files.Any(x => x.RelativePath == "taskbar-designer.json"), "recovery includes Opsis taskbar designer");
+    Check(snapshot.Files.Any(x => x.RelativePath == "start-studio.json"), "recovery includes Start Studio presentation preferences");
     File.WriteAllText(Path.Combine(folder, "module-core.json"), "{}");
     OpsisRecoveryHub.RestoreOwnedSettings(snapshot.Id);
     Check(File.ReadAllText(Path.Combine(folder, "module-core.json")) == before, "recovery restored original settings");
@@ -323,10 +351,15 @@ try
             System.Windows.Forms.Application.EnableVisualStyles();
             var widgetLayout = OpsisWidgetDesigner.Read("Clock Demo");
             using var editor = new MotionDesk.UI.OpsisWidgetVisualDesignerForm(widgetLayout);
+            using var taskbarDesigner = new MotionDesk.UI.OpsisTaskbarDesignerForm();
+            using var explorerDesigner = new MotionDesk.UI.OpsisExplorerStudioForm();
+            using var startStudio = new MotionDesk.UI.StartStudioForm();
             using var window = new MotionDesk.UI.OpsisCustomWidgetWindow(widgetLayout);
             var editorHandle = editor.Handle;
             var widgetHandle = window.Handle;
-            actualWindowsCreated = editorHandle != IntPtr.Zero && widgetHandle != IntPtr.Zero;
+            actualWindowsCreated = editorHandle != IntPtr.Zero && widgetHandle != IntPtr.Zero &&
+                taskbarDesigner.Handle != IntPtr.Zero && explorerDesigner.Handle != IntPtr.Zero &&
+                startStudio.Handle != IntPtr.Zero;
         }
         catch (Exception ex) { uiFailure = ex; }
     })
