@@ -141,6 +141,8 @@ public static class AppearancePresets
         var before = Capture("Rollback");
         // Validate the entire preset before touching any Windows or Opsis settings.
         Validate(target);
+        if (Equivalent(before, target)) return; // No writes for an unchanged profile.
+        OpsisRecoveryHub.Snapshot("Before appearance preset: " + target.Name);
         try { ApplyCore(target); }
         catch
         {
@@ -153,20 +155,48 @@ public static class AppearancePresets
         }
     }
 
+    /// <summary>Side-effect-free value comparison; preset names are metadata only.</summary>
+    public static bool Equivalent(Preset a, Preset b) =>
+        a.HideFileExt == b.HideFileExt && a.Hidden == b.Hidden &&
+        a.CompactMode == b.CompactMode && a.ExplorerLaunchTo == b.ExplorerLaunchTo &&
+        (!TaskbarViewProfiles.IsWindows11 ||
+            (a.TaskbarAlignment == b.TaskbarAlignment && a.TaskbarWidgets == b.TaskbarWidgets &&
+             a.TaskbarTaskView == b.TaskbarTaskView && a.TaskbarSearch == b.TaskbarSearch)) &&
+        a.HotCornersEnabled == b.HotCornersEnabled && a.TopLeft == b.TopLeft &&
+        a.TopRight == b.TopRight && a.BottomLeft == b.BottomLeft &&
+        a.BottomRight == b.BottomRight && a.DwellMs == b.DwellMs &&
+        a.EdgePixels == b.EdgePixels && a.PauseOnFullscreen == b.PauseOnFullscreen;
+
     private static void ApplyCore(Preset p)
     {
-        ExplorerViewProfiles.ApplyOption("HideFileExt", p.HideFileExt);
-        ExplorerViewProfiles.ApplyOption("Hidden", p.Hidden);
-        ExplorerViewProfiles.ApplyOption("UseCompactMode", p.CompactMode);
-        ExplorerViewProfiles.ApplyOption("LaunchTo", p.ExplorerLaunchTo);
+        // Only changed options are written; no needless SSD or registry activity.
+        if (ExplorerViewProfiles.ReadOption("HideFileExt") != p.HideFileExt)
+            ExplorerViewProfiles.ApplyOption("HideFileExt", p.HideFileExt);
+        if (ExplorerViewProfiles.ReadOption("Hidden") != p.Hidden)
+            ExplorerViewProfiles.ApplyOption("Hidden", p.Hidden);
+        if (ExplorerViewProfiles.ReadOption("UseCompactMode") != p.CompactMode)
+            ExplorerViewProfiles.ApplyOption("UseCompactMode", p.CompactMode);
+        if (ExplorerViewProfiles.ReadOption("LaunchTo") != p.ExplorerLaunchTo)
+            ExplorerViewProfiles.ApplyOption("LaunchTo", p.ExplorerLaunchTo);
         if (TaskbarViewProfiles.IsWindows11)
         {
-            TaskbarViewProfiles.ApplyOption("TaskbarAl", p.TaskbarAlignment);
-            TaskbarViewProfiles.ApplyOption("TaskbarDa", p.TaskbarWidgets);
-            TaskbarViewProfiles.ApplyOption("ShowTaskViewButton", p.TaskbarTaskView);
-            TaskbarViewProfiles.ApplyOption("SearchboxTaskbarMode", p.TaskbarSearch);
+            if (TaskbarViewProfiles.ReadOption("TaskbarAl") != p.TaskbarAlignment)
+                TaskbarViewProfiles.ApplyOption("TaskbarAl", p.TaskbarAlignment);
+            if (TaskbarViewProfiles.ReadOption("TaskbarDa") != p.TaskbarWidgets)
+                TaskbarViewProfiles.ApplyOption("TaskbarDa", p.TaskbarWidgets);
+            if (TaskbarViewProfiles.ReadOption("ShowTaskViewButton") != p.TaskbarTaskView)
+                TaskbarViewProfiles.ApplyOption("ShowTaskViewButton", p.TaskbarTaskView);
+            if (TaskbarViewProfiles.ReadOption("SearchboxTaskbarMode") != p.TaskbarSearch)
+                TaskbarViewProfiles.ApplyOption("SearchboxTaskbarMode", p.TaskbarSearch);
         }
         var s = AppSettings.Load();
+        bool changed = s.HotCornersEnabled != p.HotCornersEnabled ||
+            s.HotCornerTopLeft != p.TopLeft || s.HotCornerTopRight != p.TopRight ||
+            s.HotCornerBottomLeft != p.BottomLeft || s.HotCornerBottomRight != p.BottomRight ||
+            s.HotCornerDwellMilliseconds != p.DwellMs ||
+            s.HotCornerEdgePixels != p.EdgePixels ||
+            s.HotCornersPauseOnFullscreen != p.PauseOnFullscreen;
+        if (!changed) return;
         s.HotCornersEnabled = p.HotCornersEnabled;
         s.HotCornerTopLeft = p.TopLeft; s.HotCornerTopRight = p.TopRight;
         s.HotCornerBottomLeft = p.BottomLeft; s.HotCornerBottomRight = p.BottomRight;
