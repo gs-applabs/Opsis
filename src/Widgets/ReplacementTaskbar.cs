@@ -33,7 +33,7 @@ internal sealed class ReplacementTaskbar : Form
         // overlay over them. This is read-only; user/vendor files are untouched.
         try
         {
-            var external = OpsisModCompatibility.Scan();
+            var external = OpsisModCompatibility.ScanCached();
             if (!OpsisIntegrationAudit.TaskbarOverlayAllowed(true, external, false))
             {
                 RotatingLogger.Write("Opsis taskbar held: competing shell replacement detected: " +
