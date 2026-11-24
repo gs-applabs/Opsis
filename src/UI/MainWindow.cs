@@ -4042,17 +4042,29 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                     case string galleryId when galleryId.StartsWith("gallery:", StringComparison.Ordinal):
                         if (galleryCommands.TryGetValue(galleryId, out var asset))
                         {
-                            if (asset.Type.Equals("widget", StringComparison.OrdinalIgnoreCase))
-                                new OpsisCustomWidgetWindow(OpsisEcosystemGallery.ReadWidgetContribution(asset)).Show(this);
-                            else if (asset.Type.Equals("wallpaper", StringComparison.OrdinalIgnoreCase) &&
-                                MessageBox.Show(this, StudioText("Apply this plugin wallpaper?", "Εφαρμογή αυτού του wallpaper;"),
-                                    "Opsis Gallery", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
-                                OpsisEcosystemGallery.ApplyStaticWallpaper(asset);
-                            else if (asset.Type.Equals("theme", StringComparison.OrdinalIgnoreCase) &&
-                                MessageBox.Show(this, StudioText("Import this theme?", "Εισαγωγή αυτού του θέματος;"),
-                                    "Opsis Gallery", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
-                                OpsisEcosystemGallery.InstallThemeContribution(asset);
-                            else NavigateTo("Personalization");
+                            try
+                            {
+                                if (asset.Type.Equals("widget", StringComparison.OrdinalIgnoreCase))
+                                    new OpsisCustomWidgetWindow(OpsisEcosystemGallery.ReadWidgetContribution(asset)).Show(this);
+                                else if (asset.Type.Equals("wallpaper", StringComparison.OrdinalIgnoreCase))
+                                {
+                                    if (MessageBox.Show(this, StudioText("Apply this plugin wallpaper?", "Εφαρμογή αυτού του wallpaper;"),
+                                        "Opsis Gallery", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
+                                        OpsisEcosystemGallery.ApplyStaticWallpaper(asset);
+                                }
+                                else if (asset.Type.Equals("theme", StringComparison.OrdinalIgnoreCase))
+                                {
+                                    if (MessageBox.Show(this, StudioText("Import this theme?", "Εισαγωγή αυτού του θέματος;"),
+                                        "Opsis Gallery", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
+                                        OpsisEcosystemGallery.InstallThemeContribution(asset);
+                                }
+                                else NavigateTo("Personalization");
+                            }
+                            catch (Exception ex)
+                            {
+                                RotatingLogger.Write("Gallery command failed: " + ex.Message);
+                                MessageBox.Show(this, ex.Message, "Opsis Gallery", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                            }
                         }
                         break;
                     case string pluginId when pluginId.StartsWith("plugin:", StringComparison.Ordinal): NavigateTo(pluginId); break;
