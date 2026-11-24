@@ -3025,6 +3025,16 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                     try { MessageBox.Show(this, AppearancePresets.Preview(selected), "Opsis — P2 Preview", MessageBoxButtons.OK, MessageBoxIcon.Information); }
                     catch (Exception ex) { MessageBox.Show(this, ex.Message, "Opsis — P2", MessageBoxButtons.OK, MessageBoxIcon.Error); }
                 }),
+                (LocalizationManager.CurrentLanguage == "el" ? "Γραφική προεπισκόπηση" : "Visual preview", (_, _) =>
+                {
+                    if (presetPicker.SelectedItem is not string selected) return;
+                    try
+                    {
+                        using var previewWindow = new AppearancePreviewForm(AppearancePresets.Read(selected));
+                        previewWindow.ShowDialog(this);
+                    }
+                    catch (Exception ex) { MessageBox.Show(this, ex.Message, "Opsis — P2", MessageBoxButtons.OK, MessageBoxIcon.Error); }
+                }),
                 (LocalizationManager.CurrentLanguage == "el" ? "Εφαρμογή προφίλ" : "Apply preset", (_, _) =>
                 {
                     if (presetPicker.SelectedItem is not string selected) return;
