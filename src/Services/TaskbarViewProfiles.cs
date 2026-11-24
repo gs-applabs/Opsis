@@ -60,6 +60,36 @@ namespace MotionDesk.Services
             NotifyShell();
         }
 
+        /// <summary>Read only known Taskbar preferences; defaults follow Windows 11.</summary>
+        public static int ReadOption(string name)
+        {
+            var index = Array.FindIndex(Keys, entry => entry.Name == name);
+            if (index < 0) throw new ArgumentOutOfRangeException(nameof(name));
+            using var key = Registry.CurrentUser.OpenSubKey(Keys[index].Path);
+            return key?.GetValue(name) is int value ? value : name switch
+            {
+                "TaskbarAl" => 1,
+                "TaskbarDa" => 1,
+                "ShowTaskViewButton" => 1,
+                "SearchboxTaskbarMode" => 1,
+                _ => 0
+            };
+        }
+
+        /// <summary>Change one supported Taskbar option and retain the original P0 backup.</summary>
+        public static void ApplyOption(string name, int value)
+        {
+            if (!IsWindows11) throw new PlatformNotSupportedException("Windows 11 is required.");
+            var index = Array.FindIndex(Keys, entry => entry.Name == name);
+            if (index < 0) throw new ArgumentOutOfRangeException(nameof(name));
+            bool valid = name == "SearchboxTaskbarMode" ? value >= 0 && value <= 3
+                : value is 0 or 1;
+            if (!valid) throw new ArgumentOutOfRangeException(nameof(value));
+            BackupIfMissing();
+            Set(Keys[index].Path, name, value);
+            NotifyShell();
+        }
+
         public static void Restore()
         {
             if (!HasBackup) throw new FileNotFoundException("Taskbar backup missing.", BackupPath);
