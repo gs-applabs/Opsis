@@ -49,12 +49,8 @@ public static class OpsisStartButtonArt
                 using var border = new Pen(Color.FromArgb(195, 219, 244, 255), Math.Max(1f, side / 36f));
                 g.FillPath(fill, path);
                 g.DrawPath(border, path);
-                if (style == "Win11 Glass" || useLogo)
-                {
-                    using var light = new SolidBrush(Color.FromArgb(60, Color.White));
-                    var gleam = new RectangleF(square.X + square.Width * .12f, square.Y + square.Height * .11f, square.Width * .76f, square.Height * .24f);
-                    g.FillEllipse(light, gleam);
-                }
+                // Flat Windows 11-style surface: no curved shine, ellipse or top highlight.
+                // Keep the subtle linear gradient and border for depth.
                 DrawMark(g, square, Color.White, useLogo, applicationIcon);
                 return;
             }
