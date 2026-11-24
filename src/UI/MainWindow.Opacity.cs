@@ -6,7 +6,7 @@ public sealed partial class MainWindow
 {
     private readonly System.Windows.Forms.Timer _opacitySaveTimer = new() { Interval = 220 };
     private double? _pendingOpacity;
-    private bool? _micaBackdrop;
+    private int? _micaBackdrop;
 
     private void ApplyWindowOpacity(double value, bool save = false)
     {
@@ -28,13 +28,17 @@ public sealed partial class MainWindow
     }
 
     private void RefreshMainWindowBackdrop() => SetMainWindowBackdrop(WindowOpacityPolicy.UseMica(
-        Opacity, Services.PerformanceProfile.ForFeature(Services.PerfFeature.Effects).BlurEffects, SystemInformation.HighContrast));
+        Opacity, Services.PerformanceProfile.ForFeature(Services.PerfFeature.Effects).BlurEffects, SystemInformation.HighContrast)
+        && !AllowTransparency && !SafeModeService.IsSafeMode && Opsis.UI.GlassEnvironment.TransparencyEnabled);
 
     private void SetMainWindowBackdrop(bool enabled)
     {
-        if (!IsHandleCreated || _micaBackdrop == enabled) return;
-        GlassBlur.ApplyMicaBackdrop(Handle, enabled);
-        _micaBackdrop = enabled;
+        if (!IsHandleCreated) return;
+        int material = !enabled ? 1 : AppSettings.Peek().ThemeMode == "SignatureGlass" ? 3 : 2;
+        if (_micaBackdrop == material) return;
+        if (GlassBlur.TryApplySystemBackdrop(Handle, material)) _micaBackdrop = material;
+        else if (material == 3 && GlassBlur.TryApplySystemBackdrop(Handle, 2)) _micaBackdrop = 2;
+        else _micaBackdrop = null;
     }
 
     private void SaveWindowOpacity()
