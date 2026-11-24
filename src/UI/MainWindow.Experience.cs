@@ -365,7 +365,13 @@ public sealed partial class MainWindow
         var saverDim = new NumericUpDown { Minimum = 0, Maximum = 75, Increment = 5, Width = 68 };
         var saverSeconds = new CheckBox { Text = StudioText("Show seconds", "Εμφάνιση δευτερολέπτων"),
             AutoSize = true, ForeColor = UiTheme.TextPrimary };
-        var savedSaver = OpsisScreensaverStudio.Read();
+        OpsisScreensaverStudio.Profile savedSaver;
+        try { savedSaver = OpsisScreensaverStudio.Read(); }
+        catch (Exception ex)
+        {
+            RotatingLogger.Write("Invalid screensaver configuration: " + ex.Message);
+            savedSaver = new OpsisScreensaverStudio.Profile();
+        }
         saverMode.SelectedItem = savedSaver.Mode;
         saverImage.Text = savedSaver.ImagePath;
         saverDim.Value = savedSaver.DimPercent;
