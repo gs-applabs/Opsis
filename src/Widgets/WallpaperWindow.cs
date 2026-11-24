@@ -321,6 +321,18 @@ namespace MotionDesk.Widgets
             MotionDesk.Services.WeatherService.RequestWallpaperWeatherRefresh(settings.WeatherLat, settings.WeatherLon);
         }
 
+        // The built-in Ancient Athens theme always uses Athens observations, not
+        // the user's currently selected Weather city. The shared 10-minute cache
+        // prevents unnecessary service requests and SSD writes.
+        private const double AncientAthensLat = 37.9715;
+        private const double AncientAthensLon = 23.7267;
+
+        public string GetAncientAthensWeatherJson() =>
+            MotionDesk.Services.WeatherService.GetWallpaperWeatherCached(AncientAthensLat, AncientAthensLon);
+
+        public void RequestAncientAthensWeatherRefresh() =>
+            MotionDesk.Services.WeatherService.RequestWallpaperWeatherRefresh(AncientAthensLat, AncientAthensLon);
+
         // Αν αυτή η οθόνη έχει "καρφιτσωμένο" δικό της βίντεο (ScreenVideoOverride), το
         // χρησιμοποιεί αντί για το κοινό playlist — έτσι υποστηρίζεται διαφορετικό βίντεο ανά
         // οθόνη χωρίς να χρειάζεται ξεχωριστό playlist/shuffle state ανά οθόνη.
