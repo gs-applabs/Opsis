@@ -30,7 +30,7 @@ public static class OpsisScreensaverStudio
             throw new InvalidDataException("Invalid screensaver scene.");
         if ((p.Mode is "StaticImage" or "ClockAndImage") &&
             (!Path.IsPathFullyQualified(p.ImagePath) ||
-             Path.GetExtension(p.ImagePath).ToLowerInvariant() is not (".jpg" or ".jpeg" or ".png" or ".webp" or ".bmp")))
+             Path.GetExtension(p.ImagePath).ToLowerInvariant() is not (".jpg" or ".jpeg" or ".png" or ".bmp")))
             throw new InvalidDataException("Select a local, supported image format.");
     }
 
