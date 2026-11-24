@@ -5,16 +5,8 @@ const path = require('node:path');
 
 const html = fs.readFileSync(path.join(__dirname, '..', 'src', 'Widgets', 'wallpaper', 'index.html'), 'utf8');
 
-test('desktop time / weather / place text honours the automatic text colour switch', () => {
-  assert.match(html, /cfg\.elAuto === false/);                       // switch off: always light text, never black letters
-  assert.match(html, /box\.style\.color = '#fff'/);
-});
-
-test('dark text only on a clearly bright backdrop, with hysteresis', () => {
-  assert.match(html, /wasDarkText \? luminosity < 0\.32 : luminosity < 0\.45/);
-  assert.doesNotMatch(html, /const useWhite = whiteRatio >= blackRatio;/);
-});
-
-test('outside the sampled weather modes the inline colour is cleared (no stale black text)', () => {
-  assert.match(html, /else \{ box\.style\.color = ''; box\.style\.textShadow = ''; delete box\.dataset\.tone; \}/);
+test('desktop time / weather / place text is always white with a fixed dark outline (no black letters, no GPU read-back)', () => {
+  assert.match(html, /box\.style\.color = '#ffffff'/);
+  assert.match(html, /box\.dataset\.contrast = 'white-fixed'/);
+  assert.doesNotMatch(html, /box\.style\.color = useWhite \? '#fff' : '#111'/);
 });

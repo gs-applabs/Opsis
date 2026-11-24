@@ -1,3 +1,16 @@
+# OPSIS Desktop Customization — ενεργός κλάδος 3.0.0.3200 RC
+
+Η επίσημη έκδοση παραμένει 2.8.0.2510. Το παρόν είναι πραγματικός κλάδος GitHub ανάπτυξης, όχι ανακατασκευασμένο R10 snapshot. Το ακόλουθο παλαιό ιστορικό παραμένει για τεκμηρίωση, αλλά δεν καθορίζει το τρέχον build ή την κατάσταση δοκιμών.
+
+- Πρώτη πηγή: docs/OPSIS-P0-P1-UNIFIED-CAPABILITIES.md και release/3.0.0.3200-readiness.json.
+- Ελέγξτε το ακριβές commit του SOURCE-MANIFEST.json εάν χρησιμοποιείτε το source-only ZIP.
+- Build RC: dotnet publish Opsis.csproj -c Release -r win-x64 --self-contained false -p:OpsisAppVersion=3.0.0.3200.
+- Δοκιμές: tests/Opsis.ShellSmoke, tests/Opsis.ExperienceSmoke, tests/Opsis.RcUiSmoke, tests/weather-spatial, tests/integration/check_baseline_and_release.py.
+- Τα αρχεία εικόνων/βίντεο wallpaper μπορούν να λείπουν από το source-only πακέτο· αποκαταστήστε τα από το ίδιο commit πριν από rendering tests ή παραγωγή installer. Τα scripts και manifests παραμένουν.
+- Μην κάνετε merge/release ή αλλαγή Version.props πριν ολοκληρωθούν όλοι οι υποχρεωτικοί έλεγχοι. Το GitHub PR #16 είναι η πραγματική βάση. Παλαιότερες δηλώσεις για μη διαθέσιμη μεταγλώττιση δεν ισχύουν για τα νεότερα επιτυχή CI runs, όμως δεν πιστοποιούν πραγματικό Windows 11 desktop.
+
+## Ιστορική αναφορά R10 (όχι ενεργές οδηγίες)
+
 # OPSIS 2.8.0.2500 — Οδηγός παράδοσης προς Claude Code
 
 ## Τι περιλαμβάνει το πακέτο

@@ -1,0 +1,124 @@
+name: Opsis 3.0.0.3200 pre-release full integration validation
+on:
+  push:
+    branches: [feat/3.0.0.3200-integration]
+  pull_request:
+    branches: [feat/p3-p5-unified-experience]
+  workflow_dispatch:
+
+concurrency:
+  group: opsis-30-integration-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+jobs:
+  experience-windows:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-2022, windows-2025]
+    timeout-minutes: 65
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '11.0.x'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Verify 2.8 settings backward compatibility and 3.0 release identity
+        run: |
+          python tests/integration/check_baseline_and_release.py
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Syntax validation for all integrated Weather spatial scripts
+        run: |
+          foreach ($file in @('weather.js','weather-spatial.js','weather-landscape.js','weather-atmosphere.js','sky-mask.js')) {
+            node --check "src/Widgets/wallpaper/$file"
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
+      - name: Spatial WebGL fallback and renderer state tests
+        run: |
+          node --test tests/weather-spatial/weather-spatial.test.cjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: SDK and OS
+        run: |
+          dotnet --info
+          Get-ComputerInfo | Select-Object WindowsProductName, WindowsVersion, OsBuildNumber | Format-List
+      - name: Restore
+        run: |
+          dotnet restore Opsis.csproj --disable-parallel
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Build Opsis core with no shared compilation
+        run: |
+          dotnet build Opsis.csproj -c Release --no-restore -m:1 -p:UseSharedCompilation=false -nodeReuse:false
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Build isolated experience tests
+        run: |
+          dotnet build tests/Opsis.ExperienceSmoke/Opsis.ExperienceSmoke.csproj -c Release -m:1 -p:UseSharedCompilation=false -nodeReuse:false
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Run isolated P3-P5 safety tests
+        run: |
+          dotnet run --project tests/Opsis.ExperienceSmoke/Opsis.ExperienceSmoke.csproj -c Release --no-build
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Run P1/P2 regression tests
+        run: |
+          dotnet build tests/Opsis.ShellSmoke/Opsis.ShellSmoke.csproj -c Release -m:1 -p:UseSharedCompilation=false -nodeReuse:false
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          dotnet run --project tests/Opsis.ShellSmoke/Opsis.ShellSmoke.csproj -c Release --no-build
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Publish complete portable executable
+        run: |
+          dotnet publish Opsis.csproj -c Release -r win-x64 --self-contained false -o publish -m:1 -p:UseSharedCompilation=false -nodeReuse:false
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          if (!(Test-Path publish/Opsis.exe)) { throw 'No Opsis.exe published' }
+          foreach ($required in @('weather-spatial.js','weather-landscape.js','sky-mask.js')) {
+            if (!(Test-Path "publish/widgets/wallpaper/$required")) {
+              throw "Integrated Weather scene script not included in publish: $required"
+            }
+          }
+          Compress-Archive -Path publish/* -DestinationPath "Opsis-Integration-Preview-$env:RUNNER_OS.zip" -Force
+      - name: Run actual portable Opsis self-test
+        run: |
+          $env:OPSIS_APPDATA = Join-Path $env:RUNNER_TEMP 'Opsis-Experience-SelfTest'
+          New-Item -ItemType Directory -Path $env:OPSIS_APPDATA -Force | Out-Null
+          $exe = (Resolve-Path 'publish/Opsis.exe').Path
+          $proc = Start-Process -FilePath $exe -ArgumentList '--run-selftest' -PassThru -Wait
+          if ($proc.ExitCode -ne 0) { throw "Opsis.exe self-test failed with exit code $($proc.ExitCode)" }
+          $reportPath = Join-Path $env:OPSIS_APPDATA 'selftest-report.json'
+          if (!(Test-Path $reportPath)) { throw 'Opsis self-test report is missing' }
+          $report = Get-Content $reportPath -Raw | ConvertFrom-Json
+          if (!$report.Passed -or $report.Checks.Count -lt 4) { throw 'Opsis executable reported failed/incomplete self-test' }
+          Write-Host "PASS actual published Opsis.exe: $($report.Checks.Count) self-test checks"
+      - name: Render WebView2 Weather 2D, 2.5D and 3D scenes in Windows VM
+        run: |
+          dotnet run --project tests/weather-spatial/WebViewSmoke.csproj -c Release -- publish/widgets/wallpaper weather-captures
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          if (@(Get-ChildItem weather-captures -Filter '*.png' -ErrorAction SilentlyContinue).Count -lt 1) {
+            throw 'WebView2 smoke did not capture any live Windows weather frame'
+          }
+      - name: Archive Windows weather frames
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: opsis30-weather-frames-${{ matrix.os }}
+          path: weather-captures/*.png
+          retention-days: 7
+          if-no-files-found: warn
+      - name: Archive build evidence
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: opsis30-preview-${{ matrix.os }}
+          path: |
+            Opsis-Integration-Preview-*.zip
+            **/TestResults/*.trx
+          retention-days: 7
+          if-no-files-found: warn

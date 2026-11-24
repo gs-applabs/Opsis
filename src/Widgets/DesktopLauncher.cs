@@ -33,8 +33,9 @@ internal sealed class DesktopLauncher : Form
         window.FormClosed += (_, _) => { if (ReferenceEquals(_visible, window)) _visible = null; };
         var screen = Screen.FromRectangle(bar).WorkingArea;
         window.StartPosition = FormStartPosition.Manual;
-        int x = bar.Left + (bar.Height > bar.Width && bar.Left <= screen.Left ? bar.Width : 0);
-        int y = bar.Top > screen.Top + screen.Height / 2 ? bar.Top - window.Height : bar.Bottom;
+        bool vertical = bar.Height > bar.Width;
+        int x = vertical ? (bar.Left < screen.Left + screen.Width / 2 ? bar.Right : bar.Left - window.Width) : bar.Left;
+        int y = vertical ? bar.Top : bar.Top > screen.Top + screen.Height / 2 ? bar.Top - window.Height : bar.Bottom;
         window.Location = new Point(Math.Clamp(x, screen.Left, Math.Max(screen.Left, screen.Right - window.Width)),
             Math.Clamp(y, screen.Top, Math.Max(screen.Top, screen.Bottom - window.Height)));
         window.Show();
@@ -78,6 +79,12 @@ internal sealed class DesktopLauncher : Form
             Add(MainWindow.StudioText("Explorer", "Εξερεύνηση"), () => Process.Start("explorer.exe"));
             Add(MainWindow.StudioText("Opsis settings", "Ρυθμίσεις Opsis"), () => TrayApplicationContext.OpenPage?.Invoke("Settings"));
             Add(MainWindow.StudioText("Task View", "Προβολή εργασιών"), VirtualWorkspaces.OpenTaskView);
+            try
+            {
+                foreach (var action in StartStudioPreferences.Read().PowerActions)
+                    Add(action, () => RunPowerAction(action));
+            }
+            catch (Exception ex) { RotatingLogger.Write("Start power settings: " + ex.Message); }
             layout.Controls.Add(shortcuts, 0, 2);
         }
         Controls.Add(layout);
@@ -132,6 +139,24 @@ internal sealed class DesktopLauncher : Form
         };
         FormClosed += (_, _) => { _closing.Cancel(); _closing.Dispose(); };
     }
+
+    private static void RunPowerAction(string action)
+    {
+        if (!StartStudioPreferences.AvailablePowerActions.Contains(action)) return;
+        if (action != "Lock" && MessageBox.Show("Save your work first. Continue with " + action + "?", "Opsis",
+            MessageBoxButtons.YesNo, MessageBoxIcon.Warning, MessageBoxDefaultButton.Button2) != DialogResult.Yes) return;
+        try
+        {
+            if (action == "Lock") { LockWorkStation(); return; }
+            var args = action switch { "Sign out" => "/l", "Restart" => "/r /t 0", "Shut down" => "/s /t 0", _ => throw new InvalidOperationException() };
+            Process.Start(new ProcessStartInfo(Path.Combine(Environment.SystemDirectory, "shutdown.exe"), args) { UseShellExecute = false, CreateNoWindow = true });
+        }
+        catch (Exception ex) { MessageBox.Show(ex.Message, "Opsis"); }
+    }
+
+    [System.Runtime.InteropServices.DllImport("user32.dll")]
+    [return: System.Runtime.InteropServices.MarshalAs(System.Runtime.InteropServices.UnmanagedType.Bool)]
+    private static extern bool LockWorkStation();
 
     private static Entry[] ReadEntries(CancellationToken token)
     {

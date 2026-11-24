@@ -254,6 +254,9 @@ namespace MotionDesk.Widgets
                 weatherSim = settings.WeatherSimulation,
                 timeSim = settings.TimeSimulation,
                 weatherGlass = settings.WeatherGlass,
+                signatureWeatherCard = AppSettings.Peek().ThemeMode == "SignatureGlass" && !SystemInformation.HighContrast,
+                weatherSpatialMode = settings.WeatherSpatialMode is "2.5D" or "3D"
+                    ? settings.WeatherSpatialMode : "Off",
                 rainLandscapeIntensity = Math.Clamp(settings.RainLandscapeIntensity, 0, 200) / 100.0,
                 rainGlassIntensity = Math.Clamp(settings.RainGlassIntensity, 0, 200) / 100.0,
                 weatherPhotoFocusX = Math.Clamp(settings.WeatherPhotoFocusX, 0, 100) / 100.0,
@@ -270,7 +273,7 @@ namespace MotionDesk.Widgets
                 weatherLon = settings.WeatherLon,
                 rotateMinutes = settings.RotateEveryMinutes,
                 windSim = settings.WindSimulation,
-                weatherInfo = settings.WeatherShowInfo && (WallpaperSettings.IsWeatherMode(effectiveMode) || settings.InfoOnAllModes)
+                weatherInfo = settings.WeatherShowInfo && (WallpaperSettings.IsWeatherMode(effectiveMode) || effectiveMode == WallpaperSettings.AthensMode || settings.InfoOnAllModes)
                     && !(AppSettings.Peek().PresentationMonitorIds?.Any(id =>
                         id.Equals(_screenDeviceName, StringComparison.OrdinalIgnoreCase) ||
                         id.Equals(MonitorTopologyService.ForDevice(_screenDeviceName)?.Id, StringComparison.OrdinalIgnoreCase)) ?? false),
@@ -318,6 +321,18 @@ namespace MotionDesk.Widgets
             var settings = WallpaperSettings.Load();
             MotionDesk.Services.WeatherService.RequestWallpaperWeatherRefresh(settings.WeatherLat, settings.WeatherLon);
         }
+
+        // The built-in Ancient Athens theme always uses Athens observations, not
+        // the user's currently selected Weather city. The shared 10-minute cache
+        // prevents unnecessary service requests and SSD writes.
+        private const double AncientAthensLat = 37.9715;
+        private const double AncientAthensLon = 23.7267;
+
+        public string GetAncientAthensWeatherJson() =>
+            MotionDesk.Services.WeatherService.GetWallpaperWeatherCached(AncientAthensLat, AncientAthensLon);
+
+        public void RequestAncientAthensWeatherRefresh() =>
+            MotionDesk.Services.WeatherService.RequestWallpaperWeatherRefresh(AncientAthensLat, AncientAthensLon);
 
         // Αν αυτή η οθόνη έχει "καρφιτσωμένο" δικό της βίντεο (ScreenVideoOverride), το
         // χρησιμοποιεί αντί για το κοινό playlist — έτσι υποστηρίζεται διαφορετικό βίντεο ανά
@@ -523,6 +538,9 @@ namespace MotionDesk.Widgets
         // "Auto" = live wind. Otherwise Calm|LightBreeze|FreshBreeze|Strong|Gale (Beaufort 1/3/5/7/9) — drives waves and cloud speed
         public string WindSimulation { get; set; } = "Auto";
         public bool WeatherGlass { get; set; } = true;   // raindrops on a window pane while it rains
+        // 2.5D = depth-separated sky parallax; 3D also adds GPU perspective weather particles.
+        // Off remains the safe default for upgrades and low-end or unsupported GPUs.
+        public string WeatherSpatialMode { get; set; } = "Off";
         public int RainLandscapeIntensity { get; set; } = 100; // 0..200 percent, independent of actual weather data
         public int RainGlassIntensity { get; set; } = 100;     // 0..200 percent; 0 disables window droplets
         public int WeatherPhotoFocusX { get; set; } = 50;     // 0..100, subject placement in portrait photo crop
@@ -976,6 +994,62 @@ namespace MotionDesk.Widgets
         // Ακριβές "στιγμιότυπο" του ΠΡΑΓΜΑΤΙΚΑ αποδομένου wallpaper (waves/video + το overlay
         // ρολογιού κ.λπ.) για χρήση ως εικόνα οθόνης κλειδώματος — όχι ξαναζωγραφισμένο αντίγραφο,
         // αλλά literal screenshot του WebView2 μέσω της επίσημης CapturePreview API.
+#if SIGNATURE_COMPOSITION_PREVIEW
+        private Bitmap? _signatureFrame;
+        private bool _signatureCaptureBusy;
+        private long _signatureNextCapture;
+
+        // One bounded in-memory image per wallpaper window, never a desktop screenshot.
+        // Called on the wallpaper UI thread. Capture is demand-driven and rate-limited.
+        internal async Task<Bitmap?> CaptureSignatureCropAsync(Rectangle desktopBounds)
+        {
+            var screen = TargetScreen.Bounds;
+            if (!screen.Contains(desktopBounds) || desktopBounds.Width < 1 || desktopBounds.Height < 1 ||
+                IsDisposed || Disposing || !Visible || _paused || AppActivity.IsPausedFor(TargetScreen))
+                return null;
+            long now = Environment.TickCount64;
+            if (!_signatureCaptureBusy && now >= _signatureNextCapture && _webView?.CoreWebView2 is { } core &&
+                screen.Width <= 4096 && screen.Height <= 4096 && (long)screen.Width * screen.Height <= 8388608)
+            {
+                _signatureCaptureBusy = true;
+                int interval = GlassService.Level == GlassLevel.Full && GlassPaneBinder.SignatureDiagnostics?.AdaptiveTier == Opsis.UI.GlassTier.High ? 500 : 2000;
+                _signatureNextCapture = now + interval;
+                var captureWatch = System.Diagnostics.Stopwatch.StartNew();
+                try
+                {
+                    using var stream = new MemoryStream();
+                    await core.CapturePreviewAsync(Microsoft.Web.WebView2.Core.CoreWebView2CapturePreviewImageFormat.Png, stream);
+                    if (IsDisposed || Disposing || !Visible || _paused || stream.Length > 48L * 1024 * 1024) return null;
+                    stream.Position = 0;
+                    using var decoded = Image.FromStream(stream);
+                    double fit = Math.Min(1d, 1280d / Math.Max(decoded.Width, decoded.Height));
+                    var next = new Bitmap(Math.Max(1,(int)(decoded.Width*fit)), Math.Max(1,(int)(decoded.Height*fit)));
+                    try { using var g = Graphics.FromImage(next); g.DrawImage(decoded, 0, 0, next.Width, next.Height); }
+                    catch { next.Dispose(); throw; }
+                    _signatureFrame?.Dispose();
+                    _signatureFrame = next;
+                }
+                catch (Exception) { _signatureFrame?.Dispose(); _signatureFrame = null; }
+                finally { _signatureCaptureBusy = false; _signatureNextCapture = Math.Max(_signatureNextCapture, Environment.TickCount64 + Math.Clamp(captureWatch.ElapsedMilliseconds * 3, 100, 4000)); }
+            }
+            if (IsDisposed || Disposing || !Visible || _paused || _signatureFrame is not { } frame ||
+                !TargetScreen.Bounds.Equals(screen)) return null;
+            var source = new RectangleF(
+                (desktopBounds.X-screen.X) * frame.Width/(float)screen.Width,
+                (desktopBounds.Y-screen.Y) * frame.Height/(float)screen.Height,
+                desktopBounds.Width * frame.Width/(float)screen.Width,
+                desktopBounds.Height * frame.Height/(float)screen.Height);
+            double scale = Math.Min(1d, 1024d / Math.Max(desktopBounds.Width, desktopBounds.Height));
+            var crop = new Bitmap(Math.Max(1,(int)(desktopBounds.Width*scale)), Math.Max(1,(int)(desktopBounds.Height*scale)));
+            try
+            {
+                using var g = Graphics.FromImage(crop);
+                g.DrawImage(frame, new RectangleF(0,0,crop.Width,crop.Height), source, GraphicsUnit.Pixel);
+                return crop;
+            }
+            catch { crop.Dispose(); return null; }
+        }
+#endif
         public async Task<bool> CapturePngAsync(string filePath)
         {
             var webView = _webView;
@@ -1212,6 +1286,9 @@ namespace MotionDesk.Widgets
                 _bridge = null;
                 _webView?.Dispose();
                 _webView = null;
+#if SIGNATURE_COMPOSITION_PREVIEW
+                _signatureFrame?.Dispose(); _signatureFrame = null;
+#endif
             }
             base.Dispose(disposing);
         }
@@ -1563,6 +1640,41 @@ namespace MotionDesk.Widgets
         // MD roadmap item: ακριβές στιγμιότυπο του τρέχοντος wallpaper (waves/βίντεο + overlay) για
         // χρήση ως εικόνα οθόνης κλειδώματος — από την οθόνη με το WallpaperWindow που είναι όντως
         // ορατό αυτή τη στιγμή (Screen.PrimaryScreen όταν υπάρχει, αλλιώς το πρώτο διαθέσιμο).
+#if SIGNATURE_COMPOSITION_PREVIEW
+        internal async Task<Bitmap?> CaptureSignatureCropAsync(Rectangle bounds)
+        {
+            if (!Active || UserPaused) return null;
+            if (bounds.Width < 1 || bounds.Height < 1) return null;
+            var candidates = _windows.Where(w => !w.IsDisposed && w.Visible && w.TargetScreen.Bounds.IntersectsWith(bounds))
+                .GroupBy(w => w.TargetScreen.DeviceName).Select(g => g.First()).ToArray();
+            var target = candidates.FirstOrDefault(w => w.TargetScreen.Bounds.Contains(bounds));
+            if (target != null) return await target.CaptureSignatureCropAsync(bounds);
+            // Composite only complete coverage; no pixels outside the wallpaper windows.
+            var pieces = candidates.Select(w => (Window: w, Area: Rectangle.Intersect(bounds,w.TargetScreen.Bounds))).ToArray();
+            if (pieces.Length < 2 || pieces.Sum(p => (long)p.Area.Width*p.Area.Height) != (long)bounds.Width*bounds.Height) return null;
+            for (int i=0;i<pieces.Length;i++) for(int j=i+1;j<pieces.Length;j++)
+                if (pieces[i].Area.IntersectsWith(pieces[j].Area)) return null;
+            double scale = Math.Min(1d,1024d / Math.Max(bounds.Width,bounds.Height));
+            var result = new Bitmap(Math.Max(1,(int)(bounds.Width*scale)),Math.Max(1,(int)(bounds.Height*scale)));
+            bool completed = false;
+            try
+            {
+                foreach (var piece in pieces)
+                {
+                    using var crop = await piece.Window.CaptureSignatureCropAsync(piece.Area);
+                    if (crop == null || !Active || UserPaused) return null;
+                    using var g = Graphics.FromImage(result);
+                    var dest = Rectangle.FromLTRB(
+                        (int)Math.Round((piece.Area.Left-bounds.Left)*scale),(int)Math.Round((piece.Area.Top-bounds.Top)*scale),
+                        Math.Min(result.Width,(int)Math.Round((piece.Area.Right-bounds.Left)*scale)),
+                        Math.Min(result.Height,(int)Math.Round((piece.Area.Bottom-bounds.Top)*scale)));
+                    if (dest.Width > 0 && dest.Height > 0) g.DrawImage(crop,dest);
+                }
+                completed = true; return result;
+            }
+            finally { if (!completed) result.Dispose(); }
+        }
+#endif
         public async Task<bool> CaptureSnapshotAsync(string filePath)
         {
             var target = _windows.FirstOrDefault(w => !w.IsDisposed && w.Visible && w.TargetScreen.Primary)
@@ -1830,6 +1942,16 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Count);
                 if (settings.RainLandscapeIntensity == percent) return;
                 settings.RainLandscapeIntensity = percent;
             }
+            settings.Save();
+            _ = RefreshAllAsync();
+        }
+
+        public void SetWeatherSpatialMode(string mode)
+        {
+            if (mode is not ("Off" or "2.5D" or "3D")) mode = "Off";
+            var settings = WallpaperSettings.Load();
+            if (settings.WeatherSpatialMode == mode) return;
+            settings.WeatherSpatialMode = mode;
             settings.Save();
             _ = RefreshAllAsync();
         }

@@ -1,0 +1,133 @@
+{
+  "schema": 1,
+  "baseline": "2.8.0.2510",
+  "target": "3.0.0.3200",
+  "branch": "feat/3.0.0.3200-integration",
+  "baseline_properties": 205,
+  "current_properties": 222,
+  "additions": [
+    {
+      "owner": "AppSettings",
+      "name": "WallpaperAccentEnabled",
+      "type": "bool",
+      "source": "src/Services/AppSettings.cs",
+      "line": 64
+    },
+    {
+      "owner": "AppSettings",
+      "name": "WallpaperAccentHex",
+      "type": "string",
+      "source": "src/Services/AppSettings.cs",
+      "line": 65
+    },
+    {
+      "owner": "AppSettings",
+      "name": "OpsisAutomationsEnabled",
+      "type": "bool",
+      "source": "src/Services/AppSettings.cs",
+      "line": 194
+    },
+    {
+      "owner": "AppSettings",
+      "name": "WindowRulesEnabled",
+      "type": "bool",
+      "source": "src/Services/AppSettings.cs",
+      "line": 195
+    },
+    {
+      "owner": "AppSettings",
+      "name": "CursorFxEnabled",
+      "type": "bool",
+      "source": "src/Services/AppSettings.cs",
+      "line": 197
+    },
+    {
+      "owner": "AppSettings",
+      "name": "CursorFxStyle",
+      "type": "string",
+      "source": "src/Services/AppSettings.cs",
+      "line": 198
+    },
+    {
+      "owner": "AppSettings",
+      "name": "CursorFxIntensity",
+      "type": "int",
+      "source": "src/Services/AppSettings.cs",
+      "line": 199
+    },
+    {
+      "owner": "AppSettings",
+      "name": "HotCornersEnabled",
+      "type": "bool",
+      "source": "src/Services/AppSettings.cs",
+      "line": 201
+    },
+    {
+      "owner": "AppSettings",
+      "name": "HotCornerTopLeft",
+      "type": "string",
+      "source": "src/Services/AppSettings.cs",
+      "line": 202
+    },
+    {
+      "owner": "AppSettings",
+      "name": "HotCornerTopRight",
+      "type": "string",
+      "source": "src/Services/AppSettings.cs",
+      "line": 203
+    },
+    {
+      "owner": "AppSettings",
+      "name": "HotCornerBottomLeft",
+      "type": "string",
+      "source": "src/Services/AppSettings.cs",
+      "line": 204
+    },
+    {
+      "owner": "AppSettings",
+      "name": "HotCornerBottomRight",
+      "type": "string",
+      "source": "src/Services/AppSettings.cs",
+      "line": 205
+    },
+    {
+      "owner": "AppSettings",
+      "name": "HotCornerDwellMilliseconds",
+      "type": "int",
+      "source": "src/Services/AppSettings.cs",
+      "line": 207
+    },
+    {
+      "owner": "AppSettings",
+      "name": "HotCornerEdgePixels",
+      "type": "int",
+      "source": "src/Services/AppSettings.cs",
+      "line": 208
+    },
+    {
+      "owner": "AppSettings",
+      "name": "HotCornersPauseOnFullscreen",
+      "type": "bool",
+      "source": "src/Services/AppSettings.cs",
+      "line": 209
+    },
+    {
+      "owner": "AppSettings",
+      "name": "MouseTrailsOriginalCount",
+      "type": "int?",
+      "source": "src/Services/AppSettings.cs",
+      "line": 212
+    },
+    {
+      "owner": "WallpaperSettings",
+      "name": "WeatherSpatialMode",
+      "type": "string",
+      "source": "src/Widgets/WallpaperWindow.cs",
+      "line": 530
+    }
+  ],
+  "missing": [],
+  "typeChanges": [],
+  "duplicate_count": 0,
+  "release_blockers": 0
+}

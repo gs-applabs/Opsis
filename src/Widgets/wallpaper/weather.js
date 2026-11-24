@@ -98,6 +98,14 @@ function sunTimes(offMin) {
 }
 
 function offsetMinutes() {
+    if (cfg.historicalAthens) {
+        const now = new Date();
+        const parts = new Intl.DateTimeFormat('en-GB', {timeZone:'Europe/Athens', hourCycle:'h23',hour:'numeric',minute:'numeric'}).formatToParts(now);
+        const hour = +parts.find(p=>p.type==='hour').value;
+        const minute = +parts.find(p=>p.type==='minute').value;
+        const offset = hour*60 + minute - now.getUTCHours()*60 - now.getUTCMinutes();
+        return ((offset + 720) % 1440 + 1440) % 1440 - 720;
+    }
     if (data && typeof data.utcOffsetSec === 'number') return data.utcOffsetSec / 60;
     return -new Date().getTimezoneOffset();
 }
@@ -109,6 +117,8 @@ function localMinutes() {
     if (sim === 'Day') return (sr + ss) / 2;
     if (sim === 'Dusk') return ss - 4;
     if (sim === 'Night') return 60;
+    if (cfg.historicalAthens && sim === 'Golden') return ss - 25;
+    if (cfg.historicalAthens && sim === 'Blue') return ss + 26;
     const d = new Date();
     const utc = d.getUTCHours() * 60 + d.getUTCMinutes() + d.getUTCSeconds() / 60;
     return (utc + offsetMinutes() + 1440) % 1440;
@@ -241,7 +251,7 @@ function buildCloudSprites(realistic = false) {
             let d = 0;
             if (kind === 'cumulus') {
                 const bump = fbm(tab, u * 2.6, 4.1, 3), qx = (u - 0.5) / 0.47, qy = (0.82 - w) / (0.66 * (0.7 + 0.6 * bump));
-                const q = qx * qx + qy * qy, m = smooth((1 - q) / 0.55) * smooth((0.84 - w) / 0.06);       // a rounded dome with a flat base, lumpy outline
+                const q = qx * qx + qy * qy, m = smooth((1 - q) / 0.55) * smooth((0.84 + (realistic ? wy * .55 : 0) - w) / (realistic ? .13 : .06));       // a rounded dome with a flat base, lumpy outline
                 const n = fbm(tab, u * 9 + wx * 6, w * 9 + wy * 6, 6);                                  // billows
                 d = m * 0.9 + (n - 0.5) * 1.5 * smooth(m * 2.5) - 0.12;
                 if (m <= 0.001) d = 0;
@@ -415,8 +425,10 @@ function setConfig(c) {
     cfg.rainLandscapeIntensity = Number.isFinite(+cfg.rainLandscapeIntensity) ? clamp(+cfg.rainLandscapeIntensity, 0, 2) : 1;
     // Weather observations belong to a location. Never briefly show the previous city's
     // temperature when the user changes coordinates while the next request is pending.
-    if (old.lat !== cfg.lat || old.lon !== cfg.lon) data = null;
-    if (old.weatherSim !== cfg.weatherSim || old.windSim !== cfg.windSim || old.lat !== cfg.lat || old.lon !== cfg.lon) computeTargets();
+    const locationChanged = old.lat !== cfg.lat || old.lon !== cfg.lon || Boolean(old.historicalAthens) !== Boolean(cfg.historicalAthens);
+    if (locationChanged) data = null;
+    if (old.weatherSim !== cfg.weatherSim || old.windSim !== cfg.windSim || locationChanged) computeTargets();
+    if (locationChanged) { Object.assign(S, TGT); birds = []; birdWait = 4; }
     sunCache.key = '';
 }
 
@@ -528,7 +540,7 @@ function drawMoonLayer(t, sr, ss, vis, cityPhoto) {
     const lunarX = lunar && lunar.azimuth >= 75 && lunar.azimuth <= 285 ? (lunar.azimuth-75)/210 : null;
     const x = W * (lunarX === null ? 0.12+0.76*v : 0.08+0.84*lunarX);
     const y = lunar ? horizon-Math.max(-.12,Math.min(1,lunar.altitude/70))*horizon*.72+6 : horizon-e*horizon*.72+6;
-    const r = Math.max(18, Math.min(W, H) * 0.042);
+    const r = cityPhoto && cfg.spatialMode === '2.5D' ? Math.max(5, Math.min(W,H)*.015) : Math.max(18, Math.min(W, H) * 0.042);
     lightX = x / W;
     const alpha = vis * (1 - S.cloud * 0.9) * smooth((e + 0.06) / 0.14);
     if (alpha <= 0.02) return { x, y, r, alpha: 0 };
@@ -572,7 +584,8 @@ function drawSunLayer(sky, t, sr, ss, cityPhoto) {
     const sunX = solar && solar.azimuth >= 75 && solar.azimuth <= 285 ? (solar.azimuth-75)/210 : null;
     const x = W * (sunX === null ? 0.1+0.8*clamp(u,-0.1,1.1) : 0.08+0.84*sunX);
     const y = solar ? horizon - Math.max(-.12, Math.min(1, solar.altitude / 70))*horizon*.78 : horizon - e*horizon*.78;
-    const r = Math.max(18, Math.min(W, H) * 0.04);
+    const photoDepth = cityPhoto && cfg.spatialMode === '2.5D';
+    const r = photoDepth ? Math.max(4, Math.min(W,H)*.011) : Math.max(18, Math.min(W, H) * 0.04);
     const vis = smooth((e + 0.1) / 0.16) * (1 - S.cloud * 0.82) * (1 - S.fog * 0.3);
     if (e > 0.02) lightX = x / W;
     const g = skyCtx;
@@ -597,9 +610,11 @@ function drawSunLayer(sky, t, sr, ss, cityPhoto) {
             g.restore();
         }
         // lens bloom: a faint horizontal streak and a wide soft halo
-        const bl = g.createLinearGradient(x - r * 9, y, x + r * 9, y);
-        bl.addColorStop(0, rgba(warm, 0)); bl.addColorStop(0.5, rgba(warm, 0.22 * vis)); bl.addColorStop(1, rgba(warm, 0));
-        g.fillStyle = bl; g.fillRect(x - r * 9, y - r * 0.18, r * 18, r * 0.36);
+        if (!photoDepth) {
+            const bl = g.createLinearGradient(x - r * 9, y, x + r * 9, y);
+            bl.addColorStop(0, rgba(warm, 0)); bl.addColorStop(0.5, rgba(warm, 0.22 * vis)); bl.addColorStop(1, rgba(warm, 0));
+            g.fillStyle = bl; g.fillRect(x - r * 9, y - r * 0.18, r * 18, r * 0.36);
+        }
         // crepuscular rays through broken cloud: thin fans, slowly breathing
         const rayA = 0.06 * vis * clamp(S.cloud * 1.6, 0, 1) * (1 - S.rain);
         if (rayA > 0.004) {
@@ -890,6 +905,7 @@ function startScenePhoto(id) {
     photoState.key = '';
     photoState.lights = null;
     photoState.skyMask = null;
+    photoState.fineMask = null;
     const image = photoState.img = new Image();
     image.onload = () => {
         if (photoState.img !== image) return;
@@ -917,7 +933,13 @@ function drawScenePhoto(c2, sky, graded) {
     const x = bounds?.x ?? 0, y = bounds?.y ?? H - h;
     const amb = clamp(sky.amb, 0, 1), night = clamp(1 - amb / 0.35, 0, 1), fog = clamp(S.fog, 0, 1), glow = clamp(sky.glow || 0, 0, 1);
     const look = cfg.realistic || photoState.landscape ? atmosphere?.photoGrade(amb, glow, S) : null;
-    const key = [w, h, H, Number(Boolean(look)), Math.round(amb * 14), Math.round(night * 8), Math.round(fog * 10),
+    const refine = cfg.spatialMode !== 'Off' && photoState.skyMask &&
+        !cfg.skyEdits?.[window.OpsisLandmarks.photoScene(photoState.id)?.file];
+    if (refine && !photoState.fineMask) {
+        try { photoState.fineMask = window.OpsisSkyMask.refinePhotoSky(photoState.img, photoState.skyMask); }
+        catch { photoState.fineMask = photoState.skyMask; }
+    }
+    const key = [w, h, H, Number(Boolean(refine)), Number(Boolean(look)), Math.round(amb * 14), Math.round(night * 8), Math.round(fog * 10),
         Math.round(glow * 4), Math.round(S.snowCover * 4), look ? Math.round((S.rain + S.storm) * 8) : 0].join('/');
     if (photoState.key !== key) {
         const resolution = Math.min(1, 3072 / Math.max(w, h));
@@ -947,12 +969,14 @@ function drawScenePhoto(c2, sky, graded) {
             o.rect(0, 0, cacheW, Math.max(0, (HORIZON - y) * cacheH / h));
             o.clip();
             o.globalCompositeOperation = 'destination-out';
-            o.drawImage(photoState.skyMask, 0, 0, cacheW, cacheH);
+            o.drawImage(refine ? photoState.fineMask : photoState.skyMask, 0, 0, cacheW, cacheH);
             o.restore();
         }
         o.globalCompositeOperation = 'source-over'; photoState.key = key;
     }
     c2.drawImage(photoState.canvas, x, y, w, h);
+    if (cfg.spatialMode !== 'Off' && !cfg.reducedMotion && tierLevel() > 0)
+        atmosphere?.drawPhotoWater(c2, photoState.id, photoState.canvas, x, y, w, h, celest, S, animTime, tierLevel() > 1);
     if (cfg.skylinePreview && photoState.skyMask)
         window.OpsisSkyMask?.outline(c2, photoState.skyMask, { x, y, width: w, height: h });
     if (night > 0.05 && photoState.lightsReady) { c2.save(); c2.globalAlpha = Math.min(1, night * 0.95); c2.globalCompositeOperation = 'lighter'; c2.drawImage(photoState.lights, x, y, w, h); c2.restore(); }
@@ -1546,12 +1570,13 @@ function draw(target, dt, profile) {
 
     // ease the scene toward the weather targets (so a weather change is a slow cross-fade, never a pop)
     const rate = 0.55;
-    S.cloud = approach(S.cloud, TGT.cloud, dt, rate); S.rain = approach(S.rain, TGT.rain, dt, rate);
-    S.snow = approach(S.snow, TGT.snow, dt, rate); S.fog = approach(S.fog, TGT.fog, dt, rate * 0.7);
-    S.storm = approach(S.storm, TGT.storm, dt, rate); S.windX = approach(S.windX, TGT.windX, dt, 0.4);
-    S.wind = approach(S.wind, TGT.wind, dt, 0.35); S.dir = approach(S.dir, TGT.dir, dt, 0.3);
+    const weatherDt = cfg.historicalAthens && cfg.reducedMotion ? 2 : dt;
+    S.cloud = approach(S.cloud, TGT.cloud, weatherDt, rate); S.rain = approach(S.rain, TGT.rain, weatherDt, rate);
+    S.snow = approach(S.snow, TGT.snow, weatherDt, rate); S.fog = approach(S.fog, TGT.fog, weatherDt, rate * 0.7);
+    S.storm = approach(S.storm, TGT.storm, weatherDt, rate); S.windX = approach(S.windX, TGT.windX, weatherDt, 0.4);
+    S.wind = approach(S.wind, TGT.wind, weatherDt, 0.35); S.dir = approach(S.dir, TGT.dir, weatherDt, 0.3);
     BFN = beaufort(S.wind);
-    S.snowCover = approach(S.snowCover, TGT.snow > 0.3 ? Math.min(1, TGT.snow) : 0, dt, 0.06);
+    S.snowCover = approach(S.snowCover, TGT.snow > 0.3 ? Math.min(1, TGT.snow) : 0, weatherDt, 0.06);
 
     const t = localMinutes();
     const { sr, ss } = sunTimes(offsetMinutes());
@@ -1570,9 +1595,19 @@ function draw(target, dt, profile) {
     if (shoot) { shoot.life += dt; if (shoot.life >= shoot.dur) shoot = null; }
 
     // ---- sky canvas
-    const photograph = onPhoto();
-    const cityPhoto = photograph && !photoState.landscape;
     const graded = drawSkyLayer(sky, t, sr, ss);
+    // Photographic plates have priority over stylised meshes. 3D adds atmospheric
+    // depth when a real scene exists; never replace a ready city photo with a mesh.
+    const historical = cfg.historicalAthens === true;
+    const photoReady = !historical && onPhoto();
+    const location = !historical && cfg.realistic && cfg.spatialMode === '3D' && !photoReady && resolveLandmark();
+    const mesh = window.OpsisWeatherSpatial?.update(dt,
+        { rain: S.rain, snow: S.snow, windX: S.windX, seconds: animTime },
+        profile?.id || 'Balanced', cfg.reducedMotion === true,
+        location ? { id: location.id, city: landmarkScene.city, ambient: sky.amb,
+            horizon: graded.hor, fog: S.fog, snowCover: S.snowCover, lightSide: t < (sr + ss) / 2 ? -1 : 1 } : null);
+    const photograph = historical || (!mesh && photoReady);
+    const cityPhoto = historical || (photograph && !photoState.landscape);
     drawStarsLayer(sky, 1 - S.cloud * 0.8 - S.fog * 0.5);
     drawMilkyWay(sky);
     const moon = drawMoonLayer(t, sr, ss, 1, cityPhoto);
@@ -1587,7 +1622,7 @@ function draw(target, dt, profile) {
     if (cfg.realistic) window.OpsisWeatherAtmosphere?.drawSky(skyCtx, W, HORIZON, sky, graded, celest, S);
     if (flash > 0) { skyCtx.fillStyle = `rgba(200,215,255,${flash * 0.55})`; skyCtx.fillRect(0, 0, W, HORIZON); }
     drawBolt(skyCtx);
-    if (!photograph) drawHillsLayer(sky, graded);
+    if (!mesh && !photograph) drawHillsLayer(sky, graded);
 
     // ---- composite
     // Ξ”Ξ™ΞΞ΅ΞΞ©Ξ£Ξ— "Ο„ΞΏ ΞµΟ†Ξ­ Ο„Ο‰Ξ½ ΟƒΟ„Ξ±Ξ³ΟΞ½Ο‰Ξ½ ΟƒΟ„Ξ·Ξ½ ΞΏΞΈΟΞ½Ξ· Ξ΄ΞµΞ½ Ξ»ΞµΞΉΟ„ΞΏΟ…ΟΞ³ΞµΞ―": Ο„ΞΏ updateGlass (Ο€ΞΏΟ… Ξ“Ξ•ΞΞ™Ξ–Ξ•Ξ™ Ο„ΞΏ
@@ -1606,9 +1641,27 @@ function draw(target, dt, profile) {
     }
     c2.setTransform(1, 0, 0, 1, 0, 0);
     c2.globalAlpha = 1; c2.globalCompositeOperation = 'source-over';
-    c2.drawImage(skyCv, 0, 0);
-    drawBirds(c2, dt, sky, cityPhoto);
-    if (photograph) drawScenePhoto(c2, sky, graded);
+    // 2.5D: independent distant-sky parallax, with slight overscan to avoid edge gaps.
+    // The land/photo, rain, fog and glass remain at their original screen depth.
+    if (cfg.spatialMode !== 'Off' && !cfg.reducedMotion && tierLevel() >= 1) {
+        const pad = Math.max(2, W * 0.014);
+        const drift = Math.sin(animTime * 0.15) * pad * 0.34;
+        c2.drawImage(skyCv, -pad + drift, 0, W + 2 * pad, HORIZON);
+    } else {
+        c2.drawImage(skyCv, 0, 0);
+    }
+    if (!cfg.reducedMotion) drawBirds(c2, dt, sky, cityPhoto);
+    if (historical) {
+        const athens = window.OpsisAncientAthens;
+        const phase = cfg.athensPhase || 'Auto';
+        const ok = athens?.draw(c2, W, H, phase, false, {sharedWeather:true, horizon:HORIZON, weather:S});
+        if (!ok) {
+            c2.fillStyle=rgba(graded.hor,1);c2.fillRect(0,HORIZON,W,H-HORIZON);
+            athens?.draw(c2,W,H,phase,false,{noEffects:true});
+        }
+    }
+    else if (mesh) c2.drawImage(mesh, 0, 0, W, H);
+    else if (photograph) drawScenePhoto(c2, sky, graded);
     else if (onLand()) {
         drawLand(c2, sky, graded);
         const city = activeCity();
@@ -1625,7 +1678,7 @@ function draw(target, dt, profile) {
     drawFog(c2, dt, graded, sky.amb);
     drawRain(c2, dt, sky.amb, density);
     drawSnow(c2, dt, sky.amb);
-    if (flash > 0) { c2.fillStyle = `rgba(210,222,255,${flash * 0.35})`; c2.fillRect(0, 0, W, H); }
+    if (flash > 0 && !cfg.reducedMotion) { c2.fillStyle = `rgba(210,222,255,${flash * 0.35})`; c2.fillRect(0, 0, W, H); }
     drawVignette(c2);
 
     if (useGlass) {
@@ -1638,10 +1691,11 @@ function draw(target, dt, profile) {
 window.WeatherWallpaper = {
     setConfig, setWeather, resize,
     release() {
+        window.OpsisWeatherSpatial?.dispose();
         W = H = 0;
         skyCv = skyCtx = cloudCv = cloudCtx = sceneCv = sceneCtx = reflCv = reflCtx = null;
         Object.assign(photoState, { id: '', key: '', ready: false, lightsReady: false,
-            img: null, lights: null, skyMask: null, canvas: null });
+            img: null, lights: null, skyMask: null, fineMask: null, canvas: null });
     },
     draw: (ctx2, dt, profile) => draw(ctx2, Math.min(dt, 0.1), profile),
     // info overlay helpers (clock / date / temperature drawn by index.html)
@@ -1658,7 +1712,7 @@ window.WeatherWallpaper = {
             stale: !!data?.stale };
     },
     // test helpers (headless screenshots)
-    _state: () => ({ S, TGT, bf: BFN, t: localMinutes(), sun: sunTimes(offsetMinutes()) }),
+    _state: () => ({ S, TGT, readyPhoto: photoState.ready ? photoState.id : null, bf: BFN, t: localMinutes(), sun: sunTimes(offsetMinutes()) }),
     _bolt: () => { nextBoltIn = 0; },
     _warm: (secs, ctx2, profile) => { for (let i = 0; i < secs * 30; i++) draw(ctx2, 1 / 30, profile); },
 };

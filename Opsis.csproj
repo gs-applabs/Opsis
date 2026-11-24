@@ -23,6 +23,9 @@
     <Compile Remove="tests/**;_compat/**;publish/**;Output/**" />
     <EmbeddedResource Remove="tests/**;_compat/**;publish/**;Output/**" />
     <None Remove="tests/**;_compat/**;publish/**;Output/**" />
+    <Content Remove="_compat/**" />
+    <PackageReference Include="SkiaSharp" Version="4.150.7" />
+    <PackageReference Include="SkiaSharp.NativeAssets.Win32" Version="4.150.7" />
     <Reference Include="lib/*.dll" Exclude="lib/WebView2Loader.dll;lib/libMonoPosixHelper.dll;lib/MonoPosixHelper.dll">
       <Private>true</Private>
     </Reference>

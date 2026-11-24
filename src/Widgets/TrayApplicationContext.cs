@@ -24,6 +24,10 @@ namespace MotionDesk.Widgets
         // Ξεχωριστό instance από αυτό που ήδη χρησιμοποιεί το wallpaper (WallpaperWindow) — αυτό εδώ
         // πρέπει να ζει όσο ζει η ίδια η εφαρμογή, ανεξάρτητα από το αν το wallpaper είναι ενεργό.
         private readonly ExplorerRestartWatcher _taskbarWatcher = new();
+        private readonly HotCornersService _hotCorners;
+        private readonly System.Windows.Forms.Timer _experienceTimer = new() { Interval = 60_000 };
+        private int _experienceChecks;
+        private bool _compatibilityIsolationApplied;
 
         public static event Action? ExitRequested;
         public static void RequestExit() => ExitRequested?.Invoke();
@@ -34,11 +38,20 @@ namespace MotionDesk.Widgets
         public TrayApplicationContext(string? desktopAction = null)
         {
             OpenPage = p => { try { ShowMainWindow(p); } catch (Exception) { } };
+            _hotCorners = new HotCornersService(() => ShowMainWindow("Personalization"));
             // Safe mode (v2.0 handoff, Φάση 1 §S): αν ενεργό, παραλείπονται plugins/wallpaper/
             // "Last Session" παρακάτω — μόνο το βασικό UI. Ο μετρητής crash μηδενίζεται μετά από
             // 30s επιτυχούς λειτουργίας (one-shot timer πιο κάτω), όχι αμέσως, ώστε ένα crash λίγο
             // μετά την εκκίνηση να εξακολουθεί να μετράει.
             bool safeMode = SafeModeService.IsSafeMode;
+            bool reviewRequired = false;
+            try
+            {
+                reviewRequired = WindowsUpdateGuard.EvaluateStartup();
+                if (reviewRequired)
+                    RotatingLogger.Write("New Windows build detected. Opsis shell replacement held for compatibility review.");
+            }
+            catch (Exception e) { RotatingLogger.Write("Windows compatibility guard failed: " + e.Message); reviewRequired = true; }
             if (safeMode)
             {
                 RotatingLogger.Write("Starting in SAFE MODE - plugins/wallpaper/last-session skipped.");
@@ -55,7 +68,13 @@ namespace MotionDesk.Widgets
             PluginHost.Instance.NavigationRequested += key => ShowMainWindow("plugin:" + key);
             // Plugins from user-writable folders run code inside Opsis: ask once, show the content hash, remember the approval (plugin-trust.json).
             // (the approval question is NOT asked while starting: see PluginHost.ConsiderFolder / ResolvePending)
-            if (!safeMode) { PluginHost.Instance.StartAll(); SchedulePluginApproval(); try { MotionDesk.Appearance.AppearanceService.Instance.Start(); } catch (Exception) { } }
+            if (!safeMode)
+            {
+                if (!reviewRequired) { PluginHost.Instance.StartAll(); SchedulePluginApproval(); }
+                else RotatingLogger.Write("Optional plugins held until Windows build compatibility review and Opsis restart.");
+                try { if (!reviewRequired) MotionDesk.Appearance.AppearanceService.Instance.Start(); }
+                catch (Exception e) { RotatingLogger.Write("Appearance service: " + e.Message); }
+            }
             // Start-up before the other start-up apps: switched on ONCE after the first run when Start with Windows is on (Settings can turn it off; never repeated)
             try
             {
@@ -164,6 +183,26 @@ namespace MotionDesk.Widgets
             };
 
             _trayIcon.DoubleClick += (s, e) => ShowMainWindow();
+            // Reuse the current NotifyIcon; no added background process or timer.
+            var trayStudio = new ToolStripMenuItem("Opsis tray icon / Εικονίδιο Opsis");
+            foreach (var option in new[] { "Original", "Information", "Shield" })
+            {
+                var entry = new ToolStripMenuItem(option);
+                entry.Click += (_, _) =>
+                {
+                    try
+                    {
+                        OpsisModCore.SetOption("control.opsis-center", "tray-icon", option);
+                        ApplyTrayIconStyle();
+                    }
+                    catch (Exception ex) { MessageBox.Show(ex.Message, "Opsis"); }
+                };
+                trayStudio.DropDownItems.Add(entry);
+            }
+            trayStudio.DropDownItems.Add("Windows taskbar / notification area", null, (_, _) => TaskbarViewProfiles.OpenWindowsTaskbarSettings());
+            contextMenu.Items.Insert(1, trayStudio);
+            _pluginMenuIndex++; // preserve insertion point after adding the icon studio
+            ApplyTrayIconStyle();
 
             _alertTimer = new System.Windows.Forms.Timer { Interval = 5000 };
             _alertTimer.Tick += (_, _) => UsageAlertTick();
@@ -182,15 +221,51 @@ namespace MotionDesk.Widgets
             // χρήστης το απενεργοποίησε ρητά (DeskZones page, "AppSettings.QuickHideDoubleClickEnabled").
             _taskbarWatcher.ExplorerRestarted += () =>
             {
-                try { GlassBlur.SetTaskbarTranslucency(WindowsSystemSettings.GetTransparencyEffectsEnabled()); }
+                try { if (!WindowsUpdateGuard.RequiresReview) GlassBlur.SetTaskbarTranslucency(WindowsSystemSettings.GetTransparencyEffectsEnabled()); }
                 catch (Exception) { } // σιωπηλό fallback — ζητήθηκε ρητά, βλ. E2
             };
 
             if (!safeMode && AppSettings.Load().QuickHideDoubleClickEnabled) DesktopIconVisibilityEngine.Instance.Start();
             else DesktopIconVisibilityEngine.Instance.RestoreIfHidden();
             AppActivity.Start();
+            if (!safeMode && !reviewRequired)
+            {
+                if (AppSettings.Load().WindowRulesEnabled) WindowRulesEngine.Instance.Start();
+                if (AppSettings.Load().CursorFxEnabled)
+                {
+                    try { MotionDesk.UI.OpsisCursorFx.Start(); }
+                    catch (Exception e) { RotatingLogger.Write("Cursor FX startup: " + e.Message); }
+                }
+            }
+            // No background thread or I/O during idle except a once-per-minute rule check.
+            // Build fingerprint is read only every 15 minutes; no Windows file hashing in the timer.
+            if (!safeMode)
+            {
+                try { if (!reviewRequired) OpsisAutomationStudio.ExecuteDue(true); }
+                catch (Exception e) { RotatingLogger.Write("Automation startup: " + e.Message); }
+                _experienceTimer.Tick += (_, _) =>
+                {
+                    try
+                    {
+                        if ((++_experienceChecks % 15) == 0)
+                        {
+                            if (WindowsUpdateGuard.EvaluateStartup()) IsolateShellForUpdate();
+                            // Opsis-only accent; no Windows registry writes and only
+                            // one settings save when the actual color changes.
+                            try { WallpaperAccentEngine.RefreshIfChanged(); }
+                            catch (Exception e) { RotatingLogger.Write("Wallpaper accent refresh: " + e.Message); }
+                        }
+                        if (WindowsUpdateGuard.RequiresReview) IsolateShellForUpdate();
+                        else if (!_compatibilityIsolationApplied && AppSettings.Peek().ReplaceWindowsTaskbar) ReplacementTaskbar.RefreshSettings();
+                        OpsisAutomationStudio.ExecuteDue(false);
+                    }
+                    catch (Exception e) { RotatingLogger.Write("Opsis experience check: " + e.Message); }
+                };
+                _experienceTimer.Start();
+            }
+            if (!safeMode && !reviewRequired) _hotCorners.Start();
             DesktopToolbar.RefreshSettings();
-            ReplacementTaskbar.RefreshSettings();
+            if (!reviewRequired) ReplacementTaskbar.RefreshSettings();
             if (!safeMode) VirtualWorkspaces.Start();
             AutoTileService.RefreshSettings();
             MotionDesk.Services.DiscordPresence.Instance.Apply();
@@ -356,8 +431,28 @@ namespace MotionDesk.Widgets
             t.Start();
         }
 
+        private void IsolateShellForUpdate()
+        {
+            if (_compatibilityIsolationApplied) return;
+            _compatibilityIsolationApplied = true;
+            void Hold(Action action, string name)
+            {
+                try { action(); }
+                catch (Exception e) { RotatingLogger.Write("Windows update isolation " + name + ": " + e.Message); }
+            }
+            Hold(ReplacementTaskbar.Stop, "taskbar");
+            Hold(WindowRulesEngine.Instance.Stop, "window rules");
+            Hold(AutoTileService.Stop, "auto tile");
+            Hold(_hotCorners.Stop, "hot corners");
+            Hold(MotionDesk.UI.OpsisCursorFx.Stop, "cursor effects");
+            Hold(() => MotionDesk.Appearance.AppearanceService.Instance.Stop(), "appearance");
+            Hold(PluginHost.Instance.SuspendForCompatibility, "plugins");
+            RotatingLogger.Write("Windows update isolation applied. Preferences preserved; restart after explicit approval.");
+        }
+
         private void AskPluginApproval()
         {
+            if (WindowsUpdateGuard.RequiresReview || _compatibilityIsolationApplied) return;
             // a hidden top-most owner so the box is never lost behind other windows (it used to appear behind the desktop at login and was never answered)
             using var owner = new Form { TopMost = true, ShowInTaskbar = false, FormBorderStyle = FormBorderStyle.None, Opacity = 0, Size = new System.Drawing.Size(1, 1), StartPosition = FormStartPosition.CenterScreen };
             owner.Show();
@@ -604,6 +699,10 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
             PluginHost.Instance.StopAll();
             try { MotionDesk.Appearance.AppearanceService.Instance.Stop(); } catch (Exception) { }   // taskbar look and window effects always go back to Windows
             _hotkeys.Dispose();
+            _experienceTimer.Stop(); _experienceTimer.Dispose();
+            MotionDesk.UI.OpsisCursorFx.Stop();
+            WindowRulesEngine.Instance.Dispose();
+            _hotCorners.Dispose();
             _taskbarWatcher.Dispose();
             try { _nativeContainers?.Dispose(); } catch { }
             try { StudioMusic.Stop(); } catch { }
@@ -616,6 +715,24 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
             DesktopIconVisibilityEngine.Instance.Stop();
             _trayIcon.Visible = false;
             Application.Exit();
+        }
+
+        private void ApplyTrayIconStyle()
+        {
+            try
+            {
+                var state = OpsisModCore.Read();
+                string? style = null;
+                if (state.Options.TryGetValue("control.opsis-center", out var options))
+                    options.TryGetValue("tray-icon", out style);
+                _trayIcon.Icon = style switch
+                {
+                    "Information" => System.Drawing.SystemIcons.Information,
+                    "Shield" => System.Drawing.SystemIcons.Shield,
+                    _ => MotionDesk.UI.AppWindowIcon.Value
+                };
+            }
+            catch (Exception ex) { RotatingLogger.Write("Tray icon style: " + ex.Message); }
         }
 
         private void ChooseWallpaperFolder()

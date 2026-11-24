@@ -2041,6 +2041,11 @@ namespace MotionDesk.UI
             host.Controls.Add(ComboRow("Wallpaper.WindSimLabel", WindSimIds, "Wallpaper.Wind.", settings.WindSimulation, id => WallpaperHostEngine.Instance.SetWindSimulation(id)));
             host.Controls.Add(ComboRow("Wallpaper.TimeSimLabel", TimeSimIds, "Wallpaper.Time.", settings.TimeSimulation, id => WallpaperHostEngine.Instance.SetTimeSimulation(id)));
 
+            host.Controls.Add(WeatherDepthPicker(settings.WeatherSpatialMode));
+            AddText(host, StudioText(
+                "3D needs WebGL2 hardware support and is reduced on low-power profiles; the normal 2D engine remains the automatic fallback.",
+                "Το 3D χρειάζεται WebGL2 και περιορίζεται στα προφίλ χαμηλής κατανάλωσης. Ο κλασικός 2D renderer παραμένει διαθέσιμος ως fallback."));
+
             var glass = new FlatToggle { RowWidth = 700, Text = LocalizationManager.T("Wallpaper.WeatherGlass"), Checked = settings.WeatherGlass, BackColor = UiTheme.PageBackground, Margin = new Padding(0, 6, 0, 10) };
             glass.CheckedChanged += (_, _) => WallpaperHostEngine.Instance.SetWeatherGlass(glass.Checked);
             host.Controls.Add(glass);
@@ -2613,6 +2618,311 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
             var panel = CreatePagePanel();
             AddText(panel, LocalizationManager.T("Personalization.Intro"));
             BuildWindowsAppearance(panel);   // Windows look, themes, safety (2.6.0): the same Personalization tab, no sub-tab
+            BuildEcosystemStudios(panel); // Shared P3/P4/P5 controls, backed by the Opsis Core contracts
+            bool deskFlipGreek = LocalizationManager.CurrentLanguage == "el";
+            var flipCard = AddCardSection(panel, deskFlipGreek ? "DeskFlip — Εναλλαγή παραθύρων" : "DeskFlip — Window switcher");
+            var flipPicker = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 280 };
+            flipPicker.Items.AddRange(new object[] { "Flip 3D", "Thumbnail grid", "Compact list" });
+            flipPicker.SelectedItem = DeskFlipEngine.Style;
+            flipCard.Controls.Add(flipPicker);
+            AddText(flipCard, deskFlipGreek
+                ? "Επιλέξτε εμφάνιση για το Ctrl+Alt+F. Η συντόμευση Alt+Tab των Windows δεν αλλάζει."
+                : "Choose the Ctrl+Alt+F appearance. Windows Alt+Tab remains unchanged.");
+            AddButtonGrid(flipCard,
+                (deskFlipGreek ? "Αποθήκευση εμφάνισης" : "Save style", (_, _) =>
+                {
+                    try
+                    {
+                        if (flipPicker.SelectedItem is string style) DeskFlipEngine.SetStyle(style);
+                    }
+                    catch (Exception ex) { MessageBox.Show(this, ex.Message, "DeskFlip", MessageBoxButtons.OK, MessageBoxIcon.Warning); }
+                }),
+                (deskFlipGreek ? "Άνοιγμα DeskFlip" : "Open DeskFlip", (_, _) => DeskFlipEngine.Show()));
+
+            var nativeThemeCard = AddCardSection(panel, StudioText("Native Shell themes (optional provider)", "Εγγενή θέματα Shell (προαιρετικός πάροχος)"));
+            AddText(nativeThemeCard, StudioText("Use a compatible existing Windhawk styler to avoid duplicate native hooks. Experimental, requires installed CLI and mod.", "Χρήση συμβατού υπάρχοντος Windhawk styler χωρίς διπλούς μηχανισμούς. Πειραματικό, απαιτεί εγκατεστημένο CLI και mod."));
+            AddButtonGrid(nativeThemeCard, (StudioText("Native Shell Theme Editor", "Επεξεργαστής εγγενών θεμάτων"), (_, _) =>
+            {
+                using var dialog = new NativeShellThemeForm(); dialog.ShowDialog(this);
+            }));
+
+            // ---------- Unified Opsis ecosystem: core modules, gallery, recovery ----------
+            var coreCard = AddCardSection(panel, LocalizationManager.CurrentLanguage == "el"
+                ? "Opsis Core — Ενιαίο οικοσύστημα" : "Opsis Core — Unified ecosystem");
+            AddText(coreCard, LocalizationManager.CurrentLanguage == "el"
+                ? "Όλες οι λειτουργίες και τα πρόσθετα εμφανίζονται στον ίδιο κατάλογο. Οι ρυθμίσεις αρθρώματος ελέγχονται για συμβατότητα· δεν εκτελούν αυτόματα κώδικα ή αλλαγές Windows. Οι μη υλοποιημένες δυνατότητες εμφανίζονται ως σχεδιαζόμενες."
+                : "All capabilities and plugin contributions share a catalog. Module switches validate compatibility and do not run arbitrary code or change Windows settings. Unimplemented features are marked as planned.");
+            var coreCatalog = new ListView
+            {
+                Width = 720, Height = 250, View = View.Details, FullRowSelect = true,
+                HideSelection = false, MultiSelect = false
+            };
+            coreCatalog.Columns.Add(LocalizationManager.CurrentLanguage == "el" ? "Ομάδα" : "Group", 120);
+            coreCatalog.Columns.Add(LocalizationManager.CurrentLanguage == "el" ? "Λειτουργία" : "Capability", 355);
+            coreCatalog.Columns.Add(LocalizationManager.CurrentLanguage == "el" ? "Υλοποίηση" : "Implementation", 185);
+            foreach (var module in OpsisModCore.Catalog.OrderBy(x => x.Group).ThenBy(x => x.Label))
+            {
+                var row = new ListViewItem(module.Group);
+                row.SubItems.Add(module.Label);
+                row.SubItems.Add(module.HasNativeImplementation ? "Built-in" : "Planned");
+                row.Tag = module;
+                coreCatalog.Items.Add(row);
+            }
+            coreCard.Controls.Add(coreCatalog);
+            AddButtonGrid(coreCard,
+                (LocalizationManager.CurrentLanguage == "el" ? "Στοιχεία αρθρώματος" : "Module details", (_, _) =>
+                {
+                    if (coreCatalog.SelectedItems.Count != 1 ||
+                        coreCatalog.SelectedItems[0].Tag is not OpsisModCore.ModuleDefinition module) return;
+                    var state = OpsisModCore.Read();
+                    bool flag = state.Enabled.TryGetValue(module.Id, out var enabled) && enabled;
+                    var info = "ID: " + module.Id + Environment.NewLine +
+                        "Group: " + module.Group + Environment.NewLine +
+                        "Native implementation: " + module.HasNativeImplementation + Environment.NewLine +
+                        "Recorded opt-in: " + flag + Environment.NewLine +
+                        "Dependencies: " + string.Join(", ", module.Requires) + Environment.NewLine +
+                        "Conflicts: " + string.Join(", ", module.Conflicts) + Environment.NewLine +
+                        "Module preferences are metadata; the corresponding settings remain under their original sections.";
+                    MessageBox.Show(this, info, "Opsis Core", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }),
+                (LocalizationManager.CurrentLanguage == "el" ? "Έλεγχος συμβατότητας" : "Check compatibility", (_, _) =>
+                {
+                    try
+                    {
+                        var issues = OpsisModCore.Validate(OpsisModCore.Read(), Environment.OSVersion.Version.Build,
+                            SafeModeService.IsSafeMode);
+                        MessageBox.Show(this, issues.Count == 0
+                            ? "No catalog conflicts detected." : string.Join(Environment.NewLine, issues),
+                            "Opsis Core", MessageBoxButtons.OK,
+                            issues.Count == 0 ? MessageBoxIcon.Information : MessageBoxIcon.Warning);
+                    }
+                    catch (Exception ex) { MessageBox.Show(this, ex.Message, "Opsis Core", MessageBoxButtons.OK, MessageBoxIcon.Error); }
+                }));
+
+            AddButtonGrid(coreCard,
+                (LocalizationManager.CurrentLanguage == "el" ? "Εναλλαγή λειτουργίας" : "Toggle selected feature", (_, _) =>
+                {
+                    if (coreCatalog.SelectedItems.Count != 1 ||
+                        coreCatalog.SelectedItems[0].Tag is not OpsisModCore.ModuleDefinition module) return;
+                    if (!OpsisFeatureSwitcher.CanSwitch(module.Id))
+                    {
+                        MessageBox.Show(this,
+                            StudioText("This feature has its own dedicated settings or is still planned; there is no independent activation adapter.",
+                                "Η λειτουργία έχει δικές της ρυθμίσεις ή βρίσκεται υπό σχεδιασμό. Δεν υπάρχει ανεξάρτητος διακόπτης."),
+                            "Opsis Core", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        return;
+                    }
+                    var next = !OpsisFeatureSwitcher.IsEnabled(module.Id);
+                    if (MessageBox.Show(this,
+                        (next ? StudioText("Enable ", "Ενεργοποίηση ") : StudioText("Disable ", "Απενεργοποίηση ")) +
+                        module.Label + "?",
+                        "Opsis Core", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes) return;
+                    try
+                    {
+                        OpsisFeatureSwitcher.Set(module.Id, next);
+                        _statusLabel.Text = "Opsis Core — " + module.Label + (next ? " enabled" : " disabled");
+                    }
+                    catch (Exception ex) { MessageBox.Show(this, ex.Message, "Opsis Core", MessageBoxButtons.OK, MessageBoxIcon.Error); }
+                }));
+
+            var ecosystemCard = AddCardSection(panel, LocalizationManager.CurrentLanguage == "el"
+                ? "Προσθήκες οικοσυστήματος — Gallery" : "Ecosystem contributions — Gallery");
+            AddText(ecosystemCard, LocalizationManager.CurrentLanguage == "el"
+                ? "Διαβάζει δηλωμένα περιεχόμενα plugins από τους φακέλους εγκατάστασης και από τη Gallery, χωρίς να εκτελεί το πρόσθετο."
+                : "Discovers declared wallpaper, widget, theme and related plugin assets without executing a plugin.");
+            var ecosystemList = new ListView
+            {
+                Width = 720, Height = 190, View = View.Details, FullRowSelect = true
+            };
+            ecosystemList.Columns.Add(LocalizationManager.CurrentLanguage == "el" ? "Τύπος" : "Type", 135);
+            ecosystemList.Columns.Add(LocalizationManager.CurrentLanguage == "el" ? "Κατηγορία" : "Category", 155);
+            ecosystemList.Columns.Add(LocalizationManager.CurrentLanguage == "el" ? "Περιεχόμενο" : "Contribution", 315);
+            var galleryFilters = new FlowLayoutPanel
+            {
+                Width = 720, AutoSize = true, WrapContents = true
+            };
+            var galleryType = new ComboBox { Width = 150, DropDownStyle = ComboBoxStyle.DropDownList };
+            galleryType.Items.AddRange(new object[]
+            {
+                "All", "wallpaper", "widget", "theme", "icon-pack", "cursor-pack",
+                "automation-template", "layout"
+            });
+            galleryType.SelectedIndex = 0;
+            var galleryCategory = new ComboBox { Width = 200, DropDownStyle = ComboBoxStyle.DropDownList };
+            galleryCategory.Items.Add("All"); galleryCategory.SelectedIndex = 0;
+            var gallerySearch = new TextBox
+            {
+                Width = 285, PlaceholderText = StudioText("Search Gallery", "Αναζήτηση στη Gallery")
+            };
+            galleryFilters.Controls.Add(galleryType);
+            galleryFilters.Controls.Add(galleryCategory);
+            galleryFilters.Controls.Add(gallerySearch);
+            ecosystemCard.Controls.Add(galleryFilters);
+            ecosystemCard.Controls.Add(ecosystemList);
+            System.Collections.Generic.IReadOnlyList<OpsisEcosystemGallery.Item> contributions =
+                Array.Empty<OpsisEcosystemGallery.Item>();
+
+            void DrawContributions()
+            {
+                var type = galleryType.SelectedItem?.ToString() ?? "All";
+                var category = galleryCategory.SelectedItem?.ToString() ?? "All";
+                var search = gallerySearch.Text.Trim();
+                ecosystemList.BeginUpdate();
+                try
+                {
+                    ecosystemList.Items.Clear();
+                    ecosystemList.Groups.Clear();
+                    var groups = new System.Collections.Generic.Dictionary<string, ListViewGroup>(
+                        StringComparer.OrdinalIgnoreCase);
+                    foreach (var item in contributions.Where(x =>
+                        (type == "All" || string.Equals(x.Type, type, StringComparison.OrdinalIgnoreCase)) &&
+                        (category == "All" || string.Equals(x.Category, category, StringComparison.OrdinalIgnoreCase)) &&
+                        (search.Length == 0 ||
+                            x.Title.Contains(search, StringComparison.CurrentCultureIgnoreCase) ||
+                            x.PluginId.Contains(search, StringComparison.CurrentCultureIgnoreCase) ||
+                            x.Category.Contains(search, StringComparison.CurrentCultureIgnoreCase))))
+                    {
+                        var groupKey = item.Type + " / " + item.Category;
+                        if (!groups.TryGetValue(groupKey, out var group))
+                        {
+                            group = new ListViewGroup(groupKey);
+                            groups[groupKey] = group;
+                            ecosystemList.Groups.Add(group);
+                        }
+                        var line = new ListViewItem(item.Type, group);
+                        line.SubItems.Add(item.Category);
+                        line.SubItems.Add(item.Title + " [" + item.PluginId + "]");
+                        line.Tag = item;
+                        ecosystemList.Items.Add(line);
+                    }
+                }
+                finally { ecosystemList.EndUpdate(); }
+            }
+
+            void RefreshContributions()
+            {
+                contributions = OpsisEcosystemGallery.Discover();
+                var category = galleryCategory.SelectedItem?.ToString() ?? "All";
+                galleryCategory.BeginUpdate();
+                try
+                {
+                    galleryCategory.Items.Clear();
+                    galleryCategory.Items.Add("All");
+                    foreach (var name in contributions.Select(x => x.Category)
+                                 .Distinct(StringComparer.OrdinalIgnoreCase)
+                                 .OrderBy(x => x, StringComparer.CurrentCultureIgnoreCase))
+                        galleryCategory.Items.Add(name);
+                    galleryCategory.SelectedItem = galleryCategory.Items.Contains(category) ? category : "All";
+                }
+                finally { galleryCategory.EndUpdate(); }
+                DrawContributions();
+            }
+            galleryType.SelectedIndexChanged += (_, _) => DrawContributions();
+            galleryCategory.SelectedIndexChanged += (_, _) => DrawContributions();
+            gallerySearch.TextChanged += (_, _) => DrawContributions();
+            try { RefreshContributions(); }
+            catch (Exception ex) { RotatingLogger.Write("Ecosystem Gallery discovery: " + ex.Message); }
+            AddButtonGrid(ecosystemCard,
+                (LocalizationManager.CurrentLanguage == "el" ? "Ανανέωση προσθηκών" : "Refresh contributions", (_, _) =>
+                {
+                    try { RefreshContributions(); }
+                    catch (Exception ex) { MessageBox.Show(this, ex.Message, "Opsis Gallery", MessageBoxButtons.OK, MessageBoxIcon.Error); }
+                }),
+                (LocalizationManager.CurrentLanguage == "el" ? "Εγκατάσταση θέματος plugin" : "Install contributed theme", (_, _) =>
+                {
+                    if (ecosystemList.SelectedItems.Count != 1 ||
+                        ecosystemList.SelectedItems[0].Tag is not OpsisEcosystemGallery.Item item) return;
+                    if (MessageBox.Show(this,
+                        StudioText("Install the selected data-only theme without applying any Windows changes?",
+                            "Να εγκατασταθεί το επιλεγμένο θέμα μόνο ως δεδομένα χωρίς αλλαγές Windows;"),
+                        "Opsis Gallery", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes) return;
+                    try
+                    {
+                        var name = OpsisEcosystemGallery.InstallThemeContribution(item);
+                        MessageBox.Show(this, StudioText("Theme added to available profiles: ",
+                            "Το θέμα προστέθηκε στα διαθέσιμα προφίλ: ") + name,
+                            "Opsis Gallery", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    }
+                    catch (Exception ex) { MessageBox.Show(this, ex.Message, "Opsis Gallery", MessageBoxButtons.OK, MessageBoxIcon.Error); }
+                }),
+                (LocalizationManager.CurrentLanguage == "el" ? "Άνοιγμα widget plugin" : "Open contributed widget", (_, _) =>
+                {
+                    if (ecosystemList.SelectedItems.Count != 1 ||
+                        ecosystemList.SelectedItems[0].Tag is not OpsisEcosystemGallery.Item item) return;
+                    try
+                    {
+                        var layout = OpsisEcosystemGallery.ReadWidgetContribution(item);
+                        new OpsisCustomWidgetWindow(layout).Show(this);
+                    }
+                    catch (Exception ex) { MessageBox.Show(this, ex.Message, "Opsis Gallery", MessageBoxButtons.OK, MessageBoxIcon.Error); }
+                }),
+                (LocalizationManager.CurrentLanguage == "el" ? "Ορισμός ως wallpaper" : "Set as wallpaper", (_, _) =>
+                {
+                    if (ecosystemList.SelectedItems.Count != 1 ||
+                        ecosystemList.SelectedItems[0].Tag is not OpsisEcosystemGallery.Item item) return;
+                    if (MessageBox.Show(this, StudioText("Apply selected static image wallpaper?", "Να εφαρμοστεί το επιλεγμένο στατικό wallpaper;"),
+                        "Opsis Gallery", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes) return;
+                    try { OpsisEcosystemGallery.ApplyStaticWallpaper(item); _statusLabel.Text = "Opsis — gallery wallpaper applied."; }
+                    catch (Exception ex) { MessageBox.Show(this, ex.Message, "Opsis Gallery", MessageBoxButtons.OK, MessageBoxIcon.Error); }
+                }),
+                (LocalizationManager.CurrentLanguage == "el" ? "Πληροφορίες περιεχομένου" : "Contribution information", (_, _) =>
+                {
+                    if (ecosystemList.SelectedItems.Count != 1 ||
+                        ecosystemList.SelectedItems[0].Tag is not OpsisEcosystemGallery.Item item) return;
+                    MessageBox.Show(this, item.Title + Environment.NewLine + item.Description +
+                        Environment.NewLine + "Type: " + item.Type + " / " + item.Category +
+                        Environment.NewLine + "Plugin: " + item.PluginId +
+                        Environment.NewLine + "Local asset: " + item.AssetPath,
+                        "Opsis Gallery", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }));
+
+            var recoveryCard = AddCardSection(panel, LocalizationManager.CurrentLanguage == "el"
+                ? "Recovery Hub — Ασφάλεια και Windows Updates" : "Recovery Hub — Safety and Windows Updates");
+            AddText(recoveryCard, LocalizationManager.CurrentLanguage == "el"
+                ? "Ενιαίος φάκελος για αντίγραφα ρυθμίσεων Opsis. Τα αρχεία των Windows ελέγχονται με hashes και εκδόσεις, αλλά δεν αντικαθίστανται ούτε επαναφέρονται με απλή αντιγραφή."
+                : "Unified Opsis settings snapshots. Windows shell files are checked by version and hash but are never overwritten or restored by simple file copy.");
+            AddButtonGrid(recoveryCard,
+                (LocalizationManager.CurrentLanguage == "el" ? "Backup ρυθμίσεων" : "Back up settings", (_, _) =>
+                {
+                    try
+                    {
+                        var snapshot = OpsisRecoveryHub.Snapshot("Manual user backup");
+                        MessageBox.Show(this, "Snapshot: " + snapshot.Id +
+                            Environment.NewLine + "Files: " + snapshot.Files.Count +
+                            Environment.NewLine + "Path: " + OpsisRecoveryHub.Root,
+                            "Opsis Recovery Hub", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    }
+                    catch (Exception ex) { MessageBox.Show(this, ex.Message, "Opsis Recovery Hub", MessageBoxButtons.OK, MessageBoxIcon.Error); }
+                }),
+                (LocalizationManager.CurrentLanguage == "el" ? "Έλεγχος Windows Update" : "Check Windows Update impact", (_, _) =>
+                {
+                    try
+                    {
+                        var message = OpsisRecoveryHub.InspectUpdateImpact();
+                        MessageBox.Show(this, message, "Opsis Windows Compatibility", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    }
+                    catch (Exception ex) { MessageBox.Show(this, ex.Message, "Opsis Windows Compatibility", MessageBoxButtons.OK, MessageBoxIcon.Error); }
+                }),
+                (LocalizationManager.CurrentLanguage == "el" ? "Επαναφορά backup Opsis" : "Restore Opsis backup", (_, _) =>
+                {
+                    try
+                    {
+                        var snapshots = OpsisRecoveryHub.List();
+                        if (snapshots.Count == 0)
+                        {
+                            MessageBox.Show(this, "No saved Opsis snapshots.", "Opsis Recovery Hub",
+                                MessageBoxButtons.OK, MessageBoxIcon.Information); return;
+                        }
+                        var latest = snapshots[0];
+                        if (MessageBox.Show(this, "Restore most recent Opsis settings? " + latest.Id +
+                            Environment.NewLine + "Current settings will be saved first. Restart Opsis afterwards.",
+                            "Opsis Recovery Hub", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes) return;
+                        OpsisRecoveryHub.RestoreOwnedSettings(latest.Id);
+                        MessageBox.Show(this, "Opsis settings restored. Restart the app to reload them.",
+                            "Opsis Recovery Hub", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    }
+                    catch (Exception ex) { MessageBox.Show(this, ex.Message, "Opsis Recovery Hub", MessageBoxButtons.OK, MessageBoxIcon.Error); }
+                }));
 
             // ---------- IconAtlas ----------
             var iconCard = AddCardSection(panel, LocalizationManager.T("Personalization.SectionIconAtlas"));
@@ -2709,6 +3019,480 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                     _statusLabel.Text = LocalizationManager.T("Personalization.FolderIconAppliedStatus");
                 }
             }));
+
+            // ---------- P0: Explorer View Profiles ----------
+            var explorerCard = AddCardSection(panel,
+                LocalizationManager.CurrentLanguage == "el" ? "Explorer — Προφίλ προβολής" : "Explorer — View profiles");
+            AddText(explorerCard, LocalizationManager.CurrentLanguage == "el"
+                ? "Προφίλ παραγωγικότητας: εμφανίζει επεκτάσεις και κρυφά αρχεία, ενεργοποιεί συμπαγή προβολή και ανοίγει στην επιλογή Αυτός ο υπολογιστής. Αποθηκεύεται αντίγραφο των προηγούμενων ρυθμίσεων πριν την πρώτη αλλαγή. Ορισμένες αλλαγές εφαρμόζονται στο επόμενο παράθυρο Explorer."
+                : "Productivity profile: shows extensions and hidden files, uses compact view and opens This PC. Original settings are backed up before the first change. Some options apply to newly opened Explorer windows.");
+            AddButtonGrid(explorerCard,
+                (LocalizationManager.CurrentLanguage == "el" ? "Εφαρμογή προφίλ" : "Apply profile", (_, _) =>
+                {
+                    if (MessageBox.Show(this,
+                        LocalizationManager.CurrentLanguage == "el"
+                            ? "Να εφαρμοστεί το προφίλ προβολής Explorer; Οι προηγούμενες ρυθμίσεις θα αποθηκευτούν."
+                            : "Apply the Explorer view profile? Previous settings will be backed up.",
+                        "Opsis — Explorer", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes) return;
+                    try
+                    {
+                        ExplorerViewProfiles.ApplyProductivity();
+                        _statusLabel.Text = LocalizationManager.CurrentLanguage == "el"
+                            ? "Το προφίλ Explorer εφαρμόστηκε." : "Explorer profile applied.";
+                    }
+                    catch (Exception ex) { MessageBox.Show(this, ex.Message, "Opsis — Explorer", MessageBoxButtons.OK, MessageBoxIcon.Error); }
+                }),
+                (LocalizationManager.CurrentLanguage == "el" ? "Επαναφορά προηγούμενων" : "Restore previous settings", (_, _) =>
+                {
+                    if (!ExplorerViewProfiles.HasBackup)
+                    {
+                        MessageBox.Show(this, LocalizationManager.CurrentLanguage == "el"
+                            ? "Δεν υπάρχει προηγούμενο αντίγραφο ρυθμίσεων." : "No previous settings backup exists.",
+                            "Opsis — Explorer", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        return;
+                    }
+                    if (MessageBox.Show(this, LocalizationManager.CurrentLanguage == "el"
+                        ? "Να επαναφερθούν οι αποθηκευμένες ρυθμίσεις Explorer;"
+                        : "Restore the saved Explorer settings?", "Opsis — Explorer",
+                        MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes) return;
+                    try
+                    {
+                        ExplorerViewProfiles.Restore();
+                        _statusLabel.Text = LocalizationManager.CurrentLanguage == "el"
+                            ? "Οι προηγούμενες ρυθμίσεις Explorer επανήλθαν." : "Previous Explorer settings restored.";
+                    }
+                    catch (Exception ex) { MessageBox.Show(this, ex.Message, "Opsis — Explorer", MessageBoxButtons.OK, MessageBoxIcon.Error); }
+                }));
+
+            // ---------- P0: Windows 11 Start & Taskbar ----------
+            var taskbarCard = AddCardSection(panel,
+                LocalizationManager.CurrentLanguage == "el" ? "Windows 11 — Start και Taskbar" : "Windows 11 — Start and Taskbar");
+            AddText(taskbarCard, LocalizationManager.CurrentLanguage == "el"
+                ? "Προαιρετικά προφίλ Taskbar χωρίς αντικατάσταση του Explorer. Το πρώτο πάτημα αποθηκεύει τις πραγματικές προηγούμενες ρυθμίσεις. Ορισμένες αλλαγές εμφανίζονται μετά από νέα σύνδεση στα Windows. Οι επιλογές προφίλ υποστηρίζονται μόνο στα Windows 11."
+                : "Optional Taskbar presets without replacing Explorer. The first application backs up your actual existing settings. Some changes may need a new Windows sign-in. Presets support Windows 11 only.");
+            AddButtonGrid(taskbarCard,
+                (LocalizationManager.CurrentLanguage == "el" ? "Λιτό Taskbar" : "Minimal Taskbar", (_, _) =>
+                {
+                    if (!TaskbarViewProfiles.IsWindows11)
+                    {
+                        MessageBox.Show(this, "Windows 11 required.", "Opsis — Taskbar", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        return;
+                    }
+                    if (MessageBox.Show(this, LocalizationManager.CurrentLanguage == "el"
+                        ? "Εφαρμογή: αριστερή στοίχιση, χωρίς Widgets / Task View / Search; να συνεχίσω;"
+                        : "Apply left alignment and hide Widgets, Task View and Search?",
+                        "Opsis — Taskbar", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes) return;
+                    try { TaskbarViewProfiles.ApplyMinimal(); _statusLabel.Text = "Opsis — Taskbar profile applied."; }
+                    catch (Exception ex) { MessageBox.Show(this, ex.Message, "Opsis — Taskbar", MessageBoxButtons.OK, MessageBoxIcon.Error); }
+                }),
+                (LocalizationManager.CurrentLanguage == "el" ? "Τυπικό Taskbar" : "Standard Taskbar", (_, _) =>
+                {
+                    if (!TaskbarViewProfiles.IsWindows11)
+                    {
+                        MessageBox.Show(this, "Windows 11 required.", "Opsis — Taskbar", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        return;
+                    }
+                    if (MessageBox.Show(this, LocalizationManager.CurrentLanguage == "el"
+                        ? "Εφαρμογή: κεντρική στοίχιση, Widgets / Task View / Search ενεργά; να συνεχίσω;"
+                        : "Apply centered alignment with Widgets, Task View and Search enabled?",
+                        "Opsis — Taskbar", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes) return;
+                    try { TaskbarViewProfiles.ApplyStandard(); _statusLabel.Text = "Opsis — Taskbar profile applied."; }
+                    catch (Exception ex) { MessageBox.Show(this, ex.Message, "Opsis — Taskbar", MessageBoxButtons.OK, MessageBoxIcon.Error); }
+                }),
+                (LocalizationManager.CurrentLanguage == "el" ? "Επαναφορά Taskbar" : "Restore Taskbar", (_, _) =>
+                {
+                    if (!TaskbarViewProfiles.HasBackup)
+                    {
+                        MessageBox.Show(this, LocalizationManager.CurrentLanguage == "el" ? "Δεν υπάρχει αντίγραφο Taskbar." : "No Taskbar backup exists.",
+                            "Opsis — Taskbar", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        return;
+                    }
+                    if (MessageBox.Show(this, LocalizationManager.CurrentLanguage == "el"
+                        ? "Επαναφορά των ρυθμίσεων Taskbar πριν από το Opsis;"
+                        : "Restore original Taskbar settings from before Opsis?",
+                        "Opsis — Taskbar", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes) return;
+                    try { if (TaskbarViewProfiles.HasBackup) TaskbarViewProfiles.Restore(); TaskbarViewProfiles.RestoreAutoHide(); _statusLabel.Text = "Opsis — Taskbar settings restored."; }
+                    catch (Exception ex) { MessageBox.Show(this, ex.Message, "Opsis — Taskbar", MessageBoxButtons.OK, MessageBoxIcon.Error); }
+                }),
+                (LocalizationManager.CurrentLanguage == "el" ? "Ρυθμίσεις Start" : "Start settings", (_, _) =>
+                {
+                    try { TaskbarViewProfiles.OpenWindowsStartSettings(); }
+                    catch (Exception ex) { MessageBox.Show(this, ex.Message, "Opsis — Start", MessageBoxButtons.OK, MessageBoxIcon.Error); }
+                }),
+                (LocalizationManager.CurrentLanguage == "el" ? "Ρυθμίσεις Taskbar" : "Taskbar settings", (_, _) =>
+                {
+                    try { TaskbarViewProfiles.OpenWindowsTaskbarSettings(); }
+                    catch (Exception ex) { MessageBox.Show(this, ex.Message, "Opsis — Taskbar", MessageBoxButtons.OK, MessageBoxIcon.Error); }
+                }));
+
+
+            // ---------- P1: granular native shell controls ----------
+            var shellAdvancedCard = AddCardSection(panel, LocalizationManager.CurrentLanguage == "el"
+                ? "P1 — Προηγμένες ρυθμίσεις Explorer και Taskbar"
+                : "P1 — Advanced Explorer and Taskbar");
+            AddText(shellAdvancedCard, LocalizationManager.CurrentLanguage == "el"
+                ? "Αλλάζεις κάθε επιλογή ξεχωριστά. Οι αρχικές τιμές αποθηκεύονται στο ίδιο αντίγραφο ασφαλείας με τα προφίλ P0. Καμία τροποποίηση αρχείων συστήματος."
+                : "Configure each setting independently. Original settings use the same backup as P0 presets. System files remain untouched.");
+
+            void AddShellOption(string label, string[] choices, int[] values, Func<int> read, Action<int> apply, bool enabled = true)
+            {
+                var line = new FlowLayoutPanel { Width = 720, Height = 42, FlowDirection = FlowDirection.LeftToRight, WrapContents = false };
+                line.Controls.Add(new Label { Text = label, Width = 275, Height = 30,
+                    TextAlign = ContentAlignment.MiddleLeft, ForeColor = UiTheme.TextPrimary });
+                var picker = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 280, Enabled = enabled };
+                picker.Items.AddRange(choices);
+                try
+                {
+                    var value = read();
+                    var found = Array.IndexOf(values, value);
+                    picker.SelectedIndex = found >= 0 ? found : 0;
+                }
+                catch { picker.SelectedIndex = 0; picker.Enabled = false; }
+                // No registry writes on selection: only the explicit Apply button commits a change.
+                line.Controls.Add(picker);
+                var button = new Button { Text = LocalizationManager.CurrentLanguage == "el" ? "Εφαρμογή" : "Apply",
+                    Width = 105, Height = 29, Enabled = picker.Enabled };
+                button.Click += (_, _) =>
+                {
+                    if (picker.SelectedIndex < 0) return;
+                    var chosen = values[picker.SelectedIndex];
+                    if (MessageBox.Show(this, label + ": " + choices[picker.SelectedIndex] + "?",
+                        "Opsis — P1", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes) return;
+                    try { apply(chosen); _statusLabel.Text = "Opsis — " + label + " updated."; }
+                    catch (Exception ex) { MessageBox.Show(this, ex.Message, "Opsis — P1", MessageBoxButtons.OK, MessageBoxIcon.Error); }
+                };
+                line.Controls.Add(button);
+                shellAdvancedCard.Controls.Add(line);
+            }
+
+            bool isEl = LocalizationManager.CurrentLanguage == "el";
+            AddShellOption(isEl ? "Explorer: επεκτάσεις αρχείων" : "Explorer: file extensions",
+                isEl ? new[] { "Εμφάνιση", "Απόκρυψη" } : new[] { "Show", "Hide" },
+                new[] { 0, 1 }, () => ExplorerViewProfiles.ReadOption("HideFileExt"),
+                value => ExplorerViewProfiles.ApplyOption("HideFileExt", value));
+            AddShellOption(isEl ? "Explorer: κρυφά αρχεία" : "Explorer: hidden files",
+                isEl ? new[] { "Εμφάνιση", "Απόκρυψη" } : new[] { "Show", "Hide" },
+                new[] { 1, 2 }, () => ExplorerViewProfiles.ReadOption("Hidden"),
+                value => ExplorerViewProfiles.ApplyOption("Hidden", value));
+            AddShellOption(isEl ? "Explorer: συμπαγής προβολή" : "Explorer: compact view",
+                isEl ? new[] { "Ενεργή", "Ανενεργή" } : new[] { "On", "Off" },
+                new[] { 1, 0 }, () => ExplorerViewProfiles.ReadOption("UseCompactMode"),
+                value => ExplorerViewProfiles.ApplyOption("UseCompactMode", value));
+            AddShellOption(isEl ? "Explorer: αρχικός φάκελος" : "Explorer: launch location",
+                isEl ? new[] { "Αυτός ο υπολογιστής", "Αρχική" } : new[] { "This PC", "Home" },
+                new[] { 1, 2 }, () => ExplorerViewProfiles.ReadOption("LaunchTo"),
+                value => ExplorerViewProfiles.ApplyOption("LaunchTo", value));
+            AddShellOption(isEl ? "Taskbar: στοίχιση" : "Taskbar: alignment",
+                isEl ? new[] { "Αριστερά", "Κέντρο" } : new[] { "Left", "Center" },
+                new[] { 0, 1 }, () => TaskbarViewProfiles.ReadOption("TaskbarAl"),
+                value => TaskbarViewProfiles.ApplyOption("TaskbarAl", value), TaskbarViewProfiles.IsWindows11);
+            AddShellOption(isEl ? "Taskbar: Widgets" : "Taskbar: Widgets",
+                isEl ? new[] { "Απόκρυψη", "Εμφάνιση" } : new[] { "Hide", "Show" },
+                new[] { 0, 1 }, () => TaskbarViewProfiles.ReadOption("TaskbarDa"),
+                value => TaskbarViewProfiles.ApplyOption("TaskbarDa", value), TaskbarViewProfiles.IsWindows11);
+            AddShellOption(isEl ? "Taskbar: Προβολή εργασιών" : "Taskbar: Task View",
+                isEl ? new[] { "Απόκρυψη", "Εμφάνιση" } : new[] { "Hide", "Show" },
+                new[] { 0, 1 }, () => TaskbarViewProfiles.ReadOption("ShowTaskViewButton"),
+                value => TaskbarViewProfiles.ApplyOption("ShowTaskViewButton", value), TaskbarViewProfiles.IsWindows11);
+            AddShellOption(isEl ? "Taskbar: Αναζήτηση" : "Taskbar: Search",
+                isEl ? new[] { "Κρυφή", "Εικονίδιο", "Εικονίδιο και ετικέτα", "Πλαίσιο" }
+                     : new[] { "Hidden", "Icon", "Icon and label", "Box" },
+                new[] { 0, 1, 3, 2 }, () => TaskbarViewProfiles.ReadOption("SearchboxTaskbarMode"),
+                value => TaskbarViewProfiles.ApplyOption("SearchboxTaskbarMode", value), TaskbarViewProfiles.IsWindows11);
+
+            AddShellOption(StudioText("Taskbar: Combine buttons", "Taskbar: Ομαδοποίηση κουμπιών"),
+                new[] { StudioText("Always", "Πάντα"), StudioText("When full", "Όταν γεμίσει"), StudioText("Never", "Ποτέ") },
+                new[] { 0, 1, 2 }, () => TaskbarViewProfiles.ReadOption("TaskbarGlomLevel"),
+                value => TaskbarViewProfiles.ApplyOption("TaskbarGlomLevel", value), TaskbarViewProfiles.IsWindows11);
+            AddShellOption(StudioText("Secondary taskbars: Combine buttons", "Δευτερεύουσες Taskbar: Ομαδοποίηση"),
+                new[] { StudioText("Always", "Πάντα"), StudioText("When full", "Όταν γεμίσει"), StudioText("Never", "Ποτέ") },
+                new[] { 0, 1, 2 }, () => TaskbarViewProfiles.ReadOption("MMTaskbarGlomLevel"),
+                value => TaskbarViewProfiles.ApplyOption("MMTaskbarGlomLevel", value), TaskbarViewProfiles.IsWindows11);
+
+            AddShellOption(StudioText("Native taskbar: Auto-hide", "Εγγενής Taskbar: Αυτόματη απόκρυψη"),
+                new[] { StudioText("Always visible", "Πάντα ορατή"), StudioText("Auto-hide", "Αυτόματη απόκρυψη") },
+                new[] { 0, 1 }, TaskbarViewProfiles.ReadAutoHide, TaskbarViewProfiles.ApplyAutoHide, TaskbarViewProfiles.IsWindows11);
+
+            // ---------- P1 Start Studio ----------
+            AddButtonGrid(shellAdvancedCard, (LocalizationManager.CurrentLanguage == "el"
+                ? "Άνοιγμα Start Studio" : "Open Start Studio", (_, _) =>
+            {
+                using var launcher = new StartStudioForm();
+                launcher.ShowDialog(this);
+            }));
+
+            // ---------- P0 Hot Corners ----------
+            var cornersCard = AddCardSection(panel, LocalizationManager.CurrentLanguage == "el" ? "Hot Corners — Γωνίες οθόνης" : "Hot Corners");
+            AddText(cornersCard, LocalizationManager.CurrentLanguage == "el"
+                ? "Προαιρετικές ενέργειες μετά από παραμονή του δείκτη για 0,7 δευτερόλεπτα σε μία γωνία. Ισχύουν σε όλες τις οθόνες, χωρίς global hooks. Αρχικά ανενεργές."
+                : "Opt-in corner actions after holding the pointer at an edge for 0.7 seconds; works across monitors without global hooks. Off by default.");
+            var cornersSettings = AppSettings.Load();
+            var cornerToggle = new CheckBox
+            {
+                Text = LocalizationManager.CurrentLanguage == "el" ? "Ενεργοποίηση Hot Corners" : "Enable Hot Corners",
+                Checked = cornersSettings.HotCornersEnabled, AutoSize = true, ForeColor = UiTheme.TextPrimary,
+                Margin = new Padding(8)
+            };
+            cornerToggle.CheckedChanged += (_, _) =>
+            {
+                var settings = AppSettings.Load(); settings.HotCornersEnabled = cornerToggle.Checked; settings.Save();
+            };
+            cornersCard.Controls.Add(cornerToggle);
+            void CornerOption(string name, Func<AppSettings, string> current, Action<AppSettings, string> assign)
+            {
+                var line = new FlowLayoutPanel { Width = 690, Height = 42, FlowDirection = FlowDirection.LeftToRight, WrapContents = false };
+                line.Controls.Add(new Label { Text = name, Width = 190, Height = 28, TextAlign = ContentAlignment.MiddleLeft, ForeColor = UiTheme.TextPrimary });
+                var picker = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 260 };
+                var values = new[] { "None", "OpenOpsis", "ShowDesktop", "TaskView" };
+                picker.Items.AddRange(values);
+                picker.SelectedItem = values.Contains(current(cornersSettings)) ? current(cornersSettings) : "None";
+                picker.SelectedIndexChanged += (_, _) =>
+                {
+                    if (picker.SelectedItem is not string selected) return;
+                    var settings = AppSettings.Load(); assign(settings, selected); settings.Save();
+                };
+                line.Controls.Add(picker);
+                cornersCard.Controls.Add(line);
+            }
+            CornerOption(LocalizationManager.CurrentLanguage == "el" ? "Επάνω αριστερά" : "Top left",
+                x => x.HotCornerTopLeft, (x,v) => x.HotCornerTopLeft = v);
+            CornerOption(LocalizationManager.CurrentLanguage == "el" ? "Επάνω δεξιά" : "Top right",
+                x => x.HotCornerTopRight, (x,v) => x.HotCornerTopRight = v);
+            CornerOption(LocalizationManager.CurrentLanguage == "el" ? "Κάτω αριστερά" : "Bottom left",
+                x => x.HotCornerBottomLeft, (x,v) => x.HotCornerBottomLeft = v);
+            CornerOption(LocalizationManager.CurrentLanguage == "el" ? "Κάτω δεξιά" : "Bottom right",
+                x => x.HotCornerBottomRight, (x,v) => x.HotCornerBottomRight = v);
+
+            // ---------- P1 Hot Corner activation options ----------
+            var sensitivityCard = AddCardSection(panel, LocalizationManager.CurrentLanguage == "el"
+                ? "P1 — Ευαισθησία Hot Corners" : "P1 — Hot Corner sensitivity");
+            AddText(sensitivityCard, LocalizationManager.CurrentLanguage == "el"
+                ? "Χρόνος παραμονής και μέγεθος ενεργής περιοχής. Η προεπιλογή αποφεύγει τυχαίες ενεργοποιήσεις."
+                : "Adjust dwell time and activation area; defaults help avoid accidental triggers.");
+            void AddCornerParameter(string title, int[] values, Func<AppSettings, int> read, Action<AppSettings, int> write, string suffix)
+            {
+                var row = new FlowLayoutPanel { Width = 700, Height = 40, WrapContents = false };
+                row.Controls.Add(new Label { Text = title, Width = 245, Height = 27,
+                    TextAlign = ContentAlignment.MiddleLeft, ForeColor = UiTheme.TextPrimary });
+                var picker = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 170 };
+                foreach (var value in values) picker.Items.Add(value + suffix);
+                var ix = Array.IndexOf(values, read(AppSettings.Load()));
+                picker.SelectedIndex = ix < 0 ? 0 : ix;
+                picker.SelectedIndexChanged += (_, _) =>
+                {
+                    if (picker.SelectedIndex < 0) return;
+                    var settings = AppSettings.Load();
+                    write(settings, values[picker.SelectedIndex]);
+                    settings.Save();
+                };
+                row.Controls.Add(picker);
+                sensitivityCard.Controls.Add(row);
+            }
+            AddCornerParameter(LocalizationManager.CurrentLanguage == "el" ? "Χρόνος παραμονής" : "Activation dwell",
+                new[] { 300, 500, 700, 1000, 1500, 2000, 2500 },
+                s => s.HotCornerDwellMilliseconds, (s,v) => s.HotCornerDwellMilliseconds = v, " ms");
+            AddCornerParameter(LocalizationManager.CurrentLanguage == "el" ? "Ενεργή περιοχή" : "Activation edge size",
+                new[] { 2, 3, 5, 8, 12, 16, 20 },
+                s => s.HotCornerEdgePixels, (s,v) => s.HotCornerEdgePixels = v, " px");
+            var fullscreenToggle = new CheckBox
+            {
+                Text = LocalizationManager.CurrentLanguage == "el" ? "Παύση σε εφαρμογές πλήρους οθόνης" : "Pause when fullscreen apps are active",
+                Checked = AppSettings.Load().HotCornersPauseOnFullscreen,
+                AutoSize = true, ForeColor = UiTheme.TextPrimary, Margin = new Padding(8)
+            };
+            fullscreenToggle.CheckedChanged += (_, _) =>
+            {
+                var settings = AppSettings.Load();
+                settings.HotCornersPauseOnFullscreen = fullscreenToggle.Checked;
+                settings.Save();
+            };
+            sensitivityCard.Controls.Add(fullscreenToggle);
+
+            // ---------- P2: Appearance Preset Manager ----------
+            var presetCard = AddCardSection(panel, LocalizationManager.CurrentLanguage == "el"
+                ? "P2 — Προφίλ εμφάνισης" : "P2 — Appearance presets");
+            AddText(presetCard, LocalizationManager.CurrentLanguage == "el"
+                ? "Αποθήκευση και φόρτωση συνδυασμένων επιλογών Explorer, Taskbar και Hot Corners. Πριν από κάθε εφαρμογή υπάρχει προεπισκόπηση και επιβεβαίωση, με προσπάθεια αυτόματης επαναφοράς αν αποτύχει."
+                : "Save and load combined Explorer, Taskbar and Hot Corner preferences. Review changes before applying; rollback is attempted on failure.");
+            var presetName = new TextBox { Width = 240, PlaceholderText = LocalizationManager.CurrentLanguage == "el"
+                ? "Όνομα νέου προφίλ" : "New preset name" };
+            var presetPicker = new ComboBox { Width = 240, DropDownStyle = ComboBoxStyle.DropDownList };
+            var presetLine = new FlowLayoutPanel { Width = 700, Height = 44, WrapContents = false };
+            presetLine.Controls.Add(presetName);
+            presetLine.Controls.Add(presetPicker);
+            presetCard.Controls.Add(presetLine);
+            void ReloadPresets()
+            {
+                var selected = presetPicker.SelectedItem?.ToString();
+                presetPicker.Items.Clear();
+                foreach (var saved in AppearancePresets.List()) presetPicker.Items.Add(saved);
+                if (selected != null && presetPicker.Items.Contains(selected)) presetPicker.SelectedItem = selected;
+                else if (presetPicker.Items.Count > 0) presetPicker.SelectedIndex = 0;
+            }
+            ReloadPresets();
+            AddButtonGrid(presetCard,
+                (LocalizationManager.CurrentLanguage == "el" ? "Αποθήκευση τρέχοντος" : "Save current", (_, _) =>
+                {
+                    try
+                    {
+                        AppearancePresets.SaveCurrent(presetName.Text);
+                        ReloadPresets();
+                        presetPicker.SelectedItem = presetName.Text.Trim();
+                        _statusLabel.Text = "Opsis — appearance preset saved.";
+                    }
+                    catch (Exception ex) { MessageBox.Show(this, ex.Message, "Opsis — P2", MessageBoxButtons.OK, MessageBoxIcon.Error); }
+                }),
+                (LocalizationManager.CurrentLanguage == "el" ? "Προεπισκόπηση αλλαγών" : "Preview changes", (_, _) =>
+                {
+                    if (presetPicker.SelectedItem is not string selected) return;
+                    try { MessageBox.Show(this, AppearancePresets.Preview(selected), "Opsis — P2 Preview", MessageBoxButtons.OK, MessageBoxIcon.Information); }
+                    catch (Exception ex) { MessageBox.Show(this, ex.Message, "Opsis — P2", MessageBoxButtons.OK, MessageBoxIcon.Error); }
+                }),
+                (LocalizationManager.CurrentLanguage == "el" ? "Γραφική προεπισκόπηση" : "Visual preview", (_, _) =>
+                {
+                    if (presetPicker.SelectedItem is not string selected) return;
+                    try
+                    {
+                        using var previewWindow = new AppearancePreviewForm(AppearancePresets.Read(selected));
+                        previewWindow.ShowDialog(this);
+                    }
+                    catch (Exception ex) { MessageBox.Show(this, ex.Message, "Opsis — P2", MessageBoxButtons.OK, MessageBoxIcon.Error); }
+                }),
+                (LocalizationManager.CurrentLanguage == "el" ? "Εφαρμογή προφίλ" : "Apply preset", (_, _) =>
+                {
+                    if (presetPicker.SelectedItem is not string selected) return;
+                    try
+                    {
+                        var preview = AppearancePresets.Preview(selected);
+                        if (MessageBox.Show(this, preview + Environment.NewLine + Environment.NewLine +
+                            (LocalizationManager.CurrentLanguage == "el" ? "Να εφαρμοστεί το προφίλ;" : "Apply this preset?"),
+                            "Opsis — P2", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes) return;
+                        AppearancePresets.Apply(selected);
+                        _statusLabel.Text = "Opsis — appearance preset applied.";
+                    }
+                    catch (Exception ex) { MessageBox.Show(this, ex.Message, "Opsis — P2", MessageBoxButtons.OK, MessageBoxIcon.Error); }
+                }),
+                (LocalizationManager.CurrentLanguage == "el" ? "Εξαγωγή JSON" : "Export JSON", (_, _) =>
+                {
+                    if (presetPicker.SelectedItem is not string selected) return;
+                    using var dialog = new SaveFileDialog
+                    {
+                        Filter = "Opsis appearance preset (*.json)|*.json",
+                        FileName = selected + ".json",
+                        Title = "Export Opsis appearance preset",
+                        OverwritePrompt = false
+                    };
+                    if (dialog.ShowDialog(this) != DialogResult.OK) return;
+                    try
+                    {
+                        AppearancePresets.ExportPortable(selected, dialog.FileName);
+                        _statusLabel.Text = "Opsis — appearance preset exported.";
+                    }
+                    catch (Exception ex) { MessageBox.Show(this, ex.Message, "Opsis — P2", MessageBoxButtons.OK, MessageBoxIcon.Error); }
+                }),
+                (LocalizationManager.CurrentLanguage == "el" ? "Εισαγωγή JSON" : "Import JSON", (_, _) =>
+                {
+                    using var dialog = new OpenFileDialog
+                    {
+                        Filter = "Opsis appearance preset (*.json)|*.json",
+                        CheckFileExists = true, Multiselect = false,
+                        Title = "Import data-only Opsis appearance preset"
+                    };
+                    if (dialog.ShowDialog(this) != DialogResult.OK) return;
+                    try
+                    {
+                        var importedName = AppearancePresets.ImportPortable(dialog.FileName);
+                        ReloadPresets();
+                        presetPicker.SelectedItem = importedName;
+                        MessageBox.Show(this,
+                            LocalizationManager.CurrentLanguage == "el"
+                              ? "Το προφίλ εισήχθη χωρίς να εφαρμοστεί. Χρησιμοποίησε την προεπισκόπηση πριν από την εφαρμογή."
+                              : "Preset imported without applying changes. Review the preview before applying.",
+                            "Opsis — P2", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    }
+                    catch (Exception ex) { MessageBox.Show(this, ex.Message, "Opsis — P2", MessageBoxButtons.OK, MessageBoxIcon.Error); }
+                }),
+                (LocalizationManager.CurrentLanguage == "el" ? "Διαγραφή προφίλ" : "Delete preset", (_, _) =>
+                {
+                    if (presetPicker.SelectedItem is not string selected) return;
+                    if (MessageBox.Show(this, selected + "?", "Opsis — Delete preset",
+                        MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes) return;
+                    try { AppearancePresets.Delete(selected); ReloadPresets(); _statusLabel.Text = "Opsis — preset deleted."; }
+                    catch (Exception ex) { MessageBox.Show(this, ex.Message, "Opsis — P2", MessageBoxButtons.OK, MessageBoxIcon.Error); }
+                }));
+
+            // ---------- P0 Native Mouse Effects and Screen Saver ----------
+            var effectsCard = AddCardSection(panel, LocalizationManager.CurrentLanguage == "el"
+                ? "Εφέ ποντικιού και προφύλαξη οθόνης" : "Mouse effects and screen saver");
+            AddText(effectsCard, LocalizationManager.CurrentLanguage == "el"
+                ? "Εφέ ίχνους δείκτη με τον εγγενή μηχανισμό Windows. Το Opsis αποθηκεύει την προηγούμενη ρύθμιση για επαναφορά. Η προφύλαξη οθόνης ρυθμίζεται από το επίσημο παράθυρο των Windows."
+                : "Native Windows cursor trails with a backup of the previous value. Screen saver uses the official Windows configuration panel.");
+            AddButtonGrid(effectsCard,
+                (LocalizationManager.CurrentLanguage == "el" ? "Ενεργοποίηση ίχνους" : "Enable pointer trails", (_, _) =>
+                {
+                    try
+                    {
+                        var settings = AppSettings.Load();
+                        if (!settings.MouseTrailsOriginalCount.HasValue)
+                        {
+                            settings.MouseTrailsOriginalCount = DesktopEffects.GetMouseTrails();
+                            settings.Save();
+                        }
+                        DesktopEffects.SetMouseTrails(4);
+                        _statusLabel.Text = "Opsis — pointer trails enabled.";
+                    }
+                    catch (Exception ex) { MessageBox.Show(this, ex.Message, "Opsis — Mouse", MessageBoxButtons.OK, MessageBoxIcon.Error); }
+                }),
+                (LocalizationManager.CurrentLanguage == "el" ? "Επαναφορά δείκτη" : "Restore pointer trails", (_, _) =>
+                {
+                    try
+                    {
+                        var settings = AppSettings.Load();
+                        if (!settings.MouseTrailsOriginalCount.HasValue) return;
+                        DesktopEffects.SetMouseTrails(settings.MouseTrailsOriginalCount.Value);
+                        settings.MouseTrailsOriginalCount = null;
+                        settings.Save();
+                        _statusLabel.Text = "Opsis — pointer trails restored.";
+                    }
+                    catch (Exception ex) { MessageBox.Show(this, ex.Message, "Opsis — Mouse", MessageBoxButtons.OK, MessageBoxIcon.Error); }
+                }),
+                (LocalizationManager.CurrentLanguage == "el" ? "Ρυθμίσεις ποντικιού" : "Mouse settings", (_, _) =>
+                {
+                    try { DesktopEffects.OpenMouseSettings(); }
+                    catch (Exception ex) { MessageBox.Show(this, ex.Message, "Opsis — Mouse", MessageBoxButtons.OK, MessageBoxIcon.Error); }
+                }),
+                (LocalizationManager.CurrentLanguage == "el" ? "Προεπισκόπηση screensaver" : "Preview screen saver", (_, _) =>
+                {
+                    try { DesktopEffects.PreviewSystemScreenSaver(); }
+                    catch (Exception ex) { MessageBox.Show(this, ex.Message, "Opsis — Screen saver", MessageBoxButtons.OK, MessageBoxIcon.Information); }
+                }),
+                (LocalizationManager.CurrentLanguage == "el" ? "Προφύλαξη οθόνης" : "Screen saver settings", (_, _) =>
+                {
+                    try { DesktopEffects.OpenScreenSaverSettings(); }
+                    catch (Exception ex) { MessageBox.Show(this, ex.Message, "Opsis — Screen saver", MessageBoxButtons.OK, MessageBoxIcon.Error); }
+                }));
+
+            // ---------- P0 Appearance preview (read-only) ----------
+            var previewCard = AddCardSection(panel, LocalizationManager.CurrentLanguage == "el"
+                ? "Προεπισκόπηση προφίλ εμφάνισης" : "Appearance profile preview");
+            AddText(previewCard, LocalizationManager.CurrentLanguage == "el"
+                ? "Προεπισκόπηση των αλλαγών πριν εφαρμοστούν, χωρίς τροποποίηση συστήματος."
+                : "Read-only summary of proposed changes before applying anything.");
+            AddButtonGrid(previewCard,
+                (LocalizationManager.CurrentLanguage == "el" ? "Προεπισκόπηση Explorer" : "Preview Explorer", (_, _) =>
+                {
+                    MessageBox.Show(this, LocalizationManager.CurrentLanguage == "el"
+                        ? "Προφίλ Explorer:\n• Επεκτάσεις αρχείων: ορατές\n• Κρυφά αρχεία: ορατά\n• Συμπαγής προβολή: ενεργή\n• Αρχική προβολή: Αυτός ο υπολογιστής\n\nΔεν έγινε καμία αλλαγή."
+                        : "Explorer preview:\n• File extensions: visible\n• Hidden files: visible\n• Compact view: enabled\n• Start view: This PC\n\nNo settings were modified.",
+                        "Opsis — Preview", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }),
+                (LocalizationManager.CurrentLanguage == "el" ? "Προεπισκόπηση Taskbar" : "Preview Taskbar", (_, _) =>
+                {
+                    MessageBox.Show(this, LocalizationManager.CurrentLanguage == "el"
+                        ? "Λιτό: αριστερή στοίχιση, απόκρυψη Search / Widgets / Task View.\nΤυπικό: κεντρική στοίχιση, εμφάνιση Search / Widgets / Task View.\n\nΔεν έγινε καμία αλλαγή."
+                        : "Minimal: left alignment; Search / Widgets / Task View hidden.\nStandard: center alignment; Search / Widgets / Task View shown.\n\nNo settings were modified.",
+                        "Opsis — Preview", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }));
 
             // ---------- DeskCursors ----------
             var cursorCard = AddCardSection(panel, LocalizationManager.T("Personalization.SectionDeskCursors"));
@@ -3223,11 +4007,32 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                 ("WorkProfile", string.Format(profileFmt, "Work")),
                 ("GamingProfile", string.Format(profileFmt, "Gaming")),
                 ("FocusProfile", string.Format(profileFmt, "Focus")),
+                ("OpsisTaskbarDesigner", StudioText("Taskbar Visual Designer", "Οπτικός σχεδιαστής Taskbar")),
+                ("OpsisExplorerStudio", StudioText("Explorer Studio", "Στούντιο Explorer")),
+                ("OpsisStartStudio", StudioText("Start Studio", "Στούντιο Έναρξης")),
+                ("OpsisScreensaverStudio", StudioText("Screensaver Studio", "Στούντιο προφύλαξης οθόνης")),
+                ("OpsisEcosystem", StudioText("Unified Opsis Mod and Plugin Gallery", "Κοινή Gallery mods και plugins")),
             };
             // Οι σελίδες των plugin (π.χ. News Crawler) εμφανίζονται κι εδώ.
             var commandList = commandDefs.ToList();
             foreach (var pluginPage in Services.PluginHost.Instance.GetNavigationItems())
                 commandList.Add(("plugin:" + pluginPage.Key, Services.PluginHost.TitleOf(pluginPage)));
+            // Command Palette 2.0: all implemented core modules are searchable
+            // alongside plugin page commands; planned modules are not advertised
+            // as executable, and Gallery metadata never executes third-party code.
+            foreach (var module in OpsisModCore.Catalog.Where(x => x.HasNativeImplementation))
+                commandList.Add(("feature:" + module.Id, "Opsis · " + module.Label));
+            var galleryCommands = new Dictionary<string, OpsisEcosystemGallery.Item>(StringComparer.OrdinalIgnoreCase);
+            try
+            {
+                foreach (var asset in OpsisEcosystemGallery.Discover().Take(150))
+                {
+                    var id = "gallery:" + asset.PluginId + ":" + asset.Id;
+                    galleryCommands.TryAdd(id, asset);
+                    commandList.Add((id, "Gallery · " + asset.Title + " (" + asset.Category + ")"));
+                }
+            }
+            catch (Exception ex) { RotatingLogger.Write("Command Gallery indexing: " + ex.Message); }
             // v2.0.0 (t35, "Start Menu replacement" σε ασφαλή μορφή): το Ctrl+K γίνεται και app
             // launcher — ΧΩΡΙΣ να πειράζει το πραγματικό Start. Πρώτα οι καρφιτσωμένες της taskbar,
             // μετά οι συντομεύσεις του Start Menu· Enter τις εκκινεί (όπως ένα διπλό-κλικ σε .lnk).
@@ -3305,6 +4110,47 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                     case "Personalization": NavigateTo("Personalization"); break; case "Settings": NavigateTo("Settings"); break;
                     case "About": NavigateTo("About"); break;
                     case "AudioEnhancement": NavigateTo("AudioEnhancement"); break;
+                    case "OpsisTaskbarDesigner":
+                        using (var form = new OpsisTaskbarDesignerForm()) form.ShowDialog(this);
+                        break;
+                    case "OpsisExplorerStudio":
+                        using (var form = new OpsisExplorerStudioForm()) form.ShowDialog(this);
+                        break;
+                    case "OpsisStartStudio":
+                        using (var form = new StartStudioForm()) form.ShowDialog(this);
+                        break;
+                    case "OpsisScreensaverStudio":
+                    case "OpsisEcosystem": NavigateTo("Personalization"); break;
+                    case string featureId when featureId.StartsWith("feature:", StringComparison.Ordinal):
+                        NavigateTo("Personalization"); break;
+                    case string galleryId when galleryId.StartsWith("gallery:", StringComparison.Ordinal):
+                        if (galleryCommands.TryGetValue(galleryId, out var asset))
+                        {
+                            try
+                            {
+                                if (asset.Type.Equals("widget", StringComparison.OrdinalIgnoreCase))
+                                    new OpsisCustomWidgetWindow(OpsisEcosystemGallery.ReadWidgetContribution(asset)).Show(this);
+                                else if (asset.Type.Equals("wallpaper", StringComparison.OrdinalIgnoreCase))
+                                {
+                                    if (MessageBox.Show(this, StudioText("Apply this plugin wallpaper?", "Εφαρμογή αυτού του wallpaper;"),
+                                        "Opsis Gallery", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
+                                        OpsisEcosystemGallery.ApplyStaticWallpaper(asset);
+                                }
+                                else if (asset.Type.Equals("theme", StringComparison.OrdinalIgnoreCase))
+                                {
+                                    if (MessageBox.Show(this, StudioText("Import this theme?", "Εισαγωγή αυτού του θέματος;"),
+                                        "Opsis Gallery", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
+                                        OpsisEcosystemGallery.InstallThemeContribution(asset);
+                                }
+                                else NavigateTo("Personalization");
+                            }
+                            catch (Exception ex)
+                            {
+                                RotatingLogger.Write("Gallery command failed: " + ex.Message);
+                                MessageBox.Show(this, ex.Message, "Opsis Gallery", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                            }
+                        }
+                        break;
                     case string pluginId when pluginId.StartsWith("plugin:", StringComparison.Ordinal): NavigateTo(pluginId); break;
                     case string appId when appId.StartsWith("app:", StringComparison.Ordinal):
                         if (appByLabel.TryGetValue(appId[4..], out var appPath) && MotionDesk.Services.SafeLaunch.IsAllowed(appPath))
@@ -4033,7 +4879,19 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                         BackColor = UiTheme.PageBackground,
                         Margin = new Padding(0, 0, 0, 6)
                     };
-                    enableToggle.CheckedChanged += (_, _) => Services.PluginHost.Instance.SetPluginEnabled(capturedId, enableToggle.Checked);
+                    bool refreshingPluginToggle = false;
+                    enableToggle.CheckedChanged += (_, _) =>
+                    {
+                        if (refreshingPluginToggle) return;
+                        try { Services.PluginHost.Instance.SetPluginEnabled(capturedId, enableToggle.Checked); }
+                        catch (Exception ex)
+                        {
+                            refreshingPluginToggle = true;
+                            try { enableToggle.Checked = Services.PluginHost.Instance.IsPluginEnabled(capturedId); }
+                            finally { refreshingPluginToggle = false; }
+                            MessageBox.Show(this, ex.Message, "Opsis", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        }
+                    };
                     panel.Controls.Add(enableToggle);
                     AddText(panel, StudioText("Declared plugin capabilities: ", "Δηλωμένες δυνατότητες plugin: ")
                         + Services.PluginHost.Instance.PluginPermissions(capturedId));

@@ -1,0 +1,72 @@
+name: Opsis P1-P2 Windows validation
+on:
+  push:
+    branches:
+      - feat/p1-shell-customization-2.8.0.2510
+  pull_request:
+    branches:
+      - feat/p0-from-2.8.0.2510
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  windows-build-and-smoke:
+    name: Windows CI / ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-2022, windows-2025]
+    timeout-minutes: 55
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v4
+      - name: .NET 11 SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '11.0.x'
+      - name: SDK and OS diagnostics
+        run: |
+          dotnet --info
+          Get-ComputerInfo | Select-Object WindowsProductName, WindowsVersion, OsBuildNumber | Format-List
+          Get-ChildItem . -Filter *.csproj | Select-Object Name
+      - name: Restore
+        run: dotnet restore Opsis.csproj --disable-parallel
+      - name: Compile Opsis
+        run: dotnet build Opsis.csproj -c Release --no-restore -m:1 -p:UseSharedCompilation=false -nodeReuse:false
+      - name: Discover and run test projects
+        run: |
+          $projects = @(Get-ChildItem -Recurse -File -Filter '*Tests.csproj' | Where-Object { $_.FullName -notmatch '[\\/](obj|bin)[\\/]' })
+          if ($projects.Count -eq 0) {
+            Write-Host 'No existing *Tests.csproj discovered; shell smoke runs separately.'
+          }
+          foreach ($p in $projects) {
+            dotnet test $p.FullName -c Release -m:1 -p:UseSharedCompilation=false -nodeReuse:false --logger "trx;LogFileName=$($p.BaseName)-$env:RUNNER_OS.trx"
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
+      - name: P1/P2 isolated Windows registry smoke
+        run: |
+          dotnet build tests/Opsis.ShellSmoke/Opsis.ShellSmoke.csproj -c Release -m:1 -p:UseSharedCompilation=false -nodeReuse:false
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          dotnet run --project tests/Opsis.ShellSmoke/Opsis.ShellSmoke.csproj -c Release --no-build
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Publish portable Windows x64 files
+        run: |
+          dotnet publish Opsis.csproj -c Release -r win-x64 --self-contained false -o publish -m:1 -p:UseSharedCompilation=false -nodeReuse:false
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          if (!(Test-Path publish/Opsis.exe)) { throw 'Publish missing Opsis.exe' }
+          Compress-Archive -Path publish/* -DestinationPath "Opsis-P1P2-$env:RUNNER_OS-$env:RUNNER_ARCH.zip" -Force
+      - name: Save Windows build output
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: opsis-p1p2-${{ matrix.os }}
+          path: |
+            Opsis-P1P2-*.zip
+            **/TestResults/*.trx
+          if-no-files-found: warn
+          retention-days: 7

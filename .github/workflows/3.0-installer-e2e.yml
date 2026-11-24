@@ -1,0 +1,111 @@
+name: Opsis 3.0.0.3200 integration installer pre-release VM audit
+on:
+  push:
+    branches: [feat/3.0.0.3200-integration]
+  pull_request:
+    branches: [feat/p3-p5-unified-experience]
+  workflow_dispatch:
+
+concurrency:
+  group: opsis-30-installer-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  install-upgrade-uninstall:
+    name: Inno 7 Windows installer / ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 70
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-2022, windows-2025]
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '11.0.x'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Reject premature 3.0 version stamps and preserve 2.8 configuration schema
+        run: |
+          python tests/integration/check_baseline_and_release.py
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Restore and publish x64
+        run: |
+          dotnet restore Opsis.csproj --disable-parallel
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          dotnet publish Opsis.csproj -c Release -r win-x64 --self-contained false -o publish -m:1 -p:UseSharedCompilation=false -nodeReuse:false
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          if (!(Test-Path publish/Opsis.exe)) { throw 'Missing Opsis.exe' }
+      - name: Install signed Inno Setup 7.1.1 compiler
+        run: |
+          $url = 'https://github.com/jrsoftware/issrc/releases/download/is-7_1_1/innosetup-7.1.1-x64.exe'
+          $download = Join-Path $env:RUNNER_TEMP 'innosetup-7.1.1-x64.exe'
+          Invoke-WebRequest -Uri $url -OutFile $download
+          $sig = Get-AuthenticodeSignature -FilePath $download
+          if ($sig.Status -ne 'Valid' -or $sig.SignerCertificate.Subject -notmatch 'Pyrsys B\.V\.') {
+            throw 'Official Inno Setup Authenticode signature validation failed'
+          }
+          $installDir = Join-Path $env:RUNNER_TEMP 'InnoSetup7'
+          $args = '/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /DIR="' + $installDir + '"'
+          $p = Start-Process -FilePath $download -ArgumentList $args -PassThru -Wait
+          if ($p.ExitCode -ne 0) { throw "Inno 7 setup failed: $($p.ExitCode)" }
+          $exe = Join-Path $installDir 'ISCC.exe'
+          if (!(Test-Path $exe)) { throw "Inno Setup compiler missing at $exe" }
+          "INNO_COMPILER=$exe" >> $env:GITHUB_ENV
+      - name: Ensure preview identity is not mislabeled as final 3.0
+        run: |
+          $expected = ([regex]::Match((Get-Content Version.props -Raw),
+            '<OpsisAppVersion>([^<]+)</OpsisAppVersion>')).Groups[1].Value
+          $actual = (Get-Item publish/Opsis.exe).VersionInfo.FileVersion
+          if ($actual -ne $expected) { throw "Published executable version $actual differs from $expected" }
+          Write-Host "Pre-release tested artifact identity: $actual; reserved target: 3.0.0.3200"
+      - name: Compile Opsis installer
+        run: |
+          & $env:INNO_COMPILER installer.iss
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $setup = @(Get-ChildItem Output -Filter 'OpsisSetup-*.exe' -File | Sort-Object LastWriteTime -Descending | Select-Object -First 1)
+          if ($setup.Count -ne 1) { throw 'Exactly one Opsis setup expected' }
+          "OPSIS_SETUP=$($setup[0].FullName)" >> $env:GITHUB_ENV
+          Get-FileHash $setup[0].FullName -Algorithm SHA256 | Format-List
+      - name: Fresh install, in-place reinstall and uninstall
+        run: |
+          $target = Join-Path $env:RUNNER_TEMP 'Opsis-P3P5-InstallerTest'
+          $args = '/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /DIR="' + $target + '"'
+          foreach ($pass in @('clean-install', 'in-place-reinstall')) {
+            $p = Start-Process -FilePath $env:OPSIS_SETUP -ArgumentList $args -PassThru -Wait
+            if ($p.ExitCode -ne 0) { throw "Setup failed ($pass): $($p.ExitCode)" }
+            $installed = Join-Path $target 'Opsis.exe'
+            if (!(Test-Path $installed)) { throw "Installed EXE missing ($pass)" }
+            Write-Host "PASS ${pass}: $installed"
+          }
+          $uninstaller = @(Get-ChildItem -Path $target -Filter 'unins*.exe' -File | Select-Object -First 1)
+          if ($uninstaller.Count -ne 1) { throw 'Uninstaller not found' }
+          $p = Start-Process -FilePath $uninstaller[0].FullName -ArgumentList '/VERYSILENT /SUPPRESSMSGBOXES /NORESTART' -PassThru -Wait
+          if ($p.ExitCode -ne 0) { throw "Uninstall failed: $($p.ExitCode)" }
+          if (Test-Path (Join-Path $target 'Opsis.exe')) { throw 'Opsis.exe remains after uninstall' }
+          Write-Host 'PASS silent uninstall'
+      - name: Write integrity evidence
+        if: success()
+        run: |
+          Get-FileHash -Path $env:OPSIS_SETUP -Algorithm SHA256 |
+            ForEach-Object { "$($_.Hash)  $(Split-Path $_.Path -Leaf)" } |
+            Out-File -FilePath Output/SHA256SUMS.txt -Encoding utf8
+      # The installer is only a pre-release test specimen. Do not publish an
+      # executable carrying the still-stable 2.8 version as if it were final 3.0.
+      - name: Preserve validation hashes only (no release installer)
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: opsis30-installer-preview-${{ matrix.os }}
+          path: |
+            Output/SHA256SUMS.txt
+          if-no-files-found: warn
+          retention-days: 7

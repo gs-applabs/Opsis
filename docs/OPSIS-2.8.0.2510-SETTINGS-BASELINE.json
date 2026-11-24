@@ -1,0 +1,1469 @@
+{
+  "schema": 1,
+  "baseline": "2.8.0.2510",
+  "repository": "gs-applabs/Opsis",
+  "baseline_ref": "release/2.8.0.2510",
+  "method": "Exact source scan of public auto-properties {get;set;} in specified baseline classes; excludes UI handlers, methods and non-property fields.",
+  "source_files": [
+    {
+      "path": "src/Services/AppSettings.cs",
+      "source_sha": "8c5e09f40518951819051072989c3205b56f232f"
+    },
+    {
+      "path": "src/Widgets/WallpaperWindow.cs",
+      "source_sha": "ec0ae441ad2ca0d3bbb042b1a3ff086272417f6f"
+    },
+    {
+      "path": "src/Widgets/DeskStripWindow.cs",
+      "source_sha": "605541f57e3ff1f2155754c97fe5e34d3773294c"
+    }
+  ],
+  "class_counts": {
+    "AppSettings": 100,
+    "WavePalette": 6,
+    "WallpaperScheduleRule": 4,
+    "WallpaperElement": 5,
+    "WallpaperSkylineEdit": 4,
+    "WallpaperSettings": 69,
+    "DeskStripSettings": 17
+  },
+  "unique_property_keys": 205,
+  "duplicate_property_keys": [],
+  "properties": [
+    {
+      "owner": "AppSettings",
+      "name": "GridSnap",
+      "type": "bool",
+      "source": "src/Services/AppSettings.cs",
+      "line": 10
+    },
+    {
+      "owner": "AppSettings",
+      "name": "SnapThreshold",
+      "type": "int",
+      "source": "src/Services/AppSettings.cs",
+      "line": 11
+    },
+    {
+      "owner": "AppSettings",
+      "name": "GridSize",
+      "type": "int",
+      "source": "src/Services/AppSettings.cs",
+      "line": 12
+    },
+    {
+      "owner": "AppSettings",
+      "name": "AutoPerformanceMode",
+      "type": "bool",
+      "source": "src/Services/AppSettings.cs",
+      "line": 13
+    },
+    {
+      "owner": "AppSettings",
+      "name": "PauseOnLock",
+      "type": "bool",
+      "source": "src/Services/AppSettings.cs",
+      "line": 15
+    },
+    {
+      "owner": "AppSettings",
+      "name": "PauseOnRemoteSession",
+      "type": "bool",
+      "source": "src/Services/AppSettings.cs",
+      "line": 16
+    },
+    {
+      "owner": "AppSettings",
+      "name": "PauseOnBatterySaver",
+      "type": "bool",
+      "source": "src/Services/AppSettings.cs",
+      "line": 17
+    },
+    {
+      "owner": "AppSettings",
+      "name": "WallpaperHeavyPause",
+      "type": "bool",
+      "source": "src/Services/AppSettings.cs",
+      "line": 19
+    },
+    {
+      "owner": "AppSettings",
+      "name": "PauseOnScreensaver",
+      "type": "bool",
+      "source": "src/Services/AppSettings.cs",
+      "line": 20
+    },
+    {
+      "owner": "AppSettings",
+      "name": "AutoMuteWhenOtherAudio",
+      "type": "bool",
+      "source": "src/Services/AppSettings.cs",
+      "line": 22
+    },
+    {
+      "owner": "AppSettings",
+      "name": "DiscordPresenceEnabled",
+      "type": "bool",
+      "source": "src/Services/AppSettings.cs",
+      "line": 24
+    },
+    {
+      "owner": "AppSettings",
+      "name": "DiscordApplicationId",
+      "type": "string",
+      "source": "src/Services/AppSettings.cs",
+      "line": 25
+    },
+    {
+      "owner": "AppSettings",
+      "name": "KeepPcAwake",
+      "type": "bool",
+      "source": "src/Services/AppSettings.cs",
+      "line": 26
+    },
+    {
+      "owner": "AppSettings",
+      "name": "PauseCpuAbove",
+      "type": "int",
+      "source": "src/Services/AppSettings.cs",
+      "line": 28
+    },
+    {
+      "owner": "AppSettings",
+      "name": "PauseGpuAbove",
+      "type": "int",
+      "source": "src/Services/AppSettings.cs",
+      "line": 29
+    },
+    {
+      "owner": "AppSettings",
+      "name": "PauseRamAbove",
+      "type": "int",
+      "source": "src/Services/AppSettings.cs",
+      "line": 30
+    },
+    {
+      "owner": "AppSettings",
+      "name": "WallpaperPerformanceMode",
+      "type": "string",
+      "source": "src/Services/AppSettings.cs",
+      "line": 31
+    },
+    {
+      "owner": "AppSettings",
+      "name": "HardwareProfileOverride",
+      "type": "string?",
+      "source": "src/Services/AppSettings.cs",
+      "line": 36
+    },
+    {
+      "owner": "AppSettings",
+      "name": "PerfDynamic",
+      "type": "bool",
+      "source": "src/Services/AppSettings.cs",
+      "line": 38
+    },
+    {
+      "owner": "AppSettings",
+      "name": "PluginUiStyle",
+      "type": "string",
+      "source": "src/Services/AppSettings.cs",
+      "line": 39
+    },
+    {
+      "owner": "AppSettings",
+      "name": "PerfFeatureTier",
+      "type": "System.Collections.Generic.Dictionary<string, string>?",
+      "source": "src/Services/AppSettings.cs",
+      "line": 40
+    },
+    {
+      "owner": "AppSettings",
+      "name": "ShowSystemMonitor",
+      "type": "bool",
+      "source": "src/Services/AppSettings.cs",
+      "line": 41
+    },
+    {
+      "owner": "AppSettings",
+      "name": "RestoreLastSession",
+      "type": "bool",
+      "source": "src/Services/AppSettings.cs",
+      "line": 42
+    },
+    {
+      "owner": "AppSettings",
+      "name": "MinimizeToTray",
+      "type": "bool",
+      "source": "src/Services/AppSettings.cs",
+      "line": 43
+    },
+    {
+      "owner": "AppSettings",
+      "name": "ZoneExcludedApps",
+      "type": "List<string>",
+      "source": "src/Services/AppSettings.cs",
+      "line": 45
+    },
+    {
+      "owner": "AppSettings",
+      "name": "ZoneRules",
+      "type": "List<WindowZoneRule>",
+      "source": "src/Services/AppSettings.cs",
+      "line": 47
+    },
+    {
+      "owner": "AppSettings",
+      "name": "UsageAlertsEnabled",
+      "type": "bool",
+      "source": "src/Services/AppSettings.cs",
+      "line": 49
+    },
+    {
+      "owner": "AppSettings",
+      "name": "UpdateCheckEnabled",
+      "type": "bool",
+      "source": "src/Services/AppSettings.cs",
+      "line": 51
+    },
+    {
+      "owner": "AppSettings",
+      "name": "LastUpdateCheckUtc",
+      "type": "DateTime",
+      "source": "src/Services/AppSettings.cs",
+      "line": 52
+    },
+    {
+      "owner": "AppSettings",
+      "name": "LastNotifiedUpdateTag",
+      "type": "string",
+      "source": "src/Services/AppSettings.cs",
+      "line": 55
+    },
+    {
+      "owner": "AppSettings",
+      "name": "LastRunVersion",
+      "type": "string",
+      "source": "src/Services/AppSettings.cs",
+      "line": 56
+    },
+    {
+      "owner": "AppSettings",
+      "name": "StartWallpaperWithWindows",
+      "type": "bool",
+      "source": "src/Services/AppSettings.cs",
+      "line": 57
+    },
+    {
+      "owner": "AppSettings",
+      "name": "EnableAnimations",
+      "type": "bool",
+      "source": "src/Services/AppSettings.cs",
+      "line": 58
+    },
+    {
+      "owner": "AppSettings",
+      "name": "ThemeMode",
+      "type": "string",
+      "source": "src/Services/AppSettings.cs",
+      "line": 59
+    },
+    {
+      "owner": "AppSettings",
+      "name": "FollowWindowsAccent",
+      "type": "bool",
+      "source": "src/Services/AppSettings.cs",
+      "line": 62
+    },
+    {
+      "owner": "AppSettings",
+      "name": "Language",
+      "type": "string",
+      "source": "src/Services/AppSettings.cs",
+      "line": 63
+    },
+    {
+      "owner": "AppSettings",
+      "name": "WindowOpacity",
+      "type": "double",
+      "source": "src/Services/AppSettings.cs",
+      "line": 64
+    },
+    {
+      "owner": "AppSettings",
+      "name": "DarkIntensity",
+      "type": "double",
+      "source": "src/Services/AppSettings.cs",
+      "line": 65
+    },
+    {
+      "owner": "AppSettings",
+      "name": "UiSoundsEnabled",
+      "type": "bool",
+      "source": "src/Services/AppSettings.cs",
+      "line": 66
+    },
+    {
+      "owner": "AppSettings",
+      "name": "SidebarCollapsed",
+      "type": "bool",
+      "source": "src/Services/AppSettings.cs",
+      "line": 67
+    },
+    {
+      "owner": "AppSettings",
+      "name": "ReplaceWindowsTaskbar",
+      "type": "bool",
+      "source": "src/Services/AppSettings.cs",
+      "line": 68
+    },
+    {
+      "owner": "AppSettings",
+      "name": "DesktopToolbarEnabled",
+      "type": "bool",
+      "source": "src/Services/AppSettings.cs",
+      "line": 69
+    },
+    {
+      "owner": "AppSettings",
+      "name": "DesktopToolbarAllMonitors",
+      "type": "bool",
+      "source": "src/Services/AppSettings.cs",
+      "line": 70
+    },
+    {
+      "owner": "AppSettings",
+      "name": "AutoTileEnabled",
+      "type": "bool",
+      "source": "src/Services/AppSettings.cs",
+      "line": 71
+    },
+    {
+      "owner": "AppSettings",
+      "name": "AutoTileGap",
+      "type": "int",
+      "source": "src/Services/AppSettings.cs",
+      "line": 72
+    },
+    {
+      "owner": "AppSettings",
+      "name": "AutoTileMode",
+      "type": "string",
+      "source": "src/Services/AppSettings.cs",
+      "line": 73
+    },
+    {
+      "owner": "AppSettings",
+      "name": "MainWindowSkin",
+      "type": "string",
+      "source": "src/Services/AppSettings.cs",
+      "line": 74
+    },
+    {
+      "owner": "AppSettings",
+      "name": "WindowSkinRevision",
+      "type": "int",
+      "source": "src/Services/AppSettings.cs",
+      "line": 75
+    },
+    {
+      "owner": "AppSettings",
+      "name": "PluginsEnabled",
+      "type": "bool",
+      "source": "src/Services/AppSettings.cs",
+      "line": 78
+    },
+    {
+      "owner": "AppSettings",
+      "name": "CustomEqProfiles",
+      "type": "List<AudioEqProfile>",
+      "source": "src/Services/AppSettings.cs",
+      "line": 80
+    },
+    {
+      "owner": "AppSettings",
+      "name": "ActiveEqProfile",
+      "type": "string?",
+      "source": "src/Services/AppSettings.cs",
+      "line": 81
+    },
+    {
+      "owner": "AppSettings",
+      "name": "DisabledPluginIds",
+      "type": "HashSet<string>",
+      "source": "src/Services/AppSettings.cs",
+      "line": 84
+    },
+    {
+      "owner": "AppSettings",
+      "name": "PendingPluginRemovals",
+      "type": "List<string>",
+      "source": "src/Services/AppSettings.cs",
+      "line": 89
+    },
+    {
+      "owner": "AppSettings",
+      "name": "WmvConversionOutputDir",
+      "type": "string?",
+      "source": "src/Services/AppSettings.cs",
+      "line": 92
+    },
+    {
+      "owner": "AppSettings",
+      "name": "LockScreenFollowsWallpaper",
+      "type": "bool",
+      "source": "src/Services/AppSettings.cs",
+      "line": 99
+    },
+    {
+      "owner": "AppSettings",
+      "name": "LockScreenSnapshotPath",
+      "type": "string?",
+      "source": "src/Services/AppSettings.cs",
+      "line": 100
+    },
+    {
+      "owner": "AppSettings",
+      "name": "StartEarlyInitialized",
+      "type": "bool",
+      "source": "src/Services/AppSettings.cs",
+      "line": 102
+    },
+    {
+      "owner": "AppSettings",
+      "name": "WidgetsThemeMode",
+      "type": "string",
+      "source": "src/Services/AppSettings.cs",
+      "line": 109
+    },
+    {
+      "owner": "AppSettings",
+      "name": "WidgetsAutoContrast",
+      "type": "bool",
+      "source": "src/Services/AppSettings.cs",
+      "line": 111
+    },
+    {
+      "owner": "AppSettings",
+      "name": "WidgetsTintColor",
+      "type": "string",
+      "source": "src/Services/AppSettings.cs",
+      "line": 112
+    },
+    {
+      "owner": "AppSettings",
+      "name": "WidgetsTintPercent",
+      "type": "int",
+      "source": "src/Services/AppSettings.cs",
+      "line": 113
+    },
+    {
+      "owner": "AppSettings",
+      "name": "WidgetDefaultWidth",
+      "type": "int",
+      "source": "src/Services/AppSettings.cs",
+      "line": 117
+    },
+    {
+      "owner": "AppSettings",
+      "name": "WidgetDefaultHeight",
+      "type": "int",
+      "source": "src/Services/AppSettings.cs",
+      "line": 118
+    },
+    {
+      "owner": "AppSettings",
+      "name": "AudioEnhancementPreset",
+      "type": "string",
+      "source": "src/Services/AppSettings.cs",
+      "line": 122
+    },
+    {
+      "owner": "AppSettings",
+      "name": "SystemMonitorGpuIndex",
+      "type": "int",
+      "source": "src/Services/AppSettings.cs",
+      "line": 124
+    },
+    {
+      "owner": "AppSettings",
+      "name": "RestoreWindowsAfterDocking",
+      "type": "bool",
+      "source": "src/Services/AppSettings.cs",
+      "line": 126
+    },
+    {
+      "owner": "AppSettings",
+      "name": "PresentationMonitorIds",
+      "type": "List<string>",
+      "source": "src/Services/AppSettings.cs",
+      "line": 128
+    },
+    {
+      "owner": "AppSettings",
+      "name": "DiskWidgetIndex",
+      "type": "int",
+      "source": "src/Services/AppSettings.cs",
+      "line": 130
+    },
+    {
+      "owner": "AppSettings",
+      "name": "ContainerMonitorLayouts",
+      "type": "Dictionary<string, string>",
+      "source": "src/Services/AppSettings.cs",
+      "line": 136
+    },
+    {
+      "owner": "AppSettings",
+      "name": "ContainerPeekDim",
+      "type": "bool",
+      "source": "src/Services/AppSettings.cs",
+      "line": 137
+    },
+    {
+      "owner": "AppSettings",
+      "name": "QuickHideDoubleClickEnabled",
+      "type": "bool",
+      "source": "src/Services/AppSettings.cs",
+      "line": 138
+    },
+    {
+      "owner": "AppSettings",
+      "name": "DeskContainersEnabled",
+      "type": "bool",
+      "source": "src/Services/AppSettings.cs",
+      "line": 141
+    },
+    {
+      "owner": "AppSettings",
+      "name": "ContainersAutoHide",
+      "type": "bool",
+      "source": "src/Services/AppSettings.cs",
+      "line": 143
+    },
+    {
+      "owner": "AppSettings",
+      "name": "ContainersAutoHideSeconds",
+      "type": "int",
+      "source": "src/Services/AppSettings.cs",
+      "line": 144
+    },
+    {
+      "owner": "AppSettings",
+      "name": "ContainersChameleon",
+      "type": "bool",
+      "source": "src/Services/AppSettings.cs",
+      "line": 145
+    },
+    {
+      "owner": "AppSettings",
+      "name": "ContainersDailyBackup",
+      "type": "bool",
+      "source": "src/Services/AppSettings.cs",
+      "line": 146
+    },
+    {
+      "owner": "AppSettings",
+      "name": "ContainersSpotSearch",
+      "type": "bool",
+      "source": "src/Services/AppSettings.cs",
+      "line": 147
+    },
+    {
+      "owner": "AppSettings",
+      "name": "QuickHideKeepThisPc",
+      "type": "bool",
+      "source": "src/Services/AppSettings.cs",
+      "line": 150
+    },
+    {
+      "owner": "AppSettings",
+      "name": "QuickHideKeepUserFolder",
+      "type": "bool",
+      "source": "src/Services/AppSettings.cs",
+      "line": 151
+    },
+    {
+      "owner": "AppSettings",
+      "name": "QuickHideKeepControlPanel",
+      "type": "bool",
+      "source": "src/Services/AppSettings.cs",
+      "line": 152
+    },
+    {
+      "owner": "AppSettings",
+      "name": "QuickHideKeepRecycleBin",
+      "type": "bool",
+      "source": "src/Services/AppSettings.cs",
+      "line": 153
+    },
+    {
+      "owner": "AppSettings",
+      "name": "QuickHideExtraKept",
+      "type": "List<string>",
+      "source": "src/Services/AppSettings.cs",
+      "line": 154
+    },
+    {
+      "owner": "AppSettings",
+      "name": "LastSeenAppVersion",
+      "type": "string?",
+      "source": "src/Services/AppSettings.cs",
+      "line": 157
+    },
+    {
+      "owner": "AppSettings",
+      "name": "WindowMemory",
+      "type": "WindowMemoryData",
+      "source": "src/Services/AppSettings.cs",
+      "line": 160
+    },
+    {
+      "owner": "AppSettings",
+      "name": "UiScalePercent",
+      "type": "int",
+      "source": "src/Services/AppSettings.cs",
+      "line": 163
+    },
+    {
+      "owner": "AppSettings",
+      "name": "CardFontScalePercent",
+      "type": "int",
+      "source": "src/Services/AppSettings.cs",
+      "line": 165
+    },
+    {
+      "owner": "AppSettings",
+      "name": "PauseWhenDesktopCovered",
+      "type": "bool",
+      "source": "src/Services/AppSettings.cs",
+      "line": 168
+    },
+    {
+      "owner": "AppSettings",
+      "name": "UseGpuGlass",
+      "type": "bool",
+      "source": "src/Services/AppSettings.cs",
+      "line": 172
+    },
+    {
+      "owner": "AppSettings",
+      "name": "GpuGlassMode",
+      "type": "string?",
+      "source": "src/Services/AppSettings.cs",
+      "line": 174
+    },
+    {
+      "owner": "AppSettings",
+      "name": "UseNativeContainers",
+      "type": "bool",
+      "source": "src/Services/AppSettings.cs",
+      "line": 176
+    },
+    {
+      "owner": "AppSettings",
+      "name": "HideOriginalsOnDrop",
+      "type": "bool",
+      "source": "src/Services/AppSettings.cs",
+      "line": 178
+    },
+    {
+      "owner": "AppSettings",
+      "name": "ContainerDragCopies",
+      "type": "bool",
+      "source": "src/Services/AppSettings.cs",
+      "line": 180
+    },
+    {
+      "owner": "AppSettings",
+      "name": "OfferContainerFromSelection",
+      "type": "bool",
+      "source": "src/Services/AppSettings.cs",
+      "line": 182
+    },
+    {
+      "owner": "AppSettings",
+      "name": "MusicOverlayEnabled",
+      "type": "bool",
+      "source": "src/Services/AppSettings.cs",
+      "line": 184
+    },
+    {
+      "owner": "AppSettings",
+      "name": "DesktopMenuEnabled",
+      "type": "bool",
+      "source": "src/Services/AppSettings.cs",
+      "line": 186
+    },
+    {
+      "owner": "AppSettings",
+      "name": "MusicOverlayAnchor",
+      "type": "string",
+      "source": "src/Services/AppSettings.cs",
+      "line": 187
+    },
+    {
+      "owner": "AppSettings",
+      "name": "Glass",
+      "type": "GlassSettings",
+      "source": "src/Services/AppSettings.cs",
+      "line": 190
+    },
+    {
+      "owner": "AppSettings",
+      "name": "ContainerMaterial",
+      "type": "DesktopMaterial",
+      "source": "src/Services/AppSettings.cs",
+      "line": 191
+    },
+    {
+      "owner": "AppSettings",
+      "name": "DeskStripMaterial",
+      "type": "DesktopMaterial",
+      "source": "src/Services/AppSettings.cs",
+      "line": 192
+    },
+    {
+      "owner": "AppSettings",
+      "name": "WidgetMaterial",
+      "type": "DesktopMaterial",
+      "source": "src/Services/AppSettings.cs",
+      "line": 193
+    },
+    {
+      "owner": "WavePalette",
+      "name": "Name",
+      "type": "string",
+      "source": "src/Widgets/WallpaperWindow.cs",
+      "line": 372
+    },
+    {
+      "owner": "WavePalette",
+      "name": "Background",
+      "type": "string",
+      "source": "src/Widgets/WallpaperWindow.cs",
+      "line": 373
+    },
+    {
+      "owner": "WavePalette",
+      "name": "WaveColor",
+      "type": "string",
+      "source": "src/Widgets/WallpaperWindow.cs",
+      "line": 374
+    },
+    {
+      "owner": "WavePalette",
+      "name": "PeakColor",
+      "type": "string",
+      "source": "src/Widgets/WallpaperWindow.cs",
+      "line": 375
+    },
+    {
+      "owner": "WavePalette",
+      "name": "GlowColor",
+      "type": "string",
+      "source": "src/Widgets/WallpaperWindow.cs",
+      "line": 376
+    },
+    {
+      "owner": "WavePalette",
+      "name": "HighlightColor",
+      "type": "string",
+      "source": "src/Widgets/WallpaperWindow.cs",
+      "line": 377
+    },
+    {
+      "owner": "WallpaperScheduleRule",
+      "name": "Enabled",
+      "type": "bool",
+      "source": "src/Widgets/WallpaperWindow.cs",
+      "line": 414
+    },
+    {
+      "owner": "WallpaperScheduleRule",
+      "name": "StartMinutes",
+      "type": "int",
+      "source": "src/Widgets/WallpaperWindow.cs",
+      "line": 415
+    },
+    {
+      "owner": "WallpaperScheduleRule",
+      "name": "EndMinutes",
+      "type": "int",
+      "source": "src/Widgets/WallpaperWindow.cs",
+      "line": 416
+    },
+    {
+      "owner": "WallpaperScheduleRule",
+      "name": "Mode",
+      "type": "string",
+      "source": "src/Widgets/WallpaperWindow.cs",
+      "line": 417
+    },
+    {
+      "owner": "WallpaperElement",
+      "name": "Id",
+      "type": "string",
+      "source": "src/Widgets/WallpaperWindow.cs",
+      "line": 427
+    },
+    {
+      "owner": "WallpaperElement",
+      "name": "Enabled",
+      "type": "bool",
+      "source": "src/Widgets/WallpaperWindow.cs",
+      "line": 428
+    },
+    {
+      "owner": "WallpaperElement",
+      "name": "X",
+      "type": "int",
+      "source": "src/Widgets/WallpaperWindow.cs",
+      "line": 429
+    },
+    {
+      "owner": "WallpaperElement",
+      "name": "Y",
+      "type": "int",
+      "source": "src/Widgets/WallpaperWindow.cs",
+      "line": 430
+    },
+    {
+      "owner": "WallpaperElement",
+      "name": "Scale",
+      "type": "int",
+      "source": "src/Widgets/WallpaperWindow.cs",
+      "line": 431
+    },
+    {
+      "owner": "WallpaperSkylineEdit",
+      "name": "Sha256",
+      "type": "string",
+      "source": "src/Widgets/WallpaperWindow.cs",
+      "line": 443
+    },
+    {
+      "owner": "WallpaperSkylineEdit",
+      "name": "Width",
+      "type": "int",
+      "source": "src/Widgets/WallpaperWindow.cs",
+      "line": 444
+    },
+    {
+      "owner": "WallpaperSkylineEdit",
+      "name": "Height",
+      "type": "int",
+      "source": "src/Widgets/WallpaperWindow.cs",
+      "line": 445
+    },
+    {
+      "owner": "WallpaperSkylineEdit",
+      "name": "Rows",
+      "type": "List<int>",
+      "source": "src/Widgets/WallpaperWindow.cs",
+      "line": 446
+    },
+    {
+      "owner": "WallpaperSettings",
+      "name": "AthensPhase",
+      "type": "string",
+      "source": "src/Widgets/WallpaperWindow.cs",
+      "line": 461
+    },
+    {
+      "owner": "WallpaperSettings",
+      "name": "Mode",
+      "type": "string",
+      "source": "src/Widgets/WallpaperWindow.cs",
+      "line": 474
+    },
+    {
+      "owner": "WallpaperSettings",
+      "name": "PageSource",
+      "type": "string",
+      "source": "src/Widgets/WallpaperWindow.cs",
+      "line": 476
+    },
+    {
+      "owner": "WallpaperSettings",
+      "name": "ImagePath",
+      "type": "string",
+      "source": "src/Widgets/WallpaperWindow.cs",
+      "line": 477
+    },
+    {
+      "owner": "WallpaperSettings",
+      "name": "ImageFit",
+      "type": "string",
+      "source": "src/Widgets/WallpaperWindow.cs",
+      "line": 478
+    },
+    {
+      "owner": "WallpaperSettings",
+      "name": "PanoramaFirstMonitor",
+      "type": "string",
+      "source": "src/Widgets/WallpaperWindow.cs",
+      "line": 480
+    },
+    {
+      "owner": "WallpaperSettings",
+      "name": "PanoramaSecondMonitor",
+      "type": "string",
+      "source": "src/Widgets/WallpaperWindow.cs",
+      "line": 481
+    },
+    {
+      "owner": "WallpaperSettings",
+      "name": "PanoramaBezelGapPx",
+      "type": "int",
+      "source": "src/Widgets/WallpaperWindow.cs",
+      "line": 482
+    },
+    {
+      "owner": "WallpaperSettings",
+      "name": "Elements",
+      "type": "List<WallpaperElement>",
+      "source": "src/Widgets/WallpaperWindow.cs",
+      "line": 484
+    },
+    {
+      "owner": "WallpaperSettings",
+      "name": "ElementsAccent",
+      "type": "string",
+      "source": "src/Widgets/WallpaperWindow.cs",
+      "line": 485
+    },
+    {
+      "owner": "WallpaperSettings",
+      "name": "ElementsClockTheme",
+      "type": "string",
+      "source": "src/Widgets/WallpaperWindow.cs",
+      "line": 486
+    },
+    {
+      "owner": "WallpaperSettings",
+      "name": "ElementsBarColor",
+      "type": "string",
+      "source": "src/Widgets/WallpaperWindow.cs",
+      "line": 487
+    },
+    {
+      "owner": "WallpaperSettings",
+      "name": "ElementsCard",
+      "type": "bool",
+      "source": "src/Widgets/WallpaperWindow.cs",
+      "line": 488
+    },
+    {
+      "owner": "WallpaperSettings",
+      "name": "ElementsAutoColor",
+      "type": "bool",
+      "source": "src/Widgets/WallpaperWindow.cs",
+      "line": 489
+    },
+    {
+      "owner": "WallpaperSettings",
+      "name": "ElementsSide",
+      "type": "string",
+      "source": "src/Widgets/WallpaperWindow.cs",
+      "line": 490
+    },
+    {
+      "owner": "WallpaperSettings",
+      "name": "ElementsVAlign",
+      "type": "string",
+      "source": "src/Widgets/WallpaperWindow.cs",
+      "line": 491
+    },
+    {
+      "owner": "WallpaperSettings",
+      "name": "PageProperties",
+      "type": "Dictionary<string, string>",
+      "source": "src/Widgets/WallpaperWindow.cs",
+      "line": 492
+    },
+    {
+      "owner": "WallpaperSettings",
+      "name": "LastRotateUtc",
+      "type": "DateTime?",
+      "source": "src/Widgets/WallpaperWindow.cs",
+      "line": 493
+    },
+    {
+      "owner": "WallpaperSettings",
+      "name": "WaveStyle",
+      "type": "string",
+      "source": "src/Widgets/WallpaperWindow.cs",
+      "line": 494
+    },
+    {
+      "owner": "WallpaperSettings",
+      "name": "VideoPath",
+      "type": "string",
+      "source": "src/Widgets/WallpaperWindow.cs",
+      "line": 495
+    },
+    {
+      "owner": "WallpaperSettings",
+      "name": "VideoPaths",
+      "type": "List<string>",
+      "source": "src/Widgets/WallpaperWindow.cs",
+      "line": 496
+    },
+    {
+      "owner": "WallpaperSettings",
+      "name": "DisabledVideoPaths",
+      "type": "HashSet<string>",
+      "source": "src/Widgets/WallpaperWindow.cs",
+      "line": 500
+    },
+    {
+      "owner": "WallpaperSettings",
+      "name": "Shuffle",
+      "type": "bool",
+      "source": "src/Widgets/WallpaperWindow.cs",
+      "line": 501
+    },
+    {
+      "owner": "WallpaperSettings",
+      "name": "CurrentVideoIndex",
+      "type": "int",
+      "source": "src/Widgets/WallpaperWindow.cs",
+      "line": 502
+    },
+    {
+      "owner": "WallpaperSettings",
+      "name": "ShuffleHistory",
+      "type": "List<string>",
+      "source": "src/Widgets/WallpaperWindow.cs",
+      "line": 505
+    },
+    {
+      "owner": "WallpaperSettings",
+      "name": "WeatherCity",
+      "type": "string",
+      "source": "src/Widgets/WallpaperWindow.cs",
+      "line": 508
+    },
+    {
+      "owner": "WallpaperSettings",
+      "name": "WeatherPlaceSource",
+      "type": "string",
+      "source": "src/Widgets/WallpaperWindow.cs",
+      "line": 510
+    },
+    {
+      "owner": "WallpaperSettings",
+      "name": "WeatherPlaceDetail",
+      "type": "string",
+      "source": "src/Widgets/WallpaperWindow.cs",
+      "line": 511
+    },
+    {
+      "owner": "WallpaperSettings",
+      "name": "WeatherReverseGeocode",
+      "type": "bool",
+      "source": "src/Widgets/WallpaperWindow.cs",
+      "line": 512
+    },
+    {
+      "owner": "WallpaperSettings",
+      "name": "WeatherLat",
+      "type": "double",
+      "source": "src/Widgets/WallpaperWindow.cs",
+      "line": 513
+    },
+    {
+      "owner": "WallpaperSettings",
+      "name": "WeatherLon",
+      "type": "double",
+      "source": "src/Widgets/WallpaperWindow.cs",
+      "line": 514
+    },
+    {
+      "owner": "WallpaperSettings",
+      "name": "WeatherLocationPrompted",
+      "type": "bool",
+      "source": "src/Widgets/WallpaperWindow.cs",
+      "line": 518
+    },
+    {
+      "owner": "WallpaperSettings",
+      "name": "WeatherSimulation",
+      "type": "string",
+      "source": "src/Widgets/WallpaperWindow.cs",
+      "line": 520
+    },
+    {
+      "owner": "WallpaperSettings",
+      "name": "TimeSimulation",
+      "type": "string",
+      "source": "src/Widgets/WallpaperWindow.cs",
+      "line": 522
+    },
+    {
+      "owner": "WallpaperSettings",
+      "name": "WindSimulation",
+      "type": "string",
+      "source": "src/Widgets/WallpaperWindow.cs",
+      "line": 524
+    },
+    {
+      "owner": "WallpaperSettings",
+      "name": "WeatherGlass",
+      "type": "bool",
+      "source": "src/Widgets/WallpaperWindow.cs",
+      "line": 525
+    },
+    {
+      "owner": "WallpaperSettings",
+      "name": "RainLandscapeIntensity",
+      "type": "int",
+      "source": "src/Widgets/WallpaperWindow.cs",
+      "line": 526
+    },
+    {
+      "owner": "WallpaperSettings",
+      "name": "RainGlassIntensity",
+      "type": "int",
+      "source": "src/Widgets/WallpaperWindow.cs",
+      "line": 527
+    },
+    {
+      "owner": "WallpaperSettings",
+      "name": "WeatherPhotoFocusX",
+      "type": "int",
+      "source": "src/Widgets/WallpaperWindow.cs",
+      "line": 528
+    },
+    {
+      "owner": "WallpaperSettings",
+      "name": "WeatherSkylinePreview",
+      "type": "bool",
+      "source": "src/Widgets/WallpaperWindow.cs",
+      "line": 529
+    },
+    {
+      "owner": "WallpaperSettings",
+      "name": "WeatherSkylineEdits",
+      "type": "Dictionary<string, WallpaperSkylineEdit>",
+      "source": "src/Widgets/WallpaperWindow.cs",
+      "line": 530
+    },
+    {
+      "owner": "WallpaperSettings",
+      "name": "WeatherLandmarkId",
+      "type": "string",
+      "source": "src/Widgets/WallpaperWindow.cs",
+      "line": 531
+    },
+    {
+      "owner": "WallpaperSettings",
+      "name": "WeatherLandmarks",
+      "type": "bool",
+      "source": "src/Widgets/WallpaperWindow.cs",
+      "line": 532
+    },
+    {
+      "owner": "WallpaperSettings",
+      "name": "WeatherShowInfo",
+      "type": "bool",
+      "source": "src/Widgets/WallpaperWindow.cs",
+      "line": 536
+    },
+    {
+      "owner": "WallpaperSettings",
+      "name": "InfoOnAllModes",
+      "type": "bool",
+      "source": "src/Widgets/WallpaperWindow.cs",
+      "line": 537
+    },
+    {
+      "owner": "WallpaperSettings",
+      "name": "InfoFont",
+      "type": "string",
+      "source": "src/Widgets/WallpaperWindow.cs",
+      "line": 538
+    },
+    {
+      "owner": "WallpaperSettings",
+      "name": "WeatherInfoX",
+      "type": "int",
+      "source": "src/Widgets/WallpaperWindow.cs",
+      "line": 539
+    },
+    {
+      "owner": "WallpaperSettings",
+      "name": "WeatherInfoY",
+      "type": "int",
+      "source": "src/Widgets/WallpaperWindow.cs",
+      "line": 540
+    },
+    {
+      "owner": "WallpaperSettings",
+      "name": "WeatherInfoScale",
+      "type": "int",
+      "source": "src/Widgets/WallpaperWindow.cs",
+      "line": 541
+    },
+    {
+      "owner": "WallpaperSettings",
+      "name": "WeatherFahrenheit",
+      "type": "bool",
+      "source": "src/Widgets/WallpaperWindow.cs",
+      "line": 542
+    },
+    {
+      "owner": "WallpaperSettings",
+      "name": "IncludeSubfolders",
+      "type": "bool",
+      "source": "src/Widgets/WallpaperWindow.cs",
+      "line": 545
+    },
+    {
+      "owner": "WallpaperSettings",
+      "name": "RepeatPerVideo",
+      "type": "int",
+      "source": "src/Widgets/WallpaperWindow.cs",
+      "line": 546
+    },
+    {
+      "owner": "WallpaperSettings",
+      "name": "RotateEveryMinutes",
+      "type": "int",
+      "source": "src/Widgets/WallpaperWindow.cs",
+      "line": 547
+    },
+    {
+      "owner": "WallpaperSettings",
+      "name": "RepeatsDone",
+      "type": "int",
+      "source": "src/Widgets/WallpaperWindow.cs",
+      "line": 548
+    },
+    {
+      "owner": "WallpaperSettings",
+      "name": "AdvanceSerial",
+      "type": "int",
+      "source": "src/Widgets/WallpaperWindow.cs",
+      "line": 549
+    },
+    {
+      "owner": "WallpaperSettings",
+      "name": "ScheduleEnabled",
+      "type": "bool",
+      "source": "src/Widgets/WallpaperWindow.cs",
+      "line": 552
+    },
+    {
+      "owner": "WallpaperSettings",
+      "name": "Schedule",
+      "type": "List<WallpaperScheduleRule>",
+      "source": "src/Widgets/WallpaperWindow.cs",
+      "line": 553
+    },
+    {
+      "owner": "WallpaperSettings",
+      "name": "AudioEnabled",
+      "type": "bool",
+      "source": "src/Widgets/WallpaperWindow.cs",
+      "line": 561
+    },
+    {
+      "owner": "WallpaperSettings",
+      "name": "AudioVolume",
+      "type": "double",
+      "source": "src/Widgets/WallpaperWindow.cs",
+      "line": 562
+    },
+    {
+      "owner": "WallpaperSettings",
+      "name": "AudioBassGain",
+      "type": "double",
+      "source": "src/Widgets/WallpaperWindow.cs",
+      "line": 563
+    },
+    {
+      "owner": "WallpaperSettings",
+      "name": "AudioMidGain",
+      "type": "double",
+      "source": "src/Widgets/WallpaperWindow.cs",
+      "line": 564
+    },
+    {
+      "owner": "WallpaperSettings",
+      "name": "AudioTrebleGain",
+      "type": "double",
+      "source": "src/Widgets/WallpaperWindow.cs",
+      "line": 565
+    },
+    {
+      "owner": "WallpaperSettings",
+      "name": "PerformanceMode",
+      "type": "string",
+      "source": "src/Widgets/WallpaperWindow.cs",
+      "line": 567
+    },
+    {
+      "owner": "WallpaperSettings",
+      "name": "ThemeMode",
+      "type": "string",
+      "source": "src/Widgets/WallpaperWindow.cs",
+      "line": 568
+    },
+    {
+      "owner": "WallpaperSettings",
+      "name": "PaletteName",
+      "type": "string",
+      "source": "src/Widgets/WallpaperWindow.cs",
+      "line": 569
+    },
+    {
+      "owner": "WallpaperSettings",
+      "name": "WaveSpeed",
+      "type": "double",
+      "source": "src/Widgets/WallpaperWindow.cs",
+      "line": 570
+    },
+    {
+      "owner": "WallpaperSettings",
+      "name": "GlowIntensity",
+      "type": "double",
+      "source": "src/Widgets/WallpaperWindow.cs",
+      "line": 571
+    },
+    {
+      "owner": "WallpaperSettings",
+      "name": "LineThickness",
+      "type": "double",
+      "source": "src/Widgets/WallpaperWindow.cs",
+      "line": 572
+    },
+    {
+      "owner": "WallpaperSettings",
+      "name": "ScreenVideoOverride",
+      "type": "Dictionary<string, string>",
+      "source": "src/Widgets/WallpaperWindow.cs",
+      "line": 577
+    },
+    {
+      "owner": "DeskStripSettings",
+      "name": "Paths",
+      "type": "List<string>",
+      "source": "src/Widgets/DeskStripWindow.cs",
+      "line": 19
+    },
+    {
+      "owner": "DeskStripSettings",
+      "name": "AutoPinnedFamily",
+      "type": "List<string>",
+      "source": "src/Widgets/DeskStripWindow.cs",
+      "line": 21
+    },
+    {
+      "owner": "DeskStripSettings",
+      "name": "MonitorPinnedOrder",
+      "type": "Dictionary<string, List<string>>",
+      "source": "src/Widgets/DeskStripWindow.cs",
+      "line": 23
+    },
+    {
+      "owner": "DeskStripSettings",
+      "name": "LaunchGroups",
+      "type": "Dictionary<string, List<string>>",
+      "source": "src/Widgets/DeskStripWindow.cs",
+      "line": 25
+    },
+    {
+      "owner": "DeskStripSettings",
+      "name": "StartEnabled",
+      "type": "bool",
+      "source": "src/Widgets/DeskStripWindow.cs",
+      "line": 26
+    },
+    {
+      "owner": "DeskStripSettings",
+      "name": "Position",
+      "type": "DockPosition",
+      "source": "src/Widgets/DeskStripWindow.cs",
+      "line": 27
+    },
+    {
+      "owner": "DeskStripSettings",
+      "name": "AutoHide",
+      "type": "bool",
+      "source": "src/Widgets/DeskStripWindow.cs",
+      "line": 28
+    },
+    {
+      "owner": "DeskStripSettings",
+      "name": "IconSize",
+      "type": "int",
+      "source": "src/Widgets/DeskStripWindow.cs",
+      "line": 29
+    },
+    {
+      "owner": "DeskStripSettings",
+      "name": "LabelFontScalePercent",
+      "type": "int",
+      "source": "src/Widgets/DeskStripWindow.cs",
+      "line": 30
+    },
+    {
+      "owner": "DeskStripSettings",
+      "name": "Magnify",
+      "type": "bool",
+      "source": "src/Widgets/DeskStripWindow.cs",
+      "line": 31
+    },
+    {
+      "owner": "DeskStripSettings",
+      "name": "ShowRunning",
+      "type": "bool",
+      "source": "src/Widgets/DeskStripWindow.cs",
+      "line": 32
+    },
+    {
+      "owner": "DeskStripSettings",
+      "name": "Monitor",
+      "type": "string?",
+      "source": "src/Widgets/DeskStripWindow.cs",
+      "line": 33
+    },
+    {
+      "owner": "DeskStripSettings",
+      "name": "OnlyLocalWindows",
+      "type": "bool",
+      "source": "src/Widgets/DeskStripWindow.cs",
+      "line": 34
+    },
+    {
+      "owner": "DeskStripSettings",
+      "name": "AllMonitors",
+      "type": "bool",
+      "source": "src/Widgets/DeskStripWindow.cs",
+      "line": 35
+    },
+    {
+      "owner": "DeskStripSettings",
+      "name": "HideOnFullscreen",
+      "type": "bool",
+      "source": "src/Widgets/DeskStripWindow.cs",
+      "line": 36
+    },
+    {
+      "owner": "DeskStripSettings",
+      "name": "ShowPreviews",
+      "type": "bool",
+      "source": "src/Widgets/DeskStripWindow.cs",
+      "line": 37
+    },
+    {
+      "owner": "DeskStripSettings",
+      "name": "ShowWorkspaceLabel",
+      "type": "bool",
+      "source": "src/Widgets/DeskStripWindow.cs",
+      "line": 38
+    }
+  ]
+}
