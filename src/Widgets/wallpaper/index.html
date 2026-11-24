@@ -23,6 +23,16 @@ html,body{margin:0;padding:0;width:100vw;height:100vh;overflow:hidden;background
 /* P0: keep weather overlay labels white under all Windows/embedding themes. */
 #wxInfo, #wxInfo #wxTime, #wxInfo #wxDate, #wxInfo #wxTemp, #wxInfo #wxWind, #wxInfo #wxCity, #wxInfo #wxSource { color:#fff !important; -webkit-text-fill-color:#fff !important; }
 #wxInfo #wxCity { text-shadow:0 1px 4px rgba(0,0,0,.85), 0 2px 16px rgba(0,0,0,.65); }
+/* Opt-in shared theme: live values, never baked into the scene. */
+#wxInfo.signature-card{width:min(calc(var(--s)*340px),88vw);padding:clamp(12px,1.5vw,23px);box-sizing:border-box;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px 13px;text-align:left;white-space:normal;border:1px solid rgba(174,228,255,.8);border-radius:clamp(16px,2vw,26px);background:linear-gradient(145deg,rgba(31,91,138,.86),rgba(6,29,54,.90) 64%,rgba(16,58,91,.86));box-shadow:inset 0 1px 1px rgba(255,255,255,.7),inset 0 -2px 7px rgba(100,207,255,.35),0 5px 24px rgba(0,0,0,.42);text-shadow:0 1px 4px #061528}
+@supports(backdrop-filter:blur(8px)){#wxInfo.signature-card{backdrop-filter:blur(8px);background:linear-gradient(145deg,rgba(31,91,138,.73),rgba(6,29,54,.86) 64%,rgba(16,58,91,.76))}}
+#wxInfo.signature-card #wxCity{grid-column:1;grid-row:1;font:600 clamp(13px,calc(var(--s)*18px),22px)/1.25 "Segoe UI",sans-serif;letter-spacing:0;margin:0;opacity:1;overflow-wrap:anywhere;text-transform:none}
+#wxInfo.signature-card #wxTime{grid-column:2;grid-row:1/3;font-size:clamp(18px,calc(var(--s)*34px),40px);font-weight:500;align-self:center;text-align:right}
+#wxInfo.signature-card #wxDate{grid-column:1;grid-row:2;font-size:clamp(10px,calc(var(--s)*12px),16px);letter-spacing:0;margin:0}
+#wxInfo.signature-card #wxTemp{grid-column:1/3;grid-row:3;font-size:clamp(23px,calc(var(--s)*48px),58px);font-weight:500;border-top:1px solid rgba(190,227,255,.28);padding-top:10px;margin:0;line-height:1.1}
+#wxInfo.signature-card #wxWind{grid-column:1/3;grid-row:4;font-size:clamp(11px,calc(var(--s)*14px),18px);margin:0;opacity:1}
+#wxInfo.signature-card #wxSource{grid-column:1/3;grid-row:5;font-size:clamp(9px,calc(var(--s)*11px),13px);margin:0;overflow-wrap:anywhere}
+#wxInfo.signature-card #wxTemp:empty{display:none}
 #pulse{position:fixed;inset:0;pointer-events:none;background:radial-gradient(circle at 50% 50%,rgba(255,255,255,.14),transparent 65%);opacity:0;transition:opacity 120ms linear}
 body.reduced-motion *,body.reduced-motion *::before,body.reduced-motion *::after{animation-duration:0.001ms!important;animation-iteration-count:1!important;transition-duration:0.001ms!important}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:0.001ms!important;transition-duration:0.001ms!important}}
@@ -652,6 +662,8 @@ function updateWeatherInfo() {
     if (!box) return;
     if (!cfg.weatherInfo || !window.WeatherWallpaper) { box.style.display = 'none'; return; }   // το cfg.weatherInfo ισχύει ήδη ανά mode (βλ. C#)
     const ancientAthens = cfg.mode === 'Ancient Athens';
+    const card = cfg.signatureWeatherCard === true;
+    box.classList.toggle('signature-card', card);
     const i = WeatherWallpaper.info();
     // 1.7.8: 14 γλώσσες (ίδιες με το GearWin) - το cfg.lang είναι ο κωδικός της εφαρμογής (el/en/de/fr/...).
     const LOCALES = { el: 'el-GR', en: 'en-US', de: 'de-DE', fr: 'fr-FR', es: 'es-ES', ko: 'ko-KR', zh: 'zh-CN', it: 'it-IT',
@@ -682,8 +694,8 @@ function updateWeatherInfo() {
     // που ήδη ενώνει θερμοκρασία+συνθήκη. Το #wxWind element μένει στο DOM (θέση/CSS ανέγγιχτη) αλλά
     // άδειο — κρύβεται μέσω CSS (:empty) ώστε να μη μείνει κενό διάστημα.
     const windText = typeof i.windKmh === 'number' ? `${i.windKmh} km/h` : '';
-    document.getElementById('wxTemp').textContent = [tempText, windText, cond].filter(Boolean).join('  ·  ');
-    document.getElementById('wxWind').textContent = '';
+    document.getElementById('wxTemp').textContent = card ? tempText : [tempText, windText, cond].filter(Boolean).join('  ·  ');
+    document.getElementById('wxWind').textContent = card ? [cond,windText].filter(Boolean).join('  ·  ') : '';
     document.getElementById('wxCity').textContent = ancientAthens
         ? (cfg.lang === 'el' ? 'ΑΡΧΑΙΑ ΑΘΗΝΑ' : 'ANCIENT ATHENS') : (cfg.weatherCity || '');
     document.getElementById('wxSource').textContent = window.OpsisWeatherFreshness
@@ -692,10 +704,11 @@ function updateWeatherInfo() {
     box.style.left = (cfg.infoX ?? 50) + '%';
     box.style.top = (cfg.infoY ?? 34) + '%';
     box.style.setProperty('--s', ((cfg.infoScale ?? 100) / 100).toFixed(2));
-    box.style.display = 'block';
+    box.style.display = card ? 'grid' : 'block';
+    if (card) { box.style.color='#fff'; box.style.textShadow='0 1px 4px #061528'; }
     // Sample the actual composited weather canvas at the current clock location.
     // Browser/video fallback keeps the existing shadow (never read an unrelated frame).
-    if (isWeatherMode(cfg.mode) && canvas.style.display !== 'none') {
+    if (!card && isWeatherMode(cfg.mode) && canvas.style.display !== 'none') {
         try {
             const r = box.getBoundingClientRect();
             let samples = 0, sum = 0;
