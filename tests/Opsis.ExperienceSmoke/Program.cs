@@ -13,6 +13,17 @@ void Check(bool condition, string description)
 }
 try
 {
+    Check(OpsisPluginPackageAudit.Classify("OpsisNewsCrawler.OpsisPlugin.dll",
+              new Version(1, 0, 0, 0)) == "CompatibleABI",
+        "known plugin identity matches Opsis pinned 1.0.0.0 ABI");
+    Check(OpsisPluginPackageAudit.Classify("OpsisNewsCrawler.OpsisPlugin.dll",
+              new Version(0, 24, 1, 0)) == "IncompatibleABI",
+        "incompatible NewsCrawler plugin binary version is rejected before execution");
+    Check(OpsisPluginPackageAudit.Classify("UnknownPlugin.dll",
+              new Version(1, 0, 0, 0)) == "RequiresTrustReview",
+        "unknown plugin is not incorrectly certified by matching an assembly version");
+    Check(OpsisPluginPackageAudit.Classify("Chronikologio.OpsisPlugin.dll", null) == "InvalidMetadata",
+        "missing plugin assembly metadata blocks ABI certification");
     Check(OpsisIntegrationAudit.Baseline28.Count >= 25, "2.8.0.2510 baseline inventory recorded");
     Check(OpsisIntegrationAudit.Baseline28.Select(x => x.Key)
         .Distinct(StringComparer.OrdinalIgnoreCase).Count() == OpsisIntegrationAudit.Baseline28.Count,
