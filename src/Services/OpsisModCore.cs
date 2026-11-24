@@ -58,7 +58,7 @@ public static class OpsisModCore
         new ModuleDefinition("theme.icon-atlas", "Themes", "IconAtlas pack manager", Array.Empty<string>(), Array.Empty<string>(), 19041, true),
         new ModuleDefinition("theme.dynamic-accent", "Themes", "Wallpaper-derived accent colors (planned)", Array.Empty<string>(), Array.Empty<string>()),
         new ModuleDefinition("theme.gallery-marketplace", "Themes", "Theme Marketplace (planned)", Array.Empty<string>(), Array.Empty<string>()),
-        new ModuleDefinition("theme.pack-export", "Themes", "Unified Theme Pack import/export (planned)", Array.Empty<string>(), Array.Empty<string>()),
+        new ModuleDefinition("theme.pack-export", "Themes", "Safe .opsis-theme pack import/export", Array.Empty<string>(), Array.Empty<string>(), 19041, true),
         new ModuleDefinition("wallpaper.weather", "Wallpaper", "Live Weather Wallpaper", Array.Empty<string>(), Array.Empty<string>(), 19041, true),
         new ModuleDefinition("wallpaper.scene-composer", "Wallpaper", "Weather Scene Composer", new[] { "wallpaper.weather" }, Array.Empty<string>(), 19041, true),
         new ModuleDefinition("wallpaper.scene-rules", "Wallpaper", "Weather Scene scheduled rules", new[] { "wallpaper.scene-composer" }, Array.Empty<string>(), 19041, true),
