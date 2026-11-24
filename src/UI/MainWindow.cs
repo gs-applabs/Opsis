@@ -503,7 +503,20 @@ namespace MotionDesk.UI
             bool shown = Visible && WindowState != FormWindowState.Minimized;
             if (_statusTimer != null) _statusTimer.Enabled = shown;
             bool visible = shown && AppSettings.Peek().EnableAnimations;
-            if (_brandPulseTimer != null) _brandPulseTimer.Enabled = visible;
+            if (_brandPulseTimer == null && _brandDot != null && !_brandDot.IsDisposed)
+            {
+                _brandPulseTimer = new System.Windows.Forms.Timer { Interval = 50 };
+                _brandPulseTimer.Tick += (_, _) =>
+                {
+                    _brandPulseT = (_brandPulseT + .05) % 10000;
+                    if (_brandDot != null && !_brandDot.IsDisposed) _brandDot.Invalidate();
+                };
+            }
+            if (_brandPulseTimer != null)
+            {
+                _brandPulseTimer.Enabled = visible;
+                if (!visible && _brandDot != null && !_brandDot.IsDisposed) _brandDot.Invalidate();
+            }
             if (_headerWaveTimer != null) _headerWaveTimer.Enabled = visible;
         }
 
