@@ -258,6 +258,14 @@ namespace MotionDesk.UI
 
             // ---- Explorer and taskbar behaviour
             var shell = AddCardSection(panel, T("Win.SecExplorer"));
+            AddText(shell, StudioText("Explorer glass uses the existing DWM window effects. Only File Explorer windows are targeted; native content may remain opaque. No shell patch or restart is required.",
+                "Το γυαλί του Explorer χρησιμοποιεί τα υπάρχοντα εφέ DWM. Αφορά μόνο τα παράθυρα Εξερεύνησης· το εσωτερικό τους ενδέχεται να παραμένει αδιαφανές. Δεν απαιτείται patch ή επανεκκίνηση του κελύφους."));
+            var explorerGlass = new FlatToggle { Name = "ExplorerGlass", RowWidth = 700,
+                Text = StudioText("File Explorer — Acrylic backdrop", "Εξερεύνηση αρχείων — γυάλινο φόντο Acrylic"),
+                Checked = fx.ExplorerGlass, BackColor = UiTheme.Surface, Margin = new Padding(0, 2, 0, 2),
+                Enabled = svc.EngineActive && OperatingSystem.IsWindowsVersionAtLeast(10, 0, 22621) && !SystemInformation.HighContrast };
+            explorerGlass.CheckedChanged += (_, _) => Fx(e => e.ExplorerGlass = explorerGlass.Checked);
+            shell.Controls.Add(explorerGlass);
             Tg(shell, "Win.FileExt", cur.ShowFileExtensions == true, v => Do(() => svc.Engine.Apply(new Look { ShowFileExtensions = v })));
             Tg(shell, "Win.HiddenFiles", cur.ShowHiddenFiles == true, v => Do(() => svc.Engine.Apply(new Look { ShowHiddenFiles = v })));
             Tg(shell, "Win.ClockSecs", cur.ClockSeconds == true, v => Do(() => svc.Engine.Apply(new Look { ClockSeconds = v })));
