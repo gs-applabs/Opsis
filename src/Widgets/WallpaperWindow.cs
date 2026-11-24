@@ -1012,7 +1012,9 @@ namespace MotionDesk.Widgets
                 screen.Width <= 4096 && screen.Height <= 4096 && (long)screen.Width * screen.Height <= 8388608)
             {
                 _signatureCaptureBusy = true;
-                _signatureNextCapture = now + 2000;
+                int interval = GlassService.Level == GlassLevel.Full && GlassPaneBinder.SignatureDiagnostics?.AdaptiveTier == Opsis.UI.GlassTier.High ? 500 : 2000;
+                _signatureNextCapture = now + interval;
+                var captureWatch = System.Diagnostics.Stopwatch.StartNew();
                 try
                 {
                     using var stream = new MemoryStream();
@@ -1028,7 +1030,7 @@ namespace MotionDesk.Widgets
                     _signatureFrame = next;
                 }
                 catch (Exception) { _signatureFrame?.Dispose(); _signatureFrame = null; }
-                finally { _signatureCaptureBusy = false; }
+                finally { _signatureCaptureBusy = false; _signatureNextCapture = Math.Max(_signatureNextCapture, Environment.TickCount64 + Math.Clamp(captureWatch.ElapsedMilliseconds * 3, 100, 4000)); }
             }
             if (IsDisposed || Disposing || !Visible || _paused || _signatureFrame is not { } frame ||
                 !TargetScreen.Bounds.Equals(screen)) return null;
@@ -1642,8 +1644,35 @@ namespace MotionDesk.Widgets
         internal async Task<Bitmap?> CaptureSignatureCropAsync(Rectangle bounds)
         {
             if (!Active || UserPaused) return null;
-            var target = _windows.FirstOrDefault(w => !w.IsDisposed && w.Visible && w.TargetScreen.Bounds.Contains(bounds));
-            return target == null ? null : await target.CaptureSignatureCropAsync(bounds);
+            if (bounds.Width < 1 || bounds.Height < 1) return null;
+            var candidates = _windows.Where(w => !w.IsDisposed && w.Visible && w.TargetScreen.Bounds.IntersectsWith(bounds))
+                .GroupBy(w => w.TargetScreen.DeviceName).Select(g => g.First()).ToArray();
+            var target = candidates.FirstOrDefault(w => w.TargetScreen.Bounds.Contains(bounds));
+            if (target != null) return await target.CaptureSignatureCropAsync(bounds);
+            // Composite only complete coverage; no pixels outside the wallpaper windows.
+            var pieces = candidates.Select(w => (Window: w, Area: Rectangle.Intersect(bounds,w.TargetScreen.Bounds))).ToArray();
+            if (pieces.Length < 2 || pieces.Sum(p => (long)p.Area.Width*p.Area.Height) != (long)bounds.Width*bounds.Height) return null;
+            for (int i=0;i<pieces.Length;i++) for(int j=i+1;j<pieces.Length;j++)
+                if (pieces[i].Area.IntersectsWith(pieces[j].Area)) return null;
+            double scale = Math.Min(1d,1024d / Math.Max(bounds.Width,bounds.Height));
+            var result = new Bitmap(Math.Max(1,(int)(bounds.Width*scale)),Math.Max(1,(int)(bounds.Height*scale)));
+            bool completed = false;
+            try
+            {
+                foreach (var piece in pieces)
+                {
+                    using var crop = await piece.Window.CaptureSignatureCropAsync(piece.Area);
+                    if (crop == null || !Active || UserPaused) return null;
+                    using var g = Graphics.FromImage(result);
+                    var dest = Rectangle.FromLTRB(
+                        (int)Math.Round((piece.Area.Left-bounds.Left)*scale),(int)Math.Round((piece.Area.Top-bounds.Top)*scale),
+                        Math.Min(result.Width,(int)Math.Round((piece.Area.Right-bounds.Left)*scale)),
+                        Math.Min(result.Height,(int)Math.Round((piece.Area.Bottom-bounds.Top)*scale)));
+                    if (dest.Width > 0 && dest.Height > 0) g.DrawImage(crop,dest);
+                }
+                completed = true; return result;
+            }
+            finally { if (!completed) result.Dispose(); }
         }
 #endif
         public async Task<bool> CaptureSnapshotAsync(string filePath)
