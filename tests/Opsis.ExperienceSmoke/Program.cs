@@ -434,6 +434,12 @@ try
     Check(TaskbarViewProfiles.IsValid("TaskbarGlomLevel", 2) && !TaskbarViewProfiles.IsValid("TaskbarGlomLevel", 3) &&
         ExplorerViewProfiles.IsValid("ShowStatusBar", 0) && !ExplorerViewProfiles.IsValid("ShowStatusBar", 2),
         "native Explorer and Taskbar options validate without touching registry");
+    Check(NativeShellThemeBridge.IsKnownTheme("windows-11-notification-center-styler", "LiquidGlass") &&
+        !NativeShellThemeBridge.IsKnownTheme("unregistered", "LiquidGlass") &&
+        !NativeShellThemeBridge.IsKnownTheme("windows-11-notification-center-styler", "unknown"),
+        "native shell provider only accepts known theme choices");
+    Check(NativeShellThemeBridge.ParseTheme("{\"schemaVersion\":1,\"success\":true,\"data\":{\"id\":\"windows-11-notification-center-styler\",\"key\":\"theme\",\"value\":\"LiquidGlass\"}}",
+        "windows-11-notification-center-styler") == "LiquidGlass", "native theme CLI schema validated without starting third party executable");
     Check(OpsisModCompatibility.ResolveWindhawkDisabled(1, 1, 0, false) == false &&
         OpsisModCompatibility.ResolveWindhawkDisabled(0, 0, 1, false) == false &&
         OpsisModCompatibility.ResolveWindhawkDisabled(0, 1, 0, true) == true &&

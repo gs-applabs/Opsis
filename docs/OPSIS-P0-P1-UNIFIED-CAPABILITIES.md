@@ -35,8 +35,8 @@ Benchmark criteria: same workload, resolution and DPI; CPU/GPU, memory, GDI hand
 | 10 | P1 | Advanced Explorer tabs | folder launch and keyboard guidance only; native tab management pending |
 | 11 | P1 | Taskbar thumbnail customization | Opsis taskbar on-demand DWM preview with Off/Compact/Large; native thumbnail styling pending |
 | 12 | P1 | System Tray Icon Studio | Opsis NotifyIcon style selection added; other Windows tray icons remain untouched |
-| 13 | P2 | Notification Center Styler | Native access and notification settings link; XAML styling pending |
-| 14 | P2 | Quick Settings Styler | Native access via existing keyboard helper; XAML styling pending |
+| 13 | P2 | Notification Center Styler | native access plus experimental optional existing Windhawk theme adapter; independent XAML engine not implemented |
+| 14 | P2 | Quick Settings Styler | native access plus shared optional existing Windhawk Notification Center theme adapter; independent XAML engine not implemented |
 | 15 | P2 | Volume Flyout customization | on-demand Opsis volume flyout, compact/large/Windows choice; native flyout styling pending |
 | 16 | P2 | Independent appearance profiles per monitor | per-display Opsis taskbar profile overrides via existing topology service; full native Shell per-monitor styling pending |
 | 17 | P2 | Custom Taskbar gestures | opt-in empty-area middle/double click in Opsis bar; native gesture hooks pending |
@@ -67,3 +67,6 @@ Prior commit 9b3fb2e: Windows VM audit 45462736778, installer E2E 45462736804, c
 
 ### Cross-phase fixes
 Windhawk portable scan follows upstream src/windhawk/engine/storage_manager.cpp and src/windhawk-core/core/src/services/storage.rs: [Storage] AppDataPath, Engine/Mods/<id>.ini [Mod]. Installed scope follows engine/mod.cpp (UserScoped + Disabled, Nuked takes precedence). Read only known program roots or running process folders, local bounded reads; no arbitrary disk scan or third-party writes. A portable installation that is not running and is in an arbitrary location is not automatically discovered; actual injection remains unverified. DeskFlip now opens with title cards first, uses one globally bounded background capture worker and frees late snapshots after closure; a stalled PrintWindow can still occupy that single worker until restart but cannot freeze the UI. Volume rechecks actual endpoint ID before applying. Release remains blocked.
+
+### Native visual provider increment (experimental)
+The existing Personalization page now offers a shared Native Shell Theme Editor with built-in theme selections for Start, Explorer, Taskbar, Notification Center and Quick Settings. It invokes only the installed Windhawk CLI's official schema-1 mod settings get/set theme interface, after explicit confirmation; no automatic downloads, installs, enabling mods, direct third-party storage writes or duplicate injection engine. First original theme per mod is stored under Opsis, readback verifies setting, custom overrides remain untouched. Disallow Opsis replacement taskbar concurrently with native Taskbar Styler. CLI availability is limited to the installed Program Files layout and a version supporting the new CLI; actual native rendering and compatibility not verified. Source: ramensoftware/windhawk src/windhawk-core/cli/src/args.rs, commands/mods/settings.rs, output.rs; Windhawk public styler pages. This does not complete native custom XAML, per-monitor native styles, volume flyout styling, advanced Explorer tab management, or standalone native engine.
