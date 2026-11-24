@@ -272,7 +272,7 @@ namespace MotionDesk.Widgets
                 weatherLon = settings.WeatherLon,
                 rotateMinutes = settings.RotateEveryMinutes,
                 windSim = settings.WindSimulation,
-                weatherInfo = settings.WeatherShowInfo && (WallpaperSettings.IsWeatherMode(effectiveMode) || settings.InfoOnAllModes)
+                weatherInfo = settings.WeatherShowInfo && (WallpaperSettings.IsWeatherMode(effectiveMode) || effectiveMode == WallpaperSettings.AthensMode || settings.InfoOnAllModes)
                     && !(AppSettings.Peek().PresentationMonitorIds?.Any(id =>
                         id.Equals(_screenDeviceName, StringComparison.OrdinalIgnoreCase) ||
                         id.Equals(MonitorTopologyService.ForDevice(_screenDeviceName)?.Id, StringComparison.OrdinalIgnoreCase)) ?? false),
