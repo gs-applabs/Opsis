@@ -57,6 +57,7 @@ public interface IDwmWindows
     /// <summary>Όνομα εκτελέσιμου του παραθύρου (π.χ. "chrome.exe"), ή null αν δεν είναι γνωστό.</summary>
     string? ProcessName(IntPtr hwnd) => null;
     bool IsExplorerWindow(IntPtr hwnd) => false;
+    bool SupportsExplorerGlass => true;
     void SetCaptionColor(IntPtr hwnd, int colorRef) { }        // 0x00BBGGRR ή 0xFFFFFFFF = προεπιλογή
     void SetCaptionTextColor(IntPtr hwnd, int colorRef) { }
 }
@@ -146,7 +147,7 @@ public sealed class WindowEffectsEngine
             _dwm.SetDarkTitle(h, s.DarkTitle == DarkTitleBars.On || _systemIsDark());
             touched = true;
         }
-        if (s.ExplorerGlass && _dwm.IsExplorerWindow(h))
+        if (s.ExplorerGlass && _dwm.SupportsExplorerGlass && _dwm.IsExplorerWindow(h))
         {
             _dwm.SetBackdrop(h, 3); // DWMSBT_TRANSIENTWINDOW (Acrylic), not Explorer content injection
             touched = true;
@@ -231,12 +232,13 @@ public sealed class RealDwmWindows : IDwmWindows
         { "Progman", "WorkerW", "Shell_TrayWnd", "Shell_SecondaryTrayWnd", "NotifyIconOverflowWindow", "TopLevelWindowForOverflowXamlIsland", "XamlExplorerHostIslandWindow", "Windows.UI.Core.CoreWindow" };
 
     public IntPtr Foreground => GetForegroundWindow();
+    public bool SupportsExplorerGlass => OperatingSystem.IsWindowsVersionAtLeast(10, 0, 22621) && !System.Windows.Forms.SystemInformation.HighContrast;
     public bool IsExplorerWindow(IntPtr h)
     {
         if (!IsEligible(h)) return false;
         var name = new StringBuilder(128);
         GetClassName(h, name, name.Capacity);
-        return name.ToString() is "CabinetWClass" or "ExploreWClass" &&
+        return (name.ToString() is "CabinetWClass" or "ExploreWClass") &&
             string.Equals(ProcessName(h), "explorer.exe", StringComparison.OrdinalIgnoreCase);
     }
     public bool IsAlive(IntPtr h) => IsWindow(h);
