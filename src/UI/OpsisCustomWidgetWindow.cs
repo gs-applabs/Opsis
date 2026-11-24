@@ -29,14 +29,24 @@ public sealed class OpsisCustomWidgetWindow : Form
         var accent = ColorTranslator.FromHtml(layout.AccentHex);
         _content = new Label
         {
-            Dock = DockStyle.Fill,
+            AutoSize = false,
+            Size = new Size(Math.Min(330, Math.Max(160, layout.Width - 40)), Math.Min(115, Math.Max(60, layout.Height - 30))),
             TextAlign = ContentAlignment.MiddleCenter,
             ForeColor = accent,
             BackColor = UiTheme.Surface,
             Font = new Font("Segoe UI Variable Display", layout.FontSize, FontStyle.Regular),
-            AutoEllipsis = true
+            AutoEllipsis = true,
+            BorderStyle = layout.ShowWidgetBorder ? BorderStyle.FixedSingle : BorderStyle.None
         };
         Controls.Add(_content);
+        void PositionContent()
+        {
+            var (x, y) = OpsisWidgetDesigner.Position(ClientSize.Width, ClientSize.Height,
+                _content.Width, _content.Height, layout.ContentXPercent, layout.ContentYPercent);
+            _content.Location = new Point(x, y);
+        }
+        Resize += (_, _) => PositionContent();
+        PositionContent();
         _refresh.Tick += (_, _) => UpdateText();
         Shown += (_, _) => { UpdateText(); if (layout.Binding != "Text") _refresh.Start(); };
         FormClosed += (_, _) => { _refresh.Stop(); _refresh.Dispose(); _content.Font.Dispose(); };
