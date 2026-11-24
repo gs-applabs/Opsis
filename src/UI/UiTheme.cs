@@ -167,10 +167,18 @@ namespace MotionDesk.UI
         private const uint DWMSBT_NONE = 1;
         [DllImport("dwmapi.dll")] private static extern int DwmSetWindowAttribute(IntPtr hwnd, int attr, ref int value, int size);
 
-        public static void ApplyMicaBackdrop(IntPtr handle, bool enabled = true)
+        public static void ApplyMicaBackdrop(IntPtr handle, bool enabled = true) =>
+            TryApplySystemBackdrop(handle, enabled ? (int)DWMSBT_MAINWINDOW : (int)DWMSBT_NONE);
+
+        // DWM owns the system material. Never claim a successful change if
+        // Windows rejected the attribute; do not use a layered window with it.
+        internal static bool TryApplySystemBackdrop(IntPtr handle, int material)
         {
-            try { int v = (int)(enabled ? DWMSBT_MAINWINDOW : DWMSBT_NONE); DwmSetWindowAttribute(handle, DWMWA_SYSTEMBACKDROP_TYPE, ref v, sizeof(int)); }
-            catch (DllNotFoundException) { } catch (EntryPointNotFoundException) { }
+            if (handle == IntPtr.Zero || material is < 1 or > 4 ||
+                !OperatingSystem.IsWindowsVersionAtLeast(10, 0, 22621)) return false;
+            try { return DwmSetWindowAttribute(handle, DWMWA_SYSTEMBACKDROP_TYPE, ref material, sizeof(int)) >= 0; }
+            catch (DllNotFoundException) { return false; }
+            catch (EntryPointNotFoundException) { return false; }
         }
 
         // DWMWA_WINDOW_CORNER_PREFERENCE (Win11 22H2+) — στρογγυλεμένες γωνίες στο ίδιο το OS-level
