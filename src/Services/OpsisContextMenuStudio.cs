@@ -73,6 +73,13 @@ public static class OpsisContextMenuStudio
     /// <summary>Remove only entries created by this version of Opsis.</summary>
     public static void Disable()
     {
+        // Validate both keys before deleting either one; never partially delete on a collision.
+        foreach (var root in Roots)
+        {
+            using var existing = Registry.CurrentUser.OpenSubKey(root + "\\" + MenuKey);
+            if (existing != null && !string.Equals(existing.GetValue(OwnerValue) as string, Owner, StringComparison.Ordinal))
+                throw new InvalidOperationException("Context menu entry is not owned by Opsis.");
+        }
         foreach (var root in Roots)
         {
             var path = root + "\\" + MenuKey;
