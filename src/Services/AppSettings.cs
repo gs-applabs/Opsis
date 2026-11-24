@@ -185,6 +185,13 @@ namespace MotionDesk.Services
         /// <summary>Opt-in: "New DeskContainer" / "Next animated wallpaper" in the desktop right-click menu (per-user registry verbs, see DesktopMenu).</summary>
         public bool DesktopMenuEnabled { get; set; } = true;
         public string MusicOverlayAnchor { get; set; } = "BottomRight";
+        // P0 optional desktop interactions. Values: None | OpenOpsis | ShowDesktop | TaskView.
+        public bool HotCornersEnabled { get; set; } = false;
+        public string HotCornerTopLeft { get; set; } = "None";
+        public string HotCornerTopRight { get; set; } = "None";
+        public string HotCornerBottomLeft { get; set; } = "None";
+        public string HotCornerBottomRight { get; set; } = "None";
+
 
         /// <summary>2.6.0: the shared Glass theme choices (Opsis.UI.GlassSettings): Solid by default.</summary>
         public GlassSettings Glass { get; set; } = new();
