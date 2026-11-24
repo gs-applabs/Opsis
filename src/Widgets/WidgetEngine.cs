@@ -372,6 +372,8 @@ namespace MotionDesk.Widgets
                 _webView = null;
                 if (_themeHandler != null) { ThemeManager.Changed -= _themeHandler; ThemeManager.Repainted -= _themeHandler; }
                 _themeHandler = null;
+                _glassPane?.Dispose();
+                _glassPane = null;
             }
             base.Dispose(disposing);
         }
@@ -886,9 +888,7 @@ namespace MotionDesk.Widgets
             _themeHandler = () =>
             {
                 if (IsDisposed) return;
-                panel.BackColor = WidgetSurface();
-                BackColor = WidgetSurface();
-                TransparencyKey = UsesTransparentWidgetPixels ? Color.Black : default;
+                RefreshWidgetSurface();
                 closeLabel.ForeColor = UiTheme.TextSecondary;
                 lockLabel.ForeColor = UiTheme.TextSecondary;
                 menuLabel.ForeColor = UiTheme.TextSecondary;
@@ -909,9 +909,23 @@ namespace MotionDesk.Widgets
         private GlassPaneBinder? _glassPane;
         private Color SurfaceTint => _customTintArgb is int tint ? Color.FromArgb(tint) : UiTheme.TintColor;
         private int TintAlpha => _customTintArgb != null ? Math.Max(70, UiTheme.TintAlpha) : UiTheme.TintAlpha;
-        private bool WantsSurfaceGlass => UiTheme.IsFullyTransparent && GlassService.Enabled &&
+        private bool WantsSurfaceGlass => UiTheme.IsFullyTransparent && !SystemInformation.HighContrast &&
             DesktopMaterials.Get(DesktopSurface.Widgets).Mode != "Solid";
-        private bool UsesTransparentWidgetPixels => UiTheme.IsFullyTransparent && (TintAlpha == 0 || WantsSurfaceGlass);
+        // Explicit legacy clear mode remains available. A custom glass material needs
+        // an actual bound pane, not merely permission to start the GPU engine.
+        private bool UsesTransparentWidgetPixels => UiTheme.IsFullyTransparent && !SystemInformation.HighContrast &&
+            (_glassPane?.HasPane == true || (TintAlpha == 0 && !DesktopMaterials.Get(DesktopSurface.Widgets).WantsGlass));
+
+        private void RefreshWidgetSurface()
+        {
+            if (IsDisposed || Disposing) return;
+            var color = WidgetSurface();
+            BackColor = color;
+            if (_themedPanel != null) _themedPanel.BackColor = color;
+            var key = UsesTransparentWidgetPixels ? Color.Black : Color.Empty;
+            if (TransparencyKey != key) TransparencyKey = key;
+            Invalidate(true);
+        }
 
         private void EnsureGlassPane()
         {
@@ -919,6 +933,7 @@ namespace MotionDesk.Widgets
             _glassPane = new GlassPaneBinder(this, 12, () => WantsSurfaceGlass, DesktopSurface.Widgets, () => _customRadius,
                 style => TintAlpha == 0 ? style : style with
                 { Tint = SurfaceTint, TintAlpha = (float)(TintAlpha / 255.0 * _backgroundOpacity) });
+            _glassPane.PaneChanged += RefreshWidgetSurface;
         }
 
         internal static Color SurfaceFor(Control control) =>
@@ -926,6 +941,7 @@ namespace MotionDesk.Widgets
 
         private Color WidgetSurface()
         {
+            if (SystemInformation.HighContrast) return SystemColors.Window;
             if (UsesTransparentWidgetPixels) return Color.Black;
             Color surface = UiTheme.Surface;
             int a = TintAlpha;
@@ -947,8 +963,9 @@ namespace MotionDesk.Widgets
         private void ApplyGlassBlur()
         {
             _glassPane?.Sync();
-            if (UiTheme.IsFullyTransparent) GlassBlur.Disable(Handle);
+            if (UiTheme.IsFullyTransparent || SystemInformation.HighContrast) GlassBlur.Disable(Handle);
             else GlassBlur.Apply(Handle, SurfaceTint, _backgroundOpacity);
+            RefreshWidgetSurface();
         }
 
         private void InitializeNativeClock()
