@@ -18,3 +18,15 @@ public sealed class WebView2UserDataTests
         Assert.Equal(Path.Combine(@"C:\Users\x\AppData\Local", "Opsis", "WebView2"), WebView2Support.UserDataFolder("", @"C:\Users\x\AppData\Local"));
     }
 }
+
+public sealed class WebView2ProfileKeyTests
+{
+    [Fact]
+    public void ProfileIsKeyedByTheBrowserArguments()
+    {
+        string a = WebView2Support.UserDataFolder("", @"C:\L", "--x");
+        Assert.Equal(a, WebView2Support.UserDataFolder("", @"C:\L", "--x"));                 // same arguments, same folder (instances of one edition share)
+        Assert.NotEqual(a, WebView2Support.UserDataFolder("", @"C:\L", "--y"));              // another edition with other arguments never fights over it
+        Assert.StartsWith(Path.Combine(@"C:\L", "Opsis", "WebView2") + Path.DirectorySeparatorChar + "p", a);
+    }
+}
