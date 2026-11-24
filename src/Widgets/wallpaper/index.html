@@ -681,7 +681,10 @@ function updateWeatherInfo() {
     box.style.display = 'block';
     // Sample the actual composited weather canvas at the current clock location.
     // Browser/video fallback keeps the existing shadow (never read an unrelated frame).
-    if (isWeatherMode(cfg.mode) && canvas.style.display !== 'none') {
+    // The same switch as the wallpaper elements ("text colour follows the wallpaper"): OFF = always light text with a dark halo (never black letters); ON = dark text only on a CLEARLY bright backdrop, with hysteresis.
+    if (cfg.elAuto === false) {
+        box.style.color = '#fff'; box.style.textShadow = '0 2px 18px rgba(0,0,0,.82),0 1px 3px #000'; box.dataset.tone = 'light'; delete box.dataset.contrast;
+    } else if (isWeatherMode(cfg.mode) && canvas.style.display !== 'none') {
         try {
             const r = box.getBoundingClientRect();
             let samples = 0, sum = 0;
@@ -700,14 +703,17 @@ function updateWeatherInfo() {
             }
             const luminosity = sum / Math.max(samples, 1);
             const whiteRatio = 1.05 / (luminosity + .05), blackRatio = (luminosity + .05) / .05;
-            const useWhite = whiteRatio >= blackRatio;
+            // linear luminance: dark text only above 0.45 (a clearly bright sky), back to light below 0.32, so the letters never flip to black on a mid-tone or dark scene
+            const wasDarkText = box.dataset.tone === 'dark';
+            const useWhite = wasDarkText ? luminosity < 0.32 : luminosity < 0.45;
+            box.dataset.tone = useWhite ? 'light' : 'dark';
             box.style.color = useWhite ? '#fff' : '#111';
             box.style.textShadow = useWhite
                 ? '0 2px 18px rgba(0,0,0,.82),0 1px 3px #000'
                 : '0 2px 18px rgba(255,255,255,.82),0 1px 3px #fff';
             box.dataset.contrast = Math.max(whiteRatio, blackRatio).toFixed(1);
         } catch { /* canvas unavailable/tainted: preserve high-contrast default */ }
-    }
+    } else { box.style.color = ''; box.style.textShadow = ''; delete box.dataset.tone; }
     // fade in once the temperature is known (or after 3.5 s without data) — no half-empty block that jumps when the data arrives
     box.style.opacity = (typeof i.temp === 'number' || performance.now() > 3500) ? '1' : '0';
 }
