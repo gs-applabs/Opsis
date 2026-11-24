@@ -60,6 +60,10 @@ namespace MotionDesk.Services
         //  αντί για σταθερή παλέτα accent χρωμάτων, ακολούθησε το πραγματικό
         // accent color που έχει επιλέξει ο χρήστης στα Windows (Ρυθμίσεις > Εξατομίκευση > Χρώματα).
         public bool FollowWindowsAccent { get; set; } = false;
+        // Opsis-only wallpaper accent; never changes the actual Windows accent.
+        public bool WallpaperAccentEnabled { get; set; } = false;
+        public string WallpaperAccentHex { get; set; } = "";
+
         public string Language { get; set; } = "Follow";  // Follow | el | en
         public double WindowOpacity { get; set; } = 1.0;  // 0.6 - 1.0, εφαρμόζεται στο κύριο παράθυρο
         public double DarkIntensity { get; set; } = 0.5;  // 0 (πιο ανοιχτό σκούρο) - 1 (σχεδόν μαύρο), 0.5 = η αρχική βάση
