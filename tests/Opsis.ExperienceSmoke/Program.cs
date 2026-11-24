@@ -13,6 +13,28 @@ void Check(bool condition, string description)
 }
 try
 {
+    Check(MotionDesk.UI.OpsisStartButtonArt.Styles.Length == 6 &&
+        MotionDesk.UI.OpsisStartButtonArt.IsValid("Opsis Glass") &&
+        !MotionDesk.UI.OpsisStartButtonArt.IsValid("not-a-design"),
+        "P1 Start button gallery has six validated design choices");
+    Check(StartStudioPreferences.Read().StartButtonStyle == "Opsis Glass",
+        "existing users default to the Opsis Glass emblem");
+    StartStudioPreferences.SetStartButton("Aurora");
+    Check(StartStudioPreferences.Read().StartButtonStyle == "Aurora",
+        "selected Opsis Start button survives configuration round-trip");
+    bool invalidStartRejected = false;
+    try { StartStudioPreferences.SetStartButton("UnsafeStyle"); }
+    catch (ArgumentOutOfRangeException) { invalidStartRejected = true; }
+    Check(invalidStartRejected, "unrecognized Start design cannot be persisted");
+    using (var canvas = new System.Drawing.Bitmap(64, 64))
+    using (var g = System.Drawing.Graphics.FromImage(canvas))
+    {
+        foreach (var design in MotionDesk.UI.OpsisStartButtonArt.Styles)
+            MotionDesk.UI.OpsisStartButtonArt.Draw(g,
+                new System.Drawing.Rectangle(0, 0, 64, 64), design);
+    }
+    Check(true, "all six P1 button designs render on the Windows GDI+ runner");
+    StartStudioPreferences.SetStartButton("Opsis Glass");
     Check(OpsisPluginPackageAudit.Classify("OpsisNewsCrawler.OpsisPlugin.dll",
               new Version(1, 0, 0, 0)) == "CompatibleABI",
         "known plugin identity matches Opsis pinned 1.0.0.0 ABI");
