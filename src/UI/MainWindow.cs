@@ -2727,6 +2727,23 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                     try { RefreshContributions(); }
                     catch (Exception ex) { MessageBox.Show(this, ex.Message, "Opsis Gallery", MessageBoxButtons.OK, MessageBoxIcon.Error); }
                 }),
+                (LocalizationManager.CurrentLanguage == "el" ? "Εγκατάσταση θέματος plugin" : "Install contributed theme", (_, _) =>
+                {
+                    if (ecosystemList.SelectedItems.Count != 1 ||
+                        ecosystemList.SelectedItems[0].Tag is not OpsisEcosystemGallery.Item item) return;
+                    if (MessageBox.Show(this,
+                        StudioText("Install the selected data-only theme without applying any Windows changes?",
+                            "Να εγκατασταθεί το επιλεγμένο θέμα μόνο ως δεδομένα χωρίς αλλαγές Windows;"),
+                        "Opsis Gallery", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes) return;
+                    try
+                    {
+                        var name = OpsisEcosystemGallery.InstallThemeContribution(item);
+                        MessageBox.Show(this, StudioText("Theme added to available profiles: ",
+                            "Το θέμα προστέθηκε στα διαθέσιμα προφίλ: ") + name,
+                            "Opsis Gallery", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    }
+                    catch (Exception ex) { MessageBox.Show(this, ex.Message, "Opsis Gallery", MessageBoxButtons.OK, MessageBoxIcon.Error); }
+                }),
                 (LocalizationManager.CurrentLanguage == "el" ? "Άνοιγμα widget plugin" : "Open contributed widget", (_, _) =>
                 {
                     if (ecosystemList.SelectedItems.Count != 1 ||
