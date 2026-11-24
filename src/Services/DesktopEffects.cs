@@ -25,8 +25,8 @@ namespace MotionDesk.Services
         }
         public static void SetMouseTrails(int count)
         {
-            // 0 disables Windows native pointer trails; 2-7 produce progressively longer trails.
-            if (count != 0 && (count < 2 || count > 7))
+            // 0 disables Windows native pointer trails; 2-16 are accepted so previously configured trail lengths can be restored.
+            if (count != 0 && (count < 2 || count > 16))
                 throw new ArgumentOutOfRangeException(nameof(count));
             int unused = 0;
             if (!Spi(SetMouseTrails, (uint)count, ref unused, PersistAndBroadcast))
