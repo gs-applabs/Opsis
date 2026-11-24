@@ -1,0 +1,68 @@
+name: Opsis unified experience P3-P5 validation
+on:
+  push:
+    branches: [feat/p3-p5-unified-experience]
+  pull_request:
+    branches: [feat/unified-mod-core-update-guard]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+jobs:
+  experience-windows:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-2022, windows-2025]
+    timeout-minutes: 65
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '11.0.x'
+      - name: SDK and OS
+        run: |
+          dotnet --info
+          Get-ComputerInfo | Select-Object WindowsProductName, WindowsVersion, OsBuildNumber | Format-List
+      - name: Restore
+        run: |
+          dotnet restore Opsis.csproj --disable-parallel
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Build Opsis core with no shared compilation
+        run: |
+          dotnet build Opsis.csproj -c Release --no-restore -m:1 -p:UseSharedCompilation=false -nodeReuse:false
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Build isolated experience tests
+        run: |
+          dotnet build tests/Opsis.ExperienceSmoke/Opsis.ExperienceSmoke.csproj -c Release -m:1 -p:UseSharedCompilation=false -nodeReuse:false
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Run isolated P3-P5 safety tests
+        run: |
+          dotnet run --project tests/Opsis.ExperienceSmoke/Opsis.ExperienceSmoke.csproj -c Release --no-build
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Run P1/P2 regression tests
+        run: |
+          dotnet build tests/Opsis.ShellSmoke/Opsis.ShellSmoke.csproj -c Release -m:1 -p:UseSharedCompilation=false -nodeReuse:false
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          dotnet run --project tests/Opsis.ShellSmoke/Opsis.ShellSmoke.csproj -c Release --no-build
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Publish complete portable executable
+        run: |
+          dotnet publish Opsis.csproj -c Release -r win-x64 --self-contained false -o publish -m:1 -p:UseSharedCompilation=false -nodeReuse:false
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          if (!(Test-Path publish/Opsis.exe)) { throw 'No Opsis.exe published' }
+          Compress-Archive -Path publish/* -DestinationPath "Opsis-Unified-$env:RUNNER_OS.zip" -Force
+      - name: Archive build evidence
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: opsis-unified-${{ matrix.os }}
+          path: |
+            Opsis-Unified-*.zip
+            **/TestResults/*.trx
+          retention-days: 7
+          if-no-files-found: warn
