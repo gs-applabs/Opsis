@@ -66,6 +66,10 @@ public sealed partial class MainWindow
             try
             {
                 DisposeChildren(propertyRows);
+                // the corner radius (curvature) is adjustable in EVERY look, also the default one (it no longer forces the Custom material)
+                if (target == DesktopSurface.Containers)
+                    propertyRows.Controls.Add(SettingsView.NumericRow(StudioText("Corner radius", "Ακτίνα γωνιών"), material.UsesCustom || material.RadiusSet ? material.Radius : 14, 0, 32,
+                        number => Save(material with { Radius = number, RadiusSet = true }, rebuild: false)));
                 if (!material.UsesCustom) return;
                 propertyRows.Controls.Add(StudioButton(StudioText("Tint color", "Χρώμα απόχρωσης"), () =>
                 {
@@ -77,10 +81,11 @@ public sealed partial class MainWindow
                 Number("Blur", "Θάμπωμα", material.Blur, 60, value => material with { Blur = value });
                 Number("Lens / gloss %", "Φακός / γυαλάδα %", material.Refraction, 200, value => material with { Refraction = value });
                 Number("Rim light %", "Φωτεινό περίγραμμα %", material.Rim, 300, value => material with { Rim = value });
+                if (target != DesktopSurface.Containers)
+                    Number("Corner radius", "Ακτίνα γωνιών", material.Radius, 32, value => material with { Radius = value });
                 if (target == DesktopSurface.Containers)
                     Number("Item font size (0 = per container)", "Μέγεθος γραμματοσειράς (0 = ανά container)",
                         material.ItemFontSize, 24, value => material with { ItemFontSize = value });
-                Number("Corner radius", "Ακτίνα γωνιών", material.Radius, 32, value => material with { Radius = value });
             }
             finally { propertyRows.ResumeLayout(); }
         }

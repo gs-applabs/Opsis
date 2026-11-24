@@ -166,7 +166,7 @@ namespace MotionDesk.Containers
             var hc = highContrast ?? SystemInformation.HighContrast;   // Windows High Contrast: system colours only, opaque, no glass
             g.SmoothingMode = SmoothingMode.AntiAlias; g.InterpolationMode = InterpolationMode.HighQualityBicubic; g.TextRenderingHint = TextRenderingHint.AntiAliasGridFit;
             var material = DesktopMaterials.Get(DesktopSurface.Containers);
-            var radius = (int)Math.Round((material.UsesCustom ? material.Radius : 14) * scale);
+            var radius = (int)Math.Round(material.EffectiveRadius(14) * scale);
             var tb = model.TitleBar;
             var accent = DesktopMaterial.OptionalColor(material.AccentColor, MotionDesk.UI.UiTheme.AccentCyan);
 
@@ -421,7 +421,7 @@ namespace MotionDesk.Containers
                 _repaint.Stop();
                 if (Visible && IsHandleCreated && Width > 0 && Height > 0) PresentFrame(Bounds);
             };
-            _pane = new GlassPaneBinder(this, 14, () => GlassService.Enabled && DesktopMaterials.Get(DesktopSurface.Containers).Mode != "Solid", DesktopSurface.Containers);
+            _pane = new GlassPaneBinder(this, 14, () => GlassService.Enabled && DesktopMaterials.Get(DesktopSurface.Containers).Mode != "Solid", DesktopSurface.Containers, cornerOverride: () => (int)Math.Round(DesktopMaterials.Get(DesktopSurface.Containers).EffectiveRadius(14) * Scale));
             _pane.PaneChanged += Dirty;
             _icons.Loaded += Dirty;
             _portalTimer.Tick += (_, _) => { _portalTimer.Stop(); RefreshPortal(); };
@@ -1304,11 +1304,30 @@ namespace MotionDesk.Containers
         public Point ItemScreenCenter(int i) { var r = ItemLayout.CellRect(i, _scroll); return PointToScreen(new Point(r.X + r.Width / 2, r.Y + r.Height / 2)); }
 
         /// <summary>Scroll by wheel notches (positive = down).</summary>
-        public void ScrollBy(int pixels) { _scroll = ItemLayout.ClampScroll(_scroll + pixels, Items.Count); Dirty(); }
+        // 2.8.0.2510: smooth scrolling. The wheel / keys set a TARGET and the position glides to it (ease-out, about 150 ms) instead of jumping a whole step; with animations off it jumps as before.
+        private int _scrollTarget; private bool _scrollGliding; private System.Windows.Forms.Timer? _scrollTimer;
+        public void ScrollBy(int pixels)
+        {
+            if (!MotionDesk.Services.AppSettings.Peek().EnableAnimations) { _scroll = ItemLayout.ClampScroll(_scroll + pixels, Items.Count); _scrollGliding = false; Dirty(); return; }
+            _scrollTarget = ItemLayout.ClampScroll((_scrollGliding ? _scrollTarget : _scroll) + pixels, Items.Count);
+            _scrollGliding = true;
+            _scrollTimer ??= new System.Windows.Forms.Timer { Interval = 8 };
+            _scrollTimer.Tick -= GlideTick; _scrollTimer.Tick += GlideTick;
+            _scrollTimer.Start();
+        }
+
+        private void GlideTick(object? sender, EventArgs e)
+        {
+            int diff = _scrollTarget - _scroll;
+            if (!_scrollGliding || IsDisposed || Math.Abs(diff) <= 1) { _scroll = ItemLayout.ClampScroll(_scrollTarget, Items.Count); _scrollGliding = false; _scrollTimer?.Stop(); Dirty(); return; }
+            int step = (int)Math.Round(diff * 0.26); if (step == 0) step = Math.Sign(diff);
+            _scroll = ItemLayout.ClampScroll(_scroll + step, Items.Count);
+            Dirty();
+        }
 
         protected override void Dispose(bool disposing)
         {
-            if (disposing) { CancelTabDrag(); _tabDragKeys?.Dispose(); _hoverTimer.Dispose(); _watch?.Dispose(); _portalTimer.Dispose(); _repaint.Stop(); _repaint.Dispose(); _pane?.Dispose(); _surface.Dispose(); _icons.Dispose(); }
+            if (disposing) { CancelTabDrag(); _tabDragKeys?.Dispose(); _hoverTimer.Dispose(); _scrollTimer?.Dispose(); _watch?.Dispose(); _portalTimer.Dispose(); _repaint.Stop(); _repaint.Dispose(); _pane?.Dispose(); _surface.Dispose(); _icons.Dispose(); }
             base.Dispose(disposing);
         }
     }
