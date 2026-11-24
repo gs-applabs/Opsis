@@ -193,6 +193,11 @@ namespace MotionDesk.Services
         // Explicit opt-in. Automation rules are inactive until the user enables the studio.
         public bool OpsisAutomationsEnabled { get; set; } = false;
         public bool WindowRulesEnabled { get; set; } = false; // P3: disabled until explicit opt-in
+        // Cursor FX: opt-in per-user overlay; no mouse hooks, scripts or system modifications.
+        public bool CursorFxEnabled { get; set; } = false;
+        public string CursorFxStyle { get; set; } = "Both"; // Halo | Ripple | Both
+        public int CursorFxIntensity { get; set; } = 70; // 20 .. 100
+
         public bool HotCornersEnabled { get; set; } = false;
         public string HotCornerTopLeft { get; set; } = "None";
         public string HotCornerTopRight { get; set; } = "None";
