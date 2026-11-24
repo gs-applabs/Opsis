@@ -47,6 +47,7 @@ body.reduced-motion *,body.reduced-motion *::before,body.reduced-motion *::after
 <script src="weather-spatial.js"></script>
 <script src="weather.js"></script>
 <script src="weather-freshness.js"></script>
+<script src="ancient-athens-effects.js"></script>
 <script src="ancient-athens.js"></script>
 <script src="studio-landscapes.js"></script>
 <script src="studio-scenes.js"></script>
@@ -656,9 +657,16 @@ function updateWeatherInfo() {
                       ru: 'ru-RU', ja: 'ja-JP', pt: 'pt-PT', tr: 'tr-TR', ar: 'ar-SA', hi: 'hi-IN' };
     const lang = LOCALES[cfg.lang] || 'en-US';
     document.documentElement.lang = LOCALES[cfg.lang] ? cfg.lang : 'en';   // σωστά κεφαλαία στα ελληνικά (χωρίς τόνους) στο text-transform
-    const t = new Date(2000, 0, 1, i.h, i.m);
-    document.getElementById('wxTime').textContent = t.toLocaleTimeString(lang, { hour: '2-digit', minute: '2-digit', hour12: cfg.lang === 'el' ? false : undefined });
-    document.getElementById('wxDate').textContent = i.date.toLocaleDateString(lang, { weekday: 'long', day: 'numeric', month: 'long' });
+    const ancientAthens = cfg.mode === 'Ancient Athens';
+    const t = ancientAthens ? new Date() : new Date(2000, 0, 1, i.h, i.m);
+    document.getElementById('wxTime').textContent = t.toLocaleTimeString(lang, {
+        hour: '2-digit', minute: '2-digit', hour12: cfg.lang === 'el' ? false : undefined,
+        ...(ancientAthens ? { timeZone: 'Europe/Athens' } : {})
+    });
+    document.getElementById('wxDate').textContent = (ancientAthens ? t : i.date).toLocaleDateString(lang, {
+        weekday: 'long', day: 'numeric', month: 'long',
+        ...(ancientAthens ? { timeZone: 'Europe/Athens' } : {})
+    });
     const condId = ({ 0: 'Clear', 1: 'PartlyCloudy', 2: 'PartlyCloudy', 3: 'Cloudy', 45: 'Fog', 48: 'Fog', 51: 'Drizzle', 53: 'Drizzle', 55: 'Drizzle', 56: 'Drizzle', 57: 'Drizzle',
         61: 'Rain', 63: 'Rain', 66: 'Rain', 67: 'Rain', 80: 'Rain', 81: 'Rain', 65: 'HeavyRain', 82: 'HeavyRain', 71: 'Snow', 73: 'Snow', 75: 'Snow', 77: 'Snow', 85: 'Snow', 86: 'Snow',
         95: 'Thunderstorm', 96: 'Thunderstorm', 99: 'Thunderstorm' })[i.code];
@@ -676,7 +684,8 @@ function updateWeatherInfo() {
     const windText = typeof i.windKmh === 'number' ? `${i.windKmh} km/h` : '';
     document.getElementById('wxTemp').textContent = [tempText, windText, cond].filter(Boolean).join('  ·  ');
     document.getElementById('wxWind').textContent = '';
-    document.getElementById('wxCity').textContent = cfg.weatherCity || '';
+    document.getElementById('wxCity').textContent = ancientAthens
+        ? (cfg.lang === 'el' ? 'ΑΡΧΑΙΑ ΑΘΗΝΑ' : 'ANCIENT ATHENS') : (cfg.weatherCity || '');
     document.getElementById('wxSource').textContent = window.OpsisWeatherFreshness
         ? window.OpsisWeatherFreshness.format(i, Date.now(), cfg.lang) : '';
     box.style.fontFamily = '"' + String(cfg.infoFont || 'Segoe UI Light').replace(/["\\]/g, '') + '", "Segoe UI", system-ui, sans-serif';
@@ -725,9 +734,11 @@ async function pollWeatherOnce(revision) {
     const b = bridge();
     if (!b || !window.WeatherWallpaper) return false;
     try {
-        const data = JSON.parse(await b.GetWeatherJson());
+        const data = JSON.parse(await (cfg.mode === 'Ancient Athens'
+            ? b.GetAncientAthensWeatherJson() : b.GetWeatherJson()));
         if (revision !== weatherRevision || isPaused) return false;
         WeatherWallpaper.setWeather(data);
+        if (cfg.mode === 'Ancient Athens') OpsisAncientAthens.setWeather(data);
         updateWeatherInfo();
         return data.ok === true;
     } catch (e) { return false; }   // κρατάει τα προηγούμενα δεδομένα
@@ -738,7 +749,10 @@ async function refreshWeather() {
     if (!b || !window.WeatherWallpaper) return;
     weatherPollHandles.forEach(clearTimeout);
     weatherPollHandles = [];
-    try { b.RequestWeatherRefresh(); } catch (e) { /* ignore */ }
+    try {
+        if (cfg.mode === 'Ancient Athens') b.RequestAncientAthensWeatherRefresh();
+        else b.RequestWeatherRefresh();
+    } catch (e) { /* keep last cached observation */ }
     const revision = ++weatherRevision;
     const ok = await pollWeatherOnce(revision);
     if (revision !== weatherRevision || isPaused) return;
@@ -751,12 +765,15 @@ async function refreshWeather() {
 }
 
 function isWeatherMode(mode) { return mode === 'Weather'; }
+function usesAtmosphere(mode) { return isWeatherMode(mode) || mode === 'Ancient Athens'; }
 
 function drawAthens(force = false) {
     const second = Math.floor(Date.now() / 1000);
-    if (!force && second === athensSecond) return;
+    const lowPower = cfg.performanceMode === 'Battery' || cfg.performanceMode === 'Low Power';
+    if (!force && (lowPower || reduceWallpaperMotion()) && second === athensSecond) return;
     athensSecond = second;
-    OpsisAncientAthens.draw(ctx, canvas.width, canvas.height, cfg.athensPhase, force);
+    OpsisAncientAthens.draw(ctx, canvas.width, canvas.height, cfg.athensPhase, force,
+        { reducedMotion: reduceWallpaperMotion(), lowPower });
 }
 
 let studioTime = 0;
@@ -776,7 +793,11 @@ function renderFrame(dt) {
 function waveLoop(now) {
     const profile = perfProfile();
     const reduced = reduceWallpaperMotion();
-    const minFrameMs = reduced ? 10000 : 1000 / Math.max(1, profile.targetFps);
+    const athensMode = cfg.mode === 'Ancient Athens';
+    const athensIdle = athensMode && (reduced || cfg.performanceMode === 'Low Power' || cfg.performanceMode === 'Battery');
+    const minFrameMs = athensIdle ? 1000
+        : athensMode ? 1000 / Math.min(24, Math.max(12, profile.targetFps || 24))
+        : reduced ? 10000 : 1000 / Math.max(1, profile.targetFps);
 
     if (now - lastFrameTime >= minFrameMs) {
         const dt = Math.min(0.1, (now - lastFrameTime) / 1000 || 0.016);
@@ -809,7 +830,7 @@ function waveLoop(now) {
         lastFrameTime = now;
     }
     waveLoopHandle = null;
-    const delay = cfg.mode === 'Ancient Athens' ? 1000 - Date.now() % 1000
+    const delay = athensIdle ? 1000 - Date.now() % 1000
         : minFrameMs - (performance.now() - lastFrameTime) - 12;
     if (delay >= 20) {
         waveWakeTimer = setTimeout(() => {
@@ -1059,7 +1080,7 @@ async function doRefresh() {
         WeatherWallpaper.setConfig({ realistic: wx, spatialMode: wx ? (cfg.weatherSpatialMode || 'Off') : 'Off', reducedMotion: reduceWallpaperMotion(), weatherSim: wx ? (cfg.weatherSim || 'Auto') : 'Auto', timeSim: wx ? (cfg.timeSim || 'Auto') : 'Auto', windSim: wx ? (cfg.windSim || 'Auto') : 'Auto', glass: cfg.weatherGlass !== false, rainGlassIntensity: cfg.rainGlassIntensity, rainLandscapeIntensity: cfg.rainLandscapeIntensity, photoFocusX: cfg.weatherPhotoFocusX, skylinePreview: cfg.weatherSkylinePreview === true, skyEdits: cfg.weatherSkyEdits || {}, landmarks: cfg.weatherLandmarks !== false, landmarkId: cfg.weatherLandmarkId || 'Auto', lat: cfg.weatherLat, lon: cfg.weatherLon });
     }
     stopPolling();
-    if (!isPaused && (isWeatherMode(cfg.mode) || cfg.weatherInfo))
+    if (!isPaused && (usesAtmosphere(cfg.mode) || cfg.weatherInfo))
         await Promise.race([refreshWeather(), new Promise(res => setTimeout(res, 400))]);
 
     if (cfg.mode === 'Video') {
@@ -1103,7 +1124,7 @@ function startPolling() {
     if (isPaused) return;
     updateWeatherInfo();
     if (cfg.weatherInfo) infoTimer = setInterval(updateWeatherInfo, 1000);
-    if (isWeatherMode(cfg.mode) || cfg.weatherInfo) weatherTimer = setInterval(refreshWeather, 600000);
+    if (usesAtmosphere(cfg.mode) || cfg.weatherInfo) weatherTimer = setInterval(refreshWeather, 600000);
     if (cfg.mode === 'Desktop') deskTimer = setInterval(refreshDesk, 60000);
     if (cfg.mode !== 'Ancient Athens' && cfg.performanceMode !== 'Battery')
         audioTimer = setInterval(refreshAudioPulse, cfg.performanceMode === 'High' ? 250 : 600);
@@ -1133,7 +1154,7 @@ window.motionDeskSetPaused = (paused) => {
         else if (cfg.mode === 'Desktop') { /* static picture, nothing to restart */ }
         else if (!waveLoopHandle && !waveWakeTimer) { waveLoopHandle = requestAnimationFrame(waveLoop); }
         startPolling();
-        if (isWeatherMode(cfg.mode) || cfg.weatherInfo) refreshWeather();
+        if (usesAtmosphere(cfg.mode) || cfg.weatherInfo) refreshWeather();
         if (cfg.mode === 'Desktop') refreshDesk();
     }
 };
