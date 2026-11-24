@@ -186,6 +186,8 @@ namespace MotionDesk.Services
         public bool DesktopMenuEnabled { get; set; } = true;
         public string MusicOverlayAnchor { get; set; } = "BottomRight";
         // P0 optional desktop interactions. Values: None | OpenOpsis | ShowDesktop | TaskView.
+        // Explicit opt-in. Automation rules are inactive until the user enables the studio.
+        public bool OpsisAutomationsEnabled { get; set; } = false;
         public bool HotCornersEnabled { get; set; } = false;
         public string HotCornerTopLeft { get; set; } = "None";
         public string HotCornerTopRight { get; set; } = "None";
