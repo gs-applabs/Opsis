@@ -301,6 +301,32 @@ try
     Check(dueCount > 0 && dueCount < 10_000, "ten thousand in-memory automation evaluations stable");
 
 
+    // Create real Win32 form handles from an STA Windows thread. This confirms
+    // the native visual editor and runtime widget are constructible without
+    // opening modal dialogs or relying on a developer desktop session.
+    Exception? uiFailure = null;
+    var actualWindowsCreated = false;
+    var uiThread = new System.Threading.Thread(() =>
+    {
+        try
+        {
+            System.Windows.Forms.Application.EnableVisualStyles();
+            var widgetLayout = OpsisWidgetDesigner.Read("Clock Demo");
+            using var editor = new MotionDesk.UI.OpsisWidgetVisualDesignerForm(widgetLayout);
+            using var window = new MotionDesk.UI.OpsisCustomWidgetWindow(widgetLayout);
+            var editorHandle = editor.Handle;
+            var widgetHandle = window.Handle;
+            actualWindowsCreated = editorHandle != IntPtr.Zero && widgetHandle != IntPtr.Zero;
+        }
+        catch (Exception ex) { uiFailure = ex; }
+    })
+    { IsBackground = true };
+    uiThread.SetApartmentState(System.Threading.ApartmentState.STA);
+    uiThread.Start();
+    Check(uiThread.Join(TimeSpan.FromSeconds(15)), "native UI smoke completed without hanging");
+    if (uiFailure != null) throw new InvalidOperationException("WinForms visual widget smoke failed", uiFailure);
+    Check(actualWindowsCreated, "visual editor and widget Win32 handles created on Windows VM");
+
     Console.WriteLine($"COMPLETE {passed} validated assertions");
 }
 finally
