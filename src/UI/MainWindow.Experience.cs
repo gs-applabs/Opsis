@@ -152,6 +152,94 @@ public sealed partial class MainWindow
                 catch (Exception ex) { MessageBox.Show(this, ex.Message, "Weather Scene Composer", MessageBoxButtons.OK, MessageBoxIcon.Error); }
             }));
 
+        var windowCard = AddCardSection(panel, StudioText("P3 — Window Rules", "P3 — Κανόνες παραθύρων"));
+        AddText(windowCard, StudioText(
+            "Control position and always-on-top for explicitly named applications. Only the foreground window is inspected, no global hooks or DLL injection. All original positions are restored on exit.",
+            "Έλεγξε θέση και παραμονή επάνω για συγκεκριμένες εφαρμογές. Ελέγχεται μόνο το ενεργό παράθυρο, χωρίς hooks ή DLL injection. Στην έξοδο γίνεται προσπάθεια επαναφοράς αρχικών θέσεων."));
+        var windowEnabled = new CheckBox { AutoSize = true, ForeColor = UiTheme.TextPrimary,
+            Text = StudioText("Enable Window Rules", "Ενεργοποίηση κανόνων παραθύρων"),
+            Checked = AppSettings.Load().WindowRulesEnabled };
+        windowEnabled.CheckedChanged += (_, _) =>
+        {
+            try
+            {
+                var s = AppSettings.Load(); s.WindowRulesEnabled = windowEnabled.Checked; s.Save();
+                if (!windowEnabled.Checked) WindowRulesEngine.Instance.Restore();
+            }
+            catch (Exception ex) { MessageBox.Show(this, ex.Message, "Window Rules", MessageBoxButtons.OK, MessageBoxIcon.Error); }
+        };
+        windowCard.Controls.Add(windowEnabled);
+        var appName = new TextBox { Width = 145, PlaceholderText = "notepad" };
+        NumericUpDown Numeric(int minimum, int maximum, int current, int width = 74) =>
+            new() { Minimum = minimum, Maximum = maximum, Value = current, Width = width };
+        var xPos = Numeric(-20000, 20000, 100);
+        var yPos = Numeric(-20000, 20000, 100);
+        var winWidth = Numeric(300, 10000, 960);
+        var winHeight = Numeric(240, 10000, 640);
+        var move = new CheckBox { Text = StudioText("Set bounds", "Θέση/μέγεθος"), AutoSize = true,
+            ForeColor = UiTheme.TextPrimary, Checked = true };
+        var topMost = new CheckBox { Text = "Always on top", AutoSize = true,
+            ForeColor = UiTheme.TextPrimary };
+        var windowForm = new FlowLayoutPanel { Width = 720, AutoSize = true, WrapContents = true };
+        foreach (var part in new Control[] { appName, xPos, yPos, winWidth, winHeight, move, topMost })
+            windowForm.Controls.Add(part);
+        windowCard.Controls.Add(windowForm);
+        var windowRulesList = new ListBox { Width = 700, Height = 110 };
+        windowCard.Controls.Add(windowRulesList);
+        void RefreshWindowRules()
+        {
+            windowRulesList.Items.Clear();
+            foreach (var r in WindowRulesEngine.Read())
+                windowRulesList.Items.Add((r.Enabled ? "● " : "○ ") + r.Process + " · " +
+                    (r.MoveAndResize ? $"{r.X},{r.Y} {r.Width}×{r.Height}" : "No move") +
+                    (r.AlwaysOnTop ? " · Always on top" : ""));
+        }
+        try { RefreshWindowRules(); }
+        catch (Exception ex) { windowRulesList.Items.Add("Error: " + ex.Message); }
+        AddButtonGrid(windowCard,
+            (StudioText("Add rule", "Προσθήκη κανόνα"), (_, _) =>
+            {
+                try
+                {
+                    var list = WindowRulesEngine.Read().ToList();
+                    list.Add(new WindowRulesEngine.Rule
+                    {
+                        Process = appName.Text.Trim().Replace(".exe", "", StringComparison.OrdinalIgnoreCase),
+                        Enabled = false, MoveAndResize = move.Checked,
+                        X = (int)xPos.Value, Y = (int)yPos.Value, Width = (int)winWidth.Value,
+                        Height = (int)winHeight.Value, AlwaysOnTop = topMost.Checked
+                    });
+                    WindowRulesEngine.Save(list); RefreshWindowRules();
+                }
+                catch (Exception ex) { MessageBox.Show(this, ex.Message, "Window Rules", MessageBoxButtons.OK, MessageBoxIcon.Error); }
+            }),
+            (StudioText("Enable / disable", "Ενεργοποίηση / απενεργοποίηση"), (_, _) =>
+            {
+                if (windowRulesList.SelectedIndex < 0) return;
+                try
+                {
+                    var list = WindowRulesEngine.Read().ToList();
+                    list[windowRulesList.SelectedIndex].Enabled = !list[windowRulesList.SelectedIndex].Enabled;
+                    WindowRulesEngine.Instance.Restore();
+                    WindowRulesEngine.Save(list); RefreshWindowRules();
+                }
+                catch (Exception ex) { MessageBox.Show(this, ex.Message, "Window Rules", MessageBoxButtons.OK, MessageBoxIcon.Error); }
+            }),
+            (StudioText("Delete rule", "Διαγραφή κανόνα"), (_, _) =>
+            {
+                if (windowRulesList.SelectedIndex < 0) return;
+                try
+                {
+                    var list = WindowRulesEngine.Read().ToList();
+                    list.RemoveAt(windowRulesList.SelectedIndex);
+                    WindowRulesEngine.Instance.Restore();
+                    WindowRulesEngine.Save(list); RefreshWindowRules();
+                }
+                catch (Exception ex) { MessageBox.Show(this, ex.Message, "Window Rules", MessageBoxButtons.OK, MessageBoxIcon.Error); }
+            }),
+            (StudioText("Restore window positions", "Επαναφορά θέσεων παραθύρων"), (_, _) =>
+                WindowRulesEngine.Instance.Restore()));
+
         var automationCard = AddCardSection(panel, StudioText("P5 — Automation Studio", "P5 — Στούντιο αυτοματισμών"));
         AddText(automationCard, StudioText(
             "Local schedules only. Rules are disabled by default and never execute shell commands, arbitrary scripts or downloaded code.",
