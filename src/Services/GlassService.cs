@@ -153,6 +153,25 @@ namespace MotionDesk.Services
         private readonly System.Text.StringBuilder _nextClass = new(64);
 #if SIGNATURE_COMPOSITION_PREVIEW
         private Opsis.UI.Composition.CompositionPaneBinding? _signature;
+        private bool _signatureFramePending;
+        private long _signatureNextFrame;
+        private Rectangle _signatureLastFrameBounds;
+        private async void RequestSignatureFrame()
+        {
+            if (_signature is not { Active: true } binding || _signatureFramePending || Environment.TickCount64 < _signatureNextFrame) return;
+            _signatureFramePending = true;
+            _signatureNextFrame = Environment.TickCount64 + 2000;
+            var bounds = _f.Bounds;
+            try
+            {
+                using var frame = await MotionDesk.Widgets.WallpaperHostEngine.Instance.CaptureSignatureCropAsync(bounds);
+                if (_disposed || _f.IsDisposed || _f.Bounds != bounds || _signature != binding || !binding.Active) return;
+                binding.SubmitBackdrop(frame);
+                _signatureLastFrameBounds = bounds;
+            }
+            catch (Exception ex) { System.Diagnostics.Debug.WriteLine("Signature frame: " + ex.Message); }
+            finally { _signatureFramePending = false; }
+        }
         // A single native device per UI thread; the old desktop renderer remains
         // available to the independent DeskStrip path during this preview.
         [ThreadStatic] private static Opsis.UI.Composition.CompositionGlassRenderer? _signatureRenderer;
@@ -262,7 +281,11 @@ namespace MotionDesk.Services
                     SignatureState, SignatureStyle, _wants);
                 _signature.ActiveChanged += _ => { if (!_disposed && !_f.Disposing && _f.IsHandleCreated) PaneChanged?.Invoke(); };
             }
-            _signature.Sync();
+            if (_signature.Sync())
+            {
+                if (_signatureLastFrameBounds != _f.Bounds) { _signature.SubmitBackdrop(null); _signatureLastFrameBounds = _f.Bounds; }
+                RequestSignatureFrame();
+            }
             return;
 #else
             var m = _wants() ? GlassService.Manager : null;
