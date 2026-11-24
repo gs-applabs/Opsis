@@ -1,0 +1,96 @@
+name: Opsis 3.0 plugin ABI and ecosystem compatibility
+on:
+  push:
+    branches: [feat/3.0.0.3200-integration]
+  pull_request:
+    branches: [feat/p3-p5-unified-experience]
+  workflow_dispatch:
+
+concurrency:
+  group: opsis-30-plugins-${{ github.ref }}
+  cancel-in-progress: true
+permissions:
+  contents: read
+
+jobs:
+  plugin-build-matrix:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-2022, windows-2025]
+    timeout-minutes: 75
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: gs-applabs/OpsisNewsCrawler
+          path: _compat/news
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          repository: gs-applabs/san-shmera
+          path: _compat/chronikologio
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          repository: gs-applabs/OpsisMediaSuite
+          path: _compat/media
+          persist-credentials: false
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            10.0.x
+            11.0.x
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Host and plugin project builds
+        run: |
+          dotnet restore Opsis.csproj --disable-parallel
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          dotnet publish Opsis.csproj -c Release -r win-x64 --self-contained false -o publish -m:1 -p:UseSharedCompilation=false -nodeReuse:false
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          dotnet build _compat/news/src/OpsisNewsCrawler.OpsisPlugin/OpsisNewsCrawler.OpsisPlugin.csproj -c Release -m:1 -p:UseSharedCompilation=false -nodeReuse:false
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          dotnet build _compat/chronikologio/src/Chronikologio.OpsisPlugin/Chronikologio.OpsisPlugin.csproj -c Release -m:1 -p:ChronNet=11.0 -p:UseSharedCompilation=false -nodeReuse:false
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Verify actual compiled host/plugin ABI identity
+        run: |
+          $expected = [version]'1.0.0.0'
+          New-Item -ItemType Directory -Path out -Force | Out-Null
+          $dlls = @(
+            @{ Root='_compat/news/src/OpsisNewsCrawler.OpsisPlugin/bin/Release'; Name='OpsisNewsCrawler.OpsisPlugin.dll' },
+            @{ Root='_compat/chronikologio/src/Chronikologio.OpsisPlugin/bin/Release'; Name='Chronikologio.OpsisPlugin.dll' }
+          )
+          $report = @()
+          foreach ($entry in $dlls) {
+            $dll = @(Get-ChildItem -Path $entry.Root -Filter $entry.Name -Recurse -File | Sort-Object LastWriteTime -Descending | Select-Object -First 1)
+            if ($dll.Count -ne 1) { throw "Missing compiled plugin $($entry.Name)" }
+            $identity = [System.Reflection.AssemblyName]::GetAssemblyName($dll[0].FullName)
+            $status = if ($identity.Version -eq $expected) { 'CompatibleABI' } else { 'IncompatibleABI' }
+            $report += [pscustomobject]@{ Plugin=$entry.Name; AssemblyVersion=$identity.Version.ToString(); Status=$status }
+          }
+          $report | ConvertTo-Json -Depth 4 | Set-Content out/plugin-abi-report.json -Encoding utf8
+          $report | Format-Table -AutoSize
+          if (@($report | Where-Object { $_.Status -ne 'CompatibleABI' }).Count -gt 0) {
+            throw 'Known plugins do not all match the pinned Opsis 1.0.0.0 ABI; coordinated plugin updates are required'
+          }
+      - name: Electron Media Suite security and functional tests
+        working-directory: _compat/media
+        run: |
+          npm ci --ignore-scripts --no-audit --no-fund
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          npm test
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Preserve plugin ABI findings
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: opsis30-plugin-compat-${{ matrix.os }}
+          path: out/plugin-abi-report.json
+          if-no-files-found: warn
+          retention-days: 7
