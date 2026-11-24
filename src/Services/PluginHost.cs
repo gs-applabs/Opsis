@@ -7,6 +7,7 @@ using System.Reflection;
 using System.Runtime.Loader;
 using Microsoft.Win32;
 using MotionDesk.UI;
+using MotionDesk.Widgets;
 using OpsisNewsCrawler.Plugin.Abstractions;
 
 namespace MotionDesk.Services
