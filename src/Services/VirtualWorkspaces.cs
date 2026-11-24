@@ -123,6 +123,8 @@ internal static class VirtualWorkspaces
 
     internal static void OpenTaskView() => DesktopKey(0x09, ctrl: false);
     internal static void OpenSystemTray() => DesktopKey(0x42, ctrl: false);
+    internal static void OpenNotifications() => DesktopKey(0x4E, ctrl: false);
+    internal static void OpenQuickSettings() => DesktopKey(0x41, ctrl: false);
     internal static void CreateDesktop() => DesktopKey(0x44);
     internal static void CloseDesktop() => DesktopKey(0x73);
     internal static void Switch(bool next) => DesktopKey(next ? (byte)0x27 : (byte)0x25);

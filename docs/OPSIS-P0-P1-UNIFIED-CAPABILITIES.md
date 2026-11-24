@@ -35,11 +35,11 @@ Benchmark criteria: same workload, resolution and DPI; CPU/GPU, memory, GDI hand
 | 10 | P1 | Advanced Explorer tabs | folder launch and keyboard guidance only; native tab management pending |
 | 11 | P1 | Taskbar thumbnail customization | Opsis taskbar on-demand DWM preview with Off/Compact/Large; native thumbnail styling pending |
 | 12 | P1 | System Tray Icon Studio | Opsis NotifyIcon style selection added; other Windows tray icons remain untouched |
-| 13 | P2 | Notification Center Styler | pending |
-| 14 | P2 | Quick Settings Styler | pending |
-| 15 | P2 | Volume Flyout customization | pending; existing audio controls do not equal native flyout styling |
-| 16 | P2 | Independent appearance profiles per monitor | partial; existing per-monitor wallpaper profiles not full shell profiles |
-| 17 | P2 | Custom Taskbar gestures | pending |
+| 13 | P2 | Notification Center Styler | Native access and notification settings link; XAML styling pending |
+| 14 | P2 | Quick Settings Styler | Native access via existing keyboard helper; XAML styling pending |
+| 15 | P2 | Volume Flyout customization | on-demand Opsis volume flyout, compact/large/Windows choice; native flyout styling pending |
+| 16 | P2 | Independent appearance profiles per monitor | per-display Opsis taskbar profile overrides via existing topology service; full native Shell per-monitor styling pending |
+| 17 | P2 | Custom Taskbar gestures | opt-in empty-area middle/double click in Opsis bar; native gesture hooks pending |
 | 18 | P0 | Conflicts per enabled Windhawk mod | read-only registry inventory; explicit competing taskbar styles hold Opsis overlay; portable/per-user scopes and live injection not verified |
 | 19 | P0 | Automatic isolation after Windows Update | existing UpdateGuard now latches on state failure and isolates running taskbar, tiling, window rules, hot corners, cursor FX, appearance and plugin starts; tests pending |
 | 20 | P1 | Shared Shell visual profile editor | AppearancePresets extends portable profiles with Opsis bar geometry and Start button style; native advanced settings incomplete |
@@ -61,3 +61,6 @@ RC run 45460763639 (commit 5432484): shell/experience smoke completed, including
 
 ### P1 8–12 increment
 Fixed CS0136 in AppearancePreviewForm from run 45461452851 (segmentCount). Start power actions use fixed allowlist, no forced shutdown, explicit confirmation except lock. Explorer shortcuts use shell targets, no claim of native command bar or advanced tab implementation. Existing taskbar supports explicit right-click compositor preview, one live DWM thumbnail, no capture bitmap or new polling; disabled by default. Existing NotifyIcon has three persistent styles and native Settings link; no third-party icon manipulation. Smoke assertions do not execute power actions. Actual Windows VM validation pending; P0 native XAML, portable Windhawk and P1 native features remain outstanding.
+
+### P2 increment and cumulative release status
+Prior commit 9b3fb2e: Windows VM audit 45462736778, installer E2E 45462736804, comparison 45462737115 completed successfully. Plugin workflow 45462736563 was in progress at inspection. No result yet for this P2 commit. Existing Taskbar Designer now supports per-monitor overrides, unique display IDs or device fallback for duplicate IDs, explicit inheritance and same existing refresh timer. Gestures route to existing DeskFlip, Task View and Windows panels. Volume companion uses existing NAudio dependency on demand with explicit apply; not native flyout styling. Notification Center and Quick Settings native access is NOT styling. Snapshot includes monitor and native Start backup. Preserve all unimplemented native XAML, advanced Explorer tabs and command bar, native taskbar relocation, native tray/thumbnail styling, portable Windhawk verification, full Rainmeter, HDR and true interactive Win11 gates. Previous weather R19/R20 and wallpaper add-on need separate asset/installer verification; no fabricated asset or publish claim. No version bump or release. Microsoft settings URI reference: https://learn.microsoft.com/en-us/windows/apps/develop/launch/launch-settings.

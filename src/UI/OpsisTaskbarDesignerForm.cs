@@ -10,7 +10,13 @@ namespace MotionDesk.UI;
 /// <summary>Visual preview and editor of Opsis' OWN replacement taskbar, not Explorer injection.</summary>
 public sealed class OpsisTaskbarDesignerForm : Form
 {
-    private readonly OpsisTaskbarDesigner.Profile _profile = OpsisTaskbarDesigner.Read();
+    private OpsisTaskbarDesigner.Profile _profile = OpsisTaskbarDesigner.Read();
+    private readonly ComboBox _monitor = new() { DropDownStyle = ComboBoxStyle.DropDownList, Width = 230 };
+    private readonly ComboBox _middle = new() { DropDownStyle = ComboBoxStyle.DropDownList, Width = 145 };
+    private readonly ComboBox _double = new() { DropDownStyle = ComboBoxStyle.DropDownList, Width = 145 };
+    private readonly ComboBox _volume = new() { DropDownStyle = ComboBoxStyle.DropDownList, Width = 145 };
+    private readonly System.Collections.Generic.List<string?> _monitorKeys = new() { null };
+    private bool _loading;
     private readonly ComboBox _style = new() { DropDownStyle = ComboBoxStyle.DropDownList, Width = 145 };
     private readonly ComboBox _thumbnail = new() { DropDownStyle = ComboBoxStyle.DropDownList, Width = 130 };
     private readonly ComboBox _edge = new() { DropDownStyle = ComboBoxStyle.DropDownList, Width = 130 };
@@ -52,6 +58,19 @@ public sealed class OpsisTaskbarDesignerForm : Form
         _style.Items.AddRange(new object[] { "Classic", "Compact", "Glass" });
         _alignment.Items.AddRange(new object[] { "Left", "Center" });
         _edge.Items.AddRange(new object[] { "Native", "Top", "Bottom", "Left", "Right" });
+        _monitor.Items.Add("All monitors / Default");
+        var displays = MonitorTopologyService.Current();
+        foreach (var display in displays)
+        {
+            _monitorKeys.Add(OpsisTaskbarDesigner.MonitorKey(display, displays));
+            _monitor.Items.Add(display.DeviceName + (display.Primary ? " (primary)" : ""));
+        }
+        _monitor.SelectedIndex = 0;
+        _middle.Items.AddRange(OpsisTaskbarDesigner.Gestures.Cast<object>().ToArray());
+        _double.Items.AddRange(OpsisTaskbarDesigner.Gestures.Cast<object>().ToArray());
+        _volume.Items.AddRange(new object[] { "Windows", "Compact", "Large" });
+        _middle.SelectedItem = _profile.EmptyMiddleClick; _double.SelectedItem = _profile.EmptyDoubleClick;
+        _volume.SelectedItem = _profile.VolumeStyle;
         _thumbnail.Items.AddRange(new object[] { "Off", "Compact", "Large" });
         _thumbnail.SelectedItem = _profile.ThumbnailStyle;
         LoadGeometry(_profile);
@@ -65,6 +84,12 @@ public sealed class OpsisTaskbarDesignerForm : Form
         _animate.Checked = _profile.ActiveButtonAnimation;
         _speed.Value = _profile.AnimationIntervalMs;
 
+        grid.Controls.Add(Labeled("Monitor / Οθόνη", _monitor));
+        grid.Controls.Add(Labeled("Empty area middle click", _middle));
+        grid.Controls.Add(Labeled("Empty area double click", _double));
+        grid.Controls.Add(Labeled("Volume flyout (Opsis)", _volume));
+        var inherit = new Button { Text = "Inherit global / Κοινό προφίλ", AutoSize = true, Height = 34 };
+        grid.Controls.Add(inherit);
         grid.Controls.Add(Labeled("Style", _style));
         grid.Controls.Add(Labeled("Alignment", _alignment));
         grid.Controls.Add(Labeled("Button width", _width));
@@ -93,7 +118,24 @@ public sealed class OpsisTaskbarDesignerForm : Form
         actions.BringToFront();
         _heading.BringToFront();
 
-        void Redraw() { FillProfile(); DrawPreview(); }
+        void Redraw() { if (_loading) return; FillProfile(); DrawPreview(); }
+        _middle.SelectedIndexChanged += (_, _) => Redraw();
+        _double.SelectedIndexChanged += (_, _) => Redraw();
+        _volume.SelectedIndexChanged += (_, _) => Redraw();
+        _monitor.SelectedIndexChanged += (_, _) => LoadMonitor();
+        inherit.Click += (_, _) =>
+        {
+            if (_monitor.SelectedIndex <= 0) return;
+            if (MessageBox.Show(this, "Remove this monitor override and inherit the global profile?", Text,
+                MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes) return;
+            try
+            {
+                if (WindowsUpdateGuard.RequiresReview || SafeModeService.IsSafeMode) throw new InvalidOperationException("Compatibility review required.");
+                OpsisTaskbarDesigner.SaveMonitorProfile(_monitorKeys[_monitor.SelectedIndex]!, null);
+                LoadMonitor(); ReplacementTaskbar.RefreshSettings();
+            }
+            catch (Exception ex) { MessageBox.Show(this, ex.Message, Text); }
+        };
         _style.SelectedIndexChanged += (_, _) => Redraw();
         _alignment.SelectedIndexChanged += (_, _) => Redraw();
         _width.ValueChanged += (_, _) => Redraw();
@@ -119,7 +161,8 @@ public sealed class OpsisTaskbarDesignerForm : Form
                 if (WindowsUpdateGuard.RequiresReview || SafeModeService.IsSafeMode)
                     throw new InvalidOperationException("Windows compatibility review is required.");
                 FillProfile();
-                OpsisTaskbarDesigner.Save(_profile);
+                if (_monitor.SelectedIndex > 0) OpsisTaskbarDesigner.SaveMonitorProfile(_monitorKeys[_monitor.SelectedIndex]!, _profile);
+                else OpsisTaskbarDesigner.Save(_profile);
                 ReplacementTaskbar.RefreshSettings();
                 MessageBox.Show(this, "Opsis Taskbar profile saved.", "Opsis", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
@@ -135,6 +178,7 @@ public sealed class OpsisTaskbarDesignerForm : Form
             _taskView.Checked = defaults.ShowTaskView; _clock.Checked = defaults.ShowClock;
             _animate.Checked = defaults.ActiveButtonAnimation; _speed.Value = defaults.AnimationIntervalMs;
             _thumbnail.SelectedItem = defaults.ThumbnailStyle;
+            _middle.SelectedItem = defaults.EmptyMiddleClick; _double.SelectedItem = defaults.EmptyDoubleClick; _volume.SelectedItem = defaults.VolumeStyle;
             LoadGeometry(defaults);
         };
         system.Click += (_, _) => TaskbarViewProfiles.OpenWindowsTaskbarSettings();
@@ -151,6 +195,28 @@ public sealed class OpsisTaskbarDesignerForm : Form
         column.Controls.Add(new Label { Text = caption, AutoSize = true, ForeColor = UiTheme.TextSecondary });
         column.Controls.Add(input);
         return column;
+    }
+
+    private void LoadMonitor()
+    {
+        _loading = true;
+        try
+        {
+            var key = _monitor.SelectedIndex > 0 ? _monitorKeys[_monitor.SelectedIndex] : null;
+            var overrides = OpsisTaskbarDesigner.ReadMonitorProfiles();
+            _profile = key != null && overrides.TryGetValue(key, out var saved) ? saved : OpsisTaskbarDesigner.Read();
+            _style.SelectedItem = _profile.Style; _alignment.SelectedItem = _profile.Alignment;
+            _width.Value = _profile.ButtonWidth; _gap.Value = _profile.ButtonGap;
+            _opacity.Value = _profile.OpacityPercent; _taskView.Checked = _profile.ShowTaskView;
+            _clock.Checked = _profile.ShowClock; _animate.Checked = _profile.ActiveButtonAnimation;
+            _speed.Value = _profile.AnimationIntervalMs; _thumbnail.SelectedItem = _profile.ThumbnailStyle;
+            _middle.SelectedItem = _profile.EmptyMiddleClick; _double.SelectedItem = _profile.EmptyDoubleClick;
+            _volume.SelectedItem = _profile.VolumeStyle;
+            LoadGeometry(_profile);
+        }
+        catch (Exception ex) { MessageBox.Show(this, ex.Message, Text); }
+        finally { _loading = false; }
+        DrawPreview();
     }
 
     private void LoadGeometry(OpsisTaskbarDesigner.Profile p)
@@ -171,6 +237,9 @@ public sealed class OpsisTaskbarDesignerForm : Form
         _profile.ShowClock = _clock.Checked;
         _profile.ActiveButtonAnimation = _animate.Checked;
         _profile.AnimationIntervalMs = (int)_speed.Value;
+        _profile.EmptyMiddleClick = _middle.SelectedItem?.ToString() ?? "None";
+        _profile.EmptyDoubleClick = _double.SelectedItem?.ToString() ?? "None";
+        _profile.VolumeStyle = _volume.SelectedItem?.ToString() ?? "Windows";
         _profile.ThumbnailStyle = _thumbnail.SelectedItem?.ToString() ?? "Off";
         _profile.Edge = _edge.SelectedItem?.ToString() ?? "Native";
         _profile.Floating = _floating.Checked; _profile.Segmented = _segmented.Checked; _profile.DynamicSize = _dynamic.Checked;

@@ -1,5 +1,7 @@
 using System;
 using System.IO;
+using System.Collections.Generic;
+using System.Linq;
 using System.Drawing;
 using System.Text.Json;
 
@@ -29,11 +31,17 @@ public static class OpsisTaskbarDesigner
         public int OpacityPercent { get; set; } = 100;
         public bool ShowTaskView { get; set; } = true;
         public bool ShowClock { get; set; } = true;
+        public string EmptyMiddleClick { get; set; } = "None";
+        public string EmptyDoubleClick { get; set; } = "None";
+        public string VolumeStyle { get; set; } = "Windows";
         public string ThumbnailStyle { get; set; } = "Off"; // Off | Compact | Large
         public static bool IsThumbnailStyle(string? value) => value is "Off" or "Compact" or "Large";
         public bool ActiveButtonAnimation { get; set; } = false;
         public int AnimationIntervalMs { get; set; } = 300;
     }
+    public static IReadOnlyList<string> Gestures { get; } = Array.AsReadOnly(new[] { "None", "Task view", "DeskFlip", "Notifications", "Quick settings", "Volume" });
+    public static bool ValidGesture(string? action) => action != null && Gestures.Contains(action);
+    public static bool ValidVolumeStyle(string? style) => style is "Windows" or "Compact" or "Large";
     private static readonly object Gate = new();
     private static string FilePath => Path.Combine(AppPaths.AppDataFolder, "taskbar-designer.json");
     private static Profile? _cached;
@@ -47,6 +55,7 @@ public static class OpsisTaskbarDesigner
         OpacityPercent = p.OpacityPercent, ShowTaskView = p.ShowTaskView,
         ShowClock = p.ShowClock, ActiveButtonAnimation = p.ActiveButtonAnimation,
         AnimationIntervalMs = p.AnimationIntervalMs, ThumbnailStyle = p.ThumbnailStyle,
+        EmptyMiddleClick = p.EmptyMiddleClick, EmptyDoubleClick = p.EmptyDoubleClick, VolumeStyle = p.VolumeStyle,
         Edge = p.Edge, Floating = p.Floating, Segmented = p.Segmented, DynamicSize = p.DynamicSize,
         EdgeMargin = p.EdgeMargin, LengthPercent = p.LengthPercent, Thickness = p.Thickness
     };
@@ -55,7 +64,7 @@ public static class OpsisTaskbarDesigner
     {
         if (p == null || p.Schema != 1 || string.IsNullOrWhiteSpace(p.Name) || p.Name.Length > 60 ||
             p.Style is not ("Classic" or "Compact" or "Glass") ||
-            !Profile.IsThumbnailStyle(p.ThumbnailStyle) ||
+            !Profile.IsThumbnailStyle(p.ThumbnailStyle) || !ValidGesture(p.EmptyMiddleClick) || !ValidGesture(p.EmptyDoubleClick) || !ValidVolumeStyle(p.VolumeStyle) ||
             p.Alignment is not ("Left" or "Center") ||
             p.Edge is not ("Native" or "Top" or "Bottom" or "Left" or "Right") ||
             p.EdgeMargin is < 0 or > 32 || p.LengthPercent is < 40 or > 100 || p.Thickness is < 36 or > 112 ||
@@ -99,6 +108,66 @@ public static class OpsisTaskbarDesigner
             AtomicFile.WriteAllText(FilePath, JsonSerializer.Serialize(profile,
                 new JsonSerializerOptions { WriteIndented = true }));
             _cached = null; _cachedPath = null; _checkedAt = 0;
+        }
+    }
+
+    private static string MonitorFile => Path.Combine(AppPaths.AppDataFolder, "taskbar-monitor-profiles.json");
+    private static Dictionary<string, Profile>? _monitorCache;
+    private static string? _monitorCachePath;
+    private static long _monitorCheckedAt;
+
+    public static bool ValidMonitorKey(string? key) => !string.IsNullOrWhiteSpace(key) && key.Length <= 512 && !key.Any(char.IsControl);
+    internal static string MonitorKey(MonitorTopologyService.Display display, IReadOnlyList<MonitorTopologyService.Display> displays) =>
+        displays.Count(x => string.Equals(x.Id, display.Id, StringComparison.OrdinalIgnoreCase)) == 1 ?
+            "id:" + display.Id : "device:" + display.DeviceName;
+
+    public static IReadOnlyDictionary<string, Profile> ReadMonitorProfiles()
+    {
+        lock (Gate)
+        {
+            var path = MonitorFile;
+            if (_monitorCache == null || _monitorCachePath != path || Environment.TickCount64 - _monitorCheckedAt >= 5000)
+            {
+                var values = new Dictionary<string, Profile>(StringComparer.OrdinalIgnoreCase);
+                if (File.Exists(path))
+                {
+                    if (new FileInfo(path).Length > 128 * 1024) throw new InvalidDataException("Monitor profiles too large.");
+                    var loaded = JsonSerializer.Deserialize<Dictionary<string, Profile>>(AtomicFile.ReadAllText(path))
+                        ?? throw new InvalidDataException("Invalid monitor profiles.");
+                    if (loaded.Count > 32) throw new InvalidDataException("Too many monitor profiles.");
+                    foreach (var pair in loaded)
+                    {
+                        Validate(pair.Value);
+                        if (!ValidMonitorKey(pair.Key) || !values.TryAdd(pair.Key, pair.Value))
+                            throw new InvalidDataException("Invalid or duplicate monitor profile identity.");
+                    }
+                }
+                _monitorCache = values; _monitorCachePath = path; _monitorCheckedAt = Environment.TickCount64;
+            }
+            return _monitorCache.ToDictionary(x => x.Key, x => Copy(x.Value), StringComparer.OrdinalIgnoreCase);
+        }
+    }
+
+    public static void SaveMonitorProfile(string key, Profile? profile)
+    {
+        if (!ValidMonitorKey(key)) throw new ArgumentException("Invalid monitor identity.", nameof(key));
+        if (profile != null) Validate(profile);
+        lock (Gate)
+        {
+            var values = ReadMonitorProfiles().ToDictionary(x => x.Key, x => x.Value, StringComparer.OrdinalIgnoreCase);
+            if (profile == null)
+            {
+                if (!values.Remove(key)) return;
+            }
+            else
+            {
+                if (values.TryGetValue(key, out var old) && Equivalent(old, profile)) return;
+                if (!values.ContainsKey(key) && values.Count >= 32) throw new InvalidDataException("Too many monitor profiles.");
+                values[key] = Copy(profile);
+            }
+            OpsisRecoveryHub.Snapshot("Before per-monitor Opsis taskbar changes");
+            AtomicFile.WriteAllText(MonitorFile, JsonSerializer.Serialize(values));
+            _monitorCache = null;
         }
     }
 

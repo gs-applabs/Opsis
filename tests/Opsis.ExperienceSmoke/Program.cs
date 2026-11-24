@@ -434,6 +434,16 @@ try
     Check(TaskbarViewProfiles.IsValid("TaskbarGlomLevel", 2) && !TaskbarViewProfiles.IsValid("TaskbarGlomLevel", 3) &&
         ExplorerViewProfiles.IsValid("ShowStatusBar", 0) && !ExplorerViewProfiles.IsValid("ShowStatusBar", 2),
         "native Explorer and Taskbar options validate without touching registry");
+    Check(OpsisTaskbarDesigner.ValidGesture("Quick settings") && !OpsisTaskbarDesigner.ValidGesture("run.exe") &&
+        OpsisTaskbarDesigner.ValidVolumeStyle("Compact") && !OpsisTaskbarDesigner.ValidVolumeStyle("unknown"),
+        "P2 gesture and sound styles have fixed allowlists");
+    var monitorProfile = new OpsisTaskbarDesigner.Profile { Edge = "Left", EmptyMiddleClick = "DeskFlip", VolumeStyle = "Large" };
+    OpsisTaskbarDesigner.SaveMonitorProfile("id:test-monitor-a", monitorProfile);
+    Check(OpsisTaskbarDesigner.ReadMonitorProfiles().TryGetValue("ID:TEST-MONITOR-A", out var restoredMonitor) &&
+        restoredMonitor.Edge == "Left" && restoredMonitor.EmptyMiddleClick == "DeskFlip" && restoredMonitor.VolumeStyle == "Large",
+        "P2 monitor profile roundtrip case-insensitive without changing global profile");
+    OpsisTaskbarDesigner.SaveMonitorProfile("id:test-monitor-a", null);
+    Check(!OpsisTaskbarDesigner.ReadMonitorProfiles().ContainsKey("id:test-monitor-a"), "P2 monitor override removal returns to default");
     Check(OpsisTaskbarDesigner.Profile.IsThumbnailStyle("Large") && !OpsisTaskbarDesigner.Profile.IsThumbnailStyle("Unknown"),
         "taskbar thumbnail preferences use fixed allowlist");
     Check(StartStudioPreferences.ValidPowerActions(new[] { "Lock", "Restart" }) &&

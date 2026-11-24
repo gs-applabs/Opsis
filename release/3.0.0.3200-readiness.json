@@ -4,7 +4,7 @@
   "targetVersion": "3.0.0.3200",
   "currentPublishedVersion": "2.8.0.2510",
   "state": "development",
-  "branch": "feat/3.0.0.3200-integration",
+  "branch": "feat/p0-p1-unified-capability-switcher",
   "releaseBlocked": true,
   "requireAllGatesPassed": true,
   "gates": [
@@ -35,18 +35,18 @@
     },
     {
       "id": "unified-win2022-win2025-build-tests",
-      "status": "pending",
-      "evidence": ".github/workflows/3.0-integration.yml"
+      "status": "in-review",
+      "evidence": "Prior commit 9b3fb2e Windows audit 45462736778 and installer 45462736804 succeeded; P2 head must pass again."
     },
     {
       "id": "webview2-gpu-weather-renderer-captures",
-      "status": "pending",
-      "evidence": "tests/weather-spatial/WebViewSmoke.csproj"
+      "status": "in-review",
+      "evidence": "Prior commit 9b3fb2e Windows audit 45462736778 and installer 45462736804 succeeded; P2 head must pass again."
     },
     {
       "id": "installer-install-reinstall-uninstall-windows-vm",
-      "status": "pending",
-      "evidence": ".github/workflows/3.0-installer-e2e.yml"
+      "status": "in-review",
+      "evidence": "Prior commit 9b3fb2e Windows audit 45462736778 and installer 45462736804 succeeded; P2 head must pass again."
     },
     {
       "id": "integrated-plugins-e2e",
@@ -61,7 +61,7 @@
     {
       "id": "complete-original-feature-list",
       "status": "incomplete",
-      "evidence": "Native Windows Start replacement, full Rainmeter plugins, Windhawk mods, SCR registration, online marketplace and full 3D models are not complete"
+      "evidence": "Native shell XAML, portable/live Windhawk, Rainmeter full runtime, advanced tabs, marketplace, SCR and high-fidelity landscape assets incomplete; see canonical progress document."
     },
     {
       "id": "approved-version-bump-and-production-release",

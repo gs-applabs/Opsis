@@ -201,6 +201,7 @@ namespace MotionDesk.Widgets
             }
             trayStudio.DropDownItems.Add("Windows taskbar / notification area", null, (_, _) => TaskbarViewProfiles.OpenWindowsTaskbarSettings());
             contextMenu.Items.Insert(1, trayStudio);
+            _pluginMenuIndex++; // preserve insertion point after adding the icon studio
             ApplyTrayIconStyle();
 
             _alertTimer = new System.Windows.Forms.Timer { Interval = 5000 };
