@@ -13,7 +13,7 @@ public sealed class OpsisCustomWidgetWindow : Form
 {
     private readonly OpsisWidgetDesigner.Layout _layout;
     private readonly Label _content;
-    private readonly Timer _refresh = new() { Interval = 1000 };
+    private readonly System.Windows.Forms.Timer _refresh = new() { Interval = 1000 };
     public OpsisCustomWidgetWindow(OpsisWidgetDesigner.Layout layout)
     {
         OpsisWidgetDesigner.Validate(layout);
@@ -33,7 +33,7 @@ public sealed class OpsisCustomWidgetWindow : Form
             TextAlign = ContentAlignment.MiddleCenter,
             ForeColor = accent,
             BackColor = UiTheme.Surface,
-            Font = new Font("Segoe UI Variable Display", layout.FontSize, FontStyle.Light),
+            Font = new Font("Segoe UI Variable Display", layout.FontSize, FontStyle.Regular),
             AutoEllipsis = true
         };
         Controls.Add(_content);
