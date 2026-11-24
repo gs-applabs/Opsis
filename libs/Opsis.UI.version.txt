@@ -1,1 +1,1 @@
-1bb382d (Opsis.UI 0.5.1, net11, built with PathMap, no PDB)
+aeaceea (Opsis.UI 6.0.0, net11, built with PathMap, no PDB)
