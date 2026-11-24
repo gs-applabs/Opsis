@@ -2754,6 +2754,67 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                     catch (Exception ex) { MessageBox.Show(this, ex.Message, "Opsis — Explorer", MessageBoxButtons.OK, MessageBoxIcon.Error); }
                 }));
 
+            // ---------- P0: Windows 11 Start & Taskbar ----------
+            var taskbarCard = AddCardSection(panel,
+                LocalizationManager.CurrentLanguage == "el" ? "Windows 11 — Start και Taskbar" : "Windows 11 — Start and Taskbar");
+            AddText(taskbarCard, LocalizationManager.CurrentLanguage == "el"
+                ? "Προαιρετικά προφίλ Taskbar χωρίς αντικατάσταση του Explorer. Το πρώτο πάτημα αποθηκεύει τις πραγματικές προηγούμενες ρυθμίσεις. Ορισμένες αλλαγές εμφανίζονται μετά από νέα σύνδεση στα Windows. Οι επιλογές προφίλ υποστηρίζονται μόνο στα Windows 11."
+                : "Optional Taskbar presets without replacing Explorer. The first application backs up your actual existing settings. Some changes may need a new Windows sign-in. Presets support Windows 11 only.");
+            AddButtonGrid(taskbarCard,
+                (LocalizationManager.CurrentLanguage == "el" ? "Λιτό Taskbar" : "Minimal Taskbar", (_, _) =>
+                {
+                    if (!TaskbarViewProfiles.IsWindows11)
+                    {
+                        MessageBox.Show(this, "Windows 11 required.", "Opsis — Taskbar", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        return;
+                    }
+                    if (MessageBox.Show(this, LocalizationManager.CurrentLanguage == "el"
+                        ? "Εφαρμογή: αριστερή στοίχιση, χωρίς Widgets / Task View / Search; να συνεχίσω;"
+                        : "Apply left alignment and hide Widgets, Task View and Search?",
+                        "Opsis — Taskbar", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes) return;
+                    try { TaskbarViewProfiles.ApplyMinimal(); _statusLabel.Text = "Opsis — Taskbar profile applied."; }
+                    catch (Exception ex) { MessageBox.Show(this, ex.Message, "Opsis — Taskbar", MessageBoxButtons.OK, MessageBoxIcon.Error); }
+                }),
+                (LocalizationManager.CurrentLanguage == "el" ? "Τυπικό Taskbar" : "Standard Taskbar", (_, _) =>
+                {
+                    if (!TaskbarViewProfiles.IsWindows11)
+                    {
+                        MessageBox.Show(this, "Windows 11 required.", "Opsis — Taskbar", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        return;
+                    }
+                    if (MessageBox.Show(this, LocalizationManager.CurrentLanguage == "el"
+                        ? "Εφαρμογή: κεντρική στοίχιση, Widgets / Task View / Search ενεργά; να συνεχίσω;"
+                        : "Apply centered alignment with Widgets, Task View and Search enabled?",
+                        "Opsis — Taskbar", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes) return;
+                    try { TaskbarViewProfiles.ApplyStandard(); _statusLabel.Text = "Opsis — Taskbar profile applied."; }
+                    catch (Exception ex) { MessageBox.Show(this, ex.Message, "Opsis — Taskbar", MessageBoxButtons.OK, MessageBoxIcon.Error); }
+                }),
+                (LocalizationManager.CurrentLanguage == "el" ? "Επαναφορά Taskbar" : "Restore Taskbar", (_, _) =>
+                {
+                    if (!TaskbarViewProfiles.HasBackup)
+                    {
+                        MessageBox.Show(this, LocalizationManager.CurrentLanguage == "el" ? "Δεν υπάρχει αντίγραφο Taskbar." : "No Taskbar backup exists.",
+                            "Opsis — Taskbar", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        return;
+                    }
+                    if (MessageBox.Show(this, LocalizationManager.CurrentLanguage == "el"
+                        ? "Επαναφορά των ρυθμίσεων Taskbar πριν από το Opsis;"
+                        : "Restore original Taskbar settings from before Opsis?",
+                        "Opsis — Taskbar", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes) return;
+                    try { TaskbarViewProfiles.Restore(); _statusLabel.Text = "Opsis — Taskbar settings restored."; }
+                    catch (Exception ex) { MessageBox.Show(this, ex.Message, "Opsis — Taskbar", MessageBoxButtons.OK, MessageBoxIcon.Error); }
+                }),
+                (LocalizationManager.CurrentLanguage == "el" ? "Ρυθμίσεις Start" : "Start settings", (_, _) =>
+                {
+                    try { TaskbarViewProfiles.OpenWindowsStartSettings(); }
+                    catch (Exception ex) { MessageBox.Show(this, ex.Message, "Opsis — Start", MessageBoxButtons.OK, MessageBoxIcon.Error); }
+                }),
+                (LocalizationManager.CurrentLanguage == "el" ? "Ρυθμίσεις Taskbar" : "Taskbar settings", (_, _) =>
+                {
+                    try { TaskbarViewProfiles.OpenWindowsTaskbarSettings(); }
+                    catch (Exception ex) { MessageBox.Show(this, ex.Message, "Opsis — Taskbar", MessageBoxButtons.OK, MessageBoxIcon.Error); }
+                }));
+
             // ---------- DeskCursors ----------
             var cursorCard = AddCardSection(panel, LocalizationManager.T("Personalization.SectionDeskCursors"));
             AddText(cursorCard, LocalizationManager.T("Personalization.DeskCursorsIntro"));
