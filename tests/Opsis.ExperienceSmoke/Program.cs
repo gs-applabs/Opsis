@@ -38,6 +38,17 @@ try
     try { WeatherSceneComposer.Validate(new WeatherSceneComposer.Scene { Name = "../escape" }); }
     catch (ArgumentException) { rejected = true; }
     Check(rejected, "unsafe scene path rejected");
+    var themeFile = Path.Combine(folder, "Exported.opsis-theme");
+    OpsisThemeBundle.ExportCurrent("Portable Theme", themeFile);
+    Check(File.Exists(themeFile), "theme exported");
+    var imported = OpsisThemeBundle.Import(themeFile);
+    Check(imported == "Portable Theme", "theme imported with matching name");
+    Check(AppearancePresets.List().Contains("Portable Theme"), "appearance contribution installed");
+    Check(WeatherSceneComposer.List().Contains("Portable Theme"), "weather scene contribution installed");
+    rejected = false;
+    try { OpsisThemeBundle.Import(themeFile); }
+    catch (IOException) { rejected = true; }
+    Check(rejected, "theme import refuses overwrite");
     scene.Weather = "Unsafe";
     rejected = false;
     try { WeatherSceneComposer.Validate(scene); }
