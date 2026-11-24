@@ -22,7 +22,7 @@ public sealed class EffectsSettings
     internal EffectsSettings Snapshot()
     {
         var copy = (EffectsSettings)MemberwiseClone();
-        copy.ExcludedProcesses = new List<string>(ExcludedProcesses);
+        copy.ExcludedProcesses = new List<string>(ExcludedProcesses ?? new());
         return copy;
     }
     /// <summary>Χρώμα γραμμής τίτλου / κειμένου τίτλου (Windows 11 22H2+). null = προεπιλογή. Όπως το Mica For Everyone.</summary>
@@ -232,7 +232,9 @@ public sealed class RealDwmWindows : IDwmWindows
         { "Progman", "WorkerW", "Shell_TrayWnd", "Shell_SecondaryTrayWnd", "NotifyIconOverflowWindow", "TopLevelWindowForOverflowXamlIsland", "XamlExplorerHostIslandWindow", "Windows.UI.Core.CoreWindow" };
 
     public IntPtr Foreground => GetForegroundWindow();
-    public bool SupportsExplorerGlass => OperatingSystem.IsWindowsVersionAtLeast(10, 0, 22621) && !System.Windows.Forms.SystemInformation.HighContrast;
+    private readonly Func<bool> _highContrast;
+    public RealDwmWindows(Func<bool>? highContrast = null) => _highContrast = highContrast ?? (() => false);
+    public bool SupportsExplorerGlass => OperatingSystem.IsWindowsVersionAtLeast(10, 0, 22621) && !_highContrast();
     public bool IsExplorerWindow(IntPtr h)
     {
         if (!IsEligible(h)) return false;
