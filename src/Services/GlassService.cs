@@ -160,7 +160,7 @@ namespace MotionDesk.Services
         {
             if (_signature is not { Active: true } binding || _signatureFramePending || Environment.TickCount64 < _signatureNextFrame) return;
             _signatureFramePending = true;
-            _signatureNextFrame = Environment.TickCount64 + 2000;
+            _signatureNextFrame = Environment.TickCount64 + (SignatureRenderer().AdaptiveTier == Opsis.UI.GlassTier.High && GlassService.Level == GlassLevel.Full ? 500 : 2000);
             var bounds = _f.Bounds;
             try
             {
@@ -175,6 +175,7 @@ namespace MotionDesk.Services
         // A single native device per UI thread; the old desktop renderer remains
         // available to the independent DeskStrip path during this preview.
         [ThreadStatic] private static Opsis.UI.Composition.CompositionGlassRenderer? _signatureRenderer;
+        internal static Opsis.UI.Composition.CompositionDiagnostics? SignatureDiagnostics => _signatureRenderer?.Diagnostics;
         private static Opsis.UI.Composition.CompositionGlassRenderer SignatureRenderer()
         {
             if (_signatureRenderer != null) return _signatureRenderer;
@@ -197,7 +198,7 @@ namespace MotionDesk.Services
             var level = GlassService.Level;
             var tier = level == GlassLevel.Full ? Opsis.UI.GlassTier.High :
                 level == GlassLevel.Frosted ? Opsis.UI.GlassTier.Medium : Opsis.UI.GlassTier.Low;
-            bool active = level is GlassLevel.Full or GlassLevel.Frosted;
+            bool active = (level is GlassLevel.Full or GlassLevel.Frosted) && !AppSettings.Peek().Glass.ReducedEffects;
             return new Opsis.UI.GlassState(active, tier, Opsis.UI.GlassOffReason.None,
                 Opsis.UI.BackdropKind.None, active ? 14 : 0, _radius, .30, .85, 0, .80);
         }
@@ -206,11 +207,20 @@ namespace MotionDesk.Services
             var look = GlassService.Style(_radius, _surface);
             if (_cornerOverride?.Invoke() is int radius) look = look with { CornerRadius = radius };
             if (_tintOverride != null) look = _tintOverride(look);
+            var material = AppSettings.Peek().Glass;
+            var pointer = _f.PointToClient(Cursor.Position);
+            bool hover = _f.ClientRectangle.Contains(pointer) && !SystemInformation.HighContrast && !material.ReducedEffects;
             return new Opsis.UI.Composition.CompositionGlassStyle(look.Tint, look.TintAlpha,
                 look.CornerRadius, look.Gloss, look.Rim)
             {
                 Blur = state.Tier == Opsis.UI.GlassTier.High ? look.BlurSigma : look.BlurSigma * .5f,
-                Refraction = state.Tier == Opsis.UI.GlassTier.High ? look.Gloss : 0
+                Refraction = state.Tier == Opsis.UI.GlassTier.High ? look.Gloss : 0,
+                Dispersion = Math.Clamp(material.Dispersion, 0, 100) / 100f,
+                Microtexture = Math.Clamp(material.Microtexture, 0, 100) / 100f,
+                Depth = Math.Clamp(material.Shadow, 0, 100) / 100f,
+                InteractiveLight = hover ? Math.Clamp(material.InteractiveLight, 0, 100) / 100f : 0,
+                LightX = Math.Clamp(pointer.X / (float)Math.Max(1, _f.ClientSize.Width), 0, 1),
+                LightY = Math.Clamp(pointer.Y / (float)Math.Max(1, _f.ClientSize.Height), 0, 1)
             };
         }
 #endif
