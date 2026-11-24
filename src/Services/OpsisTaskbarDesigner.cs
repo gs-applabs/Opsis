@@ -26,6 +26,9 @@ public static class OpsisTaskbarDesigner
     }
     private static readonly object Gate = new();
     private static string FilePath => Path.Combine(AppPaths.AppDataFolder, "taskbar-designer.json");
+    private static Profile? _cached;
+    private static string? _cachedPath;
+    private static long _checkedAt;
     public static Profile Default => new();
 
     public static void Validate(Profile? p)
@@ -43,12 +46,21 @@ public static class OpsisTaskbarDesigner
     {
         lock (Gate)
         {
-            if (!File.Exists(FilePath)) return Default;
-            if (new FileInfo(FilePath).Length > 32 * 1024)
+            var path = FilePath;
+            if (_cached != null && string.Equals(_cachedPath, path, StringComparison.OrdinalIgnoreCase) &&
+                Environment.TickCount64 - _checkedAt < 5000)
+                return _cached;
+            if (!File.Exists(path))
+            {
+                _cached = Default; _cachedPath = path; _checkedAt = Environment.TickCount64;
+                return _cached;
+            }
+            if (new FileInfo(path).Length > 32 * 1024)
                 throw new InvalidDataException("Taskbar profile is oversized.");
-            var p = JsonSerializer.Deserialize<Profile>(AtomicFile.ReadAllText(FilePath))
+            var p = JsonSerializer.Deserialize<Profile>(AtomicFile.ReadAllText(path))
                 ?? throw new InvalidDataException("Taskbar profile not readable.");
             Validate(p);
+            _cached = p; _cachedPath = path; _checkedAt = Environment.TickCount64;
             return p;
         }
     }
@@ -62,6 +74,7 @@ public static class OpsisTaskbarDesigner
             OpsisRecoveryHub.Snapshot("Before Opsis taskbar visual changes");
             AtomicFile.WriteAllText(FilePath, JsonSerializer.Serialize(profile,
                 new JsonSerializerOptions { WriteIndented = true }));
+            _cached = null; _cachedPath = null; _checkedAt = 0;
         }
     }
 
