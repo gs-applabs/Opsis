@@ -17,6 +17,8 @@ public sealed class OpsisTaskbarDesignerForm : Form
     private readonly NumericUpDown _opacity = new() { Minimum = 60, Maximum = 100, Width = 74 };
     private readonly CheckBox _taskView = new() { Text = "Task View", AutoSize = true };
     private readonly CheckBox _clock = new() { Text = "Clock", AutoSize = true };
+    private readonly CheckBox _animate = new() { Text = "Pulse active app / Εφέ ενεργής εφαρμογής", AutoSize = true };
+    private readonly NumericUpDown _speed = new() { Minimum = 180, Maximum = 800, Increment = 60, Width = 78 };
     private readonly Panel _preview = new() { Height = 72, Dock = DockStyle.Bottom };
     private readonly Label _heading = new() { Dock = DockStyle.Top, AutoSize = false, Height = 62 };
 
@@ -47,6 +49,8 @@ public sealed class OpsisTaskbarDesignerForm : Form
         _opacity.Value = _profile.OpacityPercent;
         _taskView.Checked = _profile.ShowTaskView;
         _clock.Checked = _profile.ShowClock;
+        _animate.Checked = _profile.ActiveButtonAnimation;
+        _speed.Value = _profile.AnimationIntervalMs;
 
         grid.Controls.Add(Labeled("Style", _style));
         grid.Controls.Add(Labeled("Alignment", _alignment));
@@ -55,6 +59,8 @@ public sealed class OpsisTaskbarDesignerForm : Form
         grid.Controls.Add(Labeled("Glass opacity %", _opacity));
         grid.Controls.Add(_taskView);
         grid.Controls.Add(_clock);
+        grid.Controls.Add(_animate);
+        grid.Controls.Add(Labeled("Pulse ms", _speed));
 
         var actions = new FlowLayoutPanel { Dock = DockStyle.Bottom, Height = 50, Padding = new Padding(12, 7, 5, 5) };
         var apply = new Button { Text = "Apply / Εφαρμογή", Width = 145, Height = 34 };
@@ -76,6 +82,8 @@ public sealed class OpsisTaskbarDesignerForm : Form
         _opacity.ValueChanged += (_, _) => Redraw();
         _taskView.CheckedChanged += (_, _) => Redraw();
         _clock.CheckedChanged += (_, _) => Redraw();
+        _animate.CheckedChanged += (_, _) => Redraw();
+        _speed.ValueChanged += (_, _) => Redraw();
         _preview.Resize += (_, _) => DrawPreview();
         apply.Click += (_, _) =>
         {
@@ -98,6 +106,7 @@ public sealed class OpsisTaskbarDesignerForm : Form
             _width.Value = defaults.ButtonWidth; _gap.Value = defaults.ButtonGap;
             _opacity.Value = defaults.OpacityPercent;
             _taskView.Checked = defaults.ShowTaskView; _clock.Checked = defaults.ShowClock;
+            _animate.Checked = defaults.ActiveButtonAnimation; _speed.Value = defaults.AnimationIntervalMs;
         };
         system.Click += (_, _) => TaskbarViewProfiles.OpenWindowsTaskbarSettings();
         DrawPreview();
@@ -124,6 +133,8 @@ public sealed class OpsisTaskbarDesignerForm : Form
         _profile.OpacityPercent = (int)_opacity.Value;
         _profile.ShowTaskView = _taskView.Checked;
         _profile.ShowClock = _clock.Checked;
+        _profile.ActiveButtonAnimation = _animate.Checked;
+        _profile.AnimationIntervalMs = (int)_speed.Value;
         OpsisTaskbarDesigner.Validate(_profile);
     }
 
