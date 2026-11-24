@@ -95,6 +95,23 @@ public static class OpsisEcosystemGallery
         return widget;
     }
 
+    /// <summary>
+    /// Install an explicitly chosen signed-by-content (SHA-256 manifest) declarative
+    /// theme bundle from the same plugin Gallery. Does not auto-apply settings.
+    /// </summary>
+    public static string InstallThemeContribution(Item item)
+    {
+        if (!string.Equals(item.Type, "theme", StringComparison.OrdinalIgnoreCase) ||
+            !string.Equals(Path.GetExtension(item.AssetPath), ".opsis-theme", StringComparison.OrdinalIgnoreCase))
+            throw new InvalidDataException("This Gallery item is not an Opsis theme.");
+        var selected = Discover().FirstOrDefault(x => x.Id == item.Id &&
+            string.Equals(x.PluginId, item.PluginId, StringComparison.OrdinalIgnoreCase) &&
+            string.Equals(x.AssetPath, item.AssetPath, StringComparison.OrdinalIgnoreCase));
+        if (selected == null || new FileInfo(selected.AssetPath).Length > 1024 * 1024)
+            throw new InvalidDataException("Theme contribution missing or too large.");
+        return OpsisThemeBundle.Import(selected.AssetPath);
+    }
+
     /// <summary>Apply only a selected, verified static image contribution. Never execute plugin code.</summary>
     public static void ApplyStaticWallpaper(Item item)
     {
