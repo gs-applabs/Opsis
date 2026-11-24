@@ -23,9 +23,11 @@ public sealed class StartStudioForm : Form
     private readonly CheckBox _pinnedOnly = new() { Text = "Pinned only / Μόνο καρφιτσωμένα", AutoSize = true, Margin = new Padding(7, 10, 10, 6) };
     private readonly Button _pinButton = new() { Text = "Pin / Unpin", Width = 120, Height = 30 };
     private readonly Button _refreshButton = new() { Text = "Refresh / Ανανέωση", Width = 160, Height = 30 };
-    private readonly FlowLayoutPanel _toolbar = new() { Dock = DockStyle.Top, Height = 76, WrapContents = true };
+    private readonly FlowLayoutPanel _toolbar = new() { Dock = DockStyle.Top, Height = 90, WrapContents = true };
     private readonly ComboBox _layoutStyle = new() { Width = 112, DropDownStyle = ComboBoxStyle.DropDownList };
     private readonly CheckBox _groupByFolder = new() { Text = "Group / Ομάδες", Width = 140, AutoSize = false, Height = 30 };
+    private readonly ComboBox _startStyle = new() { Width = 155, DropDownStyle = ComboBoxStyle.DropDownList };
+    private readonly Button _startPreview = new() { Width = 46, Height = 40, Text = "", AccessibleName = "Selected Opsis Start button preview" };
     private bool _loadingPresentation;
 
     public StartStudioForm()
@@ -44,11 +46,22 @@ public sealed class StartStudioForm : Form
         _layoutStyle.Items.AddRange(new object[] { "List", "Tiles", "Compact" });
         _toolbar.Controls.Add(_layoutStyle);
         _toolbar.Controls.Add(_groupByFolder);
+        _startStyle.Items.AddRange(OpsisStartButtonArt.Styles);
+        _toolbar.Controls.Add(new Label { Text = "Start Button", AutoSize = true, Margin = new Padding(8, 11, 3, 0) });
+        _toolbar.Controls.Add(_startStyle);
+        _startPreview.FlatStyle = FlatStyle.Flat;
+        _startPreview.Paint += (_, e) => OpsisStartButtonArt.PaintButton(_startPreview, e,
+            _startStyle.SelectedItem as string ?? "Opsis Glass", GetOpsisIcon());
+        _startPreview.Click += (_, _) => MessageBox.Show(this,
+            "This button design applies to the Opsis Replacement Taskbar. Native Windows Start stays unchanged.",
+            "Opsis Start Button", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        _toolbar.Controls.Add(_startPreview);
         Controls.Add(_toolbar);
         Controls.Add(_info);
         _pinnedOnly.CheckedChanged += (_, _) => RefreshResults();
         _pinButton.Click += (_, _) => TogglePinned();
         _refreshButton.Click += (_, _) => LoadShortcuts();
+        _startStyle.SelectedIndexChanged += (_, _) => ChangeStartButton();
         _layoutStyle.SelectedIndexChanged += (_, _) => ChangePresentation();
         _groupByFolder.CheckedChanged += (_, _) => ChangePresentation();
         _search.TextChanged += (_, _) => RefreshResults();
@@ -104,12 +117,32 @@ public sealed class StartStudioForm : Form
             {
                 _layoutStyle.SelectedItem = preferences.DisplayStyle;
                 _groupByFolder.Checked = preferences.GroupByFolder;
+                _startStyle.SelectedItem = preferences.StartButtonStyle;
             }
             finally { _loadingPresentation = false; }
         }
         catch (Exception ex) { MessageBox.Show(this, ex.Message, "Start Studio saved shortcuts", MessageBoxButtons.OK, MessageBoxIcon.Warning); _pinned.Clear(); }
         ApplyPresentation();
         RefreshResults();
+    }
+
+    private static System.Drawing.Icon? GetOpsisIcon()
+    {
+        try { return System.Drawing.Icon.ExtractAssociatedIcon(Application.ExecutablePath); }
+        catch { return null; }
+    }
+
+    private void ChangeStartButton()
+    {
+        _startPreview.Invalidate();
+        if (_loadingPresentation || _startStyle.SelectedItem is not string style) return;
+        try
+        {
+            StartStudioPreferences.SetStartButton(style);
+            MotionDesk.Widgets.ReplacementTaskbar.RefreshStartButtonArt();
+            _info.Text = "Start button: " + style + " — Opsis taskbar only";
+        }
+        catch (Exception ex) { _info.Text = "Start button: " + ex.Message; }
     }
 
     private void ChangePresentation()
