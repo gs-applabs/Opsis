@@ -395,55 +395,10 @@ namespace MotionDesk.UI
             // ρυθμίζεται μόνο αλλάζοντας το Size παρακάτω.
             const int logoSize = 56;
             _brandDot = new PulsingLogoPanel { Size = new Size(logoSize, logoSize), Location = new Point(0, 2) };
-            _brandDot.Paint += (s, e) =>
-            {
-                var g = e.Graphics;
-                g.SmoothingMode = SmoothingMode.AntiAlias;
-                // Δυναμική κλιμάκωση βάσει του ΤΡΕΧΟΝΤΟΣ Width του control (όχι της σταθεράς
-                // logoSize) — έτσι το λογότυπο μπορεί να ξαναμεγεθυνθεί όταν συμπτύσσεται το
-                // sidebar, χωρίς να "κόβεται" σε ένα στενότερο compact μενού.
-                float scale = ((Control)s!).Width / 36f;
-                g.ScaleTransform(scale, scale);
-                double glowAlpha = Math.Sin(_brandPulseT) * 0.5 + 0.5;
-                double wave = _brandPulseT * 1.6;
-
-                using (var halo = new SolidBrush(Color.FromArgb((int)(25 + glowAlpha * 55), UiTheme.AccentCyan)))
-                    g.FillEllipse(halo, 18 - 20, 18 - 20, 40, 40);
-
-                var rect = new Rectangle(2, 2, 32, 32);
-                using (var bgBrush = new LinearGradientBrush(rect, UiTheme.AccentCyan, UiTheme.AccentBlue, 45f))
-                using (var path = UiTheme.RoundedPath(rect, 8))
-                    g.FillPath(bgBrush, path);
-
-                // Glossy highlight (ζητήθηκε ρητά): απαλή λευκή λάμψη στο πάνω μισό, σαν
-                // γυαλιστερό κουμπί — clipped στο ίδιο rounded-rect ώστε να μη ξεχειλίζει.
-                using (var glossPath = UiTheme.RoundedPath(rect, 8))
-                {
-                    var oldClip = g.Clip;
-                    g.SetClip(glossPath, System.Drawing.Drawing2D.CombineMode.Intersect);
-                    var glossRect = new Rectangle(rect.X, rect.Y, rect.Width, rect.Height / 2 + 4);
-                    using (var glossBrush = new LinearGradientBrush(glossRect, Color.FromArgb(120, 255, 255, 255), Color.FromArgb(0, 255, 255, 255), 90f))
-                        g.FillRectangle(glossBrush, glossRect);
-                    g.Clip = oldClip;
-                }
-
-                // "Trace" λογότυπο (επιλέχθηκε από τον χρήστη ανάμεσα σε 5 προτάσεις): το ίδιο κύμα
-                // παραμένει σταθερό σαν ίχνος/track, και ένας φωτεινός κόμβος το ξαναδιατρέχει σε
-                // βρόχο — ίδια ιδέα με το νέο assets/Opsis.ico και τα tray frames (scripts/generate_*.ps1),
-                // εδώ ζωντανή/συνεχής αντί για 6 διακριτά καρέ, πάνω στο ήδη υπάρχον animation timer.
-                PointF P0 = new(8, 20), P1 = new(13, 13), P2 = new(21, 27), P3 = new(26, 20);
-                using (var pen1 = new Pen(Color.FromArgb(150, 255, 255, 255), 2.2f) { StartCap = LineCap.Round, EndCap = LineCap.Round })
-                    g.DrawBezier(pen1, P0, P1, P2, P3);
-
-                double t = (_brandPulseT * 0.22) % 1.0;
-                double mt = 1 - t;
-                float nx = (float)(mt * mt * mt * P0.X + 3 * mt * mt * t * P1.X + 3 * mt * t * t * P2.X + t * t * t * P3.X);
-                float ny = (float)(mt * mt * mt * P0.Y + 3 * mt * mt * t * P1.Y + 3 * mt * t * t * P2.Y + t * t * t * P3.Y);
-                using (var nodeHalo = new SolidBrush(Color.FromArgb(110, 255, 255, 255)))
-                    g.FillEllipse(nodeHalo, nx - 5, ny - 5, 10, 10);
-                using (var nodeDot = new SolidBrush(Color.White))
-                    g.FillEllipse(nodeDot, nx - 2.3f, ny - 2.3f, 4.6f, 4.6f);
-            };
+            _brandDot.Paint += (_, e) =>
+                OpsisBrandMark.Draw(e.Graphics, new RectangleF(2, 2,
+                    Math.Max(1, _brandDot.Width - 4), Math.Max(1, _brandDot.Height - 4)),
+                    _brandPulseT, _brandPulseTimer?.Enabled == true);
             _brandPanel.Controls.Add(_brandDot);
             const int brandTextX = logoSize + 10;
             int brandLabelWidth = SidebarExpandedWidth - brandTextX - _sidebar.Padding.Horizontal;
