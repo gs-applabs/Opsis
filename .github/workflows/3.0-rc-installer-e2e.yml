@@ -2,6 +2,8 @@ name: Opsis 3.0 RC installer Windows VM E2E
 on:
   push:
     branches: [test/3.0.0.3200-rc-vm-audit]
+  pull_request:
+    branches: [feat/p2-win11-square-start-presets]
   workflow_dispatch:
 permissions:
   contents: read
