@@ -12,6 +12,42 @@ public sealed partial class MainWindow
     /// <summary>All studios use the same page/theme, settings and recovery services.</summary>
     private void BuildEcosystemStudios(Panel panel)
     {
+        var integrationCard = AddCardSection(panel,
+            StudioText("3.0 — Original feature and plugin inventory", "3.0 — Απογραφή αρχικών λειτουργιών και plugins"));
+        AddText(integrationCard, StudioText(
+            "Read-only audit of native 2.8.0.2510 owners, current modules, installed/loaded plugin contributions and shell compatibility. It does not load or execute plugins.",
+            "Απογραφή των μηχανισμών 2.8.0.2510, των modules, των εγκατεστημένων/φορτωμένων plugins και πιθανών συγκρούσεων. Δεν εκτελεί κώδικα plugins."));
+        AddButtonGrid(integrationCard,
+            (StudioText("Run ecosystem conflict audit", "Έλεγχος διπλοτύπων και συγκρούσεων"), async (_, _) =>
+            {
+                try
+                {
+                    var report = await System.Threading.Tasks.Task.Run(OpsisIntegrationAudit.Inspect);
+                    var lines = new System.Text.StringBuilder();
+                    lines.AppendLine("Baseline: " + report.BaselineVersion +
+                        "  →  Target: " + report.TargetVersion);
+                    lines.AppendLine("Native 2.8 features mapped: " + report.Baseline.Count);
+                    lines.AppendLine("Current module registry: " + report.RegisteredModules);
+                    lines.AppendLine("Loaded plugin identities: " + report.LoadedPlugins.Count);
+                    lines.AppendLine("Contributed Gallery assets: " + report.GalleryContributions);
+                    foreach (var plugin in report.LoadedPlugins)
+                        lines.AppendLine("  Plugin " + plugin.Id + " v" + plugin.Version +
+                            (plugin.Enabled ? " [enabled]" : " [disabled]"));
+                    if (report.Collisions.Count == 0) lines.AppendLine("No known duplicates or shell conflicts detected.");
+                    else foreach (var issue in report.Collisions.Take(60))
+                        lines.AppendLine(issue.Severity + " · " + issue.Domain +
+                            ": " + issue.Description + Environment.NewLine + issue.Resolution);
+                    MessageBox.Show(this, lines.ToString(), "Opsis 3.0 Integration Audit",
+                        MessageBoxButtons.OK, report.Collisions.Any(x => x.Severity == "Block")
+                            ? MessageBoxIcon.Warning : MessageBoxIcon.Information);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show(this, ex.Message, "Opsis integration audit",
+                        MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            }));
+
         var guard = AddCardSection(panel, StudioText("P3 — Windows Compatibility Guard", "P3 — Έλεγχος συμβατότητας Windows"));
         AddText(guard, StudioText(
             "Opsis remembers the approved Windows build and pauses risky shell activation after a feature update. Wallpapers and independent widgets remain usable. Windows-protected files are never overwritten.",
