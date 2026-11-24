@@ -26,6 +26,7 @@ public sealed class StartStudioForm : Form
     private readonly FlowLayoutPanel _toolbar = new() { Dock = DockStyle.Top, Height = 76, WrapContents = true };
     private readonly ComboBox _layoutStyle = new() { Width = 112, DropDownStyle = ComboBoxStyle.DropDownList };
     private readonly CheckBox _groupByFolder = new() { Text = "Group / Ομάδες", Width = 140, AutoSize = false, Height = 30 };
+    private bool _loadingPresentation;
 
     public StartStudioForm()
     {
@@ -98,8 +99,13 @@ public sealed class StartStudioForm : Form
         {
             var preferences = StartStudioPreferences.Read();
             _pinned = preferences.PinnedShortcuts.ToHashSet(StringComparer.OrdinalIgnoreCase);
-            _layoutStyle.SelectedItem = preferences.DisplayStyle;
-            _groupByFolder.Checked = preferences.GroupByFolder;
+            _loadingPresentation = true;
+            try
+            {
+                _layoutStyle.SelectedItem = preferences.DisplayStyle;
+                _groupByFolder.Checked = preferences.GroupByFolder;
+            }
+            finally { _loadingPresentation = false; }
         }
         catch (Exception ex) { MessageBox.Show(this, ex.Message, "Start Studio saved shortcuts", MessageBoxButtons.OK, MessageBoxIcon.Warning); _pinned.Clear(); }
         ApplyPresentation();
@@ -108,7 +114,7 @@ public sealed class StartStudioForm : Form
 
     private void ChangePresentation()
     {
-        if (_layoutStyle.SelectedItem is not string style) return;
+        if (_layoutStyle.SelectedItem is not string style || _loadingPresentation) return;
         try { StartStudioPreferences.SetDisplay(style, _groupByFolder.Checked); }
         catch (Exception ex) { _info.Text = "Start Studio: " + ex.Message; }
         ApplyPresentation();
