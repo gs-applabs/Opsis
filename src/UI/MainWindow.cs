@@ -3994,8 +3994,8 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
 
             // #97: source-controlled compatibility matrix, with honest validation status.
             // Showing a branch name or intended ABI here must never imply an E2E pass.
-            AddSection(panel, StudioText("Plugin compatibility for 2.8.0.2500 (planned)",
-                "Συμβατότητα plugins για 2.8.0.2500 (σχεδιαζόμενη)"));
+            AddSection(panel, StudioText("Plugin compatibility for 2.8.0.2510",
+                "Συμβατότητα plugins για 2.8.0.2510"));
             foreach (var plugin in PluginCompatibilityCatalog.Read())
             {
                 var observed = PluginCompatibilityCatalog.Probe(plugin);

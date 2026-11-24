@@ -312,6 +312,22 @@ namespace MotionDesk.Services
         {
             try { plugin.SetLanguage(LocalizationManager.CurrentLanguage); }
             catch (Exception ex) { Log($"Plugin '{plugin.Name}' SetLanguage failed: {ex.Message}"); }
+            PushHostSettings(plugin);
+        }
+
+        /// <summary>Contract 1.0.0.0: the settings that belong to Opsis (language, theme, hardware tier, UI scale, "Opsis manages the updates of this plugin"), for a plugin that implements IPluginHostSettingsAware.</summary>
+        internal static PluginHostSettings BuildHostSettings(IOpsisNewsCrawlerPlugin plugin)
+        {
+            bool dark = true; try { dark = ThemeManager.Current.IsDark; } catch (Exception) { }
+            int scale = 100; try { scale = AppSettings.Load().UiScalePercent; } catch (Exception) { }
+            return new PluginHostSettings(LocalizationManager.CurrentLanguage, dark, HardwareProfileService.CurrentTier.ToString(), scale, plugin is IPluginUpdateSource);
+        }
+
+        private void PushHostSettings(IOpsisNewsCrawlerPlugin plugin)
+        {
+            if (plugin is not IPluginHostSettingsAware aware) return;
+            try { aware.SetHostSettings(BuildHostSettings(plugin)); }
+            catch (Exception ex) { Log($"Plugin '{plugin.Name}' SetHostSettings failed: {ex.Message}"); }
         }
 
         // Handoff Φάση 6 (ελάχιστο): προαιρετική ικανότητα — καλείται ΜΟΝΟ αν το plugin υλοποιεί το
@@ -319,7 +335,7 @@ namespace MotionDesk.Services
         // IOpsisNewsCrawlerPlugin contract, άρα κανένα υπάρχον plugin δεν σπάει).
         private void PushHardwareProfile(IOpsisNewsCrawlerPlugin plugin)
         {
-            if (plugin is not OpsisNewsCrawler.Plugin.Abstractions.IPluginProfileAware aware) return;
+            if (plugin is not OpsisNewsCrawler.Plugin.Abstractions.IPluginProfileAware aware) { PushHostSettings(plugin); return; }
             try { aware.SetHardwareProfile(HardwareProfileService.CurrentTier.ToString()); }
             catch (Exception ex) { Log($"Plugin '{plugin.Name}' SetHardwareProfile failed: {ex.Message}"); }
         }
@@ -510,7 +526,7 @@ namespace MotionDesk.Services
                     var identity = AssemblyName.GetAssemblyName(dll);
                     if (identity.Version != new Version(1, 0, 0, 0))
                     {
-                        Log($"Plugin '{fileName}' skipped: ABI {identity.Version} (2.8.0.2500 requires 1.0.0.0). Update this plugin before enabling it.");
+                        Log($"Plugin '{fileName}' skipped: ABI {identity.Version} (2.8.0.2510 requires 1.0.0.0). Update this plugin before enabling it.");
                         continue;
                     }
                 }

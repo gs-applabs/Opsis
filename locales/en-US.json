@@ -1003,5 +1003,7 @@
   "Personalization.LockGifFrameInfo": "Windows cannot play an animation on the lock screen. Opsis checks the GIF (type, size, frames) and uses its first frame as the picture, through the normal lock-screen setting. Reset restores the original.",
   "Personalization.LockGifWarn": "This changes a Windows setting (the lock screen picture, with an administrator prompt). The original setting can be restored with the Reset button. Continue?",
   "Win.ImportBackup": "A safety copy of your old settings was saved to: {0}",
+  "VersionNotes.2.8.0.2510": "2.8.0.2510 final build: the Opsis.UI/plugin contract 1.0.0.0 is now the union with the Crawler 0.28.0 contract (host settings and update source added), the wallpaper no longer fails while another Opsis edition runs (WebView2 profile keyed by its arguments, private fallback profile), plugins receive the host settings (language, theme, tier, scale).",
+
   "VersionNotes.2.8.0.2500": "2.8.0.2500 development preview: plugin integration, Greeklish search, opt-in local diagnostics and accessible accent contrast. Not a final release; outstanding enhancements and verification remain."
 }

@@ -84,16 +84,36 @@ namespace MotionDesk.Widgets
             // (LocalApplicationData, όχι ApplicationData/AppPaths.AppDataFolder: cache δεδομένα του
             // WebView2 runtime, όχι ρυθμίσεις χρήστη — σωστά τοπικό/μη-roaming, ξαναδημιουργείται
             // αβλαβώς αν χαθεί, οπότε δεν χρειάζεται μετάβαση από το παλιό όνομα.)
-            string userDataFolder = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                "Opsis", "WebView2");
-            Directory.CreateDirectory(userDataFolder);
             // Λιγότερη μνήμη/CPU σε αδύναμα συστήματα: χωρίς background networking/sync/translate, χωρίς renderer
             // backgrounding (το wallpaper είναι πίσω από όλα, τα Windows θα το "κοιμίζανε").
-            var options = new CoreWebView2EnvironmentOptions(
-                "--disable-features=Translate,msEdgeSync --disable-background-networking " +
-                "--disable-renderer-backgrounding --disable-backgrounding-occluded-windows --autoplay-policy=no-user-gesture-required");
-            return await CoreWebView2Environment.CreateAsync(null, userDataFolder, options).ConfigureAwait(true);
+            const string args = "--disable-features=Translate,msEdgeSync --disable-background-networking " +
+                "--disable-renderer-backgrounding --disable-backgrounding-occluded-windows --autoplay-policy=no-user-gesture-required";
+            string userDataFolder = UserDataFolder(browserArguments: args);
+            Directory.CreateDirectory(userDataFolder);
+            var options = new CoreWebView2EnvironmentOptions(args);
+            try { return await CoreWebView2Environment.CreateAsync(null, userDataFolder, options).ConfigureAwait(true); }
+            catch (Exception ex)
+            {
+                MotionDesk.Services.AttachLog.Write("WebView2 environment failed: " + ex.GetType().Name + ": " + ex.Message + " - retrying with a private profile");
+                string own = Path.Combine(userDataFolder, "private-" + Environment.ProcessId);
+                Directory.CreateDirectory(own);
+                return await CoreWebView2Environment.CreateAsync(null, own, options).ConfigureAwait(true);
+            }
+        }
+
+        /// <summary>
+        /// The WebView2 user-data folder: under LocalAppData\Opsis, or inside the isolated data folder when OPSIS_APPDATA is set (tests). The browser arguments are part of the environment:
+        /// WebView2 refuses a second environment on the SAME folder with DIFFERENT arguments while another process uses it (0x8007139F). Another Opsis edition running at the same time
+        /// (Opsis 2.4.6.2 / 2.6.0 next to Opsis Studio) did exactly that to the wallpaper, so the folder is keyed by the arguments.
+        /// </summary>
+        internal static string UserDataFolder(string? isolatedAppData = null, string? localAppData = null, string browserArguments = "")
+        {
+            isolatedAppData ??= Environment.GetEnvironmentVariable("OPSIS_APPDATA");
+            string baseFolder = !string.IsNullOrWhiteSpace(isolatedAppData) ? Path.Combine(isolatedAppData, "WebView2")
+                : Path.Combine(localAppData ?? Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Opsis", "WebView2");
+            if (browserArguments.Length == 0) return baseFolder;
+            using var sha = System.Security.Cryptography.SHA256.Create();
+            return Path.Combine(baseFolder, "p" + Convert.ToHexString(sha.ComputeHash(System.Text.Encoding.UTF8.GetBytes(browserArguments)))[..8].ToLowerInvariant());
         }
     }
 }

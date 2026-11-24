@@ -45,10 +45,11 @@ test('host compatibility diagnostic reports both plugin IDs and registered feeds
   assert.match(d,/PluginFeeds\.All\(\)/);
 });
 
-test('version metadata is ready for 2.8.0.2500 staging and retains preview designation', () => {
+test('version metadata is 2.8.0.2510 (final build, no preview label)', () => {
   assert.match(source('Opsis.Studio.csproj'), /<Import Project="Version\.props"/);
-  assert.match(source('Version.props'), /<OpsisAppVersion>2\.8\.0\.2500<\/OpsisAppVersion>/);
-  assert.match(source('Version.props'), /<InformationalVersion>\$\(OpsisAppVersion\)-source-preview<\/InformationalVersion>/);
+  assert.match(source('Version.props'), /<OpsisAppVersion>2\.8\.0\.2510<\/OpsisAppVersion>/);
+  assert.match(source('Version.props'), /<InformationalVersion>\$\(OpsisAppVersion\)<\/InformationalVersion>/);
+  assert.doesNotMatch(source('Version.props'), /source-preview/);
   assert.match(source('installer.iss'), /GetFileVersion\(PublishDir/);
 });
 
