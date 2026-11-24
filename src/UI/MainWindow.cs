@@ -2701,6 +2701,15 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                     try { RefreshContributions(); }
                     catch (Exception ex) { MessageBox.Show(this, ex.Message, "Opsis Gallery", MessageBoxButtons.OK, MessageBoxIcon.Error); }
                 }),
+                (LocalizationManager.CurrentLanguage == "el" ? "Ορισμός ως wallpaper" : "Set as wallpaper", (_, _) =>
+                {
+                    if (ecosystemList.SelectedItems.Count != 1 ||
+                        ecosystemList.SelectedItems[0].Tag is not OpsisEcosystemGallery.Item item) return;
+                    if (MessageBox.Show(this, StudioText("Apply selected static image wallpaper?", "Να εφαρμοστεί το επιλεγμένο στατικό wallpaper;"),
+                        "Opsis Gallery", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes) return;
+                    try { OpsisEcosystemGallery.ApplyStaticWallpaper(item); _statusLabel.Text = "Opsis — gallery wallpaper applied."; }
+                    catch (Exception ex) { MessageBox.Show(this, ex.Message, "Opsis Gallery", MessageBoxButtons.OK, MessageBoxIcon.Error); }
+                }),
                 (LocalizationManager.CurrentLanguage == "el" ? "Πληροφορίες περιεχομένου" : "Contribution information", (_, _) =>
                 {
                     if (ecosystemList.SelectedItems.Count != 1 ||
