@@ -6,6 +6,10 @@ on:
     branches: [feat/unified-mod-core-update-guard]
   workflow_dispatch:
 
+concurrency:
+  group: opsis-unified-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 jobs:
