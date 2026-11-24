@@ -90,15 +90,23 @@ namespace MotionDesk.Services
                     bool original = control.Checked;
                     try
                     {
+                        HangTrace.Mark("audit: toggling " + name);
                         control.Checked = !original;
+                        HangTrace.Mark("audit: toggled, pumping");
                         Pump(250);
-                        if (read(engine.ReadCurrent()) != !original) problems.Add("[Taskbar] Windows did not apply " + name);
+                        HangTrace.Mark("audit: pumped, reading");
+                        var afterToggle = engine.ReadCurrent();
+                        HangTrace.Mark("audit: read");
+                        if (read(afterToggle) != !original) problems.Add("[Taskbar] Windows did not apply " + name);
                     }
                     finally
                     {
                         var current = window.Controls.Find(name, true).OfType<Opsis.UI.FlatToggle>().FirstOrDefault();
+                        HangTrace.Mark("audit: restoring " + name);
                         if (current != null) current.Checked = original;
+                        HangTrace.Mark("audit: restored, pumping");
                         Pump(250);
+                        HangTrace.Mark("audit: pumped after restore");
                         if (read(engine.ReadCurrent()) != original) problems.Add("[Taskbar] Windows did not restore " + name);
                     }
                 }
