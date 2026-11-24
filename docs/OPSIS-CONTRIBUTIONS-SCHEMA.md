@@ -41,7 +41,7 @@ Example:
 
 `Type` and `Category` define the shared Gallery grouping. A plugin may contribute multiple items in different categories. Missing/broken contributions are skipped instead of taking down the host.
 
-**Important:** Discovery is metadata-only. It never executes JavaScript, DLLs or native code. Only explicitly selected *static image wallpaper* contributions can be applied by the current Gallery; accepted extensions are PNG, JPEG, WebP, GIF and BMP. Executable widgets, HTML wallpapers and templates need separate permission and host integration; listing a contribution is **not** a grant to execute code.
+**Important:** Discovery is metadata-only. It never executes JavaScript, DLLs or native code. Only explicitly selected *static image wallpaper* contributions can be applied by the current Gallery; accepted extensions are PNG, JPEG, WebP, GIF and BMP. Declarative Clock/Date/Text/CPU/RAM/Battery widget JSON files can be previewed as Opsis-native widgets after an explicit user action. Theme entries containing validated `.opsis-theme` packages can be installed as data only, without applying OS settings. Executable widgets, HTML wallpapers and scripts still need separate permission and host integration; listing a contribution is **not** a grant to execute code.
 
 ## Security and compatibility
 
@@ -57,3 +57,25 @@ Example:
 ## Repository / design
 
 The shared contract is implemented by `src/Services/OpsisEcosystemGallery.cs`. The application displays contributions in `src/UI/MainWindow.cs`, grouped by category/type, and can apply vetted image wallpapers with backup. This is an initial manifest contract; richer widget content APIs, visual editors and downloadable catalogs are separately tracked as planned features.
+
+
+## Live native widget contribution example
+
+A `widget` entry may reference `assets/clock.json` with content:
+
+```json
+{
+  "Schema": 1,
+  "Name": "Athens Clock",
+  "Binding": "Clock",
+  "Text": "",
+  "AccentHex": "#00D2FF",
+  "FontSize": 30,
+  "Width": 330,
+  "Height": 135,
+  "OpacityPercent": 95,
+  "AlwaysOnTop": false
+}
+```
+
+The widget uses built-in WinForms drawing and existing Opsis monitoring services. No JavaScript/Lua code is executed. Theme assets are `.opsis-theme` declarative archives and cannot inject binaries into the host. Context menu entries are owned and reversible; they are not delivered as arbitrary registry scripts.
