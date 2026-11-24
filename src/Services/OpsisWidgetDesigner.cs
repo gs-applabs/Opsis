@@ -16,7 +16,7 @@ public static class OpsisWidgetDesigner
     {
         public int Schema { get; set; } = 1;
         public string Name { get; set; } = "";
-        public string Binding { get; set; } = "Clock"; // Clock | Date | Text
+        public string Binding { get; set; } = "Clock"; // Clock | Date | Text | CPU | RAM | Battery
         public string Text { get; set; } = "";
         public string AccentHex { get; set; } = "#00D2FF";
         public int FontSize { get; set; } = 30;
@@ -40,7 +40,7 @@ public static class OpsisWidgetDesigner
     {
         if (layout == null) throw new InvalidDataException("Null layout.");
         FileFor(layout.Name);
-        if (layout.Schema != 1 || layout.Binding is not ("Clock" or "Date" or "Text") ||
+        if (layout.Schema != 1 || layout.Binding is not ("Clock" or "Date" or "Text" or "CPU" or "RAM" or "Battery") ||
             layout.Text == null || layout.Text.Length > 250 || layout.AccentHex == null ||
             layout.AccentHex.Length != 7 || layout.AccentHex[0] != '#' ||
             !int.TryParse(layout.AccentHex.AsSpan(1), System.Globalization.NumberStyles.HexNumber,
