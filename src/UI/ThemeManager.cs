@@ -260,9 +260,16 @@ namespace MotionDesk.UI
             var ui = UiContext;
             if (ui != null && System.Threading.SynchronizationContext.Current != ui)
             {
-                ui.Post(_ => { MotionDesk.Services.HangTrace.Mark("RefreshFromWindows: start"); RefreshFromWindows(); MotionDesk.Services.HangTrace.Mark("RefreshFromWindows: done"); }, null);
+                // the callback runs the refresh directly: it must NOT re-test the context, because a callback that is dispatched by another context
+                // (e.g. the one of the UI audit) would then post itself again for ever and starve the message loop
+                ui.Post(_ => RefreshNow(), null);
                 return;
             }
+            RefreshNow();
+        }
+
+        private static void RefreshNow()
+        {
             if (AppSettings.Load().ThemeMode == "Follow")
             {
                 var resolved = Resolve("Follow");
