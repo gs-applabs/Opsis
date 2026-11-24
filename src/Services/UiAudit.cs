@@ -66,8 +66,20 @@ namespace MotionDesk.Services
             while (DateTime.UtcNow < end) { Application.DoEvents(); System.Threading.Thread.Sleep(10); }
         }
 
+        // hang hunting: every message the UI thread dispatches while the taskbar toggles are checked (the last one written is the one whose handler did not return)
+        private sealed class TraceFilter : IMessageFilter
+        {
+            private int _n;
+            public bool PreFilterMessage(ref Message m)
+            {
+                if (_n++ < 600) HangTrace.Mark($"msg 0x{m.Msg:X4} hwnd={(Control.FromHandle(m.HWnd)?.GetType().Name ?? m.HWnd.ToString())}");
+                return false;
+            }
+        }
+
         private static void VerifyTaskbarControls(Form window, List<string> problems, Action<string> mark)
         {
+            var traceFilter = new TraceFilter(); Application.AddMessageFilter(traceFilter);
             var engine = MotionDesk.Appearance.AppearanceService.Instance.Engine;
             var snapshot = engine.Snapshot();
             var toggles = new (string Name, Func<MotionDesk.Appearance.Look, bool?> Read)[]
@@ -128,7 +140,7 @@ namespace MotionDesk.Services
                 }
                 else problems.Add("[Taskbar] Missing Win.Combine");
             }
-            finally { engine.Restore(snapshot); }
+            finally { Application.RemoveMessageFilter(traceFilter); engine.Restore(snapshot); }
         }
 
         private static IEnumerable<MotionDesk.UI.StudioAdvancedSection> AdvancedSections(Control parent)
