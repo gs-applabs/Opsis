@@ -104,6 +104,21 @@ try
     }));
     Check(OpsisEcosystemGallery.Discover().Any(x => x.PluginId == "example.plugin"), "plugin wallpaper contribution discovered");
 
+    var widget = new OpsisWidgetDesigner.Layout {
+        Name = "Clock Demo", Binding = "Clock", AccentHex = "#00D2FF", FontSize = 30
+    };
+    OpsisWidgetDesigner.Save(widget);
+    Check(OpsisWidgetDesigner.List().Contains("Clock Demo"), "native widget layout appears in Gallery storage");
+    Check(OpsisWidgetDesigner.Read("Clock Demo").Binding == "Clock", "native widget layout roundtrip");
+    rejected = false;
+    try { OpsisWidgetDesigner.Validate(new OpsisWidgetDesigner.Layout { Name = "../escape", Binding = "Clock" }); }
+    catch (ArgumentException) { rejected = true; }
+    Check(rejected, "widget layout traversal rejected");
+    rejected = false;
+    try { OpsisWidgetDesigner.Validate(new OpsisWidgetDesigner.Layout { Name = "Bad Widget", Binding = "Script" }); }
+    catch (InvalidDataException) { rejected = true; }
+    Check(rejected, "widget designer refuses arbitrary script bindings");
+
     // Image-to-accent extraction must be deterministic and never modify Windows colors.
     var imagePath = Path.Combine(folder, "test-accent.png");
     using (var bmp = new System.Drawing.Bitmap(30, 30))
@@ -140,6 +155,7 @@ try
     Check(snapshot.Files.Any(x => x.RelativePath == "module-core.json"), "recovery saved modules");
     Check(snapshot.Files.Any(x => x.RelativePath == "automations.json"), "recovery saved automations");
     Check(snapshot.Files.Any(x => x.RelativePath.StartsWith("weather-scenes/", StringComparison.Ordinal)), "recovery saved scenes");
+    Check(snapshot.Files.Any(x => x.RelativePath.StartsWith("widget-designs/", StringComparison.Ordinal)), "recovery saved widget designs");
     File.WriteAllText(Path.Combine(folder, "module-core.json"), "{}");
     OpsisRecoveryHub.RestoreOwnedSettings(snapshot.Id);
     Check(File.ReadAllText(Path.Combine(folder, "module-core.json")) == before, "recovery restored original settings");
