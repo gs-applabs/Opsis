@@ -100,6 +100,14 @@ try
         "audit warns about overlapping taskbar, DeskStrip, toolbar and accent owners");
 
 
+    var windhawkMods = OpsisModCompatibility.EvaluateWindhawkMods(new (string Id, bool? Disabled)[]
+    {
+        ("windows-11-taskbar-styler", false), ("WINDOWS-11-TASKBAR-STYLER", false),
+        ("windows-11-start-menu-styler", true), ("custom-unknown", null)
+    });
+    Check(windhawkMods.Count == 2 && windhawkMods.Any(m => m.Area == "Taskbar") &&
+        windhawkMods.Any(m => m.Area == "Unknown mod") && windhawkMods.All(m => m.Risk == "Review"),
+        "Windhawk per-mod detection deduplicates, excludes disabled and never claims verified injection");
     Check(OpsisModCore.Catalog.Count >= 10, "unified module catalog available");
     Check(OpsisModCore.Read().Enabled.Count == 0, "module flags disabled by default");
     OpsisModCore.SetModule("windows.hot-corners", true, 22631, false);

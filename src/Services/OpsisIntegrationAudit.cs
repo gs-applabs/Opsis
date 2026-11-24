@@ -90,6 +90,13 @@ public static class OpsisIntegrationAudit
                     "Opsis replacement taskbar overlaps with " + externalShell.Product,
                     "Disable the competing shell replacement or disable Opsis taskbar overlay."));
         }
+        // Per-mod findings are advisory, not evidence of active injection.
+        // Surface potential taskbar overlaps through the existing audit UI.
+        if (replaceWindowsTaskbar)
+            foreach (var mod in external.Where(x => x.Product.StartsWith("Windhawk: ", StringComparison.Ordinal) &&
+                         (x.Area == "Taskbar" || x.Area == "System tray")))
+                problems.Add(new Collision("Review", "shell.taskbar", mod.Product + ": " + mod.Advice,
+                    "Choose a single taskbar owner after inspecting enabled mods and testing compatibility."));
         if (autoTileEnabled && windowRulesEnabled)
             problems.Add(new Collision("Block", "desktop.window-position",
                 "AutoTile and Window Rules both try to position application windows.",

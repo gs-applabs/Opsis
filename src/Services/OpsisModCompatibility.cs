@@ -41,6 +41,62 @@ public static class OpsisModCompatibility
             .ThenBy(x => x.Product).ToArray();
     }
 
+    // Explicit catalog of known overlap candidates. Do not infer conflicts from
+    // substring matches or claim that a configured mod is currently injected.
+    private static readonly Dictionary<string, string> WindhawkAreas = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["windows-11-start-menu-styler"] = "Start",
+        ["windows-11-file-explorer-styler"] = "Explorer",
+        ["windows-11-taskbar-styler"] = "Taskbar",
+        ["taskbar-icon-size"] = "Taskbar",
+        ["taskbar-clock-customization"] = "Taskbar",
+        ["taskbar-labels"] = "Taskbar",
+        ["taskbar-tray-system-icon-tweaks"] = "System tray",
+        ["windows-11-notification-center-styler"] = "Notification center",
+        ["taskbar-volume-control"] = "Taskbar",
+        ["disable-taskbar-thumbnails"] = "Taskbar"
+    };
+
+    public static IReadOnlyList<Finding> EvaluateWindhawkMods(IEnumerable<(string Id, bool? Disabled)> mods)
+    {
+        return mods.Where(m => !string.IsNullOrWhiteSpace(m.Id) && m.Id.Length <= 128)
+            .GroupBy(m => m.Id, StringComparer.OrdinalIgnoreCase)
+            .Where(g => g.Any(m => m.Disabled != true))
+            .Select(g =>
+            {
+                bool configured = g.Any(m => m.Disabled == false);
+                var known = WindhawkAreas.TryGetValue(g.Key, out var area);
+                return new Finding("Windhawk: " + g.Key, "Review", area ?? "Unknown mod",
+                    (configured ? "Configured enabled; runtime injection not verified. " : "Enabled state unknown. ") +
+                    (known ? "Check overlap with Opsis before changing this shell area."
+                           : "Review this mod manually; no automatic compatibility assumption."));
+            }).OrderBy(f => f.Product, StringComparer.OrdinalIgnoreCase).ToArray();
+    }
+
+    private static IReadOnlyList<Finding> ScanWindhawkMods()
+    {
+        var candidates = new List<(string Id, bool? Disabled)>();
+        foreach (var view in new[] { RegistryView.Registry64, RegistryView.Registry32 })
+        {
+            try
+            {
+                using var machine = RegistryKey.OpenBaseKey(RegistryHive.LocalMachine, view);
+                using var root = machine.OpenSubKey(@"SOFTWARE\Windhawk\Engine\Mods", false);
+                if (root == null) continue;
+                foreach (var id in root.GetSubKeyNames().Take(1000))
+                {
+                    using var mod = root.OpenSubKey(id, false);
+                    if (mod == null) continue;
+                    var raw = mod.GetValue("Disabled");
+                    candidates.Add((id, raw is int flag && flag is 0 or 1 ? flag == 1 : (bool?)null));
+                }
+            }
+            catch (Exception e) when (e is UnauthorizedAccessException or System.Security.SecurityException or System.IO.IOException or PlatformNotSupportedException)
+            { RotatingLogger.Write("Optional Windhawk registry inventory inaccessible: " + e.Message); }
+        }
+        return EvaluateWindhawkMods(candidates);
+    }
+
     private static readonly object CacheGate = new();
     private static IReadOnlyList<Finding>? _lastScan;
     private static long _lastScanTicks;
@@ -104,6 +160,6 @@ public static class OpsisModCompatibility
             catch (Exception e) when (e is InvalidOperationException or System.ComponentModel.Win32Exception)
             { RotatingLogger.Write("Optional shell process scan: " + e.Message); }
         }
-        return Evaluate(names);
+        return Evaluate(names).Concat(ScanWindhawkMods()).ToArray();
     }
 }
