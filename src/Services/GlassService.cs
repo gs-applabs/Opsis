@@ -62,13 +62,13 @@ namespace MotionDesk.Services
                         try
                         {
                             _manager = new OpsisGlass.GlassManager();
-                            if (!_manager.IsGpuReady) { RotatingLogger.Write("GlassService: GPU glass unavailable, keeping the DWM look"); _manager.Dispose(); _manager = null; _failed = true; return null; }
+                            if (!_manager.IsGpuReady) { RotatingLogger.Write("GlassService: GPU glass unavailable, keeping the DWM look"); _manager.Dispose(); _manager = null; _failed = true; _decidedAt = DateTime.MinValue; Decide(); return null; }
                             AppActivity.FullscreenChanged += _ => Refresh();
                             PerformanceGovernor.EffectiveChanged += _ => Refresh();
                             _timer = new System.Threading.Timer(_ => Refresh(), null, 2000, 2000);   // wallpaper on/off, mode changes (cheap: pushes only when something changed)
                             Refresh();
                         }
-                        catch (Exception ex) { RotatingLogger.Write("GlassService: " + ex.Message); _manager = null; _failed = true; return null; }
+                        catch (Exception ex) { RotatingLogger.Write("GlassService: " + ex.Message); _manager?.Dispose(); _manager = null; _failed = true; _decidedAt = DateTime.MinValue; Decide(); return null; }
                     }
                     return _manager;
                 }
@@ -147,7 +147,7 @@ namespace MotionDesk.Services
         private OpsisGlass.GlassStyle? _shownStyle;
         private Rectangle _shownBounds;
         private bool _shownVisible;
-        private bool _syncQueued;
+        private int _syncQueued;
         private readonly Func<int?>? _cornerOverride;
         private readonly Func<OpsisGlass.GlassStyle, OpsisGlass.GlassStyle>? _tintOverride;
         private readonly System.Text.StringBuilder _nextClass = new(64);
@@ -164,7 +164,7 @@ namespace MotionDesk.Services
             MotionDesk.UI.ThemeManager.Changed += OnTheme;
             MotionDesk.UI.ThemeManager.Repainted += OnTheme;
             GlassService.PolicyChanged += OnPolicyChanged;
-            form.HandleDestroyed += (_, _) => Remove();
+            form.HandleDestroyed += (_, _) => { Interlocked.Exchange(ref _syncQueued, 0); Remove(); };
             _reseat.Tick += (_, _) =>
             {
                 if (_id >= 0 && !_disposed && _f.Visible && !PaneIsBelow())
@@ -174,10 +174,9 @@ namespace MotionDesk.Services
 
         private void QueueSync()
         {
-            if (_syncQueued || _disposed || !_f.IsHandleCreated) return;
-            _syncQueued = true;
-            try { _f.BeginInvoke(() => { _syncQueued = false; Sync(); }); }
-            catch (InvalidOperationException) { _syncQueued = false; }
+            if (_disposed || !_f.IsHandleCreated || Interlocked.Exchange(ref _syncQueued, 1) != 0) return;
+            try { _f.BeginInvoke(() => { Interlocked.Exchange(ref _syncQueued, 0); Sync(); }); }
+            catch (InvalidOperationException) { Interlocked.Exchange(ref _syncQueued, 0); }
         }
 
         private bool PaneIsBelow()
@@ -217,7 +216,11 @@ namespace MotionDesk.Services
             if (_tintOverride != null) style = _tintOverride(style);
             var bounds = _f.Bounds;
             bool created = _id < 0;
-            if (created) _id = m.AddPane(bounds, style, clickThrough: true);
+            if (created)
+            {
+                _id = m.AddPane(bounds, style, clickThrough: true);
+                if (_id < 0) return;
+            }
             else
             {
                 if (_shownBounds.Location != bounds.Location) m.MovePane(_id, bounds.Location);
@@ -242,7 +245,10 @@ namespace MotionDesk.Services
             if (_id < 0) return;
             GlassService.ExistingManager?.RemovePane(_id);
             _id = -1;
-            if (!_disposed) PaneChanged?.Invoke();
+            _shownVisible = false;
+            _shownStyle = null;
+            _shownBounds = Rectangle.Empty;
+            if (!_disposed && _f.IsHandleCreated && !_f.Disposing) PaneChanged?.Invoke();
         }
 
         public void Dispose() { if (_disposed) return; _disposed = true; MotionDesk.UI.ThemeManager.Changed -= OnTheme; MotionDesk.UI.ThemeManager.Repainted -= OnTheme; GlassService.PolicyChanged -= OnPolicyChanged; Remove(); _reseat.Dispose(); }
