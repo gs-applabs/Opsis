@@ -22,7 +22,7 @@ namespace MotionDesk.UI
         {
             var svc = AppearanceService.Instance;
             string T(string k) => LocalizationManager.T(k);
-            void Rebuild() { _winAppearanceScroll = panel.VerticalScroll.Value; BeginInvoke(new Action(() => { if (!IsDisposed && _currentPageKey == "Personalization") ShowPersonalization(); })); }
+            void Rebuild() { _winAppearanceScroll = panel.VerticalScroll.Value; BeginInvoke(new Action(() => { MotionDesk.Services.HangTrace.Mark("rebuild callback: start"); if (!IsDisposed && _currentPageKey == "Personalization") ShowPersonalization(); MotionDesk.Services.HangTrace.Mark("rebuild callback: done"); })); }
             // a collapsed "Advanced" section inside a card; returns the column to add the rows to
             FlowLayoutPanel AdvBox(Control card)
             {
@@ -82,6 +82,8 @@ namespace MotionDesk.UI
             string[] Opts(params string[] keys) => keys.Select(k => k.StartsWith("=") ? k[1..] : T(k)).ToArray();
 
             // ---- theme and colour
+
+            MotionDesk.Services.HangTrace.Mark("page: theme and colour");
             var theme = AddCardSection(panel, T("Win.SecTheme"));
             var modeRow = Row(theme);
             Cb(modeRow, "Win.Mode", Opts("Win.ModeManual", "Win.ModeSun", "Win.ModeFixed"), (int)s.Mode, i => { s.Mode = (ThemeMode)i; svc.SaveSettings(); Rebuild(); }, 260);
@@ -187,6 +189,8 @@ namespace MotionDesk.UI
             ResetButton(theme, 0);
 
             // ---- taskbar (Windows settings)
+
+            MotionDesk.Services.HangTrace.Mark("page: taskbar (Windows settings)");
             var tb = AddCardSection(panel, T("Win.SecTaskbar"));
             Tg(tb, "Settings.TransparencyEffects", WindowsSystemSettings.GetTransparencyEffectsEnabled(), v => Do(() =>
             {
@@ -201,6 +205,8 @@ namespace MotionDesk.UI
             Tg(tb, "Win.TbWidgets", cur.ShowWidgets == true, v => Do(() => svc.Engine.Apply(new Look { ShowWidgets = v })));
 
             // ---- taskbar look (TranslucentTB / RoundedTB style)
+
+            MotionDesk.Services.HangTrace.Mark("page: taskbar look (TranslucentTB / RoundedTB style)");
             var bar = AddCardSection(panel, T("Win.SecBar"));
             AddText(bar, T("Win.BarNote"));
             void SaveBar()
@@ -232,6 +238,8 @@ namespace MotionDesk.UI
             ResetButton(bar, 1);
 
             // ---- window effects (documented DWM APIs, event driven)
+
+            MotionDesk.Services.HangTrace.Mark("page: window effects (documented DWM APIs, event driven)");
             var fxCard = AddCardSection(panel, T("Win.SecEffects"));
             AddText(fxCard, T("Win.EffectsNote"));
             void Fx(Action<EffectsSettings> change) { try { svc.Backup(); change(s.Effects); svc.Store.Save(s); svc.ApplyEffects(); } catch (Exception ex) { Fail(ex); } }
@@ -257,6 +265,8 @@ namespace MotionDesk.UI
             ResetButton(fxCard, 2);
 
             // ---- Explorer and taskbar behaviour
+
+            MotionDesk.Services.HangTrace.Mark("page: Explorer and taskbar behaviour");
             var shell = AddCardSection(panel, T("Win.SecExplorer"));
             Tg(shell, "Win.FileExt", cur.ShowFileExtensions == true, v => Do(() => svc.Engine.Apply(new Look { ShowFileExtensions = v })));
             Tg(shell, "Win.HiddenFiles", cur.ShowHiddenFiles == true, v => Do(() => svc.Engine.Apply(new Look { ShowHiddenFiles = v })));
@@ -272,6 +282,8 @@ namespace MotionDesk.UI
             }, 190);
 
             // ---- wallpaper slideshow (static pictures; the animated wallpaper library is on the Wallpaper page)
+
+            MotionDesk.Services.HangTrace.Mark("page: wallpaper slideshow (static pictures; the animated");
             var slide = AddCardSection(panel, T("Win.SecSlide"));
             var sl = s.Slideshow;
             bool PickFolder()
@@ -300,6 +312,8 @@ namespace MotionDesk.UI
             ResetButton(slide, 4);
 
             // ---- themes: full themes (.opsistheme) and the Windows .theme files in one place
+
+            MotionDesk.Services.HangTrace.Mark("page: themes: full themes (.opsistheme) and the Windows ");
             var th = AddCardSection(panel, T("Win.SecThemes"));
             var items = svc.Themes.List();
             var list = new ListBox { Width = 440, Height = 150, IntegralHeight = false, BackColor = UiTheme.PageBackground, ForeColor = UiTheme.TextPrimary, BorderStyle = BorderStyle.None, Margin = new Padding(0, 2, 0, 6) };
@@ -379,6 +393,8 @@ namespace MotionDesk.UI
             }, 280);
 
             // ---- safety and restore
+
+            MotionDesk.Services.HangTrace.Mark("page: safety and restore");
             var safe = AddCardSection(panel, T("Win.SecSafety"));
             AddText(safe, T("Win.SafetyNote"));
             Tg(safe, "Win.RestorePoint", s.Safety.RestorePointBeforeInvasive, v => { s.Safety.RestorePointBeforeInvasive = v; svc.Store.Save(s); });
