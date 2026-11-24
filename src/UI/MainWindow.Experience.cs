@@ -250,6 +250,17 @@ public sealed partial class MainWindow
                 }
                 catch (Exception ex) { MessageBox.Show(this, ex.Message, "Opsis Widget Studio", MessageBoxButtons.OK, MessageBoxIcon.Error); }
             }),
+            (StudioText("Visual editor", "Οπτικός επεξεργαστής"), (_, _) =>
+            {
+                if (widgetPicker.SelectedItem is not string selected) return;
+                try
+                {
+                    using var editor = new OpsisWidgetVisualDesignerForm(OpsisWidgetDesigner.Read(selected));
+                    editor.ShowDialog(this);
+                    RefreshWidgets();
+                }
+                catch (Exception ex) { MessageBox.Show(this, ex.Message, "Opsis Widget Studio", MessageBoxButtons.OK, MessageBoxIcon.Error); }
+            }),
             (StudioText("Open widget", "Άνοιγμα widget"), (_, _) =>
             {
                 if (widgetPicker.SelectedItem is not string selected) return;
