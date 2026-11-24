@@ -1,0 +1,96 @@
+name: Opsis 3.0 RC exhaustive Windows VM audit
+on:
+  push:
+    branches: [test/3.0.0.3200-rc-vm-audit]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: opsis-rc-vm-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  rc-build-ui:
+    name: Build 3.0 RC, shell/navigation UI and stability / ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-2022, windows-2025]
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 11.0.x
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Preserve original 2.8 settings and enforce release blockers
+        run: |
+          python tests/integration/check_baseline_and_release.py
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Build actual 3.0.0.3200 candidate (command line version override only)
+        run: |
+          dotnet restore Opsis.csproj --disable-parallel
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          dotnet publish Opsis.csproj -c Release -r win-x64 --self-contained false -o publish -m:1 -p:OpsisAppVersion=3.0.0.3200 -p:UseSharedCompilation=false -nodeReuse:false
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          if (!(Test-Path publish/Opsis.exe)) { throw 'RC exe missing' }
+          $vi = (Get-Item publish/Opsis.exe).VersionInfo
+          Write-Host "FileVersion=$($vi.FileVersion), ProductVersion=$($vi.ProductVersion)"
+          if ($vi.FileVersion -ne '3.0.0.3200') { throw 'RC file version not applied' }
+          New-Item -ItemType Directory -Force evidence | Out-Null
+          Get-FileHash publish/Opsis.exe -Algorithm SHA256 | Format-List | Out-File evidence/rc-exe-sha256.txt
+      - name: Build/run previous P1/P2 shell tests
+        run: |
+          dotnet run --project tests/Opsis.ShellSmoke/Opsis.ShellSmoke.csproj -c Release -p:OpsisAppVersion=3.0.0.3200 -m:1 -p:UseSharedCompilation=false -nodeReuse:false
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Build/run integrated P0-P5 feature and resource smoke
+        run: |
+          dotnet run --project tests/Opsis.ExperienceSmoke/Opsis.ExperienceSmoke.csproj -c Release -p:OpsisAppVersion=3.0.0.3200 -m:1 -p:UseSharedCompilation=false -nodeReuse:false
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Build/run full sidebar-page, button-art, scrolling UI snapshots and stress
+        run: |
+          dotnet run --project tests/Opsis.RcUiSmoke/Opsis.RcUiSmoke.csproj -c Release -p:OpsisAppVersion=3.0.0.3200 -- evidence/ui
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          if (!(Test-Path evidence/ui/ui-smoke-report.json)) { throw 'UI report missing' }
+      - name: Real published executable self-test and memory observation
+        run: |
+          $env:OPSIS_APPDATA = Join-Path $env:RUNNER_TEMP 'Opsis-RC-SelfTest'
+          New-Item -ItemType Directory -Force $env:OPSIS_APPDATA | Out-Null
+          $exe = (Resolve-Path publish/Opsis.exe).Path
+          $sw = [System.Diagnostics.Stopwatch]::StartNew()
+          $proc = Start-Process -FilePath $exe -ArgumentList '--run-selftest' -PassThru -Wait
+          $sw.Stop()
+          if ($proc.ExitCode -ne 0) { throw "Published RC self-test failed: $($proc.ExitCode)" }
+          Copy-Item (Join-Path $env:OPSIS_APPDATA 'selftest-report.json') evidence/published-selftest.json
+          [pscustomobject]@{ runMs=$sw.Elapsed.TotalMilliseconds; exit=$proc.ExitCode; platform=$env:RUNNER_OS } |
+            ConvertTo-Json | Set-Content evidence/rc-runtime.json
+      - name: Weather JavaScript syntax and fallback engine
+        run: |
+          foreach ($file in @('weather.js','weather-spatial.js','weather-landscape.js','weather-atmosphere.js','sky-mask.js')) {
+            node --check "src/Widgets/wallpaper/$file"
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
+          node --test tests/weather-spatial/weather-spatial.test.cjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Render Weather in real WebView2 Windows runner
+        run: |
+          dotnet run --project tests/weather-spatial/WebViewSmoke.csproj -c Release -- publish/widgets/wallpaper evidence/weather
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Archive RC portable files and VM evidence (not production release)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: opsis30-rc-ui-and-binary-${{ matrix.os }}
+          path: |
+            evidence/**
+            publish/**
+          if-no-files-found: warn
+          retention-days: 7
