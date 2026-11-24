@@ -21,6 +21,8 @@ public static class OpsisTaskbarDesigner
         public int OpacityPercent { get; set; } = 100;
         public bool ShowTaskView { get; set; } = true;
         public bool ShowClock { get; set; } = true;
+        public bool ActiveButtonAnimation { get; set; } = false;
+        public int AnimationIntervalMs { get; set; } = 300;
     }
     private static readonly object Gate = new();
     private static string FilePath => Path.Combine(AppPaths.AppDataFolder, "taskbar-designer.json");
@@ -32,7 +34,8 @@ public static class OpsisTaskbarDesigner
             p.Style is not ("Classic" or "Compact" or "Glass") ||
             p.Alignment is not ("Left" or "Center") ||
             p.ButtonWidth is < 72 or > 240 || p.ButtonGap is < 0 or > 20 ||
-            p.OpacityPercent is < 60 or > 100)
+            p.OpacityPercent is < 60 or > 100 ||
+            p.AnimationIntervalMs is < 180 or > 800)
             throw new InvalidDataException("Invalid Opsis taskbar visual profile.");
     }
 
