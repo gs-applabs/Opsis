@@ -29,7 +29,7 @@ for (const scene of europa.scenes) {
 assert.ok(ids.has('eu-athens') && ids.has('eu-rome'));
 assert.ok(!ids.has('ancient-athens'));
 const requiredNames = new Set(['dawn.webp','day.webp','golden.webp','blue.webp','night.webp']);
-assert.ok(requiredNames.isSubset(new Set(rome.textureRequirements.static)));
+assert.ok(requiredNames.isSubsetOf(new Set(rome.textureRequirements.static)));
 const required = process.argv.includes('--release');
 if (required) {
   // Optional-addon contents are not in the host. Always check the *installed*
