@@ -68,6 +68,38 @@ namespace MotionDesk.Services
             NotifyExplorer();
         }
 
+        /// <summary>Read one of the explicitly supported Explorer settings.</summary>
+        public static int ReadOption(string name)
+        {
+            if (Array.FindIndex(Entries, e => e.Name == name) < 0)
+                throw new ArgumentOutOfRangeException(nameof(name));
+            using var key = Registry.CurrentUser.OpenSubKey(AdvancedPath);
+            return key?.GetValue(name) is int value ? value : name switch
+            {
+                "HideFileExt" => 1,
+                "Hidden" => 2,
+                "UseCompactMode" => 0,
+                "LaunchTo" => 2,
+                _ => 0
+            };
+        }
+
+        /// <summary>Apply an individual Explorer preference, preserving the P0 backup.</summary>
+        public static void ApplyOption(string name, int value)
+        {
+            bool valid = name switch
+            {
+                "HideFileExt" or "UseCompactMode" => value is 0 or 1,
+                "Hidden" => value is 1 or 2,
+                "LaunchTo" => value is 1 or 2,
+                _ => false
+            };
+            if (!valid) throw new ArgumentOutOfRangeException(nameof(value));
+            BackupIfMissing();
+            SetDword(AdvancedPath, name, value);
+            NotifyExplorer();
+        }
+
         public static void Restore()
         {
             if (!HasBackup) throw new FileNotFoundException("No Explorer settings backup found.", BackupPath);
