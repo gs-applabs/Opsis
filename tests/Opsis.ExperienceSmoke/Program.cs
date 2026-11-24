@@ -41,6 +41,28 @@ try
         MotionDesk.UI.OpsisStartButtonArt.IsValid("Opsis Square"),
         "P2 sharp and rounded square Start variants are available");
     StartStudioPreferences.SetStartButton("Opsis Glass");
+    var catalogRoot = Path.Combine(folder, "gallery-test");
+    void CreateCatalogFixture(string relative, string id)
+    {
+        var dir = Path.Combine(catalogRoot, relative);
+        Directory.CreateDirectory(dir);
+        File.WriteAllText(Path.Combine(dir, "index.html"), "<!doctype html><title>fixture</title>");
+        File.WriteAllText(Path.Combine(dir, "opsis-wallpaper.json"), JsonSerializer.Serialize(new {
+            WallpaperId=id, Name=id, Category="Abstract", Collection="OPSIS 100 3D Wallpapers"
+        }));
+        using var image = new System.Drawing.Bitmap(8, 8);
+        image.Save(Path.Combine(dir, "poster.png"), System.Drawing.Imaging.ImageFormat.Png);
+    }
+    CreateCatalogFixture("wallpapers/samples/opsis-glass-signature", "opsis-glass-signature");
+    CreateCatalogFixture("wallpapers/packs/opsis-100/opsis-glass-signature", "opsis-glass-signature");
+    CreateCatalogFixture("wallpapers/packs/opsis-100/animated-one", "animated-one");
+    CreateCatalogFixture("wallpapers/packs/opsis-100/ancient-athens", "ancient-athens");
+    var gallery = WallpaperGalleryCatalog.Discover(catalogRoot);
+    Check(gallery.Count == 2 && gallery.Count(x => x.Id == "opsis-glass-signature") == 1,
+        "web wallpaper catalog discovers addon scenes, deduplicates Signature and excludes Ancient Athens");
+    Check(gallery.Single(x => x.Id == "opsis-glass-signature").IndexPath ==
+        Path.Combine(catalogRoot, "wallpapers/samples/opsis-glass-signature/index.html".Replace('/', Path.DirectorySeparatorChar)),
+        "built-in Signature has priority over legacy addon copy");
     Check(OpsisPluginPackageAudit.Classify("OpsisNewsCrawler.OpsisPlugin.dll",
               new Version(1, 0, 0, 0)) == "CompatibleABI",
         "known plugin identity matches Opsis pinned 1.0.0.0 ABI");

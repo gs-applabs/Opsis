@@ -57,6 +57,9 @@ public sealed class StartStudioForm : Form
             "This button design applies to the Opsis Replacement Taskbar. Native Windows Start stays unchanged.",
             "Opsis Start Button", MessageBoxButtons.OK, MessageBoxIcon.Information);
         _toolbar.Controls.Add(_startPreview);
+        var gallery = new Button { Text = "Design gallery / Συλλογή", AutoSize = true, Height = 36 };
+        gallery.Click += (_, _) => ShowStartDesignGallery();
+        _toolbar.Controls.Add(gallery);
         var nativeStart = new Button { Text = "Windows Start / Έναρξη Windows", AutoSize = true, Height = 30 };
         nativeStart.Click += (_, _) => { using var dialog = new NativeStartSettingsForm(); dialog.ShowDialog(this); };
         _toolbar.Controls.Add(nativeStart);
@@ -156,6 +159,35 @@ public sealed class StartStudioForm : Form
     {
         try { return System.Drawing.Icon.ExtractAssociatedIcon(Application.ExecutablePath); }
         catch { return null; }
+    }
+
+    private void ShowStartDesignGallery()
+    {
+        using var dialog = new AppDialog { Text = "Start button designs / Σχέδια Έναρξης",
+            StartPosition = FormStartPosition.CenterParent, ClientSize = new System.Drawing.Size(590, 450),
+            MinimumSize = new System.Drawing.Size(420, 300) };
+        var grid = new FlowLayoutPanel { Dock = DockStyle.Fill, AutoScroll = true, Padding = new Padding(12), WrapContents = true };
+        var note = new Label { Dock = DockStyle.Bottom, Height = 48,
+            Text = "Opsis Replacement Taskbar only / Μόνο για τη γραμμή εργασιών Opsis",
+            TextAlign = System.Drawing.ContentAlignment.MiddleCenter };
+        foreach (var style in OpsisStartButtonArt.Styles)
+        {
+            var tile = new Button { Size = new System.Drawing.Size(126, 104), FlatStyle = FlatStyle.Flat,
+                Margin = new Padding(5), AccessibleName = style, Text = "" };
+            tile.Paint += (_, e) =>
+            {
+                var bounds = new System.Drawing.Rectangle(33, 5, 60, 60);
+                OpsisStartButtonArt.Draw(e.Graphics, bounds, style, _startIcon);
+                TextRenderer.DrawText(e.Graphics, style, tile.Font,
+                    new System.Drawing.Rectangle(2, 69, tile.ClientSize.Width - 4, 30), tile.ForeColor,
+                    TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis);
+            };
+            if (string.Equals(_startStyle.SelectedItem as string, style, StringComparison.Ordinal)) tile.FlatAppearance.BorderSize = 3;
+            tile.Click += (_, _) => { _startStyle.SelectedItem = style; dialog.DialogResult = DialogResult.OK; };
+            grid.Controls.Add(tile);
+        }
+        dialog.Controls.Add(grid); dialog.Controls.Add(note);
+        dialog.ShowDialog(this);
     }
 
     private void ChangeStartButton()

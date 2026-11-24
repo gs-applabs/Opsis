@@ -37,8 +37,8 @@ public sealed partial class MainWindow
                 _sidebar.Width = SidebarCollapsedWidth;
                 ApplySidebarCollapsedVisuals(true);
             }
-            _brandPulseTimer = new System.Windows.Forms.Timer { Interval = HardwareProfileService.ScaleDecorativeInterval(60) };
-            _brandPulseTimer.Tick += (_, _) => { _brandPulseT += .08; _brandDot.Invalidate(); };
+            _brandPulseTimer?.Dispose();
+            _brandPulseTimer = null; // canonical brand is static; no idle animation timer
         }
         Text = "Opsis - Desktop Customization";
         ApplyChromeColors();

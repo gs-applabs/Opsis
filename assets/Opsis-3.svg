@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="4096" height="4096" viewBox="0 0 100 100"><defs>
+<radialGradient id="body" cx="30%" cy="16%" r="90%"><stop stop-color="#466e90" stop-opacity=".95"/><stop offset=".38" stop-color="#14324c" stop-opacity=".97"/><stop offset=".8" stop-color="#061625" stop-opacity=".98"/><stop offset="1" stop-color="#16374b" stop-opacity=".94"/></radialGradient>
+<linearGradient id="blue" x1=".15" y1="0" x2=".8" y2="1"><stop stop-color="#c7f7ff"/><stop offset=".12" stop-color="#38c7ff"/><stop offset=".35" stop-color="#008ee8"/><stop offset=".64" stop-color="#0755be"/><stop offset=".84" stop-color="#008ee8"/><stop offset="1" stop-color="#40c8ff"/></linearGradient>
+<linearGradient id="white" x1=".2" y1="0" x2=".75" y2="1"><stop stop-color="#fff"/><stop offset=".3" stop-color="#f8fdff"/><stop offset=".55" stop-color="#d2e6f3"/><stop offset=".73" stop-color="#fff"/><stop offset="1" stop-color="#90b8d5"/></linearGradient>
+<linearGradient id="rim" x1=".1" y1="0" x2=".85" y2="1"><stop stop-color="#b8efff" stop-opacity=".9"/><stop offset=".2" stop-color="#fff" stop-opacity=".7"/><stop offset=".42" stop-color="#1b6a9d" stop-opacity=".2"/><stop offset=".7" stop-color="#061c36" stop-opacity=".7"/><stop offset=".9" stop-color="#4fdaff" stop-opacity=".9"/><stop offset="1" stop-color="#d2f6ff" stop-opacity=".5"/></linearGradient>
+<linearGradient id="gloss" x1="0" y1="0" x2=".3" y2="1"><stop stop-color="#fff" stop-opacity=".43"/><stop offset=".7" stop-color="#bcf0ff" stop-opacity=".06"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
+<radialGradient id="shade"><stop offset=".73" stop-color="#001226" stop-opacity="0"/><stop offset="1" stop-color="#001226" stop-opacity=".23"/></radialGradient>
+<radialGradient id="shadow"><stop offset=".82" stop-color="#020a16" stop-opacity=".4"/><stop offset="1" stop-color="#020a16" stop-opacity="0"/></radialGradient>
+<clipPath id="disc"><circle cx="50" cy="50" r="46.5"/></clipPath>
+<path id="blue-shape" d="M41 3 C19 5 5 23 3 43 C1 54 12 60 23 58 C29 57 33 53 28 48 C20 41 20 34 29 32 L41 32 C46 31 49 27 48 23 C46 19 37 19 32 19 C38 13 41 7 41 3 Z M3 55 C9 66 21 67 31 61 L45 46 C38 65 26 80 17 85 C8 76 4 65 3 55 Z M95 30 C104 51 96 78 78 89 C68 96 54 98 41 95 C47 81 58 72 72 65 C85 60 94 55 95 30 Z"/><path id="ribbon-shape" d="M47 3 C66 5 79 13 80 26 C81 39 68 46 57 55 C52 60 49 64 47 69 C63 64 79 60 92 59 C80 65 66 70 54 75 C42 80 36 87 35 96 C27 94 20 90 14 84 C27 75 31 62 39 51 C49 38 62 32 63 22 C64 13 56 7 47 3 Z"/>
+</defs>
+<circle cx="50" cy="51.5" r="48.5" fill="url(#shadow)"/>
+<circle cx="50" cy="50" r="47.5" fill="url(#body)" stroke="url(#rim)" stroke-width="1.5"/>
+<g clip-path="url(#disc)">
+<use xlink:href="#blue-shape" fill="#001126" opacity=".65" transform="translate(0 1.25)" stroke="#001126" stroke-width="1.8"/>
+<use xlink:href="#blue-shape" fill="url(#blue)" stroke="#6dd7ff" stroke-opacity=".36" stroke-width=".55" stroke-linejoin="round"/>
+<use xlink:href="#ribbon-shape" fill="#001022" opacity=".62" transform="translate(1.1 1.5)" stroke="#001022" stroke-width="1.8"/>
+<use xlink:href="#ribbon-shape" fill="url(#white)" stroke="#f2fbff" stroke-opacity=".85" stroke-width=".38" stroke-linejoin="round"/>
+<path d="M47 4 C68 8 75 15 76 24 C77 36 65 45 54 54 C50 58 45 65 44 70" fill="none" stroke="#fff" stroke-opacity=".60" stroke-width=".75" stroke-linecap="round"/>
+<path d="M6 36 C10 16 29 5 50 4 C70 4 87 15 94 32 C74 24 55 26 39 33 C25 39 14 40 6 36Z" fill="url(#gloss)"/>
+<path d="M11 24 A44 44 0 0 1 49 6" fill="none" stroke="#e3faff" stroke-opacity=".65" stroke-width=".85" stroke-linecap="round"/>
+<path d="M65 93 A46 46 0 0 0 94 66" fill="none" stroke="#7ae8ff" stroke-opacity=".74" stroke-width=".72" stroke-linecap="round"/>
+<circle cx="50" cy="50" r="46.5" fill="url(#shade)"/></g>
+<circle cx="50" cy="50" r="46.6" fill="none" stroke="url(#rim)" stroke-width=".65"/></svg>

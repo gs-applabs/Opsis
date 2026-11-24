@@ -34,7 +34,7 @@
       <Private>true</Private>
     </Reference>
     <None Update="lib/WebView2Loader.dll;lib/libMonoPosixHelper.dll;lib/MonoPosixHelper.dll" CopyToOutputDirectory="PreserveNewest" Link="%(Filename)%(Extension)" />
-    <None Update="assets/**;locales/**;suite/**;wallpapers/**;widget-sdk/**;LICENSE;THIRD_PARTY_NOTICES.md" CopyToOutputDirectory="PreserveNewest" />
+    <None Update="assets/**;locales/**;suite/**;wallpapers/**;widget-sdk/**;LICENSE;THIRD_PARTY_NOTICES.md" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <None Update="lib/HidSharp-LICENSE.txt" CopyToOutputDirectory="PreserveNewest" />
     <None Remove="src/Widgets/wallpaper/**;src/Widgets/sysmon/**" />
     <Content Include="src/Widgets/wallpaper/**" CopyToOutputDirectory="PreserveNewest" Link="widgets/wallpaper/%(RecursiveDir)%(Filename)%(Extension)" />

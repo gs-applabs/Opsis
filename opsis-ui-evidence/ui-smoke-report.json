@@ -1,0 +1,293 @@
+{
+  "passed": true,
+  "runtimeSeconds": 16.0068314,
+  "environment": "Microsoft Windows NT 10.0.26300.0",
+  "checks": [
+    {
+      "check": "11 start-button designs registered",
+      "passed": true
+    },
+    {
+      "check": "StartStudioForm sizing 800x600",
+      "passed": true
+    },
+    {
+      "check": "StartStudioForm sizing 1280x720",
+      "passed": true
+    },
+    {
+      "check": "StartStudioForm sizing 1600x900",
+      "passed": true
+    },
+    {
+      "check": "StartStudioForm child control tree",
+      "passed": true
+    },
+    {
+      "check": "StartStudioForm nonnegative control sizes",
+      "passed": true
+    },
+    {
+      "check": "OpsisTaskbarDesignerForm sizing 800x600",
+      "passed": true
+    },
+    {
+      "check": "OpsisTaskbarDesignerForm sizing 1280x720",
+      "passed": true
+    },
+    {
+      "check": "OpsisTaskbarDesignerForm sizing 1600x900",
+      "passed": true
+    },
+    {
+      "check": "OpsisTaskbarDesignerForm child control tree",
+      "passed": true
+    },
+    {
+      "check": "OpsisTaskbarDesignerForm nonnegative control sizes",
+      "passed": true
+    },
+    {
+      "check": "AppearancePreviewForm sizing 800x600",
+      "passed": true
+    },
+    {
+      "check": "AppearancePreviewForm sizing 1280x720",
+      "passed": true
+    },
+    {
+      "check": "AppearancePreviewForm sizing 1600x900",
+      "passed": true
+    },
+    {
+      "check": "AppearancePreviewForm custom canvas and disclosure label",
+      "passed": true
+    },
+    {
+      "check": "AppearancePreviewForm nonnegative control sizes",
+      "passed": true
+    },
+    {
+      "check": "main sidebar exposes expected native pages",
+      "passed": true
+    },
+    {
+      "check": "sidebar page Dashboard renders control tree",
+      "passed": true
+    },
+    {
+      "check": "sidebar page Widgets renders control tree",
+      "passed": true
+    },
+    {
+      "check": "sidebar page DeskZones renders control tree",
+      "passed": true
+    },
+    {
+      "check": "sidebar page DeskContainers renders control tree",
+      "passed": true
+    },
+    {
+      "check": "sidebar page DeskStrip renders control tree",
+      "passed": true
+    },
+    {
+      "check": "sidebar page Wallpaper renders control tree",
+      "passed": true
+    },
+    {
+      "check": "sidebar page DeskMusicVisualizer renders control tree",
+      "passed": true
+    },
+    {
+      "check": "sidebar page Performance renders control tree",
+      "passed": true
+    },
+    {
+      "check": "sidebar page Settings renders control tree",
+      "passed": true
+    },
+    {
+      "check": "sidebar page Automation renders control tree",
+      "passed": true
+    },
+    {
+      "check": "sidebar page Personalization renders control tree",
+      "passed": true
+    },
+    {
+      "check": "sidebar page Theme renders control tree",
+      "passed": true
+    },
+    {
+      "check": "sidebar page AudioEnhancement renders control tree",
+      "passed": true
+    },
+    {
+      "check": "sidebar page About renders control tree",
+      "passed": true
+    },
+    {
+      "check": "sidebar navigation occupies usable width",
+      "passed": true
+    },
+    {
+      "check": "80-cycle Start Studio/GDI stress bounded private memory delta",
+      "passed": true
+    }
+  ],
+  "measured": [
+    {
+      "title": "StartStudioForm",
+      "controlCount": 15,
+      "preferredSize": "{Width=560, Height=380}"
+    },
+    {
+      "title": "OpsisTaskbarDesignerForm",
+      "controlCount": 77,
+      "preferredSize": "{Width=710, Height=340}"
+    },
+    {
+      "title": "AppearancePreviewForm",
+      "controlCount": 2,
+      "preferredSize": "{Width=570, Height=420}"
+    },
+    {
+      "title": "MainWindow pages",
+      "controlCount": 14,
+      "measurements": [
+        {
+          "page": "Dashboard",
+          "elapsedMs": 186.1947,
+          "controls": 57,
+          "clickableButtons": 21,
+          "settingsInputs": 1,
+          "scrollingContainers": 2,
+          "visibleScrollbars": 1
+        },
+        {
+          "page": "Widgets",
+          "elapsedMs": 354.288,
+          "controls": 128,
+          "clickableButtons": 38,
+          "settingsInputs": 9,
+          "scrollingContainers": 2,
+          "visibleScrollbars": 1
+        },
+        {
+          "page": "DeskZones",
+          "elapsedMs": 299.6496,
+          "controls": 93,
+          "clickableButtons": 21,
+          "settingsInputs": 9,
+          "scrollingContainers": 2,
+          "visibleScrollbars": 1
+        },
+        {
+          "page": "DeskContainers",
+          "elapsedMs": 211.0201,
+          "controls": 64,
+          "clickableButtons": 18,
+          "settingsInputs": 1,
+          "scrollingContainers": 2,
+          "visibleScrollbars": 0
+        },
+        {
+          "page": "DeskStrip",
+          "elapsedMs": 384.4584,
+          "controls": 89,
+          "clickableButtons": 29,
+          "settingsInputs": 1,
+          "scrollingContainers": 2,
+          "visibleScrollbars": 1
+        },
+        {
+          "page": "Wallpaper",
+          "elapsedMs": 552.636,
+          "controls": 103,
+          "clickableButtons": 58,
+          "settingsInputs": 2,
+          "scrollingContainers": 2,
+          "visibleScrollbars": 1
+        },
+        {
+          "page": "DeskMusicVisualizer",
+          "elapsedMs": 667.525,
+          "controls": 91,
+          "clickableButtons": 24,
+          "settingsInputs": 13,
+          "scrollingContainers": 2,
+          "visibleScrollbars": 1
+        },
+        {
+          "page": "Performance",
+          "elapsedMs": 165.7053,
+          "controls": 55,
+          "clickableButtons": 15,
+          "settingsInputs": 1,
+          "scrollingContainers": 2,
+          "visibleScrollbars": 1
+        },
+        {
+          "page": "Settings",
+          "elapsedMs": 278.1593,
+          "controls": 120,
+          "clickableButtons": 31,
+          "settingsInputs": 2,
+          "scrollingContainers": 2,
+          "visibleScrollbars": 1
+        },
+        {
+          "page": "Automation",
+          "elapsedMs": 210.4788,
+          "controls": 72,
+          "clickableButtons": 28,
+          "settingsInputs": 2,
+          "scrollingContainers": 2,
+          "visibleScrollbars": 1
+        },
+        {
+          "page": "Personalization",
+          "elapsedMs": 10174.9015,
+          "controls": 678,
+          "clickableButtons": 214,
+          "settingsInputs": 68,
+          "scrollingContainers": 2,
+          "visibleScrollbars": 1
+        },
+        {
+          "page": "Theme",
+          "elapsedMs": 332.4827,
+          "controls": 141,
+          "clickableButtons": 16,
+          "settingsInputs": 1,
+          "scrollingContainers": 2,
+          "visibleScrollbars": 1
+        },
+        {
+          "page": "AudioEnhancement",
+          "elapsedMs": 261.934,
+          "controls": 74,
+          "clickableButtons": 26,
+          "settingsInputs": 1,
+          "scrollingContainers": 2,
+          "visibleScrollbars": 1
+        },
+        {
+          "page": "About",
+          "elapsedMs": 521.0822,
+          "controls": 98,
+          "clickableButtons": 16,
+          "settingsInputs": 1,
+          "scrollingContainers": 2,
+          "visibleScrollbars": 1
+        }
+      ]
+    },
+    {
+      "title": "Stress",
+      "controlCount": 80,
+      "privateMemoryDeltaMiB": 94.1328125
+    }
+  ]
+}

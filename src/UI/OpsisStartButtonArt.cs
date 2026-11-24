@@ -23,6 +23,11 @@ public static class OpsisStartButtonArt
             g.InterpolationMode = InterpolationMode.HighQualityBicubic;
             var side = Math.Min(bounds.Width - 4, bounds.Height - 4);
             var rect = new Rectangle(bounds.X + (bounds.Width - side) / 2, bounds.Y + (bounds.Height - side) / 2, side, side);
+            if (style == "Opsis Glass" && applicationIcon != null)
+            {
+                g.DrawIcon(applicationIcon, rect);
+                return;
+            }
             if (style.StartsWith("Win11 ", StringComparison.Ordinal) || style == "Opsis Square")
             {
                 var sharp = style == "Win11 Sharp";
