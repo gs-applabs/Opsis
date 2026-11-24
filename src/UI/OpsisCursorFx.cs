@@ -39,7 +39,11 @@ internal sealed class CursorFxOverlay : Form
     private const int ExTransparent = 0x20;
     private const int ExToolWindow = 0x80;
     private const int ExNoActivate = 0x08000000;
-    private readonly Timer _timer = new() { Interval = 50 };
+    private readonly System.Windows.Forms.Timer _timer = new() { Interval = 50 };
+    private AppSettings? _settings;
+    private bool _compatibilityHold;
+    private DateTime _settingsAt = DateTime.MinValue;
+    private Point _lastPosition = new(int.MinValue, int.MinValue);
     private readonly int _diameter = 142;
     private DateTime _lastClickUtc = DateTime.MinValue;
     private bool _wasDown;
@@ -97,9 +101,15 @@ internal sealed class CursorFxOverlay : Form
         if (IsDisposed) return;
         try
         {
-            var settings = AppSettings.Peek();
-            if (!settings.CursorFxEnabled || SafeModeService.IsSafeMode ||
-                WindowsUpdateGuard.RequiresReview || FullscreenForeground() ||
+            var now = DateTime.UtcNow;
+            if (_settings == null || (now - _settingsAt).TotalSeconds >= 5)
+            {
+                _settings = AppSettings.Peek();
+                _compatibilityHold = SafeModeService.IsSafeMode || WindowsUpdateGuard.RequiresReview;
+                _settingsAt = now;
+            }
+            var settings = _settings;
+            if (!settings.CursorFxEnabled || _compatibilityHold || FullscreenForeground() ||
                 (settings.PauseOnBatterySaver &&
                  SystemInformation.PowerStatus.PowerLineStatus == PowerLineStatus.Offline))
             {
@@ -110,12 +120,16 @@ internal sealed class CursorFxOverlay : Form
                 ? settings.CursorFxStyle : "Both";
             _intensity = Math.Clamp(settings.CursorFxIntensity, 20, 100);
             var cursor = Cursor.Position;
-            Location = new Point(cursor.X - Width / 2, cursor.Y - Height / 2);
+            var next = new Point(cursor.X - Width / 2, cursor.Y - Height / 2);
+            var moved = next != _lastPosition;
+            if (moved) { Location = next; _lastPosition = next; }
             var down = (Control.MouseButtons & MouseButtons.Left) != 0;
             if (down && !_wasDown) _lastClickUtc = DateTime.UtcNow;
             _wasDown = down;
             if (!Visible) Show();
-            Invalidate();
+            var rippleActive = _lastClickUtc != DateTime.MinValue &&
+                (now - _lastClickUtc).TotalSeconds < 0.55;
+            if (moved || rippleActive) Invalidate();
         }
         catch (Exception ex)
         {
@@ -138,7 +152,7 @@ internal sealed class CursorFxOverlay : Form
             e.Graphics.DrawEllipse(soft, c - 16, c - 16, 32, 32);
             e.Graphics.DrawEllipse(halo, c - 15, c - 15, 30, 30);
         }
-        if (_currentStyle is "Ripple" or "Both" && _lastClickUtc != DateTime.MinValue)
+        if ((_currentStyle is "Ripple" or "Both") && _lastClickUtc != DateTime.MinValue)
         {
             var elapsed = (DateTime.UtcNow - _lastClickUtc).TotalSeconds;
             if (elapsed < 0.55)
