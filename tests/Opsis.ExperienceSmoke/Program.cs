@@ -411,6 +411,30 @@ try
     if (uiFailure != null) throw new InvalidOperationException("WinForms visual widget smoke failed", uiFailure);
     Check(actualWindowsCreated, "visual editor and widget Win32 handles created on Windows VM");
 
+    // SSD-idle regression: read-only application/catalog/profile operations may
+    // read cache, but must never rewrite settings files while doing so.
+    var monitoredFiles = new[] { "settings.json", "module-core.json", "taskbar-designer.json",
+        "start-studio.json", "automations.json", "screensaver-studio.json" };
+    var originalStamps = monitoredFiles.ToDictionary(x => x,
+        x => File.Exists(Path.Combine(folder, x))
+            ? File.GetLastWriteTimeUtc(Path.Combine(folder, x)).Ticks : 0L);
+    for (var i = 0; i < 5_000; i++)
+    {
+        _ = AppSettings.Peek();
+        _ = OpsisTaskbarDesigner.Read();
+        if (i % 25 == 0)
+        {
+            _ = StartStudioPreferences.Read();
+            _ = OpsisModCore.Read();
+            _ = OpsisAutomationStudio.Read();
+            _ = OpsisScreensaverStudio.Read();
+        }
+    }
+    Check(monitoredFiles.All(x =>
+        (File.Exists(Path.Combine(folder, x))
+            ? File.GetLastWriteTimeUtc(Path.Combine(folder, x)).Ticks : 0L) == originalStamps[x]),
+        "five thousand hot-path reads perform zero configuration writes");
+
     Console.WriteLine($"COMPLETE {passed} validated assertions");
 }
 finally
