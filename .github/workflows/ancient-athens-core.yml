@@ -32,6 +32,8 @@ jobs:
           node --check tests/weather-spatial/ancient-athens.test.cjs
       - name: Test weather transitions and compositing
         run: node --test tests/weather-spatial/ancient-athens.test.cjs
+      - name: Validate European capitals and Ancient Rome add-on authoring contracts
+        run: node addons/opsis-100/authoring/validate.cjs
   windows-build:
     runs-on: windows-2025
     timeout-minutes: 50
