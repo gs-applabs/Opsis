@@ -2588,6 +2588,15 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
             BuildWindowsAppearance(panel);   // Windows look, themes, safety (2.6.0): the same Personalization tab, no sub-tab
             BuildEcosystemStudios(panel); // Shared P3/P4/P5 controls, backed by the Opsis Core contracts
 
+            var switcherCard = AddCardSection(panel, StudioText("DeskFlip — Window switcher", "DeskFlip — Εναλλαγή παραθύρων"));
+            AddText(switcherCard, StudioText(
+                "Vista-inspired perspective, thumbnail grid or lightweight title list. Ctrl+Alt+F opens Vista mode; Windows Alt+Tab is unchanged. Previews are temporary snapshots, not live video.",
+                "Προοπτική τύπου Vista, πλέγμα μικρογραφιών ή ελαφριά λίστα τίτλων. Ctrl+Alt+F ανοίγει την προβολή Vista· το Alt+Tab των Windows δεν αλλάζει. Οι προεπισκοπήσεις είναι προσωρινά στιγμιότυπα."));
+            AddButtonGrid(switcherCard,
+                (StudioText("Vista Flip 3D", "Vista Flip 3D"), (_, _) => DeskFlipEngine.Show(DeskFlipLayout.Vista)),
+                (StudioText("Thumbnail grid", "Πλέγμα μικρογραφιών"), (_, _) => DeskFlipEngine.Show(DeskFlipLayout.Grid)),
+                (StudioText("Compact list", "Συμπαγής λίστα"), (_, _) => DeskFlipEngine.Show(DeskFlipLayout.List)));
+
             // ---------- Unified Opsis ecosystem: core modules, gallery, recovery ----------
             var coreCard = AddCardSection(panel, LocalizationManager.CurrentLanguage == "el"
                 ? "Opsis Core — Ενιαίο οικοσύστημα" : "Opsis Core — Unified ecosystem");
