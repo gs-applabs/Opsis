@@ -121,6 +121,24 @@ try
     Check(!AppearancePresets.Equivalent(unchangedAppearance, sameAppearance),
         "P2 appearance change detection notices Explorer changes");
 
+    var portableSource = Path.Combine(folder, "P2 portable source.json");
+    var portable = new AppearancePresets.Preset { Name = "P2 portable test" };
+    AppearancePresets.SavePortable(portable);
+    AppearancePresets.ExportPortable(portable.Name, portableSource);
+    Check(File.Exists(portableSource), "P2 portable JSON export created");
+    var exportJson = File.ReadAllText(portableSource);
+    Check(exportJson.Contains("P2 portable test"), "P2 export preserves validated preset");
+    AppearancePresets.Delete(portable.Name);
+    Check(AppearancePresets.ImportPortable(portableSource) == portable.Name,
+        "P2 validated portable import round-trip without applying settings");
+    var unsafeSource = Path.Combine(folder, "P2 unsafe.json");
+    File.WriteAllText(unsafeSource, "{\\"Schema\\":98,\\"Name\\":\\"invalid\\"}");
+    bool invalidImportRejected = false;
+    try { AppearancePresets.ImportPortable(unsafeSource); }
+    catch (InvalidDataException) { invalidImportRejected = true; }
+    Check(invalidImportRejected, "P2 imported JSON rejects unexpected schema");
+    AppearancePresets.Delete(portable.Name);
+
     var scene = new WeatherSceneComposer.Scene {
         Name = "Athens Dawn", Weather = "Rain", Time = "Dawn",
         Wind = "FreshBreeze", Landmark = "Auto"
