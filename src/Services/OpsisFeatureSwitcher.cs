@@ -14,12 +14,12 @@ public static class OpsisFeatureSwitcher
     public static IReadOnlyList<string> Switchable { get; } = new[]
     {
         "windows.hot-corners", "windows.window-rules", "automation.studio",
-        "explorer.context-menu", "theme.dynamic-accent"
+        "explorer.context-menu", "theme.dynamic-accent", "cursor.effects"
     };
 
     public static bool CanSwitch(string id) =>
         id is "windows.hot-corners" or "windows.window-rules" or "automation.studio" or
-            "explorer.context-menu" or "theme.dynamic-accent";
+            "explorer.context-menu" or "theme.dynamic-accent" or "cursor.effects";
 
     public static bool IsEnabled(string id)
     {
@@ -31,6 +31,7 @@ public static class OpsisFeatureSwitcher
             "automation.studio" => s.OpsisAutomationsEnabled,
             "explorer.context-menu" => OpsisContextMenuStudio.IsEnabled(),
             "theme.dynamic-accent" => s.WallpaperAccentEnabled,
+            "cursor.effects" => s.CursorFxEnabled,
             _ => false
         };
     }
@@ -68,6 +69,12 @@ public static class OpsisFeatureSwitcher
                 case "theme.dynamic-accent":
                     if (enabled) WallpaperAccentEngine.ApplyCurrent();
                     else WallpaperAccentEngine.Disable();
+                    break;
+                case "cursor.effects":
+                    s.CursorFxEnabled = enabled;
+                    s.Save();
+                    if (enabled) MotionDesk.UI.OpsisCursorFx.Start();
+                    else MotionDesk.UI.OpsisCursorFx.Stop();
                     break;
             }
         }
