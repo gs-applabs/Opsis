@@ -46,6 +46,7 @@ public static class OpsisModCore
         new ModuleDefinition("windows.hot-corners", "Desktop", "Hot Corners", Array.Empty<string>(), Array.Empty<string>(), 19041, true),
         new ModuleDefinition("windows.window-rules", "Desktop", "Window Rules", Array.Empty<string>(), Array.Empty<string>(), 19041, true),
         new ModuleDefinition("desktop.snap-layouts", "Desktop", "Desktop Snap Layouts and AutoTile", Array.Empty<string>(), Array.Empty<string>(), 19041, true),
+        new ModuleDefinition("desktop.window-switcher", "Desktop", "DeskFlip window switcher and visual layouts", Array.Empty<string>(), Array.Empty<string>(), 19041, true),
         new ModuleDefinition("desktop.spaces", "Desktop", "Virtual Workspaces", Array.Empty<string>(), Array.Empty<string>(), 19041, true),
         new ModuleDefinition("desktop.multi-monitor", "Desktop", "Per-monitor profiles and wallpaper", Array.Empty<string>(), Array.Empty<string>(), 19041, true),
         new ModuleDefinition("desktop.command-palette", "Desktop", "Opsis Command Palette", Array.Empty<string>(), Array.Empty<string>(), 19041, true),
@@ -92,10 +93,24 @@ public static class OpsisModCore
             var state = JsonSerializer.Deserialize<ModuleConfiguration>(File.ReadAllText(ConfigPath))
                 ?? throw new InvalidDataException("Invalid Opsis module configuration.");
             if (state.Schema != 1) throw new InvalidDataException("Unsupported module schema.");
-            state.Enabled ??= new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
-            state.Options ??= new Dictionary<string, Dictionary<string, string>>(StringComparer.OrdinalIgnoreCase);
+            // System.Text.Json may replace the initialized dictionaries with ordinal ones.
+            // Reject ambiguous aliases rather than choosing an arbitrary enabled state.
+            state.Enabled = Normalize(state.Enabled);
+            state.Options = Normalize(state.Options);
+            foreach (var key in state.Options.Keys.ToArray())
+                state.Options[key] = Normalize(state.Options[key]);
             return state;
         }
+    }
+
+    private static Dictionary<string, T> Normalize<T>(Dictionary<string, T>? source)
+    {
+        var result = new Dictionary<string, T>(StringComparer.OrdinalIgnoreCase);
+        if (source == null) return result;
+        foreach (var pair in source)
+            if (!result.TryAdd(pair.Key, pair.Value))
+                throw new InvalidDataException("Duplicate case-insensitive module preference: " + pair.Key);
+        return result;
     }
 
     /// <summary>Plan effective modules without modifying Windows or running plugins.</summary>
@@ -130,9 +145,11 @@ public static class OpsisModCore
             if (!Catalog.Any(m => string.Equals(m.Id, id, StringComparison.OrdinalIgnoreCase)))
                 throw new ArgumentException("Unregistered module", nameof(id));
             var state = Read();
+            bool unchanged = state.Enabled.TryGetValue(id, out var previous) && previous == enabled;
             state.Enabled[id] = enabled;
             var problems = Validate(state, build, safeMode);
             if (problems.Count > 0) throw new InvalidOperationException(string.Join(Environment.NewLine, problems));
+            if (unchanged) return;
             Directory.CreateDirectory(Path.GetDirectoryName(ConfigPath)!);
             AtomicFile.WriteAllText(ConfigPath, JsonSerializer.Serialize(state, new JsonSerializerOptions { WriteIndented = true }));
         }
@@ -150,6 +167,7 @@ public static class OpsisModCore
             var state = Read();
             if (!state.Options.TryGetValue(id, out var options))
                 state.Options[id] = options = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            if (options.TryGetValue(option, out var previous) && previous == value) return;
             options[option] = value;
             Directory.CreateDirectory(Path.GetDirectoryName(ConfigPath)!);
             AtomicFile.WriteAllText(ConfigPath, JsonSerializer.Serialize(state, new JsonSerializerOptions { WriteIndented = true }));

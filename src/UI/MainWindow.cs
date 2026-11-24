@@ -2619,6 +2619,25 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
             AddText(panel, LocalizationManager.T("Personalization.Intro"));
             BuildWindowsAppearance(panel);   // Windows look, themes, safety (2.6.0): the same Personalization tab, no sub-tab
             BuildEcosystemStudios(panel); // Shared P3/P4/P5 controls, backed by the Opsis Core contracts
+            bool deskFlipGreek = LocalizationManager.CurrentLanguage == "el";
+            var flipCard = AddCardSection(panel, deskFlipGreek ? "DeskFlip — Εναλλαγή παραθύρων" : "DeskFlip — Window switcher");
+            var flipPicker = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 280 };
+            flipPicker.Items.AddRange(new object[] { "Flip 3D", "Thumbnail grid", "Compact list" });
+            flipPicker.SelectedItem = DeskFlipEngine.Style;
+            flipCard.Controls.Add(flipPicker);
+            AddText(flipCard, deskFlipGreek
+                ? "Επιλέξτε εμφάνιση για το Ctrl+Alt+F. Η συντόμευση Alt+Tab των Windows δεν αλλάζει."
+                : "Choose the Ctrl+Alt+F appearance. Windows Alt+Tab remains unchanged.");
+            AddButtonGrid(flipCard,
+                (deskFlipGreek ? "Αποθήκευση εμφάνισης" : "Save style", (_, _) =>
+                {
+                    try
+                    {
+                        if (flipPicker.SelectedItem is string style) DeskFlipEngine.SetStyle(style);
+                    }
+                    catch (Exception ex) { MessageBox.Show(this, ex.Message, "DeskFlip", MessageBoxButtons.OK, MessageBoxIcon.Warning); }
+                }),
+                (deskFlipGreek ? "Άνοιγμα DeskFlip" : "Open DeskFlip", (_, _) => DeskFlipEngine.Show()));
 
             // ---------- Unified Opsis ecosystem: core modules, gallery, recovery ----------
             var coreCard = AddCardSection(panel, LocalizationManager.CurrentLanguage == "el"

@@ -112,6 +112,18 @@ try
     Check(rejected, "planned modules cannot be activated as implemented");
     OpsisModCore.SetOption("widgets.opsis", "category", "Weather");
     Check(OpsisModCore.Read().Options["widgets.opsis"]["category"] == "Weather", "typed module options persisted");
+    OpsisModCore.SetOption("WIDGETS.OPSIS", "CATEGORY", "Weather");
+    Check(OpsisModCore.Read().Options.Keys.Count(k => k.Equals("widgets.opsis", StringComparison.OrdinalIgnoreCase)) == 1 &&
+        OpsisModCore.Read().Options["widgets.opsis"].Count == 1, "case-insensitive module and option identity preserved after JSON round trip");
+    OpsisModCore.SetModule("WINDOWS.HOT-CORNERS", false, 22631, false);
+    Check(OpsisModCore.Read().Enabled.Count == 1, "case aliases do not duplicate module flags");
+    Check(MotionDesk.Widgets.DeskFlipEngine.Style == "Flip 3D", "DeskFlip default remains compatible");
+    foreach (var style in new[] { "Flip 3D", "Thumbnail grid", "Compact list" })
+    {
+        MotionDesk.Widgets.DeskFlipEngine.SetStyle(style);
+        Check(MotionDesk.Widgets.DeskFlipEngine.Style == style, "DeskFlip style roundtrip " + style);
+    }
+    Check(!MotionDesk.Widgets.DeskFlipEngine.IsValidStyle("unknown"), "unknown DeskFlip style rejected");
 
     var unchangedAppearance = new AppearancePresets.Preset { Name = "Sample" };
     var sameAppearance = new AppearancePresets.Preset { Name = "Different name" };
