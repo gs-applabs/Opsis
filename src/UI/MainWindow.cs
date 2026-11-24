@@ -2668,6 +2668,32 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                     catch (Exception ex) { MessageBox.Show(this, ex.Message, "Opsis Core", MessageBoxButtons.OK, MessageBoxIcon.Error); }
                 }));
 
+            AddButtonGrid(coreCard,
+                (LocalizationManager.CurrentLanguage == "el" ? "Εναλλαγή λειτουργίας" : "Toggle selected feature", (_, _) =>
+                {
+                    if (coreCatalog.SelectedItems.Count != 1 ||
+                        coreCatalog.SelectedItems[0].Tag is not OpsisModCore.ModuleDefinition module) return;
+                    if (!OpsisFeatureSwitcher.CanSwitch(module.Id))
+                    {
+                        MessageBox.Show(this,
+                            StudioText("This feature has its own dedicated settings or is still planned; there is no independent activation adapter.",
+                                "Η λειτουργία έχει δικές της ρυθμίσεις ή βρίσκεται υπό σχεδιασμό. Δεν υπάρχει ανεξάρτητος διακόπτης."),
+                            "Opsis Core", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        return;
+                    }
+                    var next = !OpsisFeatureSwitcher.IsEnabled(module.Id);
+                    if (MessageBox.Show(this,
+                        (next ? StudioText("Enable ", "Ενεργοποίηση ") : StudioText("Disable ", "Απενεργοποίηση ")) +
+                        module.Label + "?",
+                        "Opsis Core", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes) return;
+                    try
+                    {
+                        OpsisFeatureSwitcher.Set(module.Id, next);
+                        _statusLabel.Text = "Opsis Core — " + module.Label + (next ? " enabled" : " disabled");
+                    }
+                    catch (Exception ex) { MessageBox.Show(this, ex.Message, "Opsis Core", MessageBoxButtons.OK, MessageBoxIcon.Error); }
+                }));
+
             var ecosystemCard = AddCardSection(panel, LocalizationManager.CurrentLanguage == "el"
                 ? "Προσθήκες οικοσυστήματος — Gallery" : "Ecosystem contributions — Gallery");
             AddText(ecosystemCard, LocalizationManager.CurrentLanguage == "el"
