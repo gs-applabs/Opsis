@@ -354,6 +354,68 @@ public sealed partial class MainWindow
                 catch (Exception ex) { MessageBox.Show(this, ex.Message, "Windows Start", MessageBoxButtons.OK, MessageBoxIcon.Error); }
             }));
 
+        var screensaverCard = AddCardSection(panel, StudioText("P4 — Screensaver Studio", "P4 — Στούντιο προφύλαξης οθόνης"));
+        AddText(screensaverCard, StudioText(
+            "Create native Opsis fullscreen clock/image scenes. User-triggered preview only; Windows .scr registration remains a separate opt-in integration.",
+            "Δημιουργία σκηνών ρολογιού και εικόνας πλήρους οθόνης. Προεπισκόπηση μόνο με επιλογή χρήστη· δεν αλλάζει η προφύλαξη οθόνης των Windows."));
+        var saverMode = new ComboBox { Width = 152, DropDownStyle = ComboBoxStyle.DropDownList };
+        saverMode.Items.AddRange(new object[] { "Clock", "StaticImage", "ClockAndImage" });
+        var saverImage = new TextBox { Width = 320, ReadOnly = true };
+        var saverChoose = new Button { Text = StudioText("Choose image", "Επιλογή εικόνας"), Width = 120 };
+        var saverDim = new NumericUpDown { Minimum = 0, Maximum = 75, Increment = 5, Width = 68 };
+        var saverSeconds = new CheckBox { Text = StudioText("Show seconds", "Εμφάνιση δευτερολέπτων"),
+            AutoSize = true, ForeColor = UiTheme.TextPrimary };
+        var savedSaver = OpsisScreensaverStudio.Read();
+        saverMode.SelectedItem = savedSaver.Mode;
+        saverImage.Text = savedSaver.ImagePath;
+        saverDim.Value = savedSaver.DimPercent;
+        saverSeconds.Checked = savedSaver.ShowSeconds;
+        saverChoose.Click += (_, _) =>
+        {
+            using var chooser = new OpenFileDialog
+            {
+                Filter = "Images (*.jpg;*.jpeg;*.png;*.webp;*.bmp)|*.jpg;*.jpeg;*.png;*.webp;*.bmp"
+            };
+            if (chooser.ShowDialog(this) == DialogResult.OK) saverImage.Text = chooser.FileName;
+        };
+        var saverRow = new FlowLayoutPanel { Width = 720, AutoSize = true, WrapContents = true };
+        saverRow.Controls.Add(saverMode);
+        saverRow.Controls.Add(saverImage);
+        saverRow.Controls.Add(saverChoose);
+        saverRow.Controls.Add(new Label { Text = StudioText("Dim %", "Σκοτείνιασμα %"),
+            AutoSize = true, ForeColor = UiTheme.TextSecondary, Margin = new Padding(4, 8, 2, 0) });
+        saverRow.Controls.Add(saverDim);
+        saverRow.Controls.Add(saverSeconds);
+        screensaverCard.Controls.Add(saverRow);
+        OpsisScreensaverStudio.Profile BuildScreensaverProfile() => new()
+        {
+            Mode = saverMode.SelectedItem?.ToString() ?? "Clock",
+            ImagePath = saverImage.Text,
+            DimPercent = (int)saverDim.Value,
+            ShowSeconds = saverSeconds.Checked
+        };
+        AddButtonGrid(screensaverCard,
+            (StudioText("Save screensaver scene", "Αποθήκευση σκηνής"), (_, _) =>
+            {
+                try { OpsisScreensaverStudio.Save(BuildScreensaverProfile()); }
+                catch (Exception ex) { MessageBox.Show(this, ex.Message, "Opsis Screensaver", MessageBoxButtons.OK, MessageBoxIcon.Error); }
+            }),
+            (StudioText("Fullscreen preview", "Προεπισκόπηση πλήρους οθόνης"), (_, _) =>
+            {
+                try
+                {
+                    using var preview = new OpsisScreensaverPreviewForm(BuildScreensaverProfile());
+                    preview.ShowDialog(this);
+                }
+                catch (Exception ex) { MessageBox.Show(this, ex.Message, "Opsis Screensaver", MessageBoxButtons.OK, MessageBoxIcon.Error); }
+            }),
+            (StudioText("Windows screensaver settings", "Προφύλαξη οθόνης Windows"), (_, _) =>
+            {
+                try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("control.exe", "desk.cpl,,1")
+                    { UseShellExecute = true }); }
+                catch (Exception ex) { MessageBox.Show(this, ex.Message, "Windows Screensaver", MessageBoxButtons.OK, MessageBoxIcon.Error); }
+            }));
+
         var menuCard = AddCardSection(panel, StudioText("P3 — Context Menu Studio", "P3 — Μενού δεξιού κλικ"));
         AddText(menuCard, StudioText(
             "An optional Opsis launcher on Windows desktop and Explorer folder background menus. HKCU only; no DLL extension, system-file edits or Explorer restart.",
