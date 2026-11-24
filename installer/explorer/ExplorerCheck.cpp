@@ -8,7 +8,7 @@
 using ClassObject = HRESULT(STDAPICALLTYPE*)(REFCLSID, REFIID, void**);
 const CLSID classic{0x7F45B246,0x0BA9,0x4C86,{0xAB,0x71,0x09,0xF9,0x69,0x61,0x0F,0x62}};
 const CLSID modern{0xCA419189,0x286E,0x49FF,{0x9D,0x90,0x2F,0x46,0x24,0x27,0xB5,0xDE}};
-constexpr wchar_t settings[] = L"Software\\Classes\\DesktopBackground\\shellex\\ContextMenuHandlers\\OpsisStudio";
+constexpr wchar_t settings[] = L"Software\\Classes\\DesktopBackground\\shellex\\ContextMenuHandlers\\Opsis";
 
 #define VERIFY(expr) do { if (!(expr)) { fprintf(stderr, "Explorer check failed at line %d: %s\n", __LINE__, #expr); return 1; } } while (0)
 
@@ -20,7 +20,7 @@ int wmain()
     VERIFY(getClass);
     HKEY key{};
     VERIFY(RegCreateKeyExW(HKEY_CURRENT_USER, settings, 0, nullptr, 0, KEY_SET_VALUE, nullptr, &key, nullptr) == ERROR_SUCCESS);
-    constexpr wchar_t executable[] = L"C:\\Opsis fixture\\Opsis.Studio.exe";
+    constexpr wchar_t executable[] = L"C:\\Opsis fixture\\Opsis.exe";
     const DWORD greek = 1;
     VERIFY(RegSetValueExW(key, L"Executable", 0, REG_SZ, reinterpret_cast<const BYTE*>(executable), sizeof(executable)) == ERROR_SUCCESS);
     VERIFY(RegSetValueExW(key, L"Greek", 0, REG_DWORD, reinterpret_cast<const BYTE*>(&greek), sizeof(greek)) == ERROR_SUCCESS);

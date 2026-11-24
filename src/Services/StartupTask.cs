@@ -14,7 +14,7 @@ namespace MotionDesk.Services
     /// </summary>
     public static class StartupTask
     {
-        public const string TaskName = "Opsis Studio\\Start with the desktop";
+        public const string TaskName = "Opsis\\Start with the desktop";
 
         public static bool Isolated => !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("OPSIS_APPDATA"));
 

@@ -95,7 +95,7 @@ namespace MotionDesk.Widgets
         {
             var open = Application.OpenForms.OfType<Form>().FirstOrDefault(f => f.Tag as string == "opsis-welcome");
             if (open != null) { open.Activate(); return; }
-            var f = NewForm($"Opsis Desktop Customization {MotionDesk.Services.AppVersion.Label}", new Size(560, 420)); f.Tag = "opsis-welcome";
+            var f = NewForm($"Opsis - Desktop Customization {MotionDesk.Services.AppVersion.Label}", new Size(560, 420)); f.Tag = "opsis-welcome";
             var text = new Label { Text = LocalizationManager.T("Welcome.Body"), Dock = DockStyle.Fill, Padding = new Padding(24, 20, 24, 12), ForeColor = UiTheme.TextPrimary, Font = new Font("Segoe UI", 10.5f) };
             var close = new Opsis.UI.FlatButton { Text = OpsisStrings.T("ui.gotIt"), Primary = true, Width = 120, Height = 34, Dock = DockStyle.Bottom };
             close.Click += (_, _) => f.Close();

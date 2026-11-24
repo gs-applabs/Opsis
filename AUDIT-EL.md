@@ -1,4 +1,4 @@
-# Opsis Desktop Customization · 2.7.7.2402
+# Opsis - Desktop Customization · 2.7.7.2402
 
 ## Αποτελέσματα της ανασκόπησης
 

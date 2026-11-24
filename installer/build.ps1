@@ -8,7 +8,7 @@ $ErrorActionPreference = 'Stop'
 $compilerPath = (Resolve-Path -LiteralPath $Compiler).Path
 $repo = Split-Path $PSScriptRoot
 $destination = Join-Path $repo 'publish'
-$dotnetProject = Join-Path $repo 'Opsis.Studio.csproj'
+$dotnetProject = Join-Path $repo 'Opsis.csproj'
 $installer = Join-Path $repo 'installer.iss'
 $arguments = @("/DPublishDir=$destination")
 if ($CrawlerSetup) {

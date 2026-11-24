@@ -20,7 +20,7 @@ if (!$toolsDirectory -or [version]$toolsDirectory.Name -lt [version]'10.0.26100.
 $makeAppx = Join-Path $toolsDirectory.FullName 'x64\makeappx.exe'
 $signTool = Join-Path $toolsDirectory.FullName 'x64\signtool.exe'
 $manifestTool = Join-Path $toolsDirectory.FullName 'x64\mt.exe'
-$exe = Join-Path $published 'Opsis.Studio.exe'
+$exe = Join-Path $published 'Opsis.exe'
 $projectVersion = (Get-Item -LiteralPath $exe).VersionInfo.FileVersion
 $extension = Join-Path $published 'OpsisExplorer.dll'
 if (!(Test-Path -LiteralPath $extension -PathType Leaf)) { throw 'Build the Explorer DLL first.' }

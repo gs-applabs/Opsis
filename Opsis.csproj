@@ -10,8 +10,8 @@
     <ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode>
     <ApplicationIcon>assets/Opsis.ico</ApplicationIcon>
     <RootNamespace>MotionDesk</RootNamespace>
-    <AssemblyName>Opsis.Studio</AssemblyName>
-    <Product>Opsis Desktop Customization</Product>
+    <AssemblyName>Opsis</AssemblyName>
+    <Product>Opsis - Desktop Customization</Product>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <NoWarn>$(NoWarn);WFO1000</NoWarn>

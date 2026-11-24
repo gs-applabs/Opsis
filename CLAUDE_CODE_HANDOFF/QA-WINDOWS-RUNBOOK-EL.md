@@ -23,10 +23,10 @@ node --test
 
 ## 2. .NET 11 build + publish (μην συνεχίσεις αν σπάσει)
 ```powershell
-dotnet restore .\Opsis.Studio.csproj --nologo
-dotnet build .\Opsis.Studio.csproj -c Release -r win-x64 --no-restore --nologo
-dotnet publish .\Opsis.Studio.csproj -c Release -r win-x64 --self-contained false -o .\publish --nologo
-Test-Path .\publish\Opsis.Studio.exe
+dotnet restore .\Opsis.csproj --nologo
+dotnet build .\Opsis.csproj -c Release -r win-x64 --no-restore --nologo
+dotnet publish .\Opsis.csproj -c Release -r win-x64 --self-contained false -o .\publish --nologo
+Test-Path .\publish\Opsis.exe
 & .\tools\emit-release-identity.ps1 -PublishDir .\publish -OutFile .\Output\release-identity.json
 ```
 Καταχώρισε compiler errors **ολόκληρα**, όχι μόνο exit codes. Έλεγξε ότι οι εκδόσεις 2.8.0.2500 συμφωνούν σε About, `Version.props`, Assembly/FileVersion, Inno Setup, app family catalogue.

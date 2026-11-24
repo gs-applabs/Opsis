@@ -1,4 +1,4 @@
-name: Opsis Desktop Customization Windows audit
+name: Opsis - Desktop Customization Windows audit
 
 on: workflow_dispatch
 
@@ -31,7 +31,7 @@ jobs:
         shell: pwsh
         run: |
           $env:OPSIS_APPDATA = Join-Path $env:RUNNER_TEMP 'opsis-selftests'
-          & .\publish\Opsis.Studio.exe --run-selftest
+          & .\publish\Opsis.exe --run-selftest
           if ($LASTEXITCODE -ne 0) { throw "Opsis self-test failed: $LASTEXITCODE" }
           node --test
           if ($LASTEXITCODE -ne 0) { throw "Wallpaper JavaScript tests failed: $LASTEXITCODE" }
@@ -42,7 +42,7 @@ jobs:
           $setup = Get-ChildItem Output -File -Filter 'OpsisSetup-*.exe' | Select-Object -First 1
           if (!$setup) { throw 'Installer output missing' }
           [ordered]@{
-            appVersion = (Get-Item .\publish\Opsis.Studio.exe).VersionInfo.FileVersion
+            appVersion = (Get-Item .\publish\Opsis.exe).VersionInfo.FileVersion
             dotnetSdk = (dotnet --version)
             node = (node --version)
             installerName = $setup.Name
@@ -59,7 +59,7 @@ jobs:
           $env:OPSIS_AUDIT_RESOURCE_CYCLES = '3'
           $output = Join-Path $env:GITHUB_WORKSPACE 'audit-result'
           New-Item -ItemType Directory -Force $output | Out-Null
-          $process = Start-Process .\publish\Opsis.Studio.exe -ArgumentList @('--ui-audit', ('"' + $output + '"')) -PassThru
+          $process = Start-Process .\publish\Opsis.exe -ArgumentList @('--ui-audit', ('"' + $output + '"')) -PassThru
           if (-not $process.WaitForExit(1500000)) {
             Stop-Process -Id $process.Id -Force
             throw 'Opsis audit timed out'

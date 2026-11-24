@@ -1,6 +1,6 @@
 ﻿> **Έκδοση εργασίας 2.8.0.2500 — συμβατότητα plugins (PREVIEW).** Αυτός ο πηγαίος κώδικας δεν είναι τελικός installer και δεν έχει περάσει πλήρη Windows build, E2E και security validation. Η τελική έκδοση απαιτεί πράσινους ελέγχους σε Opsis, Opsis.UI, News Crawler, Χρονικολόγιο και Media Suite. Οι προηγούμενες σημειώσεις για 2.7.7.2403 παραμένουν παρακάτω ως ιστορικό.
 
-# Opsis Desktop Customization
+# Opsis - Desktop Customization
 
 Αυτόνομη έκδοση για Windows x64 που βασίζεται στον πηγαίο κώδικα Opsis 2.6.0. Η έκδοση ανοίγει με το skin **Studio**, με μόνιμη πλοήγηση σε ενότητες αριστερά και ενιαία αναζήτηση επάνω. Από **Θέμα → Skin παραθύρου** μπορείς να διαλέξεις την κλασική εμφάνιση 2.6.0.
 
@@ -44,7 +44,7 @@
 
 ## Αλλαγές 2.7.6.2401
 
-Η εγκατάσταση γίνεται από το `OpsisSetup-2.7.6.2401.exe`. Ο οδηγός Inno Setup 7.1.1 έχει ενσωματωμένα τα αρχεία της εφαρμογής και διατηρεί την υπάρχουσα εγκατάσταση Opsis Desktop Customization. Το προαιρετικό **News Crawler** εκτελεί τον παρεχόμενο οδηγό 0.25.0 σε ενσωματωμένη λειτουργία. Η έκδοση του συμβολαίου προσθέτων είναι 1.0.0.0.
+Η εγκατάσταση γίνεται από το `OpsisSetup-2.7.6.2401.exe`. Ο οδηγός Inno Setup 7.1.1 έχει ενσωματωμένα τα αρχεία της εφαρμογής και διατηρεί την υπάρχουσα εγκατάσταση Opsis - Desktop Customization. Το προαιρετικό **News Crawler** εκτελεί τον παρεχόμενο οδηγό 0.25.0 σε ενσωματωμένη λειτουργία. Η έκδοση του συμβολαίου προσθέτων είναι 1.0.0.0.
 
 Για νέο build σε Windows, το `installer/build.ps1 -Compiler <ISCC.exe> -CrawlerSetup <OpsisNewsCrawler-Setup.exe>` μεταγλωττίζει το Studio και παράγει το ενιαίο EXE. Ο Crawler είναι προαιρετικός και ελέγχεται με SHA-256.
 
@@ -77,7 +77,7 @@
 Για να μεταγλωττίσεις έναν ενιαίο installer από τον πηγαίο κώδικα, εκτέλεσε σε Windows με .NET 11 SDK και Inno Setup 7:
 
 ```powershell
-dotnet publish .\Opsis.Studio.csproj -c Release -r win-x64 --self-contained false -o .\publish
+dotnet publish .\Opsis.csproj -c Release -r win-x64 --self-contained false -o .\publish
 & "$env:ProgramFiles\Inno Setup 7\ISCC.exe" .\installer.iss
 ```
 
@@ -204,7 +204,7 @@ $env:OPSIS_E2E = '1'
 $env:OPSIS_APPDATA = Join-Path $env:TEMP ('OpsisAudit-' + [guid]::NewGuid())
 $env:OPSIS_AUDIT_NOCLICK = '1'
 $env:OPSIS_AUDIT_RESOURCE_CYCLES = '8'
-Start-Process ".\Opsis.Studio.exe" -ArgumentList "--ui-audit", "OpsisAudit" -Wait
+Start-Process ".\Opsis.exe" -ArgumentList "--ui-audit", "OpsisAudit" -Wait
 ```
 
 Το `ui-resources.json` περιέχει δείγματα CPU, μνήμης, handles και GDI/USER objects του Opsis. Η αναφορά αφορά την κύρια διεργασία Opsis. Για τις ξεχωριστές διεργασίες WebView2 χρειάζεται δική τους μέτρηση. Το `ui-audit.json` καταγράφει και τα στοιχεία ελέγχου κάθε σελίδας. Το `ui-audit.md` και τα PNG καταγράφουν τα αποτελέσματα πλοήγησης και την εμφάνιση. Για συγκεκριμένο skin όρισε `OPSIS_AUDIT_SKIN` σε `Classic`, `Studio`, `Atlas`, `Inspector`, `Index` ή `Split` πριν από την εκτέλεση.
@@ -214,7 +214,7 @@ Start-Process ".\Opsis.Studio.exe" -ArgumentList "--ui-audit", "OpsisAudit" -Wai
 Από τον φάκελο του πηγαίου κώδικα, με το .NET 11 SDK:
 
 ```powershell
-dotnet publish .\Opsis.Studio.csproj -c Release -r win-x64 --self-contained false -o .\publish
+dotnet publish .\Opsis.csproj -c Release -r win-x64 --self-contained false -o .\publish
 ```
 
 Στο Linux χρειάζεται επιπλέον `-p:EnableWindowsTargeting=true` για τη μεταγλώττιση του πακέτου Windows. Τα DLL στον κατάλογο `lib/` προέρχονται από το πακέτο Windows x64 της 2.6.0 και περιλαμβάνουν τις βιβλιοθήκες UI, GPU glass, DeskContainers και το συμβόλαιο προσθέτων. Το `src/` περιέχει τον πηγαίο κώδικα της εφαρμογής και των νέων αλλαγών. Τα κείμενα άδειας και οι αναφορές προέλευσης υπάρχουν στο πακέτο.
@@ -234,7 +234,7 @@ $env:OPSIS_AUDIT_LANGUAGE = "el"
 $env:OPSIS_AUDIT_THEME = "Light"
 $env:OPSIS_AUDIT_NOCLICK = "1"
 $env:OPSIS_AUDIT_RESOURCE_CYCLES = "3"
-Start-Process .\Opsis.Studio.exe -ArgumentList @("--ui-audit", ('"' + (Join-Path $run "results") + '"')) -Wait
+Start-Process .\Opsis.exe -ArgumentList @("--ui-audit", ('"' + (Join-Path $run "results") + '"')) -Wait
 ```
 
 Ο φάκελος `results` έχει στιγμιότυπα ανά καρτέλα, μεγέθη χειριστηρίων, DPI, λεζάντες για οπτική επαλήθευση και μετρήσεις πόρων της διεργασίας του Opsis. Ο έλεγχος του WebGL εκτελείται με `node --test tests/WebGLRecovery.test.cjs`.

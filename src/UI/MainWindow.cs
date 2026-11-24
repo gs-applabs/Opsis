@@ -4080,7 +4080,7 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
             // δοκιμασμένο στο OpsisNewsCrawler) — κατεβάζει+εγκαθιστά ΜΟΝΟ μετά από κλικ του χρήστη
             // ΚΑΙ επιβεβαίωση, μόνο από τα releases αυτού του repo, επαληθευμένο με SHA-256.
             AddSection(panel, StudioText("Build and dependencies", "Έκδοση και εξαρτήσεις"));
-            AddText(panel, $"Opsis Desktop Customization {AppVersion.Label}");
+            AddText(panel, $"Opsis - Desktop Customization {AppVersion.Label}");
             var missingDependencies = AddText(panel, "");
             missingDependencies.Visible = false;
             panel.HandleCreated += async (_, _) =>

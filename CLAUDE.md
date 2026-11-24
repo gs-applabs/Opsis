@@ -8,7 +8,7 @@
 Audit, repair, finish and verify the 2.8.0.2500 source without removing features or accidentally breaking other OPSIS apps. Start with `CLAUDE_CODE_HANDOFF/START-HERE-EL.md`, then `TASKS-AND-ACCEPTANCE-EL.md`, `QA-WINDOWS-RUNBOOK-EL.md` and `HISTORY/RECONSTRUCTED-HISTORY-EL.md`. Consult `IMPLEMENTATION-100-STATUS-2.8.0.2500.json` for all 100 tasks; written status is an **assertion, not verification**.
 
 ## Code and version contracts
-- Main project: `Opsis.Studio.csproj`, `net11.0-windows10.0.19041.0`, WinForms, x64; `global.json` requests SDK 11.0.100.
+- Main project: `Opsis.csproj`, `net11.0-windows10.0.19041.0`, WinForms, x64; `global.json` requests SDK 11.0.100.
 - App release number: **2.8.0.2500** (`Version.props`); user requires consistent UI, About, metadata and installer number.
 - Plugin DLL **AssemblyVersion AND FileVersion 1.0.0.0**: only `OpsisNewsCrawler.OpsisPlugin.dll` and `Chronikologio.OpsisPlugin.dll` (source in companion repos). Do **NOT** arbitrarily set shared `Opsis.UI.dll` or `OpsisNewsCrawler.Plugin.Abstractions.dll` to 1.0.0.0. Verify actual assembly identities on Windows before integration.
 - Shared ABI currently expects `OpsisNewsCrawler.Plugin.Abstractions` 0.8.0.0; `Opsis.UI` has its own stable assembly identity and independent package version. Review assembly-load contexts, singleton shared contract types, copies in plugin folders and deployment manifests.
@@ -34,9 +34,9 @@ node --test               # tests/*.test.cjs, requires Node.js 22
 Windows PowerShell (from the repo root on a disposable Windows runner):
 ```powershell
 dotnet --info
-dotnet restore .\Opsis.Studio.csproj
-dotnet build .\Opsis.Studio.csproj -c Release -r win-x64 --no-restore
-dotnet publish .\Opsis.Studio.csproj -c Release -r win-x64 --self-contained false -o .\publish
+dotnet restore .\Opsis.csproj
+dotnet build .\Opsis.csproj -c Release -r win-x64 --no-restore
+dotnet publish .\Opsis.csproj -c Release -r win-x64 --self-contained false -o .\publish
 # After clean build, locate Inno Setup 7 and follow CLAUDE_CODE_HANDOFF/QA-WINDOWS-RUNBOOK-EL.md
 ```
 

@@ -1,11 +1,11 @@
 ﻿#if Ver < EncodeVer(7,0,0)
   #error This installer requires Inno Setup 7 or newer.
 #endif
-#define MyAppName "Opsis Desktop Customization"
-#define MyAppExeName "Opsis.Studio.exe"
+#define MyAppName "Opsis - Desktop Customization"
+#define MyAppExeName "Opsis.exe"
 #define MyAppPublisher "gs-applabs"
 #define MyAppURL "https://github.com/gs-applabs/Opsis"
-#define StudioAppId "0F9363FA-64CB-45CF-8D70-E748B9C5BDA8"
+#define OpsisAppId "A9E8F765-1234-4567-89AB-CDEF01234567"
 #ifndef PublishDir
   #define PublishDir "publish"
 #endif
@@ -15,7 +15,7 @@
 #include "installer\dependencies.iss"
 
 [Setup]
-AppId={{{#StudioAppId}}
+AppId={{{#OpsisAppId}}
 AppName={#MyAppName}
 AppVersion={#MyAppVersion}
 AppPublisher={#MyAppPublisher}
@@ -25,7 +25,7 @@ AppUpdatesURL={#MyAppURL}/releases
 VersionInfoCompany={#MyAppPublisher}
 VersionInfoVersion={#MyAppVersion}
 VersionInfoProductVersion={#MyAppVersion}
-VersionInfoDescription=Opsis Desktop Customization Setup
+VersionInfoDescription=Opsis - Desktop Customization Setup
 VersionInfoProductName={#MyAppName}
 DefaultDirName={autopf}\{#MyAppName}
 DefaultGroupName={#MyAppName}
@@ -125,10 +125,10 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 Name: "autostart"; Description: "{cm:AutostartTask}"; GroupDescription: "{cm:StartupGroup}"; Flags: unchecked
 
 [Files]
-Source: "{#PublishDir}\Opsis.Studio.exe"; DestDir: "{app}"; Flags: ignoreversion restartreplace
-Source: "{#PublishDir}\Opsis.Studio.dll"; DestDir: "{app}"; Flags: ignoreversion restartreplace
+Source: "{#PublishDir}\Opsis.exe"; DestDir: "{app}"; Flags: ignoreversion restartreplace
+Source: "{#PublishDir}\Opsis.dll"; DestDir: "{app}"; Flags: ignoreversion restartreplace
 Source: "{#PublishDir}\OpsisExplorer.dll"; DestDir: "{app}"; Flags: ignoreversion restartreplace skipifsourcedoesntexist
-Source: "{#PublishDir}\*"; DestDir: "{app}"; Excludes: "\Opsis.Studio.exe,\Opsis.Studio.dll,\OpsisExplorer.dll"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "{#PublishDir}\*"; DestDir: "{app}"; Excludes: "\Opsis.exe,\Opsis.dll,\OpsisExplorer.dll"; Flags: ignoreversion recursesubdirs createallsubdirs
 #ifdef CrawlerSetup
 Source: "{#CrawlerSetup}"; DestDir: "{tmp}"; DestName: "OpsisNewsCrawler-Setup.exe"; Tasks: installcrawler; Flags: deleteafterinstall
 #endif
@@ -138,10 +138,10 @@ Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
 Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon
 
 [Registry]
-Root: HKCU; Subkey: "Software\Classes\DesktopBackground\shellex\ContextMenuHandlers\OpsisStudio"; Flags: dontcreatekey uninsdeletekey
+Root: HKCU; Subkey: "Software\Classes\DesktopBackground\shellex\ContextMenuHandlers\Opsis"; Flags: dontcreatekey uninsdeletekey
 Root: HKCU; Subkey: "Software\Classes\CLSID\{{7F45B246-0BA9-4C86-AB71-09F969610F62}"; Flags: dontcreatekey uninsdeletekey
-Root: HKCU; Subkey: "Software\Classes\DesktopBackground\Shell\OpsisStudio"; Flags: dontcreatekey uninsdeletekey
-Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: string; ValueName: "OpsisStudio"; ValueData: """{app}\{#MyAppExeName}"" --background"; Tasks: autostart; Flags: uninsdeletevalue
+Root: HKCU; Subkey: "Software\Classes\DesktopBackground\Shell\Opsis"; Flags: dontcreatekey uninsdeletekey
+Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: string; ValueName: "Opsis"; ValueData: """{app}\{#MyAppExeName}"" --background"; Tasks: autostart; Flags: uninsdeletevalue
 
 [Run]
 #ifdef CrawlerSetup
@@ -156,7 +156,7 @@ procedure InitializeWizard();
 var
   Previous: String;
 begin
-  if RegQueryStringValue(HKLM64, 'Software\Microsoft\Windows\CurrentVersion\Uninstall\{' + '{#StudioAppId}' + '}_is1', 'DisplayVersion', Previous) then
+  if RegQueryStringValue(HKLM64, 'Software\Microsoft\Windows\CurrentVersion\Uninstall\{' + '{#OpsisAppId}' + '}_is1', 'DisplayVersion', Previous) then
     WizardForm.WelcomeLabel2.Caption := FmtMessage(CustomMessage('UpdateDetected'), [Previous]);
   DepsInit(wpSelectTasks);
 end;

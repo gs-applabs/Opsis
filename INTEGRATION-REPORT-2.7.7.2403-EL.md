@@ -12,7 +12,7 @@
 3. **Μειωμένες εγγραφές στον SSD και ασφαλέστερη ανάκτηση JSON** (`src/Services/AtomicFile.cs`). Παράλειψη εγγραφής ίδιου περιεχομένου, συγχρονισμός ανά αρχείο, προσωρινό αρχείο και ατομική αντικατάσταση τόσο του κύριου JSON όσο και του `.bak` και των ανακτημένων δεδομένων. Τα backup τηρούν την ήδη υπάρχουσα χρονική αποφυγή υπερβολικών εγγραφών.
 4. **Weather Wallpaper με offline συμπεριφορά και διαφάνεια** (`src/Widgets/WeatherService.cs`, `src/Widgets/wallpaper/weather.js`, `weather-freshness.js`, `index.html`). Όταν αποτύχει η ανανέωση, δεν σβήνει η τελευταία έγκυρη παρατήρηση. Η αλλαγή συντεταγμένων δεν χρησιμοποιεί θερμοκρασία προηγούμενης πόλης. Προβάλλονται πηγή και ηλικία παρατήρησης, με ένδειξη παλαιότητας.
 5. **Αυτοματοποιημένη ποιότητα** (`src/Services/SelfTestRunner.cs`, `tests/WeatherFreshness.test.cjs`, `tests/WeatherOffline.test.cjs`, `.github/workflows/windows-audit.yml`). Νέος C# self-test για νόμιμα και κακόβουλα wallpaper ZIP, JavaScript regressions, Windows runner με .NET 11, Inno Setup build και manifest SHA-256 installer (workflow έτοιμο **στο source**, δεν εκτελέστηκε στην παρούσα συνεδρία).
-6. **Συγχρονισμός metadata έκδοσης** σε `Opsis.Studio.csproj`, `installer.iss` και `README-EL.md` στο **2.7.7.2403**.
+6. **Συγχρονισμός metadata έκδοσης** σε `Opsis.csproj`, `installer.iss` και `README-EL.md` στο **2.7.7.2403**.
 
 ## Συσχέτιση με ROADMAP-100-EL.md
 
@@ -31,7 +31,7 @@
 
 - `node --test` από τη ρίζα του project: **17/17 PASS** (με offline / αλλαγή τοποθεσίας και μηνύματα παλαιότητας).
 - `node --check` για `weather.js` και `weather-freshness.js`: **PASS**.
-- XML parsing του `Opsis.Studio.csproj`: **PASS**.
+- XML parsing του `Opsis.csproj`: **PASS**.
 - Έλεγχος ακεραιότητας αρχικού ZIP: **PASS**.
 - **ΜΗ ΕΠΑΛΗΘΕΥΜΕΝΑ:** C# compilation, C# selftest execution, Windows UI / Explorer tests, Inno Setup compilation, installer smoke test, υπογραφή binaries.
 
@@ -42,8 +42,8 @@
 ```powershell
 cd <φάκελος-αποσυμπιεσμένου-project>
 node --test
-dotnet publish .\Opsis.Studio.csproj -c Release -r win-x64 --self-contained false -o publish
-.\publish\Opsis.Studio.exe --run-selftest
+dotnet publish .\Opsis.csproj -c Release -r win-x64 --self-contained false -o publish
+.\publish\Opsis.exe --run-selftest
 .\installeruild.ps1 -Compiler 'C:\Program Files\Inno Setup 7\ISCC.exe'
 Get-FileHash .\Output\OpsisSetup-2.7.7.2403.exe -Algorithm SHA256
 ```

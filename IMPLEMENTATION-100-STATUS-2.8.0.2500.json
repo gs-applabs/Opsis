@@ -842,7 +842,7 @@
       "title": "Ένας πίνακας έκδοσης για app, installer, βοήθεια και ενημερώσεις.",
       "status": "new",
       "status_el": "ΥΛΟΠΟΙΗΘΗΚΕ ΣΤΟΝ SOURCE · ΧΩΡΙΣ BUILD",
-      "evidence": "Version.props · Opsis.Studio.csproj · installer.iss · src/Services/AppVersion.cs · src/Services/UpdateCheckService.cs · tools/emit-release-identity.ps1",
+      "evidence": "Version.props · Opsis.csproj · installer.iss · src/Services/AppVersion.cs · src/Services/UpdateCheckService.cs · tools/emit-release-identity.ps1",
       "note": "Μία authored έκδοση σε Version.props· EXE, Help, Update, Installer και release metadata αντλούν από το ίδιο compiled version."
     },
     {

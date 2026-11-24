@@ -10,7 +10,7 @@
 4. `src/Services/MediaSuiteDetector.cs`: απόρριψη μη απόλυτων / κενών root paths όταν λείπουν μεταβλητές περιβάλλοντος, ώστε να αποφεύγονται λανθασμένες ανιχνεύσεις.
 5. `.github/workflows/plugin-compatibility.yml`: νέος Windows-2025 CI release-gate με build και tests για OPSIS/.NET11, News Crawler/.NET10, Χρονικολόγιο/.NET10, πραγματική ταυτόχρονη φόρτωση plugins σε isolated AppData, widget/feed checks, ABI assemblies, και ανεξάρτητα tests/self-test Electron Media Suite.
 6. `tests/PluginCompatibility.test.cjs`: 6 νέοι έλεγχοι καταλόγου, συστήματος plugins, contract και συμβατότητας μεταδεδομένων (23/23 JavaScript tests μαζί με τα παλαιότερα 17).
-7. `Opsis.Studio.csproj`/`installer.iss`/`windows-audit.yml`: στόχος έκδοσης 2.8.0.2500 με `InformationalVersion=2.8.0.2500-compatibility-preview` μέχρι την τελική επικύρωση.
+7. `Opsis.csproj`/`installer.iss`/`windows-audit.yml`: στόχος έκδοσης 2.8.0.2500 με `InformationalVersion=2.8.0.2500-compatibility-preview` μέχρι την τελική επικύρωση.
 
 ## Διασυνδέσεις και εκδόσεις που εξετάστηκαν
 

@@ -2,8 +2,8 @@
 # Invoked only during the release/installer verification phase.
 param([string]$PublishDir = 'publish', [string]$OutFile = 'Output/release-identity.json')
 $ErrorActionPreference = 'Stop'
-$exe = Join-Path $PublishDir 'Opsis.Studio.exe'
-if (-not (Test-Path $exe)) { throw 'Publish Opsis.Studio.exe before generating release identity' }
+$exe = Join-Path $PublishDir 'Opsis.exe'
+if (-not (Test-Path $exe)) { throw 'Publish Opsis.exe before generating release identity' }
 $version = (Get-Item $exe).VersionInfo.FileVersion
 $props = [xml](Get-Content 'Version.props' -Raw)
 $source = $props.Project.PropertyGroup.OpsisAppVersion

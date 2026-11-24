@@ -6,7 +6,7 @@ namespace MotionDesk.Services
 {
     public static class StartupManager
     {
-        private const string AppName = "OpsisStudio";
+        private const string AppName = "Opsis";
         public static void SetStartup(bool enable)
         {
             try

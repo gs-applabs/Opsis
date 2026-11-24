@@ -1,6 +1,6 @@
 # Opsis 2.8.0.2500 R9 Windows release gate. Run ONLY on disposable Windows VM / CI runner.
 # Requires: .NET 11 SDK, Node 22+, Inno Setup 7, an interactive desktop for --ui-audit.
-# Optionally set -PreviousInstaller to a SHA-verified older Opsis.Studio installer for upgrade coverage.
+# Optionally set -PreviousInstaller to a SHA-verified older Opsis installer for upgrade coverage.
 [CmdletBinding()]
 param(
   [Parameter(Mandatory)][string]$Compiler,
@@ -54,7 +54,7 @@ try {
     Push-Location $repo
     try { & (Join-Path $repo 'installer/build.ps1') -Compiler $compiler; if ($LASTEXITCODE -ne 0) { throw 'Build failed' } }
     finally { Pop-Location }
-    $app=Join-Path $repo 'publish/Opsis.Studio.exe'
+    $app=Join-Path $repo 'publish/Opsis.exe'
     if (!(Test-Path $app)) { throw 'Published exe is missing' }
     if ((Get-Item $app).VersionInfo.FileVersion -ne '2.8.0.2500') { throw 'Published exe has wrong version' }
     $setup=Get-ChildItem (Join-Path $repo 'Output') -Filter 'OpsisSetup-2.8.0.2500.exe' | Select-Object -First 1
@@ -63,7 +63,7 @@ try {
     $results.installer=$setup.FullName
   }
   Step 'dotnet-selftest' {
-    & (Join-Path $repo 'publish/Opsis.Studio.exe') --run-selftest
+    & (Join-Path $repo 'publish/Opsis.exe') --run-selftest
     CheckExit 'Opsis .NET 11 self-tests'
   }
   Step 'classic-explorer-fallback' {
@@ -78,27 +78,27 @@ try {
     # This is a static fallback construction check; register/test all five commands below.
   }
   Step 'classic-explorer-five-commands' {
-    $app=Join-Path $repo 'publish/Opsis.Studio.exe'
+    $app=Join-Path $repo 'publish/Opsis.exe'
     # The standalone registration API selects classic mode only if OpsisExplorer.dll is absent.
     $sandbox=Join-Path $tempRoot 'opsis-r9-classic-exe'
     New-Item -ItemType Directory -Force $sandbox | Out-Null
-    Copy-Item $app (Join-Path $sandbox 'Opsis.Studio.exe') -Force
+    Copy-Item $app (Join-Path $sandbox 'Opsis.exe') -Force
     # .NET apphost also needs its deps/runtime files; use full published directory without native extension.
     Copy-Item (Join-Path $repo 'publish/*') $sandbox -Recurse -Force
     Remove-Item (Join-Path $sandbox 'OpsisExplorer.dll') -Force -ErrorAction SilentlyContinue
-    & (Join-Path $sandbox 'Opsis.Studio.exe') --setup-desktop-menu on el
+    & (Join-Path $sandbox 'Opsis.exe') --setup-desktop-menu on el
     CheckExit 'Register classic commands'
     try {
       foreach ($name in @('1-new-container','2-prev-wallpaper','3-next-wallpaper','4-toggle-wallpaper','5-stop-wallpaper')) {
-        $key = 'HKCU:\Software\Classes\DesktopBackground\Shell\OpsisStudio\shell' + $name + '\command'
+        $key = 'HKCU:\Software\Classes\DesktopBackground\Shell\Opsis\shell' + $name + '\command'
         $val = (Get-Item -LiteralPath $key -ErrorAction Stop).GetValue('')
         if ($val -notmatch '--desktop-action') { throw "Missing registered Explorer verb: $name" }
       }
     } finally {
-      & (Join-Path $sandbox 'Opsis.Studio.exe') --setup-desktop-menu off el
+      & (Join-Path $sandbox 'Opsis.exe') --setup-desktop-menu off el
       CheckExit 'Unregister classic menu'
     }
-    if (Test-Path 'HKCU:\Software\Classes\DesktopBackground\Shell\OpsisStudio') { throw 'Classic menu keys left behind' }
+    if (Test-Path 'HKCU:\Software\Classes\DesktopBackground\Shell\Opsis') { throw 'Classic menu keys left behind' }
     $results.notes+='Native C++ Explorer path is separate: test on a runner with Visual C++ x64 Build Tools.'
     $results.stages['native-explorer-menu']='NOT_VERIFIED'
   }
@@ -106,7 +106,7 @@ try {
     Step 'ui-audit' {
       $out=Join-Path $qa 'ui-audit'
       New-Item -ItemType Directory -Force $out | Out-Null
-      $p=Start-Process (Join-Path $repo 'publish/Opsis.Studio.exe') -ArgumentList @('--ui-audit', '"' + $out + '"') -PassThru
+      $p=Start-Process (Join-Path $repo 'publish/Opsis.exe') -ArgumentList @('--ui-audit', '"' + $out + '"') -PassThru
       if (-not $p.WaitForExit(1500000)) { Stop-Process -Id $p.Id -Force; throw 'UI audit timed out' }
       if ($p.ExitCode -ne 0) { throw "UI audit exit $($p.ExitCode)" }
       if (!(Test-Path (Join-Path $out 'ui-audit.md'))) { throw 'UI audit report missing' }
@@ -121,7 +121,7 @@ try {
     }
   }
   Step 'installer-install-upgrade-uninstall' {
-    $dest=Join-Path $env:ProgramFiles 'Opsis Desktop Customization'
+    $dest=Join-Path $env:ProgramFiles 'Opsis - Desktop Customization'
     $setup=$results.installer
     try {
       if ($PreviousInstaller) {
@@ -131,7 +131,7 @@ try {
         $results.stages['upgrade-from-previous']='NOT_VERIFIED'
       }
       Installer $setup @('/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART','/DEPS=none',"/LOG=`"$(Join-Path $qa 'install.log')`"") 'Opsis 2.8 install/upgrade'
-      $app=Join-Path $dest 'Opsis.Studio.exe'
+      $app=Join-Path $dest 'Opsis.exe'
       if (!(Test-Path $app)) { throw "Opsis installer did not produce $app" }
       if ((Get-Item $app).VersionInfo.FileVersion -ne '2.8.0.2500') { throw 'Installed version mismatch' }
       $uninstaller=Join-Path $dest 'unins000.exe'
@@ -141,11 +141,11 @@ try {
       Installer $uninstaller @('/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART') 'Opsis uninstall'
       if (Test-Path $app) { throw 'Opsis executable remains after uninstall' }
     } finally {
-      Get-Process Opsis.Studio -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+      Get-Process Opsis -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
     }
   }
   Step 'side-by-side-legacy-folder-guard' {
-    # The old branch's Opsis.exe must never be silently overwritten by Opsis.Studio.exe.
+    # The old branch's Opsis.exe must never be silently overwritten by Opsis.exe.
     $iss=(Get-Content (Join-Path $repo 'installer.iss') -Raw)
     if (!$iss.Contains('FileExists(ExpandConstant(' + "'{app}\Opsis.exe'" + '))')) {
       throw 'Installer legacy-folder guard is absent'
@@ -161,19 +161,19 @@ try {
       try {
         Installer $legacy @('/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART','/DEPS=none',"/DIR=`"$legacyDir`"") 'legacy side-by-side install'
         if (!(Test-Path (Join-Path $legacyDir 'Opsis.exe'))) { throw 'Legacy Opsis.exe missing' }
-        $modernDir=Join-Path $env:ProgramFiles 'Opsis Desktop Customization'
+        $modernDir=Join-Path $env:ProgramFiles 'Opsis - Desktop Customization'
         Installer $results.installer @('/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART','/DEPS=none') 'modern side-by-side install'
-        if (!(Test-Path (Join-Path $modernDir 'Opsis.Studio.exe'))) { throw 'Modern Opsis.Studio.exe missing' }
+        if (!(Test-Path (Join-Path $modernDir 'Opsis.exe'))) { throw 'Modern Opsis.exe missing' }
         if (!(Test-Path (Join-Path $legacyDir 'Opsis.exe'))) { throw 'Modern setup destroyed legacy executable' }
         # Concurrent UI launch is permitted only if each instance stays isolated.
         $old = Start-Process (Join-Path $legacyDir 'Opsis.exe') -PassThru
-        $new = Start-Process (Join-Path $modernDir 'Opsis.Studio.exe') -PassThru
+        $new = Start-Process (Join-Path $modernDir 'Opsis.exe') -PassThru
         Start-Sleep -Seconds 8
         if ($old.HasExited -or $new.HasExited) { throw 'Side-by-side app unexpectedly exited' }
         Stop-Process $old.Id,$new.Id -Force
       } finally {
-        Get-Process Opsis,Opsis.Studio -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
-        foreach ($dir in @($legacyDir,(Join-Path $env:ProgramFiles 'Opsis Desktop Customization'))) {
+        Get-Process Opsis,Opsis -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+        foreach ($dir in @($legacyDir,(Join-Path $env:ProgramFiles 'Opsis - Desktop Customization'))) {
           $un=Join-Path $dir 'unins000.exe'
           if (Test-Path $un) { Installer $un @('/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART') 'side-by-side cleanup' }
         }

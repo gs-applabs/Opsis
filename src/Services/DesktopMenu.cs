@@ -10,7 +10,7 @@ namespace MotionDesk.Services;
 public static class DesktopMenu
 {
     private const string Root = @"Software\Classes\DesktopBackground\Shell\";
-    private const string Handler = @"Software\Classes\DesktopBackground\shellex\ContextMenuHandlers\OpsisStudio";
+    private const string Handler = @"Software\Classes\DesktopBackground\shellex\ContextMenuHandlers\Opsis";
     private const string ClassicId = "{7F45B246-0BA9-4C86-AB71-09F969610F62}";
     private const string ComClass = @"Software\Classes\CLSID\" + ClassicId;
     private static readonly string[] OldVerbs = ["OpsisStudio", "OpsisStudioNewContainer", "OpsisStudioNextWallpaper"];
@@ -58,7 +58,7 @@ public static class DesktopMenu
         Registry.CurrentUser.DeleteSubKeyTree(Handler, false);
         Registry.CurrentUser.DeleteSubKeyTree(ComClass, false);
         RemoveOldVerbs();
-        using var menu = Registry.CurrentUser.CreateSubKey(Root + "OpsisStudio");
+        using var menu = Registry.CurrentUser.CreateSubKey(Root + "Opsis");
         menu.SetValue("MUIVerb", "Opsis");
         menu.SetValue("Icon", exe);
         menu.SetValue("SubCommands", "");
@@ -97,7 +97,7 @@ public static class DesktopMenu
     {
         try
         {
-            using var menu = Registry.CurrentUser.OpenSubKey(Root + @"OpsisStudio\shell\1-new-container\command");
+            using var menu = Registry.CurrentUser.OpenSubKey(Root + @"Opsis\shell\1-new-container\command");
             if (Equals(menu?.GetValue(""), $"\"{ExePath}\" --desktop-action new-container")) return true;
             using var key = Registry.CurrentUser.OpenSubKey(Handler);
             using var server = Registry.CurrentUser.OpenSubKey(ComClass + @"\InprocServer32");

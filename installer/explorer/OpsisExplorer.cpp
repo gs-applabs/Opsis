@@ -13,7 +13,7 @@ namespace
 {
     constexpr GUID classicId{0x7F45B246,0x0BA9,0x4C86,{0xAB,0x71,0x09,0xF9,0x69,0x61,0x0F,0x62}};
     constexpr GUID modernId{0xCA419189,0x286E,0x49FF,{0x9D,0x90,0x2F,0x46,0x24,0x27,0xB5,0xDE}};
-    constexpr wchar_t settingsKey[] = L"Software\\Classes\\DesktopBackground\\shellex\\ContextMenuHandlers\\OpsisStudio";
+    constexpr wchar_t settingsKey[] = L"Software\\Classes\\DesktopBackground\\shellex\\ContextMenuHandlers\\Opsis";
     enum Command { NewContainer, Previous, Next, Pause, Stop, Header, Root };
 
     struct CommandText { const wchar_t* verb; const wchar_t* en; const wchar_t* el; };
@@ -49,7 +49,7 @@ namespace
                 nullptr, path, &bytes) != ERROR_SUCCESS) return false;
         auto name = wcsrchr(path, L'\\');
         return name && !wcschr(path, L'"') && !PathIsRelativeW(path) &&
-            CompareStringOrdinal(name + 1, -1, L"Opsis.Studio.exe", -1, TRUE) == CSTR_EQUAL;
+            CompareStringOrdinal(name + 1, -1, L"Opsis.exe", -1, TRUE) == CSTR_EQUAL;
     }
 
     HRESULT InvokeAction(Command command)

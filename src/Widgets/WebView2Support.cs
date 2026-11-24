@@ -104,7 +104,7 @@ namespace MotionDesk.Widgets
         /// <summary>
         /// The WebView2 user-data folder: under LocalAppData\Opsis, or inside the isolated data folder when OPSIS_APPDATA is set (tests). The browser arguments are part of the environment:
         /// WebView2 refuses a second environment on the SAME folder with DIFFERENT arguments while another process uses it (0x8007139F). Another Opsis edition running at the same time
-        /// (Opsis 2.4.6.2 / 2.6.0 next to Opsis Studio) did exactly that to the wallpaper, so the folder is keyed by the arguments.
+        /// (Opsis 2.4.6.2 / 2.6.0 next to another Opsis build) did exactly that to the wallpaper, so the folder is keyed by the arguments.
         /// </summary>
         internal static string UserDataFolder(string? isolatedAppData = null, string? localAppData = null, string browserArguments = "")
         {

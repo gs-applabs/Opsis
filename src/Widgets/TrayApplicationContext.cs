@@ -159,7 +159,7 @@ namespace MotionDesk.Widgets
             {
                 Icon = MotionDesk.UI.AppWindowIcon.Value,
                 ContextMenuStrip = contextMenu,
-                Text = "Opsis Desktop Customization " + AppVersion.Label,
+                Text = "Opsis - Desktop Customization " + AppVersion.Label,
                 Visible = true
             };
 
@@ -286,7 +286,7 @@ namespace MotionDesk.Widgets
         {
             var form = new Form
             {
-                Text = $"Opsis Desktop Customization {AppVersion.Label}",
+                Text = $"Opsis - Desktop Customization {AppVersion.Label}",
                 StartPosition = FormStartPosition.CenterScreen,
                 FormBorderStyle = FormBorderStyle.FixedToolWindow,
                 ClientSize = new Size(545, 300),

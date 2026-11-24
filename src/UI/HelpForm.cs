@@ -84,7 +84,7 @@ internal sealed class HelpForm : OpsisWindow
     {
         _history = history;
         Name = "OpsisHelp";
-        Text = $"Opsis Desktop Customization {AppVersion.Label} · {LocalizationManager.T("Help.Title")}";
+        Text = $"Opsis - Desktop Customization {AppVersion.Label} · {LocalizationManager.T("Help.Title")}";
         Icon = AppWindowIcon.Value;
         ShowIcon = true;
         ShowInTaskbar = false;

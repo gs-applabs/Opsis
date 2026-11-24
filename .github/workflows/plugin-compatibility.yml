@@ -1,5 +1,5 @@
 # Release gate for Opsis 2.8.0.2500. Runs only on an isolated, disposable Windows GitHub runner.
-# The .NET plugins are loaded inside the real Opsis.Studio.exe (not only compile-checked).
+# The .NET plugins are loaded inside the real Opsis.exe (not only compile-checked).
 # The Electron Media Suite is an independent application, not an IOpsisNewsCrawlerPlugin.
 name: Opsis 2.8 plugin compatibility
 on:
@@ -20,7 +20,7 @@ on:
       - 'src/Services/PluginHost.cs'
       - 'src/Services/DesktopDiagnostics.cs'
       - 'suite/apps.json'
-      - 'Opsis.Studio.csproj'
+      - 'Opsis.csproj'
       - 'lib/Opsis.UI.dll'
       - 'lib/OpsisNewsCrawler.Plugin.Abstractions.dll'
       - 'tests/**'
@@ -61,7 +61,7 @@ jobs:
       - name: Build Opsis, both plugins, and run their tests
         shell: pwsh
         run: |
-          dotnet publish Opsis.Studio.csproj -c Release -r win-x64 --self-contained false -o publish -m:1 --nologo
+          dotnet publish Opsis.csproj -c Release -r win-x64 --self-contained false -o publish -m:1 --nologo
           if ($LASTEXITCODE -ne 0) { throw 'Opsis build failed' }
           dotnet test _compat/crawler/tests/OpsisNewsCrawler.Core.Tests/OpsisNewsCrawler.Core.Tests.csproj -c Release -m:1 --nologo
           if ($LASTEXITCODE -ne 0) { throw 'Crawler Core tests failed' }
@@ -137,7 +137,7 @@ jobs:
           Copy-Item plugin-crawler/* $c -Force -Recurse
           Copy-Item plugin-chronikologio/* $h -Force -Recurse
           # Both assemblies implement the real host contract; no mocking of the loader.
-          $p = Start-Process (Resolve-Path 'publish/Opsis.Studio.exe').Path -ArgumentList '--test-plugin-widget',((Resolve-Path 'compat-results').Path) -PassThru
+          $p = Start-Process (Resolve-Path 'publish/Opsis.exe').Path -ArgumentList '--test-plugin-widget',((Resolve-Path 'compat-results').Path) -PassThru
           if (-not $p.WaitForExit(150000)) { Stop-Process -Id $p.Id -Force; throw 'Real plugin smoke test timed out' }
           if ($p.ExitCode -ne 0) { throw "Plugin host exited $($p.ExitCode)" }
           $summary = Get-Content compat-results/plugin-widget.txt -Raw

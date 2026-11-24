@@ -1,4 +1,4 @@
-# Opsis Studio origins
+# Opsis origins
 
 Application foundation: Opsis 2.6.0 source and Windows x64 dependencies supplied with this project. See LICENSE, THIRD_PARTY_NOTICES.md and src/Widgets/wallpaper/landmarks/ATTRIBUTION.md for upstream notices.
 

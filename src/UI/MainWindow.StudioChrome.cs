@@ -33,7 +33,7 @@ public sealed partial class MainWindow
             _brandPulseTimer = new System.Windows.Forms.Timer { Interval = HardwareProfileService.ScaleDecorativeInterval(60) };
             _brandPulseTimer.Tick += (_, _) => { _brandPulseT += .08; _brandDot.Invalidate(); };
         }
-        Text = "Opsis Desktop Customization";
+        Text = "Opsis - Desktop Customization";
         ApplyChromeColors();
         UpdateAnimationTimers();
     }
@@ -291,7 +291,7 @@ public sealed partial class MainWindow
     {
         _currentPageKey = "Dashboard";
         var page = CreatePagePanel();
-        AddHeading(page, $"Opsis Desktop Customization {AppVersion.Label}");
+        AddHeading(page, $"Opsis - Desktop Customization {AppVersion.Label}");
         AddText(page, StudioText("Arrange windows with DeskZones, group files in DeskContainers and bring your desktop to life with weather, widgets and music.", "Οργάνωσε παράθυρα με DeskZones και αρχεία με DeskContainers. Πρόσθεσε ζωντανό καιρό, widgets και οπτικοποίηση μουσικής."));
         AddSection(page, StudioText("Desktop", "Επιφάνεια εργασίας"));
         var wallpaper = WallpaperSettings.Load();
