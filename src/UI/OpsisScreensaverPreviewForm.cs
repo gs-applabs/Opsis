@@ -75,7 +75,7 @@ public sealed class OpsisScreensaverPreviewForm : Form
         if (_profile.Mode == "StaticImage") return;
         var text = DateTime.Now.ToString(_profile.ShowSeconds ? "HH:mm:ss" : "HH:mm");
         using var font = new Font("Segoe UI Variable Display", Math.Clamp(Width / 20f, 32f, 90f),
-            FontStyle.Light, GraphicsUnit.Pixel);
+            FontStyle.Regular, GraphicsUnit.Pixel);
         using var brush = new SolidBrush(Color.White);
         using var center = new StringFormat { Alignment = StringAlignment.Center,
             LineAlignment = StringAlignment.Center };
