@@ -48,6 +48,7 @@ public sealed partial class MainWindow
         var featured = NewGrid();
         var library = NewGrid();
         var tiles = new List<WallpaperTile>();
+        var addonTiles = new List<(WallpaperTile Tile, OpsisEcosystemGallery.Item Item)>();
         foreach (var scene in StudioWallpaperCatalog.Scenes)
             AddTile(featured, scene.Mode, scene.Title(StudioGreek), scene.Detail(StudioGreek), scene.Asset, true);
         page.Controls.Add(featured);
@@ -89,7 +90,6 @@ public sealed partial class MainWindow
         page.Controls.Add(addonGrid);
         var addonItems = OpsisEcosystemGallery.Discover().Where(x => x.Type.Equals("wallpaper", StringComparison.OrdinalIgnoreCase) &&
             Path.GetExtension(x.AssetPath).ToLowerInvariant() is ".jpg" or ".jpeg" or ".png" or ".webp").ToArray();
-        var addonTiles = new List<(WallpaperTile Tile, OpsisEcosystemGallery.Item Item)>();
         int packPage = 0;
         const int PackPageSize = 18;
         categoryPicker.Items.Add(StudioText("All categories", "Όλες οι κατηγορίες"));
