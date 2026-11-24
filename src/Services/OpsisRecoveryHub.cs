@@ -54,7 +54,10 @@ public static class OpsisRecoveryHub
     {
         var p = path.Replace('\\', '/');
         if (p.Contains("..", StringComparison.Ordinal) || p.StartsWith('/') || p.Contains(':')) return false;
-        if (p is "settings.json" or "module-core.json") return true;
+        if (p is "settings.json" or "wallpaper.json" or "module-core.json" or "automations.json") return true;
+        if (p.StartsWith("weather-scenes/", StringComparison.OrdinalIgnoreCase) &&
+            p.EndsWith(".json", StringComparison.OrdinalIgnoreCase) && p.Count(ch => ch == '/') == 1)
+            return true;
         return p.StartsWith("appearance-presets/", StringComparison.OrdinalIgnoreCase) &&
                p.EndsWith(".json", StringComparison.OrdinalIgnoreCase) && p.Count(ch => ch == '/') == 1;
     }
@@ -63,6 +66,12 @@ public static class OpsisRecoveryHub
     {
         yield return "settings.json";
         yield return "module-core.json";
+        yield return "wallpaper.json";
+        yield return "automations.json";
+        var sceneFolder = Path.Combine(AppPaths.AppDataFolder, "weather-scenes");
+        if (Directory.Exists(sceneFolder) && (File.GetAttributes(sceneFolder) & FileAttributes.ReparsePoint) == 0)
+            foreach (var path in Directory.EnumerateFiles(sceneFolder, "*.json", SearchOption.TopDirectoryOnly).Take(250))
+                yield return "weather-scenes/" + Path.GetFileName(path);
         var folder = Path.Combine(AppPaths.AppDataFolder, "appearance-presets");
         if (!Directory.Exists(folder) || (File.GetAttributes(folder) & FileAttributes.ReparsePoint) != 0) yield break;
         foreach (var path in Directory.EnumerateFiles(folder, "*.json", SearchOption.TopDirectoryOnly).Take(250))
@@ -88,7 +97,7 @@ public static class OpsisRecoveryHub
                 if (!File.Exists(source)) continue;
                 var info = new FileInfo(source);
                 if ((info.Attributes & FileAttributes.ReparsePoint) != 0) continue;
-                if (info.Length > 4 * 1024 * 1024 || (total += info.Length) > 16 * 1024 * 1024)
+                if (info.Length > 4 * 1024 * 1024 || (total += info.Length) > 24 * 1024 * 1024)
                     throw new InvalidDataException("Opsis backup storage quota exceeded.");
                 var destination = Path.Combine(directory, "files", relative.Replace('/', Path.DirectorySeparatorChar));
                 Directory.CreateDirectory(Path.GetDirectoryName(destination)!);
@@ -129,7 +138,7 @@ public static class OpsisRecoveryHub
             if (new FileInfo(path).Length > 128 * 1024) throw new InvalidDataException("Invalid manifest size.");
             var manifest = JsonSerializer.Deserialize<SnapshotManifest>(File.ReadAllText(path))
                 ?? throw new InvalidDataException("Missing manifest.");
-            if (manifest.Id != id || manifest.Files.Count > 300) throw new InvalidDataException("Malformed manifest.");
+            if (manifest.Id != id || manifest.Files.Count > 600) throw new InvalidDataException("Malformed manifest.");
             var validated = new List<(string src, string dest)>();
             foreach (var entry in manifest.Files)
             {
