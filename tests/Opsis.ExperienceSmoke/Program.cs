@@ -152,6 +152,33 @@ try
         "safe plugin widget contribution instantiated as native layout");
 
 
+    const string supportedRainmeter = "[Rainmeter]\\nUpdate=1000\\n[MeasureClock]\\nMeasure=Time\\nFormat=%H:%M\\n[MeterClock]\\nMeter=String\\nMeasureName=MeasureClock\\nFontColor=64,160,224\\nFontSize=28\\nW=350\\nH=160";
+    var rainPreview = OpsisRainmeterSkinImporter.PreviewIni(supportedRainmeter.Replace("\\\\n", "\\n"), "Converted Clock");
+    Check(rainPreview.Binding == "Clock" && rainPreview.AccentHex == "#40A0E0",
+        "Rainmeter built-in Time/clock INI mapped to native Opsis widget");
+    var rainFile = Path.Combine(folder, "Converted Clock.ini");
+    File.WriteAllText(rainFile, supportedRainmeter.Replace("\\\\n", "\\n"));
+    Check(OpsisRainmeterSkinImporter.Import(rainFile) == "Converted Clock",
+        "safe Rainmeter INI import writes widget layout");
+    rejected = false;
+    try
+    {
+        OpsisRainmeterSkinImporter.PreviewIni(
+            "[Rainmeter]\\nUpdate=1000\\n[MeasureScript]\\nMeasure=Plugin\\nPlugin=RunCommand\\n[MeterA]\\nMeter=String\\nMeasureName=MeasureScript".Replace("\\\\n", "\\n"),
+            "Blocked");
+    }
+    catch (InvalidDataException) { rejected = true; }
+    Check(rejected, "Rainmeter plugin/script measure rejected");
+    rejected = false;
+    try
+    {
+        OpsisRainmeterSkinImporter.PreviewIni(
+            "[MeterA]\\nMeter=String\\nText=[!Execute \"notepad.exe\"]".Replace("\\\\n", "\\n"),
+            "Blocked");
+    }
+    catch (InvalidDataException) { rejected = true; }
+    Check(rejected, "Rainmeter bang commands rejected");
+
     var widget = new OpsisWidgetDesigner.Layout {
         Name = "Clock Demo", Binding = "Clock", AccentHex = "#00D2FF", FontSize = 30
     };
