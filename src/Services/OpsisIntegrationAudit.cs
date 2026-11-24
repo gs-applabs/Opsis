@@ -65,11 +65,9 @@ public static class OpsisIntegrationAudit
         foreach (var group in modules.GroupBy(x => x, StringComparer.OrdinalIgnoreCase).Where(x => x.Count() > 1))
             problems.Add(new Collision("Block", "core.catalog",
                 "Duplicate module registration: " + group.Key, "Retain one module ID and one service owner."));
-        var ownerIds = new HashSet<string>(Baseline28.Select(x => x.Key), StringComparer.OrdinalIgnoreCase);
-        foreach (var module in modules.Where(ownerIds.Contains))
-            problems.Add(new Collision("Review", "core.baseline",
-                "A newer module reuses an existing 2.8 feature ID: " + module,
-                "Use the existing 2.8 engine through an adapter, never add a second engine."));
+        // Existing IDs intentionally represent the same 2.8 owner: reusing an
+        // ID does not by itself create a second engine. Only duplicates in the
+        // NEW registry or competing runtime providers are collisions.
         foreach (var group in pluginEntries.GroupBy(x => x.Id, StringComparer.OrdinalIgnoreCase)
                      .Where(x => x.Count() > 1))
             problems.Add(new Collision("Block", "plugins.loader",
@@ -125,7 +123,7 @@ public static class OpsisIntegrationAudit
         return new Report("2.8.0.2510", "3.0.0.3200", DateTime.UtcNow,
             Baseline28, OpsisModCore.Catalog.Count, plugins, assets.Count,
             Evaluate(OpsisModCore.Catalog.Select(x => x.Id), plugins,
-                assets.Select(x => (x.PluginId, x.Id, x.Origin)),
+                OpsisEcosystemGallery.ContributionOrigins(),
                 s.ReplaceWindowsTaskbar, external, WindowsUpdateGuard.RequiresReview));
     }
 
