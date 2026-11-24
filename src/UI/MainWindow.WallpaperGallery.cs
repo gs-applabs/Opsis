@@ -44,6 +44,7 @@ public sealed partial class MainWindow
         var details = StudioButton(StudioText("Wallpaper settings", "Ρυθμίσεις φόντου"), ShowWallpaperDetails, 194);
         controls.Controls.AddRange([power, details]);
         page.Controls.Add(controls);
+        var weatherDepth = WeatherDepthPicker(WallpaperSettings.Load().WeatherSpatialMode);
         var featured = NewGrid();
         var library = NewGrid();
         var tiles = new List<WallpaperTile>();
@@ -61,7 +62,6 @@ public sealed partial class MainWindow
         AddTile(library, "Desktop", StudioText("Windows wallpaper", "Φόντο Windows"), StudioText("Show your system wallpaper", "Εμφάνιση του φόντου των Windows"), null);
         AddTile(library, "Waves", StudioText("Waves", "Κύματα"), StudioText("Audio-reactive ribbons", "Κορδέλες που αντιδρούν στον ήχο"), null);
         AddTile(library, "Particles", StudioText("Particles", "Σωματίδια"), StudioText("Floating particles", "Αιωρούμενα σωματίδια"), null);
-        var weatherDepth = WeatherDepthPicker(WallpaperSettings.Load().WeatherSpatialMode);
         page.Controls.Add(weatherDepth);
         page.Controls.Add(library);
 
