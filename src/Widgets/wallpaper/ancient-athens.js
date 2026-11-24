@@ -45,22 +45,76 @@
         return { from, to, blend: from === to ? 0 : t * t * (3 - 2 * t) };
     }
     const cache = new Map();
-    let lastFrame;
+    let lastFrame, blended, blendedContext, darkAcropolis, darkAcropolisKey = '', lastDrawAt = 0;
+    const atlas = (image, width, height) => {
+        const scale = Math.max(width / image.naturalWidth, height / image.naturalHeight);
+        const w = image.naturalWidth * scale, h = image.naturalHeight * scale;
+        return { x: (width - w) / 2, y: (height - h) / 2, w, h };
+    };
+    function cover(g, image, width, height) {
+        const b = atlas(image, width, height);
+        g.drawImage(image, b.x, b.y, b.w, b.h);
+    }
+    // Night panoramas have some baked-in artificial lamps on the sacred plateau.
+    // Repaint only the Acropolis silhouette with night-graded daylight texture;
+    // retaining naturally lit streets in the surrounding city.
+    function acropolisPatch(dayImage, width, height) {
+        const key = [dayImage.src,width,height].join('|');
+        if (darkAcropolisKey === key) return darkAcropolis;
+        darkAcropolisKey = key;
+        const overlay = document.createElement('canvas');
+        overlay.width = width; overlay.height = height;
+        const painter = overlay.getContext('2d');
+        if (!painter) return null;
+        painter.filter = 'brightness(0.17) saturate(0.44) contrast(0.91)';
+        cover(painter, dayImage, width, height);
+        painter.filter = 'none';
+        const mask = document.createElement('canvas');
+        mask.width = width; mask.height = height;
+        const mc = mask.getContext('2d');
+        if (!mc) return null;
+        const b = atlas(dayImage, width, height);
+        const silhouette = [
+            [.200,.515],[.241,.455],[.267,.398],[.259,.330],[.320,.320],
+            [.327,.296],[.425,.287],[.476,.259],[.480,.194],[.604,.197],
+            [.625,.279],[.732,.320],[.782,.435],[.810,.509],[.709,.565],
+            [.612,.566],[.525,.611],[.401,.606],[.287,.551]
+        ];
+        mc.filter = 'blur(' + Math.max(5, Math.round(width * .007)) + 'px)';
+        mc.fillStyle = 'white'; mc.beginPath();
+        silhouette.forEach(([x,y],i) => i ? mc.lineTo(b.x+x*b.w,b.y+y*b.h) :
+            mc.moveTo(b.x+x*b.w,b.y+y*b.h));
+        mc.closePath(); mc.fill();
+        painter.globalCompositeOperation = 'destination-in';
+        painter.drawImage(mask,0,0);
+        painter.globalCompositeOperation = 'source-over';
+        darkAcropolis = overlay;
+        return overlay;
+    }
     function load(name, highResolution) {
-        const src = 'ancient-athens/' + name + (highResolution ? '-4k.webp' : '.jpg');
-        const image = new Image();
-        image.src = src;
-        try {
-            return image.decode().then(() => image, () => highResolution ? load(name, false) : null);
-        } catch {
-            return Promise.resolve(null);
+        // Prefer WebP at both sizes; keep legacy JPEGs as a backwards-compatible
+        // fallback so upgrades never blank a built-in wallpaper.
+        const files = highResolution
+            ? [name + '-4k.webp', name + '.webp', name + '.jpg']
+            : [name + '.webp', name + '.jpg'];
+        function attempt(index) {
+            if (index >= files.length) return Promise.resolve(null);
+            const image = new Image();
+            image.src = 'ancient-athens/' + files[index];
+            let ready;
+            try { ready = typeof image.decode === 'function' ? image.decode() :
+                new Promise((resolve,reject) => { image.onload=resolve; image.onerror=reject; }); }
+            catch { return attempt(index + 1); }
+            return Promise.resolve(ready).then(() => image, () => attempt(index + 1));
         }
+        return attempt(0);
     }
     function frames(width, height, date, selection) {
         const state = phaseAt(date, selection);
         // Select the original only when it can cover the canvas at its native resolution.
         const highResolution = width > 1376 || height > 768;
         const wanted = new Set([state.from, state.to]);
+        if (wanted.has('night')) wanted.add('day');
         for (const [name, frame] of cache)
             if (!wanted.has(name) || frame.highResolution !== highResolution) cache.delete(name);
         for (const name of wanted) {
@@ -69,40 +123,72 @@
             frame.ready = load(name, highResolution).then(image => { frame.image = image; });
             cache.set(name, frame);
         }
-        return { ...state, base: cache.get(state.from), overlay: cache.get(state.to) };
+        return { ...state, base: cache.get(state.from), overlay: cache.get(state.to), daylight: cache.get('day') };
     }
     function prepare(width, height, selection) {
-        const { base, overlay } = frames(width, height, new Date(), selection);
-        return Promise.all([base.ready, overlay.ready]);
+        const { base, overlay, daylight } = frames(width, height, new Date(), selection);
+        return Promise.all([base.ready, overlay.ready, daylight?.ready].filter(Boolean));
     }
     function release() {
         cache.clear();
         lastFrame = null;
+        blended = blendedContext = darkAcropolis = null;
+        darkAcropolisKey = '';
+        lastDrawAt = 0;
+        window.OpsisAncientAthensFx?.clear();
     }
-    function draw(ctx, width, height, selection, force = false) {
-        const { base, overlay, blend } = frames(width, height, new Date(), selection);
+    function setWeather(data) { return window.OpsisAncientAthensFx?.setWeather(data) ?? false; }
+    function draw(ctx, width, height, selection, force = false, options = {}) {
+        const date = options.now instanceof Date ? options.now : new Date();
+        const { base, overlay, daylight, blend, from, to } = frames(width, height, date, selection);
         const primary = base.image || overlay.image;
         if (!primary) return;
-        const frame = [width, height, primary.src, overlay.image?.src, blend.toFixed(4)].join('|');
-        if (!force && lastFrame === frame) return;
-        lastFrame = frame;
-        function cover(image) {
-            const scale = Math.max(width / image.naturalWidth, height / image.naturalHeight);
-            const w = image.naturalWidth * scale;
-            const h = image.naturalHeight * scale;
-            ctx.drawImage(image, (width - w) / 2, (height - h) / 2, w, h);
+        if (!blended || blended.width !== width || blended.height !== height) {
+            blended = document.createElement('canvas');
+            blended.width = width; blended.height = height;
+            blendedContext = blended.getContext('2d');
+            lastFrame = null;
         }
-        ctx.save();
-        ctx.setTransform(1, 0, 0, 1, 0, 0);
-        ctx.imageSmoothingEnabled = true;
-        ctx.imageSmoothingQuality = 'high';
-        ctx.globalAlpha = 1;
-        cover(primary);
-        if (overlay.image && overlay.image !== primary && blend > 0) {
-            ctx.globalAlpha = blend;
-            cover(overlay.image);
+        if (!blendedContext) return;
+        const key=[width,height,primary.src,base.image?.src,overlay.image?.src,
+            daylight?.image?.src,Math.round(blend*300),from,to].join('|');
+        if (force || lastFrame !== key) {
+            const g = blendedContext;
+            g.save();g.setTransform(1,0,0,1,0,0);
+            g.clearRect(0,0,width,height);
+            g.imageSmoothingEnabled = true;g.imageSmoothingQuality='high';
+            function phase(image, name, opacity) {
+                if (!image || opacity <= 0) return;
+                g.globalAlpha = opacity;
+                cover(g,image,width,height);
+                if (name === 'night' && daylight?.image) {
+                    const patch=acropolisPatch(daylight.image,width,height);
+                    if(patch) { g.globalAlpha=opacity;g.drawImage(patch,0,0); }
+                }
+            }
+            if (base.image && overlay.image && base.image !== overlay.image) {
+                phase(base.image,from,1);
+                phase(overlay.image,to,blend);
+            } else {
+                const frame=primary===base.image?from:to;
+                phase(primary,frame,1);
+            }
+            g.restore();
+            lastFrame = key;
         }
+        ctx.save();ctx.setTransform(1,0,0,1,0,0);
+        ctx.globalCompositeOperation='source-over';ctx.globalAlpha=1;
+        ctx.drawImage(blended,0,0);
+        sunTimes(date);
+        const now=date.getTime();
+        const dt=lastDrawAt ? Math.max(0,Math.min(1,(now-lastDrawAt)/1000)) : .04;
+        lastDrawAt=now;
+        window.OpsisAncientAthensFx?.render(ctx,width,height,{
+            date,minutes:localMinutes(date),sr:sunrise,ss:sunset,
+            selection,reducedMotion:options.reducedMotion===true,
+            lowPower:options.lowPower===true,delta:dt
+        });
         ctx.restore();
     }
-    window.OpsisAncientAthens = { phaseAt, prepare, release, draw };
+    window.OpsisAncientAthens = { phaseAt, prepare, release, setWeather, draw };
 })();
