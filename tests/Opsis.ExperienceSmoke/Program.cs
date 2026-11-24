@@ -13,6 +13,37 @@ void Check(bool condition, string description)
 }
 try
 {
+    Check(OpsisIntegrationAudit.Baseline28.Count >= 25, "2.8.0.2510 baseline inventory recorded");
+    Check(OpsisIntegrationAudit.Baseline28.Select(x => x.Key)
+        .Distinct(StringComparer.OrdinalIgnoreCase).Count() == OpsisIntegrationAudit.Baseline28.Count,
+        "baseline feature identifiers uniquely map to existing engine owners");
+    var auditNoConflict = OpsisIntegrationAudit.Evaluate(
+        OpsisModCore.Catalog.Select(m => m.Id),
+        Array.Empty<OpsisIntegrationAudit.PluginEntry>(),
+        Array.Empty<(string, string, string)>(),
+        false, Array.Empty<OpsisModCompatibility.Finding>(), false);
+    Check(!auditNoConflict.Any(x => x.Severity == "Block"),
+        "shared 2.8 features do not falsely trigger duplicate-engine warnings");
+    var auditCollisions = OpsisIntegrationAudit.Evaluate(
+        new[] { "taskbar.native", "taskbar.native" },
+        new[] { new OpsisIntegrationAudit.PluginEntry("news", "1.0", true),
+                new OpsisIntegrationAudit.PluginEntry("news", "0.9", true) },
+        new[] { ("plugin.one", "clock", "installed"),
+                ("plugin.one", "clock", "user") },
+        true,
+        new[] { new OpsisModCompatibility.Finding("StartAllBack", "High",
+            "Start / Taskbar", "Use one shell owner") }, false);
+    Check(auditCollisions.Count(x => x.Severity == "Block") >= 3,
+        "audit rejects duplicate module IDs, loaded plugin identities and colliding shell owners");
+    Check(auditCollisions.Any(x => x.Domain == "plugins.gallery"),
+        "audit identifies duplicate Gallery contribution identities");
+    Check(!OpsisIntegrationAudit.TaskbarOverlayAllowed(true,
+        new[] { new OpsisModCompatibility.Finding("ExplorerPatcher", "High", "Taskbar", "Disable competing shell") },
+        false), "shell guard blocks overlapping active replacement taskbars");
+    Check(OpsisIntegrationAudit.TaskbarOverlayAllowed(true,
+        Array.Empty<OpsisModCompatibility.Finding>(), false),
+        "shell guard permits explicitly requested Opsis taskbar without known conflicts");
+
     Check(OpsisModCore.Catalog.Count >= 10, "unified module catalog available");
     Check(OpsisModCore.Read().Enabled.Count == 0, "module flags disabled by default");
     OpsisModCore.SetModule("windows.hot-corners", true, 22631, false);
@@ -142,6 +173,30 @@ try
         } }
     }));
     Check(OpsisEcosystemGallery.Discover().Any(x => x.PluginId == "example.plugin"), "plugin wallpaper contribution discovered");
+    var overlapFolder = Path.Combine(folder, "gallery-packs", "example-override");
+    Directory.CreateDirectory(overlapFolder);
+    File.WriteAllText(Path.Combine(overlapFolder, "cover.webp"), "updated fixture");
+    File.WriteAllText(Path.Combine(overlapFolder, "opsis-contributions.json"),
+        JsonSerializer.Serialize(new
+        {
+            Schema = 1, PluginId = "example.plugin", Version = "2.0.0", Name = "Override",
+            Contributions = new[] { new
+            {
+                Id = "city-wallpaper", Type = "wallpaper", Category = "Greece",
+                Title = "New Athens", Asset = "cover.webp", Author = "Test", Description = "Updated version"
+            }}
+        }));
+    var selectedWallpaper = OpsisEcosystemGallery.Discover()
+        .Single(x => x.PluginId == "example.plugin" && x.Id == "city-wallpaper");
+    Check(selectedWallpaper.Origin == "gallery-pack" && selectedWallpaper.Version == "2.0.0",
+        "Gallery picks newer signed-by-metadata version without duplicate cards");
+    Check(OpsisEcosystemGallery.ContributionOrigins().Count(x =>
+        x.PluginId == "example.plugin" && x.ItemId == "city-wallpaper") == 2,
+        "raw manifest audit preserves both duplicate sources for conflict reporting");
+    Check(OpsisIntegrationAudit.CandidatePluginFolders().Any(x =>
+        x.EndsWith("example-plugin", StringComparison.OrdinalIgnoreCase)),
+        "inventory discovers user-installed plugins without activating their code");
+
     // A second contributor may supply a non-executable native widget layout.
     File.WriteAllText(Path.Combine(plugin, "clock.json"), JsonSerializer.Serialize(new OpsisWidgetDesigner.Layout
     {
