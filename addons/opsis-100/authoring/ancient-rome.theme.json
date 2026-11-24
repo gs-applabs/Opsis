@@ -1,0 +1,100 @@
+{
+  "schemaVersion": 1,
+  "id": "ancient-rome-320",
+  "name": "Αρχαία Ρώμη",
+  "nameEn": "Ancient Rome",
+  "category": "Historical Cities",
+  "distribution": "opsis-100-add-on",
+  "builtIn": false,
+  "type": "weather-landmark",
+  "historicalPeriod": "Rome circa AD 320",
+  "historicalAccuracy": "requires archaeological visual review; no unverified modern landmarks",
+  "coordinateReference": {
+    "lat": 41.8902,
+    "lon": 12.4922,
+    "timeZone": "Europe/Rome"
+  },
+  "viewpoint": "Plausible aerial perspective with the Colosseum, Arch of Constantine and western Forum; verify camera and relative proportions against map",
+  "landmarks": [
+    {
+      "name": "Colosseum",
+      "required": true,
+      "completedByDate": true
+    },
+    {
+      "name": "Arch of Constantine",
+      "required": true,
+      "completedByDate": true
+    },
+    {
+      "name": "Roman Forum",
+      "required": true,
+      "completedByDate": true
+    },
+    {
+      "name": "Palatine Hill",
+      "required": true,
+      "completedByDate": true
+    },
+    {
+      "name": "Temple of Venus and Roma",
+      "required": true,
+      "completedByDate": true
+    }
+  ],
+  "weatherSource": "shared Opsis Weather provider at Rome coordinates",
+  "astronomy": "latitude/longitude/Europe-Rome with local sunrise, sunset and lunar phase",
+  "textureRequirements": {
+    "format": "image/webp",
+    "static": [
+      "dawn.webp",
+      "day.webp",
+      "golden.webp",
+      "blue.webp",
+      "night.webp"
+    ],
+    "ultraHighResolution": [
+      "dawn-4k.webp",
+      "day-4k.webp",
+      "golden-4k.webp",
+      "blue-4k.webp",
+      "night-4k.webp"
+    ],
+    "masks": [
+      "sky-mask.webp",
+      "monuments-mask.webp",
+      "artificial-lights-exclusion-mask.webp"
+    ],
+    "poster": "poster.webp",
+    "sourceAssetPolicy": "Original or explicitly licensed images; no licensed external reconstruction imported verbatim"
+  },
+  "rendering": {
+    "transition": "continuous interpolation of photographs; independent celestial/weather layers",
+    "weather": [
+      "clear",
+      "partly-cloudy",
+      "cloudy",
+      "rain",
+      "heavy-rain",
+      "storm",
+      "fog",
+      "snow",
+      "wind"
+    ],
+    "animals": [
+      "distant day birds only when weather and visibility permit"
+    ],
+    "lighting": "period-appropriate oil-lamp lighting only; no modern LED spotlights on monuments",
+    "reducedMotion": "disable particles/birds; retain static correct celestial and weather appearance",
+    "lowPower": "reduce animated FX and cache graded frame"
+  },
+  "qualityGate": {
+    "status": "awaiting-signed-off-WebP-artwork-and-Windows-WebView2-validation",
+    "assetsPresent": false,
+    "releaseEligible": false
+  },
+  "referenceUris": [
+    "https://www.rome-reborn.net/",
+    "https://www.livescience.com/archaeology/romans/soar-over-ancient-romes-temples-brothels-and-baths-in-epic-new-3d-reconstruction"
+  ]
+}
