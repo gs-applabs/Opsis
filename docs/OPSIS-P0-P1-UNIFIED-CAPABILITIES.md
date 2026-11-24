@@ -97,3 +97,5 @@ Fixed real CS0165 from run 45467808321 by declaring addonTiles before any local 
 
 ### Claude Code final handoff
 See CLAUDE_CODE_HANDOFF/RC-3.0-FINAL-HANDOFF-EL.md. Full tracked source archive plus pinned reference branch archives/patches are produced by the source workflow; release gates remain blocked. PR4 review confirmed, not payload; PR12 historical weather partially integrated. Prior chat raw exports and Glass R14 unavailable in this environment.
+
+Cross-conversation R20 patch recovered; fixed white overlay and removed synchronous canvas pixel sampling on every update, retaining Signature card styles. Newer historical addon ZIPs and verified Signature artifacts documented in final handoff. No raw historical ZIP bytes recovered.
