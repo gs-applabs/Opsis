@@ -127,3 +127,16 @@ GitHub-hosted Windows 2022/2025 workflows are configured for build, executable s
 - True per-element Acrylic/Mica taskbar animation and arbitrarily configurable native Windows taskbar.
 - Native Windows .scr installer screensaver, online Theme Marketplace, complete dynamic profile automation and richer cross-plugin command registry.
 - Full 3D weather landmarks are isolated in PR #8, not merged into this branch.
+
+
+## Follow-on integration: Command Palette 2.0 and pre-release shell regressions
+
+- Existing Opsis Command Palette now indexes implemented Opsis module names, dedicated Start/Explorer/Taskbar studios, and up to 150 declarative Gallery contributions. Gallery actions require user confirmation for wallpaper/theme changes; malformed plugin contributions are caught and logged.
+- The native Shell layout smoke test now constructs actual STA WinForms Start, Explorer, Taskbar, Widget Designer, runtime widget and Screensaver preview handles on Windows. The tests verify Start mode roundtrip and rejection, Opsis Taskbar visual/animation schema constraints, profile backup, read-only external shell mod risk classification, screensaver validation and Recovery Hub coverage.
+- A separate 5,000-read stress check verifies ordinary settings/profile reads do not rewrite files to SSD.
+- Start and Opsis Taskbar/Explorer features deliberately avoid undocumented Windows binary hooks. Full shell replacement is *not* achieved by these safe editors.
+- Screensaver preview supports GDI+-compatible JPEG, PNG and BMP, not arbitrary WebP/animated scene content or automatic Windows .scr registration.
+
+### Integrated Windows VM runs
+
+The current head automatically triggers three GitHub workflows covering Windows Server 2022/2025 .NET 11 builds, tests, portable publish, installer clean/in-place/silent-uninstall checks and plugin compatibility. Due to queued GitHub runners, these are **submitted, not passed** until every job reports `conclusion=success`. Windows Server VMs do not substitute for visual interactive Windows 11 GPU/high-DPI shell tests.
