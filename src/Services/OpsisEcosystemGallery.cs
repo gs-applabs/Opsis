@@ -141,7 +141,7 @@ public static class OpsisEcosystemGallery
             {
                 Name = imported.Name, Binding = imported.Binding, Text = imported.Text,
                 AccentHex = imported.AccentHex, FontSize = imported.FontSize,
-                Width = imported.Width, Height = imported.Height
+                Width = imported.Width, Height = imported.Height, Rows = imported.Rows
             };
             OpsisWidgetDesigner.Validate(data);
             return data;

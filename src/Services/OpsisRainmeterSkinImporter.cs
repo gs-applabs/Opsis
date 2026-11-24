@@ -16,7 +16,7 @@ namespace MotionDesk.Services;
 public static class OpsisRainmeterSkinImporter
 {
     public sealed record Preview(string Name, string Binding, string Text, string AccentHex,
-        int FontSize, int Width, int Height);
+        int FontSize, int Width, int Height, OpsisWidgetDesigner.Row[]? Rows = null);
 
     private static readonly HashSet<string> HeaderSections = new(StringComparer.OrdinalIgnoreCase)
     { "Rainmeter", "Variables", "Metadata" };
@@ -89,6 +89,44 @@ public static class OpsisRainmeterSkinImporter
     }
 
     public static Preview PreviewIni(string text, string importedName)
+    {
+        var sections = Parse(text);
+        var meters = sections.Where(x => x.Value.ContainsKey("Meter")).ToArray();
+        if (meters.Length <= 1) return PreviewSingle(text, importedName);
+        if (meters.Length > 8 || meters.Any(x => !x.Value["Meter"].Equals("String", StringComparison.OrdinalIgnoreCase)))
+            throw new InvalidDataException("Only 1–8 built-in String meters are supported.");
+        if (sections.Keys.Any(x => x.Contains("Plugin", StringComparison.OrdinalIgnoreCase) || x.Contains("Script", StringComparison.OrdinalIgnoreCase)))
+            throw new InvalidDataException("Executable/plugin components are unsupported.");
+        var used = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var header in sections.Keys.Where(HeaderSections.Contains)) used.Add(header);
+        var previews = new List<Preview>();
+        foreach (var meter in meters)
+        {
+            if (HeaderSections.Contains(meter.Key)) throw new InvalidDataException("Invalid meter header.");
+            used.Add(meter.Key);
+            var subset = new StringBuilder();
+            void AddSection(string name, Dictionary<string, string> options)
+            {
+                subset.Append('[').Append(name).AppendLine("]");
+                foreach (var (key, value) in options) subset.Append(key).Append('=').AppendLine(value);
+            }
+            foreach (var header in sections.Where(x => HeaderSections.Contains(x.Key))) AddSection(header.Key, header.Value);
+            if (meter.Value.TryGetValue("MeasureName", out var measure) && measure.Length > 0)
+            {
+                if (!sections.TryGetValue(measure, out var measureOptions) || HeaderSections.Contains(measure) || measureOptions.ContainsKey("Meter"))
+                    throw new InvalidDataException("Invalid linked measure.");
+                used.Add(measure); AddSection(measure, measureOptions);
+            }
+            AddSection(meter.Key, meter.Value);
+            previews.Add(PreviewSingle(subset.ToString(), importedName));
+        }
+        if (sections.Keys.Any(x => !used.Contains(x))) throw new InvalidDataException("Unrecognized active skin section.");
+        var first = previews[0];
+        return first with { Width = previews.Max(x => x.Width), Height = Math.Clamp(previews.Sum(x => x.Height), 80, 700),
+            Rows = previews.Select(x => new OpsisWidgetDesigner.Row(x.Binding, x.Text, x.AccentHex, x.FontSize)).ToArray() };
+    }
+
+    private static Preview PreviewSingle(string text, string importedName)
     {
         var sections = Parse(text);
         if (sections.Keys.Any(s => s.Contains("Script", StringComparison.OrdinalIgnoreCase) ||
@@ -189,7 +227,7 @@ public static class OpsisRainmeterSkinImporter
         {
             Name = name, Binding = preview.Binding, Text = preview.Text,
             AccentHex = preview.AccentHex, FontSize = preview.FontSize,
-            Width = preview.Width, Height = preview.Height
+            Width = preview.Width, Height = preview.Height, Rows = preview.Rows
         };
         OpsisWidgetDesigner.Save(layout);
         return layout.Name;

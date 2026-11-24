@@ -424,15 +424,17 @@ try
     }
     catch (InvalidDataException) { rejected = true; }
     Check(rejected, "Rainmeter bang commands rejected");
+    var multi = OpsisRainmeterSkinImporter.PreviewIni("[MeterA]\nMeter=String\nText=Hello\n[MeterB]\nMeter=String\nText=World", "Two Meters");
+    Check(multi.Rows is { Length: 2 } && multi.Rows[0].Text == "Hello" && multi.Rows[1].Text == "World",
+        "Rainmeter multi-meter data preserved as stacked native rows");
+    var multiFile = Path.Combine(folder, "Multi Meter.ini");
+    File.WriteAllText(multiFile, "[Clock]\nMeasure=Time\n[MeterA]\nMeter=String\nMeasureName=Clock\n[MeterB]\nMeter=String\nText=Welcome");
+    OpsisRainmeterSkinImporter.Import(multiFile);
+    Check(OpsisWidgetDesigner.Read("Multi Meter").Rows is { Length: 2 }, "composite widget persistence");
     rejected = false;
-    try
-    {
-        OpsisRainmeterSkinImporter.PreviewIni(
-            "[MeterA]\nMeter=String\nText=Hello\n[MeterB]\nMeter=String\nText=World",
-            "Two Meters");
-    }
+    try { OpsisRainmeterSkinImporter.PreviewIni("[MeterA]\nMeter=String\nText=Hello\n[MeterB]\nMeter=String\nText=World\n[Other]\nMeasure=Plugin\nPlugin=RunCommand", "Blocked"); }
     catch (InvalidDataException) { rejected = true; }
-    Check(rejected, "Rainmeter multiple meters fail closed instead of losing elements");
+    Check(rejected, "composite Rainmeter import rejects unused executable measures");
     rejected = false;
     try
     {
