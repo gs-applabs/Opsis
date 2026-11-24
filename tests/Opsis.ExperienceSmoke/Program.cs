@@ -115,6 +115,16 @@ try
 
     Check(OpsisFeatureSwitcher.CanSwitch("windows.hot-corners"), "core module has operational hot corner adapter");
     Check(!OpsisFeatureSwitcher.CanSwitch("start.shell-replacement"), "planned Start replacement not switchable");
+    Check(OpsisFeatureSwitcher.CanSwitch("cursor.effects"), "Cursor FX has a real optional module adapter");
+    Check(!AppSettings.Load().CursorFxEnabled, "Cursor FX defaults to disabled for existing users");
+    var cursorPreferences = AppSettings.Load();
+    cursorPreferences.CursorFxStyle = "Ripple";
+    cursorPreferences.CursorFxIntensity = 80;
+    cursorPreferences.Save();
+    Check(AppSettings.Load().CursorFxStyle == "Ripple" &&
+          AppSettings.Load().CursorFxIntensity == 80,
+          "Cursor FX settings persist without changing system mouse hooks");
+
     OpsisFeatureSwitcher.Set("windows.hot-corners", true);
     Check(AppSettings.Load().HotCornersEnabled && OpsisFeatureSwitcher.IsEnabled("windows.hot-corners"),
         "core enabled a real Hot Corners service preference");
