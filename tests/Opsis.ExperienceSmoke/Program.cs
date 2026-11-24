@@ -132,7 +132,7 @@ try
     Check(AppearancePresets.ImportPortable(portableSource) == portable.Name,
         "P2 validated portable import round-trip without applying settings");
     var unsafeSource = Path.Combine(folder, "P2 unsafe.json");
-    File.WriteAllText(unsafeSource, "{\\"Schema\\":98,\\"Name\\":\\"invalid\\"}");
+    File.WriteAllText(unsafeSource, """{"Schema":98,"Name":"invalid"}""");
     bool invalidImportRejected = false;
     try { AppearancePresets.ImportPortable(unsafeSource); }
     catch (InvalidDataException) { invalidImportRejected = true; }
