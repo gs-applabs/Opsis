@@ -36,17 +36,17 @@
     {
       "id": "unified-win2022-win2025-build-tests",
       "status": "in-review",
-      "evidence": "5b4d25d Windows audit 45464077316 and installer 45464077225 passed; latest changes must pass separately, workflow queued."
+      "evidence": "aee7f57 audit 45467808321 failed CS0165; c5345d9 fixed; 9f97858 integrates PR12 Athens. Latest CI pending; prior 5b4d25d passes only prior SHA."
     },
     {
       "id": "webview2-gpu-weather-renderer-captures",
       "status": "in-review",
-      "evidence": "5b4d25d Windows audit 45464077316 and installer 45464077225 passed; latest changes must pass separately, workflow queued."
+      "evidence": "aee7f57 audit 45467808321 failed CS0165; c5345d9 fixed; 9f97858 integrates PR12 Athens. Latest CI pending; prior 5b4d25d passes only prior SHA."
     },
     {
       "id": "installer-install-reinstall-uninstall-windows-vm",
       "status": "in-review",
-      "evidence": "5b4d25d Windows audit 45464077316 and installer 45464077225 passed; latest changes must pass separately, workflow queued."
+      "evidence": "aee7f57 audit 45467808321 failed CS0165; c5345d9 fixed; 9f97858 integrates PR12 Athens. Latest CI pending; prior 5b4d25d passes only prior SHA."
     },
     {
       "id": "integrated-plugins-e2e",

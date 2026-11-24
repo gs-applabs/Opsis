@@ -15,6 +15,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
@@ -22,9 +23,33 @@ jobs:
         run: |
           python tests/integration/check_baseline_and_release.py
           python tools/build_source_handoff.py --output out/Opsis-3.0.0.3200-RC-source-no-wallpaper-media.zip
+      - name: Full tracked source and pinned branch reference archive
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p out/full/references
+          git archive --format=zip -o out/full/Opsis-3.0.0.3200-RC-full-source.zip HEAD
+          git rev-parse HEAD > out/full/RC-COMMIT.txt
+          for spec in 'r19:3b59a2dd7baa49aa7e5ad3a9a9f70ea1a194445e' 'athens-signature:c55e405ce30b2dbed6a0f51ead42ef0f04f2813c' 'crawler:9fa970b8a2f046fa6b8dcddc6acfa7ca62bd4f69'; do
+            name="${spec%%:*}"
+            sha="${spec#*:}"
+            git cat-file -e "$sha^{commit}"
+            git archive --format=zip -o "out/full/references/$name-source.zip" "$sha"
+            git diff --binary "$(git merge-base HEAD "$sha")" "$sha" > "out/full/references/$name.patch"
+            printf '%s %s\n' "$name" "$sha" >> out/full/references/REFS.txt
+          done
+          git diff --binary ab9f08800b2fd22d8396ba6afa77a229fedd34ee HEAD > out/full/2.8.0.2510-to-RC.patch
+          (cd out/full && find . -type f -print0 | sort -z | xargs -0 sha256sum > /tmp/opsis-full-sha256 && mv /tmp/opsis-full-sha256 SHA256SUMS.txt)
+          python -c "import pathlib,zipfile; assert all(zipfile.ZipFile(p).testzip() is None for p in pathlib.Path('out/full').rglob('*.zip'))"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Opsis-3.0.0.3200-RC-full-source-and-branch-references
+          path: out/full/
+          if-no-files-found: error
+          retention-days: 30
       - uses: actions/upload-artifact@v4
         with:
           name: Opsis-3.0.0.3200-RC-source-no-wallpaper-media
-          path: out/*
+          path: out/*.zip*
           if-no-files-found: error
           retention-days: 30

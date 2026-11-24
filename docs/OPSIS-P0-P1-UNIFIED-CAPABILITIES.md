@@ -94,3 +94,6 @@ ABM_SETSTATE now explicitly passes the native taskbar HWND and always-on-top bit
 
 ### Final handoff integration
 Fixed real CS0165 from run 45467808321 by declaring addonTiles before any local function capturing it is invoked. PR #12 head c55e405 had successful integration/installer/Ancient Athens gate (45457297209/45457297549/45457297240). Cherry-picked exact blobs of unchanged host index, Ancient Athens renderer/effects, WallpaperWindow bridge, tests, manifest and gallery catalog, plus Europe/Rome authoring files. Reconciled conflicting weather.js by preserving the photo-first and SDR changes while adding historical Athens coordinates, state isolation and shared atmosphere. Signature composition remains opt-in and NOT merged wholesale; existing external UI DLL unchanged. Full R19 payload not in GitHub PR #4; only handoff files. Fresh CI required.
+
+### Claude Code final handoff
+See CLAUDE_CODE_HANDOFF/RC-3.0-FINAL-HANDOFF-EL.md. Full tracked source archive plus pinned reference branch archives/patches are produced by the source workflow; release gates remain blocked. PR4 review confirmed, not payload; PR12 historical weather partially integrated. Prior chat raw exports and Glass R14 unavailable in this environment.
