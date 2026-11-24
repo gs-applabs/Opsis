@@ -30,6 +30,11 @@ public sealed partial class MainWindow
                     lines.AppendLine("Current module registry: " + report.RegisteredModules);
                     lines.AppendLine("Installed plugin package folders: " + report.InstalledPluginFolders.Count);
                     lines.AppendLine("Pending plugin approvals: " + report.AwaitingPluginApprovals);
+                    lines.AppendLine("Inspected plugin DLLs: " + report.InstalledBinaries.Count);
+                    foreach (var binary in report.InstalledBinaries.Take(60))
+                        lines.AppendLine("  DLL " + binary.FolderName + "/" + binary.Dll +
+                            " v" + binary.AssemblyVersion + " · " + binary.Status +
+                            Environment.NewLine + "    " + binary.Explanation);
                     lines.AppendLine("Loaded plugin identities: " + report.LoadedPlugins.Count);
                     lines.AppendLine("Contributed Gallery assets: " + report.GalleryContributions);
                     foreach (var folder in report.InstalledPluginFolders.Take(40))
