@@ -41,6 +41,32 @@ public static class OpsisModCompatibility
             .ThenBy(x => x.Product).ToArray();
     }
 
+    private static readonly object CacheGate = new();
+    private static IReadOnlyList<Finding>? _lastScan;
+    private static long _lastScanTicks;
+
+    /// <summary>Cache uninstall/process inventory to avoid synchronous repeat scans
+    /// during native taskbar settings refresh. Explicit diagnostics call Scan()
+    /// for fresh results instead.</summary>
+    public static IReadOnlyList<Finding> ScanCached(int maxAgeSeconds = 45)
+    {
+        if (maxAgeSeconds is < 1 or > 600)
+            throw new ArgumentOutOfRangeException(nameof(maxAgeSeconds));
+        lock (CacheGate)
+        {
+            if (_lastScan != null &&
+                Environment.TickCount64 - _lastScanTicks < maxAgeSeconds * 1000L)
+                return _lastScan;
+        }
+        var result = Scan();
+        lock (CacheGate)
+        {
+            _lastScan = result;
+            _lastScanTicks = Environment.TickCount64;
+        }
+        return result;
+    }
+
     public static IReadOnlyList<Finding> Scan()
     {
         var names = new List<string>();
