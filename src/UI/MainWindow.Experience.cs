@@ -326,6 +326,11 @@ public sealed partial class MainWindow
                 try { using var start = new StartStudioForm(); start.ShowDialog(this); }
                 catch (Exception ex) { MessageBox.Show(this, ex.Message, "Opsis Start Studio", MessageBoxButtons.OK, MessageBoxIcon.Error); }
             }),
+            (StudioText("Explorer visual studio", "Οπτικός σχεδιαστής Explorer"), (_, _) =>
+            {
+                try { using var explorer = new OpsisExplorerStudioForm(); explorer.ShowDialog(this); }
+                catch (Exception ex) { MessageBox.Show(this, ex.Message, "Opsis Explorer Studio", MessageBoxButtons.OK, MessageBoxIcon.Error); }
+            }),
             (StudioText("Windows Start settings", "Ρυθμίσεις Έναρξης Windows"), (_, _) =>
             {
                 try { TaskbarViewProfiles.OpenWindowsStartSettings(); }
