@@ -1,0 +1,57 @@
+name: Built-in Ancient Athens Weather Wallpaper quality gate
+on:
+  push:
+    branches: [feat/athens-weather-europe-addon-split]
+  pull_request:
+    paths:
+      - 'src/Widgets/wallpaper/ancient-athens*.js'
+      - 'src/Widgets/wallpaper/index.html'
+      - 'src/Widgets/WallpaperWindow.cs'
+      - 'tests/weather-spatial/ancient-athens.test.cjs'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+jobs:
+  renderer-tests:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-2025]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Check scripts
+        shell: bash
+        run: |
+          node --check src/Widgets/wallpaper/ancient-athens.js
+          node --check src/Widgets/wallpaper/ancient-athens-effects.js
+          node --check tests/weather-spatial/ancient-athens.test.cjs
+      - name: Test weather transitions and compositing
+        run: node --test tests/weather-spatial/ancient-athens.test.cjs
+  windows-build:
+    runs-on: windows-2025
+    timeout-minutes: 50
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '11.0.x'
+      - name: Restore and build Opsis
+        shell: pwsh
+        run: |
+          dotnet restore Opsis.csproj --disable-parallel
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          dotnet build Opsis.csproj -c Release --no-restore -m:1 -p:UseSharedCompilation=false -nodeReuse:false
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Confirm the built-in theme ships with the main host
+        shell: pwsh
+        run: |
+          dotnet publish Opsis.csproj -c Release -r win-x64 --self-contained false -o publish -m:1 -p:UseSharedCompilation=false -nodeReuse:false
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          foreach ($file in @('ancient-athens.js', 'ancient-athens-effects.js')) {
+            if (!(Test-Path "publish/widgets/wallpaper/$file")) { throw "Missing built-in theme script: $file" }
+          }
