@@ -66,3 +66,13 @@ test('both quality tiers build complete finite triangles for every Greek scene a
     }
   }
 });
+
+test('photo grade SDR tone mapping is bounded and monotonic', () => {
+  const sandbox={window:{}};
+  vm.runInNewContext(fs.readFileSync(path.join(__dirname,'../../src/Widgets/wallpaper/weather-atmosphere.js'),'utf8'),sandbox);
+  const a=sandbox.window.OpsisWeatherAtmosphere;
+  assert.equal(a.toneMap(0),0); assert.equal(a.toneMap(1),1);
+  let previous=0;
+  for(let n=0;n<=100;n++){const mapped=a.toneMap(n/100); assert.ok(mapped>=previous && mapped<=1); previous=mapped;}
+  assert.ok(a.photoGrade(.8,0,{storm:0,rain:0,fog:0}).exposure > a.photoGrade(.1,0,{storm:0,rain:0,fog:0}).exposure);
+});

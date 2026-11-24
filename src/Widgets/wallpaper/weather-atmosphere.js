@@ -14,12 +14,20 @@
         return { x, y: height - photoHeight, width: photoWidth, height: photoHeight };
     }
 
+    // SDR filmic shoulder: linear light input, normalized to reference white.
+    // This is not Windows HDR output; avoids clipping extreme atmospheric lighting.
+    function toneMap(value) {
+        const x = Math.max(0, Number.isFinite(value) ? value : 0);
+        const curve = v => (v * (2.51*v + .03)) / (v * (2.43*v + .59) + .14);
+        return clamp(curve(x) / curve(1));
+    }
+
     function photoGrade(ambient, glow, weather) {
         const night = clamp(1 - ambient / .38);
         const day = Math.pow(clamp(ambient), .64);
         const storm = clamp(weather.storm + weather.rain * .43);
         return {
-            exposure: .27 + day * .73 - storm * .15,
+            exposure: .27 + toneMap(day) * .73 - storm * .15,
             saturation: .80 + day * .16 - storm * .23,
             contrast: 1.07 + day * .05,
             night,
@@ -107,5 +115,5 @@
         g.restore();
     }
 
-    window.OpsisWeatherAtmosphere = { photoBounds, photoGrade, drawSky, drawDepth, drawPhotoWater };
+    window.OpsisWeatherAtmosphere = { photoBounds, photoGrade, drawSky, drawDepth, drawPhotoWater, toneMap };
 })();

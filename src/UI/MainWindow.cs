@@ -3111,7 +3111,7 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                         ? "Επαναφορά των ρυθμίσεων Taskbar πριν από το Opsis;"
                         : "Restore original Taskbar settings from before Opsis?",
                         "Opsis — Taskbar", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes) return;
-                    try { TaskbarViewProfiles.Restore(); _statusLabel.Text = "Opsis — Taskbar settings restored."; }
+                    try { if (TaskbarViewProfiles.HasBackup) TaskbarViewProfiles.Restore(); TaskbarViewProfiles.RestoreAutoHide(); _statusLabel.Text = "Opsis — Taskbar settings restored."; }
                     catch (Exception ex) { MessageBox.Show(this, ex.Message, "Opsis — Taskbar", MessageBoxButtons.OK, MessageBoxIcon.Error); }
                 }),
                 (LocalizationManager.CurrentLanguage == "el" ? "Ρυθμίσεις Start" : "Start settings", (_, _) =>
@@ -3208,6 +3208,10 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                 new[] { StudioText("Always", "Πάντα"), StudioText("When full", "Όταν γεμίσει"), StudioText("Never", "Ποτέ") },
                 new[] { 0, 1, 2 }, () => TaskbarViewProfiles.ReadOption("MMTaskbarGlomLevel"),
                 value => TaskbarViewProfiles.ApplyOption("MMTaskbarGlomLevel", value), TaskbarViewProfiles.IsWindows11);
+
+            AddShellOption(StudioText("Native taskbar: Auto-hide", "Εγγενής Taskbar: Αυτόματη απόκρυψη"),
+                new[] { StudioText("Always visible", "Πάντα ορατή"), StudioText("Auto-hide", "Αυτόματη απόκρυψη") },
+                new[] { 0, 1 }, TaskbarViewProfiles.ReadAutoHide, TaskbarViewProfiles.ApplyAutoHide, TaskbarViewProfiles.IsWindows11);
 
             // ---------- P1 Start Studio ----------
             AddButtonGrid(shellAdvancedCard, (LocalizationManager.CurrentLanguage == "el"

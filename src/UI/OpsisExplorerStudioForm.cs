@@ -73,6 +73,34 @@ public sealed class OpsisExplorerStudioForm : Form
         var nativeEditor = new Button { Text = "Native Explorer options (Windhawk)", AutoSize = true };
         nativeEditor.Click += (_, _) => { using var dialog = new NativeShellThemeForm(); dialog.ShowDialog(this); };
         options.Controls.Add(nativeEditor);
+        var session = new Button { Text = "Explorer session / Συνεδρία φακέλων", AutoSize = true };
+        session.Click += (_, _) =>
+        {
+            using var dialog = new Form { Text = "Explorer folder session", StartPosition = FormStartPosition.CenterParent,
+                ClientSize = new Size(650, 390) };
+            var folders = new CheckedListBox { Dock = DockStyle.Fill, CheckOnClick = true, HorizontalScrollbar = true };
+            var footerSession = new FlowLayoutPanel { Dock = DockStyle.Bottom, Height = 52 };
+            var capture = new Button { Text = "Capture open folders", AutoSize = true };
+            var save = new Button { Text = "Save checked", AutoSize = true };
+            var load = new Button { Text = "Load saved", AutoSize = true };
+            var restoreSession = new Button { Text = "Open checked folders", AutoSize = true };
+            void Display(string[] paths) { folders.Items.Clear(); foreach (var path in paths) folders.Items.Add(path, true); }
+            string[] SelectedFolders() => folders.CheckedItems.Cast<string>().ToArray();
+            void TryAction(Action action) { try { action(); } catch (Exception err) { MessageBox.Show(dialog, err.Message, "Opsis"); } }
+            capture.Click += (_, _) => TryAction(() => Display(ExplorerSessionStore.Capture()));
+            save.Click += (_, _) => TryAction(() => ExplorerSessionStore.Save(SelectedFolders()));
+            load.Click += (_, _) => TryAction(() => Display(ExplorerSessionStore.Read()));
+            restoreSession.Click += (_, _) =>
+            {
+                if (MessageBox.Show(dialog, "Open selected local folders? Explorer decides window/tab placement.", "Opsis", MessageBoxButtons.YesNo) != DialogResult.Yes) return;
+                TryAction(() => MessageBox.Show(dialog, ExplorerSessionStore.Restore(SelectedFolders()) + " folders requested."));
+            };
+            footerSession.Controls.AddRange([capture, save, load, restoreSession]);
+            dialog.Controls.Add(folders); dialog.Controls.Add(footerSession);
+            TryAction(() => Display(ExplorerSessionStore.Read()));
+            dialog.ShowDialog(this);
+        };
+        options.Controls.Add(session);
         options.Controls.Add(new Label { AutoSize = true, MaximumSize = new Size(490, 0),
             Text = "Windows 11 tabs: Ctrl+T new tab · Ctrl+W close · Ctrl+Tab next. Native tab styling is not available here." });
         Controls.Add(options);

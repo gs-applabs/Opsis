@@ -301,6 +301,15 @@ try
     Check(OpsisEcosystemGallery.ImportWallpaperPack(addonZip) == 1 &&
         OpsisEcosystemGallery.Discover().Any(x => x.PluginId == "fixture.images" && x.Category == "Test"),
         "data-only wallpaper pack imported and categorized without applying wallpaper");
+    var localFolder = Path.GetTempPath().TrimEnd(Path.DirectorySeparatorChar);
+    Check(ExplorerSessionStore.IsLocalFolderPath(localFolder) &&
+        !ExplorerSessionStore.IsLocalFolderPath(@"\\server\share") &&
+        !ExplorerSessionStore.IsLocalFolderPath("https://example.invalid") &&
+        ExplorerSessionStore.Normalize(new[] { localFolder, localFolder }).Length == 1,
+        "Explorer session accepts only distinct local filesystem paths");
+    ExplorerSessionStore.Save(new[] { localFolder });
+    Check(ExplorerSessionStore.Read().SequenceEqual(new[] { localFolder }, StringComparer.OrdinalIgnoreCase),
+        "Explorer folder session roundtrip without launching Explorer");
     var webpBytes = Convert.FromBase64String("UklGRh4AAABXRUJQVlA4TBEAAAAvB8ABAAdQs840s/+BiOh/AAA=");
     var webpZip = Path.Combine(folder, "addon-webp.zip");
     using (var zip = System.IO.Compression.ZipFile.Open(webpZip, System.IO.Compression.ZipArchiveMode.Create))

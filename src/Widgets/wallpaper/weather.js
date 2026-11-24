@@ -921,7 +921,7 @@ function drawScenePhoto(c2, sky, graded) {
     const x = bounds?.x ?? 0, y = bounds?.y ?? H - h;
     const amb = clamp(sky.amb, 0, 1), night = clamp(1 - amb / 0.35, 0, 1), fog = clamp(S.fog, 0, 1), glow = clamp(sky.glow || 0, 0, 1);
     const look = cfg.realistic || photoState.landscape ? atmosphere?.photoGrade(amb, glow, S) : null;
-    const refine = cfg.spatialMode === '2.5D' && photoState.skyMask &&
+    const refine = cfg.spatialMode !== 'Off' && photoState.skyMask &&
         !cfg.skyEdits?.[window.OpsisLandmarks.photoScene(photoState.id)?.file];
     if (refine && !photoState.fineMask) {
         try { photoState.fineMask = window.OpsisSkyMask.refinePhotoSky(photoState.img, photoState.skyMask); }
@@ -963,7 +963,7 @@ function drawScenePhoto(c2, sky, graded) {
         o.globalCompositeOperation = 'source-over'; photoState.key = key;
     }
     c2.drawImage(photoState.canvas, x, y, w, h);
-    if (cfg.spatialMode === '2.5D' && !cfg.reducedMotion && tierLevel() > 0)
+    if (cfg.spatialMode !== 'Off' && !cfg.reducedMotion && tierLevel() > 0)
         atmosphere?.drawPhotoWater(c2, photoState.id, photoState.canvas, x, y, w, h, celest, S, animTime, tierLevel() > 1);
     if (cfg.skylinePreview && photoState.skyMask)
         window.OpsisSkyMask?.outline(c2, photoState.skyMask, { x, y, width: w, height: h });
@@ -1583,13 +1583,16 @@ function draw(target, dt, profile) {
 
     // ---- sky canvas
     const graded = drawSkyLayer(sky, t, sr, ss);
-    const location = cfg.realistic && cfg.spatialMode === '3D' && resolveLandmark();
+    // Photographic plates have priority over stylised meshes. 3D adds atmospheric
+    // depth when a real scene exists; never replace a ready city photo with a mesh.
+    const photoReady = onPhoto();
+    const location = cfg.realistic && cfg.spatialMode === '3D' && !photoReady && resolveLandmark();
     const mesh = window.OpsisWeatherSpatial?.update(dt,
         { rain: S.rain, snow: S.snow, windX: S.windX, seconds: animTime },
         profile?.id || 'Balanced', cfg.reducedMotion === true,
         location ? { id: location.id, city: landmarkScene.city, ambient: sky.amb,
             horizon: graded.hor, fog: S.fog, snowCover: S.snowCover, lightSide: t < (sr + ss) / 2 ? -1 : 1 } : null);
-    const photograph = !mesh && onPhoto();
+    const photograph = !mesh && photoReady;
     const cityPhoto = photograph && !photoState.landscape;
     drawStarsLayer(sky, 1 - S.cloud * 0.8 - S.fog * 0.5);
     drawMilkyWay(sky);
@@ -1626,7 +1629,7 @@ function draw(target, dt, profile) {
     c2.globalAlpha = 1; c2.globalCompositeOperation = 'source-over';
     // 2.5D: independent distant-sky parallax, with slight overscan to avoid edge gaps.
     // The land/photo, rain, fog and glass remain at their original screen depth.
-    if (cfg.spatialMode === '2.5D' && !cfg.reducedMotion && tierLevel() >= 1) {
+    if (cfg.spatialMode !== 'Off' && !cfg.reducedMotion && tierLevel() >= 1) {
         const pad = Math.max(2, W * 0.014);
         const drift = Math.sin(animTime * 0.15) * pad * 0.34;
         c2.drawImage(skyCv, -pad + drift, 0, W + 2 * pad, HORIZON);

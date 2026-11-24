@@ -163,6 +163,67 @@ namespace MotionDesk.Services
             key.SetValue(name, value, RegistryValueKind.DWord);
         }
 
+        private static string AutoHideBackup => Path.Combine(AppPaths.AppDataFolder, "native-taskbar-autohide.json");
+        private static readonly object AutoHideGate = new();
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct AppBarData
+        {
+            public uint Size;
+            public IntPtr Window;
+            public uint CallbackMessage, Edge;
+            public int Left, Top, Right, Bottom;
+            public IntPtr Parameter;
+        }
+
+        [DllImport("shell32.dll")]
+        private static extern UIntPtr SHAppBarMessage(uint message, ref AppBarData data);
+
+        private static AppBarData AppBar() => new() { Size = (uint)Marshal.SizeOf<AppBarData>() };
+        public static int ReadAutoHide()
+        {
+            var data = AppBar();
+            return (SHAppBarMessage(4, ref data).ToUInt64() & 1) != 0 ? 1 : 0;
+        }
+
+        private static void SetAutoHide(int value)
+        {
+            var data = AppBar();
+            var flags = SHAppBarMessage(4, ref data).ToUInt64();
+            data.Parameter = new IntPtr((long)((flags & 2) | (uint)value));
+            SHAppBarMessage(10, ref data);
+            if (ReadAutoHide() != value) throw new InvalidOperationException("Native taskbar did not accept auto-hide change.");
+        }
+
+        public static void ApplyAutoHide(int value)
+        {
+            if (value is not (0 or 1)) throw new ArgumentOutOfRangeException(nameof(value));
+            lock (AutoHideGate)
+            {
+                CheckWritable();
+                if (AppSettings.Peek().ReplaceWindowsTaskbar) throw new InvalidOperationException("Turn off Opsis taskbar replacement first.");
+                int before = ReadAutoHide();
+                if (before == value) return;
+                if (!File.Exists(AutoHideBackup))
+                    AtomicFile.WriteAllText(AutoHideBackup, JsonSerializer.Serialize(before));
+                SetAutoHide(value);
+            }
+        }
+
+        public static void RestoreAutoHide()
+        {
+            lock (AutoHideGate)
+            {
+                CheckWritable();
+                if (!File.Exists(AutoHideBackup)) return;
+                if (new FileInfo(AutoHideBackup).Length > 32) throw new InvalidDataException("Invalid auto-hide backup.");
+                int original = JsonSerializer.Deserialize<int>(AtomicFile.ReadAllText(AutoHideBackup));
+                if (original is not (0 or 1)) throw new InvalidDataException("Invalid auto-hide backup.");
+                if (AppSettings.Peek().ReplaceWindowsTaskbar) throw new InvalidOperationException("Turn off Opsis taskbar replacement first.");
+                if (ReadAutoHide() != original) SetAutoHide(original);
+            }
+        }
+
         public static void OpenWindowsStartSettings()
         {
             System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("ms-settings:personalization-start") { UseShellExecute = true });

@@ -55,7 +55,7 @@ public static class OpsisRecoveryHub
     {
         var p = path.Replace('\\', '/');
         if (p.Contains("..", StringComparison.Ordinal) || p.StartsWith('/') || p.Contains(':')) return false;
-        if (p is "settings.json" or "wallpaper.json" or "module-core.json" or "automations.json" or "window-rules.json" or "start-studio.json" or "taskbar-designer.json" or "taskbar-monitor-profiles.json" or "native-start-original.json" or "native-shell-theme-backups.json" or "screensaver-studio.json") return true;
+        if (p is "settings.json" or "wallpaper.json" or "module-core.json" or "automations.json" or "window-rules.json" or "start-studio.json" or "taskbar-designer.json" or "taskbar-monitor-profiles.json" or "native-start-original.json" or "native-shell-theme-backups.json" or "explorer-session.json" or "native-taskbar-autohide.json" or "screensaver-studio.json") return true;
         if (p is "native-profiles/explorer-view-before-opsis.json" or
             "native-profiles/taskbar-before-opsis.json") return true;
         if (p.StartsWith("widget-designs/", StringComparison.OrdinalIgnoreCase) &&
@@ -91,6 +91,8 @@ public static class OpsisRecoveryHub
         yield return "taskbar-monitor-profiles.json";
         yield return "native-start-original.json";
         yield return "native-shell-theme-backups.json";
+        yield return "explorer-session.json";
+        yield return "native-taskbar-autohide.json";
         yield return "screensaver-studio.json";
         var widgetFolder = Path.Combine(AppPaths.AppDataFolder, "widget-designs");
         if (Directory.Exists(widgetFolder) && (File.GetAttributes(widgetFolder) & FileAttributes.ReparsePoint) == 0)
