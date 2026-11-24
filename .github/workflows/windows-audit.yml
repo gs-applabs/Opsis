@@ -1,6 +1,9 @@
 name: Opsis - Desktop Customization Windows audit
 
-on: workflow_dispatch
+on:
+  workflow_dispatch:
+  push:
+    branches: [release/2.8.0.2510]
 
 permissions:
   contents: read
