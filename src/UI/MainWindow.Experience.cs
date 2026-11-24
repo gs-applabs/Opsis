@@ -311,6 +311,27 @@ public sealed partial class MainWindow
                 }
             }));
 
+        var shellDesignerCard = AddCardSection(panel, StudioText("P3 — Unified Shell Studio", "P3 — Ενιαίο στούντιο Shell"));
+        AddText(shellDesignerCard, StudioText(
+            "One coherent entry point for native Start preferences, Opsis taskbar layout and supported Explorer options. Reversible profiles, no Windows binary injection.",
+            "Ενιαίος χώρος για Start, σχεδίαση γραμμής εργασιών Opsis και υποστηριζόμενες επιλογές Explorer. Αναστρέψιμα προφίλ, χωρίς επεμβάσεις σε αρχεία Windows."));
+        AddButtonGrid(shellDesignerCard,
+            (StudioText("Taskbar visual designer", "Οπτικός σχεδιαστής Taskbar"), (_, _) =>
+            {
+                try { using var designer = new OpsisTaskbarDesignerForm(); designer.ShowDialog(this); }
+                catch (Exception ex) { MessageBox.Show(this, ex.Message, "Opsis Taskbar Studio", MessageBoxButtons.OK, MessageBoxIcon.Error); }
+            }),
+            (StudioText("Start Studio", "Στούντιο Έναρξης"), (_, _) =>
+            {
+                try { using var start = new StartStudioForm(); start.ShowDialog(this); }
+                catch (Exception ex) { MessageBox.Show(this, ex.Message, "Opsis Start Studio", MessageBoxButtons.OK, MessageBoxIcon.Error); }
+            }),
+            (StudioText("Windows Start settings", "Ρυθμίσεις Έναρξης Windows"), (_, _) =>
+            {
+                try { TaskbarViewProfiles.OpenWindowsStartSettings(); }
+                catch (Exception ex) { MessageBox.Show(this, ex.Message, "Windows Start", MessageBoxButtons.OK, MessageBoxIcon.Error); }
+            }));
+
         var menuCard = AddCardSection(panel, StudioText("P3 — Context Menu Studio", "P3 — Μενού δεξιού κλικ"));
         AddText(menuCard, StudioText(
             "An optional Opsis launcher on Windows desktop and Explorer folder background menus. HKCU only; no DLL extension, system-file edits or Explorer restart.",
