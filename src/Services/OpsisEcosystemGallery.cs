@@ -74,6 +74,27 @@ public static class OpsisEcosystemGallery
         return false;
     }
 
+    /// <summary>
+    /// Load a declarative Clock/Date/Text widget from an approved contribution.
+    /// Never interpret HTML/JS, load executable modules or run arbitrary data sources.
+    /// </summary>
+    public static OpsisWidgetDesigner.Layout ReadWidgetContribution(Item item)
+    {
+        if (!string.Equals(item.Type, "widget", StringComparison.OrdinalIgnoreCase) ||
+            !string.Equals(Path.GetExtension(item.AssetPath), ".json", StringComparison.OrdinalIgnoreCase))
+            throw new InvalidDataException("This is not a declarative Opsis widget.");
+        var selected = Discover().FirstOrDefault(x => x.Id == item.Id &&
+            string.Equals(x.PluginId, item.PluginId, StringComparison.OrdinalIgnoreCase) &&
+            string.Equals(x.AssetPath, item.AssetPath, StringComparison.OrdinalIgnoreCase));
+        if (selected == null || new FileInfo(selected.AssetPath).Length > 32 * 1024)
+            throw new InvalidDataException("Widget contribution missing or too large.");
+        var widget = JsonSerializer.Deserialize<OpsisWidgetDesigner.Layout>(
+            File.ReadAllText(selected.AssetPath))
+            ?? throw new InvalidDataException("Widget contribution not valid JSON.");
+        OpsisWidgetDesigner.Validate(widget);
+        return widget;
+    }
+
     /// <summary>Apply only a selected, verified static image contribution. Never execute plugin code.</summary>
     public static void ApplyStaticWallpaper(Item item)
     {
