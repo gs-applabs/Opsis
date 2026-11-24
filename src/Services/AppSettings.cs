@@ -191,6 +191,11 @@ namespace MotionDesk.Services
         public string HotCornerTopRight { get; set; } = "None";
         public string HotCornerBottomLeft { get; set; } = "None";
         public string HotCornerBottomRight { get; set; } = "None";
+        // P1 user-defined activation sensitivity, clamped by the runtime to safe ranges.
+        public int HotCornerDwellMilliseconds { get; set; } = 700;
+        public int HotCornerEdgePixels { get; set; } = 5;
+        public bool HotCornersPauseOnFullscreen { get; set; } = true;
+
         // Keep the user's original Windows mouse trails value for a genuine restore.
         public int? MouseTrailsOriginalCount { get; set; }
 
