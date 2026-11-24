@@ -2898,6 +2898,11 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                     try { DesktopEffects.OpenMouseSettings(); }
                     catch (Exception ex) { MessageBox.Show(this, ex.Message, "Opsis — Mouse", MessageBoxButtons.OK, MessageBoxIcon.Error); }
                 }),
+                (LocalizationManager.CurrentLanguage == "el" ? "Προεπισκόπηση screensaver" : "Preview screen saver", (_, _) =>
+                {
+                    try { DesktopEffects.PreviewSystemScreenSaver(); }
+                    catch (Exception ex) { MessageBox.Show(this, ex.Message, "Opsis — Screen saver", MessageBoxButtons.OK, MessageBoxIcon.Information); }
+                }),
                 (LocalizationManager.CurrentLanguage == "el" ? "Προφύλαξη οθόνης" : "Screen saver settings", (_, _) =>
                 {
                     try { DesktopEffects.OpenScreenSaverSettings(); }
