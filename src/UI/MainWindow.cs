@@ -2932,6 +2932,51 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
             CornerOption(LocalizationManager.CurrentLanguage == "el" ? "Κάτω δεξιά" : "Bottom right",
                 x => x.HotCornerBottomRight, (x,v) => x.HotCornerBottomRight = v);
 
+            // ---------- P1 Hot Corner activation options ----------
+            var sensitivityCard = AddCardSection(panel, LocalizationManager.CurrentLanguage == "el"
+                ? "P1 — Ευαισθησία Hot Corners" : "P1 — Hot Corner sensitivity");
+            AddText(sensitivityCard, LocalizationManager.CurrentLanguage == "el"
+                ? "Χρόνος παραμονής και μέγεθος ενεργής περιοχής. Η προεπιλογή αποφεύγει τυχαίες ενεργοποιήσεις."
+                : "Adjust dwell time and activation area; defaults help avoid accidental triggers.");
+            void AddCornerParameter(string title, int[] values, Func<AppSettings, int> read, Action<AppSettings, int> write, string suffix)
+            {
+                var row = new FlowLayoutPanel { Width = 700, Height = 40, WrapContents = false };
+                row.Controls.Add(new Label { Text = title, Width = 245, Height = 27,
+                    TextAlign = ContentAlignment.MiddleLeft, ForeColor = UiTheme.TextPrimary });
+                var picker = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 170 };
+                foreach (var value in values) picker.Items.Add(value + suffix);
+                var ix = Array.IndexOf(values, read(AppSettings.Load()));
+                picker.SelectedIndex = ix < 0 ? 0 : ix;
+                picker.SelectedIndexChanged += (_, _) =>
+                {
+                    if (picker.SelectedIndex < 0) return;
+                    var settings = AppSettings.Load();
+                    write(settings, values[picker.SelectedIndex]);
+                    settings.Save();
+                };
+                row.Controls.Add(picker);
+                sensitivityCard.Controls.Add(row);
+            }
+            AddCornerParameter(LocalizationManager.CurrentLanguage == "el" ? "Χρόνος παραμονής" : "Activation dwell",
+                new[] { 300, 500, 700, 1000, 1500, 2000, 2500 },
+                s => s.HotCornerDwellMilliseconds, (s,v) => s.HotCornerDwellMilliseconds = v, " ms");
+            AddCornerParameter(LocalizationManager.CurrentLanguage == "el" ? "Ενεργή περιοχή" : "Activation edge size",
+                new[] { 2, 3, 5, 8, 12, 16, 20 },
+                s => s.HotCornerEdgePixels, (s,v) => s.HotCornerEdgePixels = v, " px");
+            var fullscreenToggle = new CheckBox
+            {
+                Text = LocalizationManager.CurrentLanguage == "el" ? "Παύση σε εφαρμογές πλήρους οθόνης" : "Pause when fullscreen apps are active",
+                Checked = AppSettings.Load().HotCornersPauseOnFullscreen,
+                AutoSize = true, ForeColor = UiTheme.TextPrimary, Margin = new Padding(8)
+            };
+            fullscreenToggle.CheckedChanged += (_, _) =>
+            {
+                var settings = AppSettings.Load();
+                settings.HotCornersPauseOnFullscreen = fullscreenToggle.Checked;
+                settings.Save();
+            };
+            sensitivityCard.Controls.Add(fullscreenToggle);
+
             // ---------- P0 Native Mouse Effects and Screen Saver ----------
             var effectsCard = AddCardSection(panel, LocalizationManager.CurrentLanguage == "el"
                 ? "Εφέ ποντικιού και προφύλαξη οθόνης" : "Mouse effects and screen saver");
