@@ -2710,6 +2710,227 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                 }
             }));
 
+            // ---------- P0: Explorer View Profiles ----------
+            var explorerCard = AddCardSection(panel,
+                LocalizationManager.CurrentLanguage == "el" ? "Explorer — Προφίλ προβολής" : "Explorer — View profiles");
+            AddText(explorerCard, LocalizationManager.CurrentLanguage == "el"
+                ? "Προφίλ παραγωγικότητας: εμφανίζει επεκτάσεις και κρυφά αρχεία, ενεργοποιεί συμπαγή προβολή και ανοίγει στην επιλογή Αυτός ο υπολογιστής. Αποθηκεύεται αντίγραφο των προηγούμενων ρυθμίσεων πριν την πρώτη αλλαγή. Ορισμένες αλλαγές εφαρμόζονται στο επόμενο παράθυρο Explorer."
+                : "Productivity profile: shows extensions and hidden files, uses compact view and opens This PC. Original settings are backed up before the first change. Some options apply to newly opened Explorer windows.");
+            AddButtonGrid(explorerCard,
+                (LocalizationManager.CurrentLanguage == "el" ? "Εφαρμογή προφίλ" : "Apply profile", (_, _) =>
+                {
+                    if (MessageBox.Show(this,
+                        LocalizationManager.CurrentLanguage == "el"
+                            ? "Να εφαρμοστεί το προφίλ προβολής Explorer; Οι προηγούμενες ρυθμίσεις θα αποθηκευτούν."
+                            : "Apply the Explorer view profile? Previous settings will be backed up.",
+                        "Opsis — Explorer", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes) return;
+                    try
+                    {
+                        ExplorerViewProfiles.ApplyProductivity();
+                        _statusLabel.Text = LocalizationManager.CurrentLanguage == "el"
+                            ? "Το προφίλ Explorer εφαρμόστηκε." : "Explorer profile applied.";
+                    }
+                    catch (Exception ex) { MessageBox.Show(this, ex.Message, "Opsis — Explorer", MessageBoxButtons.OK, MessageBoxIcon.Error); }
+                }),
+                (LocalizationManager.CurrentLanguage == "el" ? "Επαναφορά προηγούμενων" : "Restore previous settings", (_, _) =>
+                {
+                    if (!ExplorerViewProfiles.HasBackup)
+                    {
+                        MessageBox.Show(this, LocalizationManager.CurrentLanguage == "el"
+                            ? "Δεν υπάρχει προηγούμενο αντίγραφο ρυθμίσεων." : "No previous settings backup exists.",
+                            "Opsis — Explorer", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        return;
+                    }
+                    if (MessageBox.Show(this, LocalizationManager.CurrentLanguage == "el"
+                        ? "Να επαναφερθούν οι αποθηκευμένες ρυθμίσεις Explorer;"
+                        : "Restore the saved Explorer settings?", "Opsis — Explorer",
+                        MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes) return;
+                    try
+                    {
+                        ExplorerViewProfiles.Restore();
+                        _statusLabel.Text = LocalizationManager.CurrentLanguage == "el"
+                            ? "Οι προηγούμενες ρυθμίσεις Explorer επανήλθαν." : "Previous Explorer settings restored.";
+                    }
+                    catch (Exception ex) { MessageBox.Show(this, ex.Message, "Opsis — Explorer", MessageBoxButtons.OK, MessageBoxIcon.Error); }
+                }));
+
+            // ---------- P0: Windows 11 Start & Taskbar ----------
+            var taskbarCard = AddCardSection(panel,
+                LocalizationManager.CurrentLanguage == "el" ? "Windows 11 — Start και Taskbar" : "Windows 11 — Start and Taskbar");
+            AddText(taskbarCard, LocalizationManager.CurrentLanguage == "el"
+                ? "Προαιρετικά προφίλ Taskbar χωρίς αντικατάσταση του Explorer. Το πρώτο πάτημα αποθηκεύει τις πραγματικές προηγούμενες ρυθμίσεις. Ορισμένες αλλαγές εμφανίζονται μετά από νέα σύνδεση στα Windows. Οι επιλογές προφίλ υποστηρίζονται μόνο στα Windows 11."
+                : "Optional Taskbar presets without replacing Explorer. The first application backs up your actual existing settings. Some changes may need a new Windows sign-in. Presets support Windows 11 only.");
+            AddButtonGrid(taskbarCard,
+                (LocalizationManager.CurrentLanguage == "el" ? "Λιτό Taskbar" : "Minimal Taskbar", (_, _) =>
+                {
+                    if (!TaskbarViewProfiles.IsWindows11)
+                    {
+                        MessageBox.Show(this, "Windows 11 required.", "Opsis — Taskbar", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        return;
+                    }
+                    if (MessageBox.Show(this, LocalizationManager.CurrentLanguage == "el"
+                        ? "Εφαρμογή: αριστερή στοίχιση, χωρίς Widgets / Task View / Search; να συνεχίσω;"
+                        : "Apply left alignment and hide Widgets, Task View and Search?",
+                        "Opsis — Taskbar", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes) return;
+                    try { TaskbarViewProfiles.ApplyMinimal(); _statusLabel.Text = "Opsis — Taskbar profile applied."; }
+                    catch (Exception ex) { MessageBox.Show(this, ex.Message, "Opsis — Taskbar", MessageBoxButtons.OK, MessageBoxIcon.Error); }
+                }),
+                (LocalizationManager.CurrentLanguage == "el" ? "Τυπικό Taskbar" : "Standard Taskbar", (_, _) =>
+                {
+                    if (!TaskbarViewProfiles.IsWindows11)
+                    {
+                        MessageBox.Show(this, "Windows 11 required.", "Opsis — Taskbar", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        return;
+                    }
+                    if (MessageBox.Show(this, LocalizationManager.CurrentLanguage == "el"
+                        ? "Εφαρμογή: κεντρική στοίχιση, Widgets / Task View / Search ενεργά; να συνεχίσω;"
+                        : "Apply centered alignment with Widgets, Task View and Search enabled?",
+                        "Opsis — Taskbar", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes) return;
+                    try { TaskbarViewProfiles.ApplyStandard(); _statusLabel.Text = "Opsis — Taskbar profile applied."; }
+                    catch (Exception ex) { MessageBox.Show(this, ex.Message, "Opsis — Taskbar", MessageBoxButtons.OK, MessageBoxIcon.Error); }
+                }),
+                (LocalizationManager.CurrentLanguage == "el" ? "Επαναφορά Taskbar" : "Restore Taskbar", (_, _) =>
+                {
+                    if (!TaskbarViewProfiles.HasBackup)
+                    {
+                        MessageBox.Show(this, LocalizationManager.CurrentLanguage == "el" ? "Δεν υπάρχει αντίγραφο Taskbar." : "No Taskbar backup exists.",
+                            "Opsis — Taskbar", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        return;
+                    }
+                    if (MessageBox.Show(this, LocalizationManager.CurrentLanguage == "el"
+                        ? "Επαναφορά των ρυθμίσεων Taskbar πριν από το Opsis;"
+                        : "Restore original Taskbar settings from before Opsis?",
+                        "Opsis — Taskbar", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes) return;
+                    try { TaskbarViewProfiles.Restore(); _statusLabel.Text = "Opsis — Taskbar settings restored."; }
+                    catch (Exception ex) { MessageBox.Show(this, ex.Message, "Opsis — Taskbar", MessageBoxButtons.OK, MessageBoxIcon.Error); }
+                }),
+                (LocalizationManager.CurrentLanguage == "el" ? "Ρυθμίσεις Start" : "Start settings", (_, _) =>
+                {
+                    try { TaskbarViewProfiles.OpenWindowsStartSettings(); }
+                    catch (Exception ex) { MessageBox.Show(this, ex.Message, "Opsis — Start", MessageBoxButtons.OK, MessageBoxIcon.Error); }
+                }),
+                (LocalizationManager.CurrentLanguage == "el" ? "Ρυθμίσεις Taskbar" : "Taskbar settings", (_, _) =>
+                {
+                    try { TaskbarViewProfiles.OpenWindowsTaskbarSettings(); }
+                    catch (Exception ex) { MessageBox.Show(this, ex.Message, "Opsis — Taskbar", MessageBoxButtons.OK, MessageBoxIcon.Error); }
+                }));
+
+
+            // ---------- P0 Hot Corners ----------
+            var cornersCard = AddCardSection(panel, LocalizationManager.CurrentLanguage == "el" ? "Hot Corners — Γωνίες οθόνης" : "Hot Corners");
+            AddText(cornersCard, LocalizationManager.CurrentLanguage == "el"
+                ? "Προαιρετικές ενέργειες μετά από παραμονή του δείκτη για 0,7 δευτερόλεπτα σε μία γωνία. Ισχύουν σε όλες τις οθόνες, χωρίς global hooks. Αρχικά ανενεργές."
+                : "Opt-in corner actions after holding the pointer at an edge for 0.7 seconds; works across monitors without global hooks. Off by default.");
+            var cornersSettings = AppSettings.Load();
+            var cornerToggle = new CheckBox
+            {
+                Text = LocalizationManager.CurrentLanguage == "el" ? "Ενεργοποίηση Hot Corners" : "Enable Hot Corners",
+                Checked = cornersSettings.HotCornersEnabled, AutoSize = true, ForeColor = UiTheme.TextPrimary,
+                Margin = new Padding(8)
+            };
+            cornerToggle.CheckedChanged += (_, _) =>
+            {
+                var settings = AppSettings.Load(); settings.HotCornersEnabled = cornerToggle.Checked; settings.Save();
+            };
+            cornersCard.Controls.Add(cornerToggle);
+            void CornerOption(string name, Func<AppSettings, string> current, Action<AppSettings, string> assign)
+            {
+                var line = new FlowLayoutPanel { Width = 690, Height = 42, FlowDirection = FlowDirection.LeftToRight, WrapContents = false };
+                line.Controls.Add(new Label { Text = name, Width = 190, Height = 28, TextAlign = ContentAlignment.MiddleLeft, ForeColor = UiTheme.TextPrimary });
+                var picker = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 260 };
+                var values = new[] { "None", "OpenOpsis", "ShowDesktop", "TaskView" };
+                picker.Items.AddRange(values);
+                picker.SelectedItem = values.Contains(current(cornersSettings)) ? current(cornersSettings) : "None";
+                picker.SelectedIndexChanged += (_, _) =>
+                {
+                    if (picker.SelectedItem is not string selected) return;
+                    var settings = AppSettings.Load(); assign(settings, selected); settings.Save();
+                };
+                line.Controls.Add(picker);
+                cornersCard.Controls.Add(line);
+            }
+            CornerOption(LocalizationManager.CurrentLanguage == "el" ? "Επάνω αριστερά" : "Top left",
+                x => x.HotCornerTopLeft, (x,v) => x.HotCornerTopLeft = v);
+            CornerOption(LocalizationManager.CurrentLanguage == "el" ? "Επάνω δεξιά" : "Top right",
+                x => x.HotCornerTopRight, (x,v) => x.HotCornerTopRight = v);
+            CornerOption(LocalizationManager.CurrentLanguage == "el" ? "Κάτω αριστερά" : "Bottom left",
+                x => x.HotCornerBottomLeft, (x,v) => x.HotCornerBottomLeft = v);
+            CornerOption(LocalizationManager.CurrentLanguage == "el" ? "Κάτω δεξιά" : "Bottom right",
+                x => x.HotCornerBottomRight, (x,v) => x.HotCornerBottomRight = v);
+
+            // ---------- P0 Native Mouse Effects and Screen Saver ----------
+            var effectsCard = AddCardSection(panel, LocalizationManager.CurrentLanguage == "el"
+                ? "Εφέ ποντικιού και προφύλαξη οθόνης" : "Mouse effects and screen saver");
+            AddText(effectsCard, LocalizationManager.CurrentLanguage == "el"
+                ? "Εφέ ίχνους δείκτη με τον εγγενή μηχανισμό Windows. Το Opsis αποθηκεύει την προηγούμενη ρύθμιση για επαναφορά. Η προφύλαξη οθόνης ρυθμίζεται από το επίσημο παράθυρο των Windows."
+                : "Native Windows cursor trails with a backup of the previous value. Screen saver uses the official Windows configuration panel.");
+            AddButtonGrid(effectsCard,
+                (LocalizationManager.CurrentLanguage == "el" ? "Ενεργοποίηση ίχνους" : "Enable pointer trails", (_, _) =>
+                {
+                    try
+                    {
+                        var settings = AppSettings.Load();
+                        if (!settings.MouseTrailsOriginalCount.HasValue)
+                        {
+                            settings.MouseTrailsOriginalCount = DesktopEffects.GetMouseTrails();
+                            settings.Save();
+                        }
+                        DesktopEffects.SetMouseTrails(4);
+                        _statusLabel.Text = "Opsis — pointer trails enabled.";
+                    }
+                    catch (Exception ex) { MessageBox.Show(this, ex.Message, "Opsis — Mouse", MessageBoxButtons.OK, MessageBoxIcon.Error); }
+                }),
+                (LocalizationManager.CurrentLanguage == "el" ? "Επαναφορά δείκτη" : "Restore pointer trails", (_, _) =>
+                {
+                    try
+                    {
+                        var settings = AppSettings.Load();
+                        if (!settings.MouseTrailsOriginalCount.HasValue) return;
+                        DesktopEffects.SetMouseTrails(settings.MouseTrailsOriginalCount.Value);
+                        settings.MouseTrailsOriginalCount = null;
+                        settings.Save();
+                        _statusLabel.Text = "Opsis — pointer trails restored.";
+                    }
+                    catch (Exception ex) { MessageBox.Show(this, ex.Message, "Opsis — Mouse", MessageBoxButtons.OK, MessageBoxIcon.Error); }
+                }),
+                (LocalizationManager.CurrentLanguage == "el" ? "Ρυθμίσεις ποντικιού" : "Mouse settings", (_, _) =>
+                {
+                    try { DesktopEffects.OpenMouseSettings(); }
+                    catch (Exception ex) { MessageBox.Show(this, ex.Message, "Opsis — Mouse", MessageBoxButtons.OK, MessageBoxIcon.Error); }
+                }),
+                (LocalizationManager.CurrentLanguage == "el" ? "Προεπισκόπηση screensaver" : "Preview screen saver", (_, _) =>
+                {
+                    try { DesktopEffects.PreviewSystemScreenSaver(); }
+                    catch (Exception ex) { MessageBox.Show(this, ex.Message, "Opsis — Screen saver", MessageBoxButtons.OK, MessageBoxIcon.Information); }
+                }),
+                (LocalizationManager.CurrentLanguage == "el" ? "Προφύλαξη οθόνης" : "Screen saver settings", (_, _) =>
+                {
+                    try { DesktopEffects.OpenScreenSaverSettings(); }
+                    catch (Exception ex) { MessageBox.Show(this, ex.Message, "Opsis — Screen saver", MessageBoxButtons.OK, MessageBoxIcon.Error); }
+                }));
+
+            // ---------- P0 Appearance preview (read-only) ----------
+            var previewCard = AddCardSection(panel, LocalizationManager.CurrentLanguage == "el"
+                ? "Προεπισκόπηση προφίλ εμφάνισης" : "Appearance profile preview");
+            AddText(previewCard, LocalizationManager.CurrentLanguage == "el"
+                ? "Προεπισκόπηση των αλλαγών πριν εφαρμοστούν, χωρίς τροποποίηση συστήματος."
+                : "Read-only summary of proposed changes before applying anything.");
+            AddButtonGrid(previewCard,
+                (LocalizationManager.CurrentLanguage == "el" ? "Προεπισκόπηση Explorer" : "Preview Explorer", (_, _) =>
+                {
+                    MessageBox.Show(this, LocalizationManager.CurrentLanguage == "el"
+                        ? "Προφίλ Explorer:\n• Επεκτάσεις αρχείων: ορατές\n• Κρυφά αρχεία: ορατά\n• Συμπαγής προβολή: ενεργή\n• Αρχική προβολή: Αυτός ο υπολογιστής\n\nΔεν έγινε καμία αλλαγή."
+                        : "Explorer preview:\n• File extensions: visible\n• Hidden files: visible\n• Compact view: enabled\n• Start view: This PC\n\nNo settings were modified.",
+                        "Opsis — Preview", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }),
+                (LocalizationManager.CurrentLanguage == "el" ? "Προεπισκόπηση Taskbar" : "Preview Taskbar", (_, _) =>
+                {
+                    MessageBox.Show(this, LocalizationManager.CurrentLanguage == "el"
+                        ? "Λιτό: αριστερή στοίχιση, απόκρυψη Search / Widgets / Task View.\nΤυπικό: κεντρική στοίχιση, εμφάνιση Search / Widgets / Task View.\n\nΔεν έγινε καμία αλλαγή."
+                        : "Minimal: left alignment; Search / Widgets / Task View hidden.\nStandard: center alignment; Search / Widgets / Task View shown.\n\nNo settings were modified.",
+                        "Opsis — Preview", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }));
+
             // ---------- DeskCursors ----------
             var cursorCard = AddCardSection(panel, LocalizationManager.T("Personalization.SectionDeskCursors"));
             AddText(cursorCard, LocalizationManager.T("Personalization.DeskCursorsIntro"));

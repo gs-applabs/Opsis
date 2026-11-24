@@ -24,6 +24,7 @@ namespace MotionDesk.Widgets
         // Ξεχωριστό instance από αυτό που ήδη χρησιμοποιεί το wallpaper (WallpaperWindow) — αυτό εδώ
         // πρέπει να ζει όσο ζει η ίδια η εφαρμογή, ανεξάρτητα από το αν το wallpaper είναι ενεργό.
         private readonly ExplorerRestartWatcher _taskbarWatcher = new();
+        private readonly HotCornersService _hotCorners;
 
         public static event Action? ExitRequested;
         public static void RequestExit() => ExitRequested?.Invoke();
@@ -34,6 +35,7 @@ namespace MotionDesk.Widgets
         public TrayApplicationContext(string? desktopAction = null)
         {
             OpenPage = p => { try { ShowMainWindow(p); } catch (Exception) { } };
+            _hotCorners = new HotCornersService(() => ShowMainWindow("Personalization"));
             // Safe mode (v2.0 handoff, Φάση 1 §S): αν ενεργό, παραλείπονται plugins/wallpaper/
             // "Last Session" παρακάτω — μόνο το βασικό UI. Ο μετρητής crash μηδενίζεται μετά από
             // 30s επιτυχούς λειτουργίας (one-shot timer πιο κάτω), όχι αμέσως, ώστε ένα crash λίγο
@@ -189,6 +191,7 @@ namespace MotionDesk.Widgets
             if (!safeMode && AppSettings.Load().QuickHideDoubleClickEnabled) DesktopIconVisibilityEngine.Instance.Start();
             else DesktopIconVisibilityEngine.Instance.RestoreIfHidden();
             AppActivity.Start();
+            if (!safeMode) _hotCorners.Start();
             DesktopToolbar.RefreshSettings();
             ReplacementTaskbar.RefreshSettings();
             if (!safeMode) VirtualWorkspaces.Start();
@@ -604,6 +607,7 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
             PluginHost.Instance.StopAll();
             try { MotionDesk.Appearance.AppearanceService.Instance.Stop(); } catch (Exception) { }   // taskbar look and window effects always go back to Windows
             _hotkeys.Dispose();
+            _hotCorners.Dispose();
             _taskbarWatcher.Dispose();
             try { _nativeContainers?.Dispose(); } catch { }
             try { StudioMusic.Stop(); } catch { }
