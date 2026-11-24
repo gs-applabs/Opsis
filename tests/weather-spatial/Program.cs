@@ -70,6 +70,43 @@ internal static class Program
                     var cleared = await core.ExecuteScriptAsync($"OpsisWeatherSpatial.setMode({JsonSerializer.Serialize(mode)}); !document.getElementById('opsis-weather-spatial')");
                     if (cleared != "true") throw new Exception("Unexpected GL layer in " + mode);
                 }
+                form.ClientSize = new Size(1280, 720);
+                foreach (var (id, time, weather) in new[] {
+                    ("patras", "Dusk", "Clear"), ("whitetower", "Night", "Clear"),
+                    ("parthenon", "Day", "PartlyCloudy") })
+                {
+                    var setup = await core.ExecuteScriptAsync($$"""
+                        (() => {
+                          const c=document.getElementById('test-frame');
+                          c.width=innerWidth; c.height=innerHeight;
+                          WeatherWallpaper.resize(c.width,c.height);
+                          OpsisWeatherSpatial.setMode('2.5D');
+                          WeatherWallpaper.setConfig({realistic:true,landmarks:true,reducedMotion:false,
+                            landmarkId:'{{id}}',spatialMode:'2.5D',timeSim:'{{time}}',weatherSim:'{{weather}}'});
+                          WeatherWallpaper.draw(c.getContext('2d'),.033,{id:'High'});
+                          return true;
+                        })()
+                        """);
+                    if (setup != "true") throw new Exception("Cannot configure 2.5D " + id);
+                    var ready = false;
+                    for (int attempt=0; attempt<60 && !ready; attempt++)
+                    {
+                        await Task.Delay(150);
+                        ready = await core.ExecuteScriptAsync($"WeatherWallpaper._state().readyPhoto === '{id}'") == "true";
+                    }
+                    if (!ready) throw new Exception("Missing 2.5D photograph for " + id);
+                    var drawn = await core.ExecuteScriptAsync("""
+                        (() => {
+                          const ctx=document.getElementById('test-frame').getContext('2d');
+                          for(let i=0;i<24;i++) WeatherWallpaper.draw(ctx,.1,{id:'High'});
+                          return !document.getElementById('opsis-weather-spatial');
+                        })()
+                        """);
+                    if (drawn != "true") throw new Exception("2.5D scene isolation failed");
+                    await Task.Delay(250);
+                    using var png = File.Create(Path.Combine(results.FullName, $"25d-{id}-{time}.png"));
+                    await core.CapturePreviewAsync(CoreWebView2CapturePreviewImageFormat.Png, png);
+                }
                 status = 0;
             }
             catch (Exception error) { Console.Error.WriteLine(error); }

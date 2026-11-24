@@ -953,6 +953,8 @@ function drawScenePhoto(c2, sky, graded) {
         o.globalCompositeOperation = 'source-over'; photoState.key = key;
     }
     c2.drawImage(photoState.canvas, x, y, w, h);
+    if (cfg.spatialMode === '2.5D' && !cfg.reducedMotion && tierLevel() > 0)
+        atmosphere?.drawPhotoWater(c2, photoState.id, photoState.canvas, x, y, w, h, celest, S, animTime, tierLevel() > 1);
     if (cfg.skylinePreview && photoState.skyMask)
         window.OpsisSkyMask?.outline(c2, photoState.skyMask, { x, y, width: w, height: h });
     if (night > 0.05 && photoState.lightsReady) { c2.save(); c2.globalAlpha = Math.min(1, night * 0.95); c2.globalCompositeOperation = 'lighter'; c2.drawImage(photoState.lights, x, y, w, h); c2.restore(); }
@@ -1674,7 +1676,7 @@ window.WeatherWallpaper = {
             stale: !!data?.stale };
     },
     // test helpers (headless screenshots)
-    _state: () => ({ S, TGT, bf: BFN, t: localMinutes(), sun: sunTimes(offsetMinutes()) }),
+    _state: () => ({ S, TGT, readyPhoto: photoState.ready ? photoState.id : null, bf: BFN, t: localMinutes(), sun: sunTimes(offsetMinutes()) }),
     _bolt: () => { nextBoltIn = 0; },
     _warm: (secs, ctx2, profile) => { for (let i = 0; i < secs * 30; i++) draw(ctx2, 1 / 30, profile); },
 };
