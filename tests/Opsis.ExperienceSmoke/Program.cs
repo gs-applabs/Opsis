@@ -215,6 +215,18 @@ try
     Check(rejected, "Rainmeter unknown executable meter property refused");
 
 
+    var combinedMods = OpsisModCompatibility.Evaluate(new[]
+    {
+        "StartAllBack", "Windhawk", "Rainmeter", "A Different Product", "StartAllBack"
+    });
+    Check(combinedMods.Count == 3, "shell mod advisory de-duplicates installed products");
+    Check(combinedMods.Any(x => x.Product == "StartAllBack" && x.Risk == "High"),
+        "competing Start/Taskbar shell replacement requires review");
+    Check(combinedMods.Any(x => x.Product == "Rainmeter" && x.Risk == "Low"),
+        "Rainmeter widget coexistence distinguished from shell injection");
+    Check(OpsisModCompatibility.Evaluate(new[] { "Notepad" }).Count == 0,
+        "unknown applications are not classified as unsafe");
+
     var taskbar = OpsisTaskbarDesigner.Read();
     Check(taskbar.Style == "Classic", "new Opsis taskbar defaults to non-invasive Classic visual style");
     taskbar.Style = "Glass";
@@ -226,6 +238,17 @@ try
     Check(OpsisTaskbarDesigner.Read().ButtonWidth == 155 &&
           OpsisTaskbarDesigner.Read().Alignment == "Center",
         "taskbar visual profile round-trips without writing Windows registry");
+    taskbar.ActiveButtonAnimation = true;
+    taskbar.AnimationIntervalMs = 240;
+    OpsisTaskbarDesigner.Save(taskbar);
+    Check(OpsisTaskbarDesigner.Read().ActiveButtonAnimation &&
+          OpsisTaskbarDesigner.Read().AnimationIntervalMs == 240,
+        "taskbar animated active button opt-in settings persist");
+    rejected = false;
+    try { OpsisTaskbarDesigner.Validate(new OpsisTaskbarDesigner.Profile { AnimationIntervalMs = 10 }); }
+    catch (InvalidDataException) { rejected = true; }
+    Check(rejected, "taskbar animation rejects extremely fast CPU-intensive polling");
+
     Check(OpsisTaskbarDesigner.ButtonHeight(taskbar, false, 44) == 38,
         "taskbar designer calculates horizontal button geometry");
     rejected = false;
