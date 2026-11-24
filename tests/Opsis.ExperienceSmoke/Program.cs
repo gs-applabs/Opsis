@@ -104,6 +104,37 @@ try
     }));
     Check(OpsisEcosystemGallery.Discover().Any(x => x.PluginId == "example.plugin"), "plugin wallpaper contribution discovered");
 
+    // Image-to-accent extraction must be deterministic and never modify Windows colors.
+    var imagePath = Path.Combine(folder, "test-accent.png");
+    using (var bmp = new System.Drawing.Bitmap(30, 30))
+    {
+        using var graphics = System.Drawing.Graphics.FromImage(bmp);
+        graphics.Clear(System.Drawing.Color.FromArgb(25, 170, 205));
+        bmp.Save(imagePath, System.Drawing.Imaging.ImageFormat.Png);
+    }
+    var computed = WallpaperAccentEngine.Extract(imagePath);
+    Check(computed.B > computed.R, "wallpaper accent extracts representative blue color");
+    Check(WallpaperAccentEngine.ToHex(computed).Length == 7, "accent encoded as validated hex");
+    var appSettings = AppSettings.Load();
+    appSettings.WallpaperAccentEnabled = true;
+    appSettings.WallpaperAccentHex = WallpaperAccentEngine.ToHex(computed);
+    appSettings.Save();
+    MotionDesk.UI.ThemeManager.RefreshOpsisAccent();
+    Check(MotionDesk.UI.ThemeManager.Current.AccentCyan.ToArgb() == computed.ToArgb(),
+        "unified Opsis palette uses wallpaper-derived accent");
+    WallpaperAccentEngine.Disable();
+    Check(!AppSettings.Load().WallpaperAccentEnabled, "dynamic accent reversible");
+
+    // Registry context menu writes only to HKCU-owned keys; CI runner uses an ephemeral account.
+    var fakeOpsis = Path.Combine(folder, "Opsis.exe");
+    File.WriteAllBytes(fakeOpsis, new byte[] {77, 90}); // file name check; never execute
+    try
+    {
+        OpsisContextMenuStudio.Enable(fakeOpsis);
+        Check(OpsisContextMenuStudio.IsEnabled(), "Opsis owned context menu installed");
+    }
+    finally { OpsisContextMenuStudio.Disable(); }
+    Check(!OpsisContextMenuStudio.IsEnabled(), "Opsis context menu removed safely");
     var before = File.ReadAllText(Path.Combine(folder, "module-core.json"));
     var snapshot = OpsisRecoveryHub.Snapshot("Integration test");
     Check(snapshot.Files.Any(x => x.RelativePath == "module-core.json"), "recovery saved modules");
