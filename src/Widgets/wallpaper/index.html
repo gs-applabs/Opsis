@@ -651,13 +651,22 @@ function updateWeatherInfo() {
     const box = document.getElementById('wxInfo');
     if (!box) return;
     if (!cfg.weatherInfo || !window.WeatherWallpaper) { box.style.display = 'none'; return; }   // το cfg.weatherInfo ισχύει ήδη ανά mode (βλ. C#)
-    const i = WeatherWallpaper.info();
+    const ancientAthens = cfg.mode === 'Ancient Athens';
+    const weatherInfo = WeatherWallpaper.info();
+    // Do not inject Athens observations into the regular Weather renderer:
+    // returning to the user's city must never momentarily show Athens data.
+    const i = ancientAthens
+        ? { ...weatherInfo, temp: ancientAthensWeather?.ok ? ancientAthensWeather.temp : null,
+            code: ancientAthensWeather?.ok ? ancientAthensWeather.code : null,
+            windKmh: ancientAthensWeather?.ok ? Math.round(ancientAthensWeather.wind || 0) : null,
+            source: ancientAthensWeather?.source, observedAt: ancientAthensWeather?.observedAt,
+            fetchedAt: ancientAthensWeather?.fetchedAt, stale: !!ancientAthensWeather?.stale }
+        : weatherInfo;
     // 1.7.8: 14 γλώσσες (ίδιες με το GearWin) - το cfg.lang είναι ο κωδικός της εφαρμογής (el/en/de/fr/...).
     const LOCALES = { el: 'el-GR', en: 'en-US', de: 'de-DE', fr: 'fr-FR', es: 'es-ES', ko: 'ko-KR', zh: 'zh-CN', it: 'it-IT',
                       ru: 'ru-RU', ja: 'ja-JP', pt: 'pt-PT', tr: 'tr-TR', ar: 'ar-SA', hi: 'hi-IN' };
     const lang = LOCALES[cfg.lang] || 'en-US';
     document.documentElement.lang = LOCALES[cfg.lang] ? cfg.lang : 'en';   // σωστά κεφαλαία στα ελληνικά (χωρίς τόνους) στο text-transform
-    const ancientAthens = cfg.mode === 'Ancient Athens';
     const t = ancientAthens ? new Date() : new Date(2000, 0, 1, i.h, i.m);
     document.getElementById('wxTime').textContent = t.toLocaleTimeString(lang, {
         hour: '2-digit', minute: '2-digit', hour12: cfg.lang === 'el' ? false : undefined,
@@ -727,6 +736,7 @@ function updateWeatherInfo() {
 }
 
 let weatherTimer = null;
+let ancientAthensWeather = null; // independent Athens cache for this host instance
 let rotationTimer = null; // εναλλαγή βίντεο ανά N λεπτά (Video mode)
 let weatherPollHandles = [];
 let weatherRevision = 0;
@@ -737,8 +747,10 @@ async function pollWeatherOnce(revision) {
         const data = JSON.parse(await (cfg.mode === 'Ancient Athens'
             ? b.GetAncientAthensWeatherJson() : b.GetWeatherJson()));
         if (revision !== weatherRevision || isPaused) return false;
-        WeatherWallpaper.setWeather(data);
-        if (cfg.mode === 'Ancient Athens') OpsisAncientAthens.setWeather(data);
+        if (cfg.mode === 'Ancient Athens') {
+            if (data.ok === true) ancientAthensWeather = data;
+            OpsisAncientAthens.setWeather(data);
+        } else WeatherWallpaper.setWeather(data);
         updateWeatherInfo();
         return data.ok === true;
     } catch (e) { return false; }   // κρατάει τα προηγούμενα δεδομένα
