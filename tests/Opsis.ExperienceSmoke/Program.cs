@@ -264,6 +264,22 @@ try
     catch (ArgumentOutOfRangeException) { rejected = true; }
     Check(rejected, "Start Studio refuses unsupported third-party shell mode");
 
+    var screensaverProfile = OpsisScreensaverStudio.Read();
+    Check(screensaverProfile.Mode == "Clock", "screensaver first-run mode is safe clock-only");
+    screensaverProfile.DimPercent = 35;
+    OpsisScreensaverStudio.Save(screensaverProfile);
+    Check(OpsisScreensaverStudio.Read().DimPercent == 35,
+        "native screensaver scene profile persists");
+    rejected = false;
+    try { OpsisScreensaverStudio.Validate(new OpsisScreensaverStudio.Profile { Mode = "ExternalCode" }); }
+    catch (InvalidDataException) { rejected = true; }
+    Check(rejected, "screensaver rejects executable/unknown modes");
+    rejected = false;
+    try { OpsisScreensaverStudio.Validate(new OpsisScreensaverStudio.Profile
+        { Mode = "StaticImage", ImagePath = "../evil.exe" }); }
+    catch (InvalidDataException) { rejected = true; }
+    Check(rejected, "screensaver rejects executable images and directory traversal");
+
     var widget = new OpsisWidgetDesigner.Layout {
         Name = "Clock Demo", Binding = "Clock", AccentHex = "#00D2FF", FontSize = 30
     };
@@ -336,6 +352,7 @@ try
     Check(snapshot.Files.Any(x => x.RelativePath.StartsWith("weather-scenes/", StringComparison.Ordinal)), "recovery saved scenes");
     Check(snapshot.Files.Any(x => x.RelativePath.StartsWith("widget-designs/", StringComparison.Ordinal)), "recovery saved widget designs");
     Check(snapshot.Files.Any(x => x.RelativePath == "taskbar-designer.json"), "recovery includes Opsis taskbar designer");
+    Check(snapshot.Files.Any(x => x.RelativePath == "screensaver-studio.json"), "recovery includes screensaver scene settings");
     Check(snapshot.Files.Any(x => x.RelativePath == "start-studio.json"), "recovery includes Start Studio presentation preferences");
     File.WriteAllText(Path.Combine(folder, "module-core.json"), "{}");
     OpsisRecoveryHub.RestoreOwnedSettings(snapshot.Id);
@@ -377,12 +394,13 @@ try
             using var taskbarDesigner = new MotionDesk.UI.OpsisTaskbarDesignerForm();
             using var explorerDesigner = new MotionDesk.UI.OpsisExplorerStudioForm();
             using var startStudio = new MotionDesk.UI.StartStudioForm();
+            using var screensaver = new MotionDesk.UI.OpsisScreensaverPreviewForm(OpsisScreensaverStudio.Read());
             using var window = new MotionDesk.UI.OpsisCustomWidgetWindow(widgetLayout);
             var editorHandle = editor.Handle;
             var widgetHandle = window.Handle;
             actualWindowsCreated = editorHandle != IntPtr.Zero && widgetHandle != IntPtr.Zero &&
                 taskbarDesigner.Handle != IntPtr.Zero && explorerDesigner.Handle != IntPtr.Zero &&
-                startStudio.Handle != IntPtr.Zero;
+                startStudio.Handle != IntPtr.Zero && screensaver.Handle != IntPtr.Zero;
         }
         catch (Exception ex) { uiFailure = ex; }
     })
