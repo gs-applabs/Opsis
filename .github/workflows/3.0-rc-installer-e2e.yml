@@ -71,6 +71,25 @@ jobs:
           $p = Start-Process $uninstall[0].FullName -ArgumentList '/VERYSILENT /SUPPRESSMSGBOXES /NORESTART' -Wait -PassThru
           if ($p.ExitCode -ne 0) { throw "Uninstall failed: $($p.ExitCode)" }
           if (Test-Path (Join-Path $target 'Opsis.exe')) { throw 'Uninstall left executable' }
+      - name: Package tested RC installer (not a production release)
+        if: success()
+        run: |
+          $exe = Get-Item $env:OPSIS_RC_INSTALLER
+          $hash = (Get-FileHash -LiteralPath $exe.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+          "$hash  $($exe.Name)" | Set-Content -Encoding ascii ($exe.FullName + '.sha256')
+          [pscustomobject]@{ version='3.0.0.3200'; channel='RC'; commit=(git rev-parse HEAD); sourceHead='${{ github.event.pull_request.head.sha || github.sha }}'; runner='${{ matrix.os }}'; install='pass'; reinstall='pass'; uninstall='pass'; sha256=$hash; file=$exe.Name; bytes=$exe.Length } |
+            ConvertTo-Json | Set-Content Output/rc-installer-build.json
+      - name: Upload tested RC installer and checksum
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Opsis-3.0.0.3200-RC-Installer-${{ matrix.os }}
+          path: |
+            Output/OpsisSetup-3.0.0.3200.exe
+            Output/OpsisSetup-3.0.0.3200.exe.sha256
+            Output/rc-installer-build.json
+          if-no-files-found: error
+          retention-days: 30
       - name: Upload diagnostic checksums only, not an unapproved release
         if: always()
         uses: actions/upload-artifact@v4
