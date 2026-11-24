@@ -70,6 +70,9 @@ public sealed class OpsisExplorerStudioForm : Form
             catch (Exception ex) { MessageBox.Show(this, ex.Message, Text); }
         };
         options.Controls.Add(tabs);
+        var nativeEditor = new Button { Text = "Native Explorer options (Windhawk)", AutoSize = true };
+        nativeEditor.Click += (_, _) => { using var dialog = new NativeShellThemeForm(); dialog.ShowDialog(this); };
+        options.Controls.Add(nativeEditor);
         options.Controls.Add(new Label { AutoSize = true, MaximumSize = new Size(490, 0),
             Text = "Windows 11 tabs: Ctrl+T new tab · Ctrl+W close · Ctrl+Tab next. Native tab styling is not available here." });
         Controls.Add(options);

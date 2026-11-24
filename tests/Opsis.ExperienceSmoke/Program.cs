@@ -331,6 +331,9 @@ try
 
 
     const string supportedRainmeter = "[Rainmeter]\nUpdate=1000\n[MeasureClock]\nMeasure=Time\nFormat=%H:%M\n[MeterClock]\nMeter=String\nMeasureName=MeasureClock\nFontColor=64,160,224\nFontSize=28\nW=350\nH=160";
+    var cpuRain = OpsisRainmeterSkinImporter.PreviewIni("[CPU]\nMeasure=CPU\nProcessor=0\n[Meter]\nMeter=String\nMeasureName=CPU", "CPU");
+    var ramRain = OpsisRainmeterSkinImporter.PreviewIni("[RAM]\nMeasure=PhysicalMemory\n[Meter]\nMeter=String\nMeasureName=RAM", "RAM");
+    Check(cpuRain.Binding == "CPU" && ramRain.Binding == "RAM", "Rainmeter CPU and used physical memory mapped to existing percentage widgets");
     var rainPreview = OpsisRainmeterSkinImporter.PreviewIni(supportedRainmeter, "Converted Clock");
     Check(rainPreview.Binding == "Clock" && rainPreview.AccentHex == "#40A0E0",
         "Rainmeter built-in Time/clock INI mapped to native Opsis widget");
@@ -440,6 +443,10 @@ try
         "native shell provider only accepts known theme choices");
     Check(NativeShellThemeBridge.ParseTheme("{\"schemaVersion\":1,\"success\":true,\"data\":{\"id\":\"windows-11-notification-center-styler\",\"key\":\"theme\",\"value\":\"LiquidGlass\"}}",
         "windows-11-notification-center-styler") == "LiquidGlass", "native theme CLI schema validated without starting third party executable");
+    Check(NativeShellThemeBridge.IsKnownTheme("taskbar-volume-control", "classic") &&
+        NativeShellThemeBridge.IsKnownTheme("confirm-closing-multiple-explorer-tabs", "cancel") &&
+        NativeShellThemeBridge.ParseTheme("{\"schemaVersion\":1,\"success\":true,\"data\":{\"id\":\"explorer-command-bar\",\"key\":\"showSettingsItem\",\"value\":true}}", "explorer-command-bar") == "true",
+        "external native provider validates known volume/tab/command bar settings and typed readback");
     Check(OpsisModCompatibility.ResolveWindhawkDisabled(1, 1, 0, false) == false &&
         OpsisModCompatibility.ResolveWindhawkDisabled(0, 0, 1, false) == false &&
         OpsisModCompatibility.ResolveWindhawkDisabled(0, 1, 0, true) == true &&

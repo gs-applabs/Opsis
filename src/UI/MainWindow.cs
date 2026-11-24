@@ -4875,7 +4875,19 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                         BackColor = UiTheme.PageBackground,
                         Margin = new Padding(0, 0, 0, 6)
                     };
-                    enableToggle.CheckedChanged += (_, _) => Services.PluginHost.Instance.SetPluginEnabled(capturedId, enableToggle.Checked);
+                    bool refreshingPluginToggle = false;
+                    enableToggle.CheckedChanged += (_, _) =>
+                    {
+                        if (refreshingPluginToggle) return;
+                        try { Services.PluginHost.Instance.SetPluginEnabled(capturedId, enableToggle.Checked); }
+                        catch (Exception ex)
+                        {
+                            refreshingPluginToggle = true;
+                            try { enableToggle.Checked = Services.PluginHost.Instance.IsPluginEnabled(capturedId); }
+                            finally { refreshingPluginToggle = false; }
+                            MessageBox.Show(this, ex.Message, "Opsis", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        }
+                    };
                     panel.Controls.Add(enableToggle);
                     AddText(panel, StudioText("Declared plugin capabilities: ", "Δηλωμένες δυνατότητες plugin: ")
                         + Services.PluginHost.Instance.PluginPermissions(capturedId));

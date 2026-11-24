@@ -432,6 +432,7 @@ namespace MotionDesk.Services
                 bool yes;
                 try { yes = ask(req); } catch (Exception ex) { Log($"Plugin '{req.Name}' approval prompt failed: {ex.Message}"); yes = false; }
                 if (!yes) { Log($"Plugin '{req.Name}' not approved by the user (sha256 {req.Sha256})."); continue; }
+                if (_compatibilitySuspended || WindowsUpdateGuard.RequiresReview) break;
                 try
                 {
                     string currentHash = PluginTrust.HashFolder(req.Folder);
@@ -445,6 +446,7 @@ namespace MotionDesk.Services
                         Log($"Plugin '{req.Name}' changed before approval completed; it requires a new approval.");
                         continue;
                     }
+                    if (_compatibilitySuspended || WindowsUpdateGuard.RequiresReview) break;
                     TrustStore.Approve(req.Name, req.Sha256);
                     Log($"Plugin '{req.Name}' approved by the user (sha256 {req.Sha256}).");
                     var before = Snap().ToHashSet();

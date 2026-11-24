@@ -256,7 +256,7 @@ namespace MotionDesk.Widgets
                             catch (Exception e) { RotatingLogger.Write("Wallpaper accent refresh: " + e.Message); }
                         }
                         if (WindowsUpdateGuard.RequiresReview) IsolateShellForUpdate();
-                        else if (AppSettings.Peek().ReplaceWindowsTaskbar) ReplacementTaskbar.RefreshSettings();
+                        else if (!_compatibilityIsolationApplied && AppSettings.Peek().ReplaceWindowsTaskbar) ReplacementTaskbar.RefreshSettings();
                         OpsisAutomationStudio.ExecuteDue(false);
                     }
                     catch (Exception e) { RotatingLogger.Write("Opsis experience check: " + e.Message); }

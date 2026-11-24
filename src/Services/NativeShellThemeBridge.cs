@@ -14,13 +14,17 @@ namespace MotionDesk.Services;
 /// XAML/JS evaluation, or direct writes to another product's storage.</summary>
 public static class NativeShellThemeBridge
 {
-    public sealed record Target(string Id, string Label, string[] Themes);
+    public sealed record Target(string Id, string Label, string[] Themes, string Key = "theme");
     public static IReadOnlyList<Target> Targets { get; } = Array.AsReadOnly(new[]
     {
         new Target("windows-11-start-menu-styler", "Start Menu", new[] { "", "TranslucentStartMenu", "NoRecommendedSection", "SideBySide", "Windows10", "WindowGlass", "LayerMicaUI", "Borderless", "FullScreen" }),
         new Target("windows-11-file-explorer-styler", "File Explorer", new[] { "", "Translucent Explorer11", "MicaBar", "NoCommandBar", "Minimal Explorer11", "Tabless", "WindowGlass", "AddressSearchOnly", "TintedGlass", "LiquidGlass" }),
         new Target("windows-11-taskbar-styler", "Taskbar", new[] { "", "TranslucentTaskbar", "DockLike", "SimplyTransparent", "Squircle", "WinXP", "WinVista", "CleanSlate", "TaskbarXII" }),
-        new Target("windows-11-notification-center-styler", "Notification Center + Quick Settings", new[] { "", "TranslucentShell", "Matter", "Unified", "WindowGlass", "TintedGlass", "Fluid", "LiquidGlass", "BetterControl11", "LayerMicaUI", "Borderless", "Densy", "FrostyGlass" })
+        new Target("windows-11-notification-center-styler", "Notification Center + Quick Settings", new[] { "", "TranslucentShell", "Matter", "Unified", "WindowGlass", "TintedGlass", "Fluid", "LiquidGlass", "BetterControl11", "LayerMicaUI", "Borderless", "Densy", "FrostyGlass" }),
+        new Target("confirm-closing-multiple-explorer-tabs", "Explorer tabs — default close confirmation", new[] { "cancel", "closeTabs" }, "defaultButton"),
+        new Target("explorer-command-bar", "Explorer command bar — settings button", new[] { "true", "false" }, "showSettingsItem"),
+        new Target("taskbar-volume-control", "Native volume indicator", new[] { "win11", "modern", "classic", "none" }, "volumeIndicator"),
+        new Target("taskbar-tray-system-icon-tweaks", "Native tray — notification bell", new[] { "never", "whenInactive", "whenInactiveAndNoDnd", "always" }, "hideBellIcon")
     });
 
     private static string BackupFile => Path.Combine(AppPaths.AppDataFolder, "native-shell-theme-backups.json");
@@ -29,6 +33,7 @@ public static class NativeShellThemeBridge
     public static bool IsKnownTheme(string id, string theme) =>
         Targets.Any(x => x.Id == id && x.Themes.Contains(theme, StringComparer.Ordinal));
     private static bool KnownId(string id) => Targets.Any(x => x.Id == id);
+    private static string KeyFor(string id) => Targets.Single(x => x.Id == id).Key;
     private static bool SafeStoredTheme(string? theme) => theme != null && theme.Length <= 128 && !theme.Any(char.IsControl);
 
     public static string? FindCli()
@@ -52,7 +57,7 @@ public static class NativeShellThemeBridge
         if (!KnownId(id)) throw new ArgumentOutOfRangeException(nameof(id));
         if (!OperatingSystem.IsWindowsVersionAtLeast(10, 0, 22000) || SafeModeService.IsSafeMode || WindowsUpdateGuard.RequiresReview)
             throw new InvalidOperationException("Windows 11 compatibility review is required.");
-        if (id == "windows-11-taskbar-styler" && AppSettings.Peek().ReplaceWindowsTaskbar)
+        if ((id == "windows-11-taskbar-styler" || id.StartsWith("taskbar-", StringComparison.Ordinal)) && AppSettings.Peek().ReplaceWindowsTaskbar)
             throw new InvalidOperationException("Turn off the Opsis replacement taskbar before using native Taskbar Styler.");
         if (OpsisModCompatibility.ScanCached().Any(x => x.Risk == "High"))
             throw new InvalidOperationException("A competing shell replacement is installed. Resolve it first.");
@@ -67,12 +72,17 @@ public static class NativeShellThemeBridge
         if (root.GetProperty("schemaVersion").GetInt32() != 1 || !root.GetProperty("success").GetBoolean())
             throw new InvalidDataException("Unsupported Windhawk CLI response.");
         var data = root.GetProperty("data");
-        if (data.GetProperty("id").GetString() != id || data.GetProperty("key").GetString() != "theme")
+        if (data.GetProperty("id").GetString() != id || data.GetProperty("key").GetString() != KeyFor(id))
             throw new InvalidDataException("Unexpected Windhawk theme response.");
         var value = data.GetProperty("value");
-        if (value.ValueKind != JsonValueKind.String)
-            throw new InvalidDataException("Theme is not set. Select an initial theme in Windhawk before using Opsis.");
-        var result = value.GetString();
+        string? result = value.ValueKind switch
+        {
+            JsonValueKind.String => value.GetString(),
+            JsonValueKind.True when KeyFor(id) == "showSettingsItem" => "true",
+            JsonValueKind.False when KeyFor(id) == "showSettingsItem" => "false",
+            _ => null
+        };
+        if (result == null) throw new InvalidDataException("Setting is not initialized. Configure it in Windhawk first.");
         if (!SafeStoredTheme(result)) throw new InvalidDataException("Unsupported theme value.");
         return result!;
     }
@@ -85,7 +95,8 @@ public static class NativeShellThemeBridge
             RedirectStandardOutput = true, RedirectStandardError = true, WorkingDirectory = Path.GetDirectoryName(cli)! };
         foreach (var token in new[] { "--json", "--quiet", "mod", "settings", theme == null ? "get" : "set", id })
             info.ArgumentList.Add(token);
-        info.ArgumentList.Add(theme == null ? "theme" : "theme=" + theme);
+        var key = KeyFor(id);
+        info.ArgumentList.Add(theme == null ? key : key + "=" + theme);
         using var process = Process.Start(info) ?? throw new InvalidOperationException("Windhawk CLI could not start.");
         using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(15));
         try
@@ -149,7 +160,11 @@ public static class NativeShellThemeBridge
         {
             EnsureWritable(id);
             if (!ReadBackups().TryGetValue(id, out var original)) throw new InvalidOperationException("No original theme backup for this mod.");
-            if (await ReadTheme(id) != original) await Run(id, original);
+            if (await ReadTheme(id) != original)
+            {
+                EnsureWritable(id);
+                await Run(id, original);
+            }
             var actual = await ReadTheme(id);
             if (actual != original) throw new InvalidOperationException("Theme restore readback differs.");
             return actual;

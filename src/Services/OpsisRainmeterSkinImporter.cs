@@ -115,16 +115,23 @@ public static class OpsisRainmeterSkinImporter
         if (Read("MeasureName") is { Length: > 0 } measure)
         {
             if (!sections.TryGetValue(measure, out var options) ||
-                !options.TryGetValue("Measure", out var type) ||
-                !type.Equals("Time", StringComparison.OrdinalIgnoreCase))
-                throw new InvalidDataException("Only a built-in Time measure is supported.");
-            var format = options.TryGetValue("Format", out var f) ? f : "%H:%M";
-            binding = format is "%H:%M" or "%H:%M:%S" ? "Clock"
-                : format is "%d/%m/%Y" or "%A, %d %B %Y" ? "Date"
-                : throw new InvalidDataException("Unsupported Rainmeter Time format.");
+                !options.TryGetValue("Measure", out var type))
+                throw new InvalidDataException("Missing or unsupported built-in measure.");
+            var format = options.TryGetValue("Format", out var f) ? f : "";
+            if (type.Equals("Time", StringComparison.OrdinalIgnoreCase))
+                binding = format is "" or "%H:%M" or "%H:%M:%S" ? "Clock"
+                    : format is "%d/%m/%Y" or "%A, %d %B %Y" ? "Date"
+                    : throw new InvalidDataException("Unsupported Rainmeter Time format.");
+            else if (type.Equals("CPU", StringComparison.OrdinalIgnoreCase) && format == "" &&
+                (!options.TryGetValue("Processor", out var processor) || processor == "0"))
+                binding = "CPU";
+            else if (type.Equals("PhysicalMemory", StringComparison.OrdinalIgnoreCase) && format == "" &&
+                (!options.TryGetValue("Total", out var total) || total == "0"))
+                binding = "RAM";
+            else throw new InvalidDataException("Only built-in Time, total CPU and used physical-memory measures are supported.");
         }
 
-        // No active components other than one meter and optionally one Time measure.
+        // No active components other than one meter and one allowlisted built-in measure.
         foreach (var (section, opts) in sections)
         {
             if (section.Equals(meters[0].Key, StringComparison.OrdinalIgnoreCase))
@@ -146,7 +153,11 @@ public static class OpsisRainmeterSkinImporter
             }
             else if (section.Equals(Read("MeasureName"), StringComparison.OrdinalIgnoreCase))
             {
-                if (opts.Keys.Any(k => k is not ("Measure" or "Format" or "UpdateDivider" or "DynamicVariables")))
+                var allowed = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Measure", "UpdateDivider", "DynamicVariables" };
+                if (binding is "Clock" or "Date") allowed.Add("Format");
+                if (binding == "CPU") allowed.Add("Processor");
+                if (binding == "RAM") allowed.Add("Total");
+                if (opts.Keys.Any(k => !allowed.Contains(k)))
                     throw new InvalidDataException("Unsupported measure option.");
                 if (opts.TryGetValue("DynamicVariables", out var flag) && flag != "0")
                     throw new InvalidDataException("Dynamic measures cannot be imported.");

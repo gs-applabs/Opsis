@@ -49,6 +49,9 @@ public static class OpsisModCompatibility
     {
         ["windows-11-start-menu-styler"] = "Start",
         ["windows-11-file-explorer-styler"] = "Explorer",
+        ["explorer-command-bar"] = "Explorer",
+        ["explorer-tabs-session-saver"] = "Explorer",
+        ["confirm-closing-multiple-explorer-tabs"] = "Explorer",
         ["windows-11-taskbar-styler"] = "Taskbar",
         ["taskbar-icon-size"] = "Taskbar",
         ["taskbar-clock-customization"] = "Taskbar",

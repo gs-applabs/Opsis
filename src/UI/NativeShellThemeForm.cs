@@ -19,7 +19,7 @@ internal sealed class NativeShellThemeForm : Form
 
     public NativeShellThemeForm()
     {
-        Text = "Opsis — Native Shell themes (optional Windhawk provider)";
+        Text = "Opsis — Native Shell settings (optional Windhawk provider)";
         StartPosition = FormStartPosition.CenterParent;
         ClientSize = new Size(560, 365);
         MinimumSize = new Size(500, 350);
@@ -27,7 +27,7 @@ internal sealed class NativeShellThemeForm : Form
             WrapContents = false, AutoScroll = true, Padding = new Padding(12) };
         Controls.Add(panel);
         panel.Controls.Add(new Label { AutoSize = false, Width = 460, Height = 76,
-            Text = "Experimental external-provider adapter. Requires a compatible installed Windhawk CLI and an installed, enabled styler mod. No mod is installed or enabled automatically. Native appearance changes are performed by Windhawk, not an Opsis hook." });
+            Text = "Experimental external-provider adapter. Requires compatible Windhawk CLI and the corresponding installed, enabled mod. No mod is installed or enabled automatically. Native appearance changes are performed by Windhawk, not an Opsis hook." });
         _target.Items.AddRange(NativeShellThemeBridge.Targets.Select(x => (object)x.Label).ToArray());
         panel.Controls.Add(_target); panel.Controls.Add(_theme);
         var buttons = new FlowLayoutPanel { AutoSize = true, Width = 460, WrapContents = true };
@@ -41,11 +41,12 @@ internal sealed class NativeShellThemeForm : Form
             _status.Text = "Read the currently installed theme before applying.";
         };
         _target.SelectedIndex = 0;
+        FormClosing += (_, e) => { if (!_target.Enabled) e.Cancel = true; };
         _read.Click += async (_, _) => await Run(() => NativeShellThemeBridge.ReadTheme(Selected.Id));
         _apply.Click += async (_, _) =>
         {
             var target = Selected; var theme = target.Themes[_theme.SelectedIndex];
-            if (MessageBox.Show(this, "Change the theme in the existing Windhawk mod? Original theme is backed up; custom style overrides are preserved.", Text,
+            if (MessageBox.Show(this, "Change only the selected setting in the existing Windhawk mod? Its original value is backed up; all other settings are preserved.", Text,
                 MessageBoxButtons.YesNo, MessageBoxIcon.Warning, MessageBoxDefaultButton.Button2) != DialogResult.Yes) return;
             await Run(() => NativeShellThemeBridge.Apply(target.Id, theme));
         };
