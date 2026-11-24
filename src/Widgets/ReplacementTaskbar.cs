@@ -55,7 +55,7 @@ internal sealed class ReplacementTaskbar : Form
             if (!OpsisIntegrationAudit.TaskbarOverlayAllowed(true, external, false))
             {
                 RotatingLogger.Write("Opsis taskbar held: competing shell replacement detected: " +
-                    string.Join(", ", external.Where(x => x.Risk == "High").Select(x => x.Product)));
+                    string.Join(", ", external.Where(OpsisModCompatibility.BlocksTaskbarOverlay).Select(x => x.Product)));
                 Stop();
                 return;
             }
@@ -106,6 +106,7 @@ internal sealed class ReplacementTaskbar : Form
 
     private static void RefreshBars()
     {
+        if (WindowsUpdateGuard.RuntimeHold) { Stop(); return; }
         if (Environment.TickCount64 < _windowsTrayUntil) return;
         var screens = Screen.AllScreens.ToDictionary(screen => screen.DeviceName, StringComparer.OrdinalIgnoreCase);
         foreach (var stale in Bars.Keys.Where(id => !screens.ContainsKey(id)).ToArray())

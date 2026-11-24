@@ -106,8 +106,11 @@ try
         ("windows-11-start-menu-styler", true), ("custom-unknown", null)
     });
     Check(windhawkMods.Count == 2 && windhawkMods.Any(m => m.Area == "Taskbar") &&
-        windhawkMods.Any(m => m.Area == "Unknown mod") && windhawkMods.All(m => m.Risk == "Review"),
-        "Windhawk per-mod detection deduplicates, excludes disabled and never claims verified injection");
+        windhawkMods.Any(m => m.Area == "Unknown mod" && m.Risk == "Review") &&
+        windhawkMods.Count(OpsisModCompatibility.BlocksTaskbarOverlay) == 1,
+        "Windhawk per-mod detection deduplicates, excludes disabled and holds competing taskbar styling");
+    Check(!OpsisIntegrationAudit.TaskbarOverlayAllowed(true, windhawkMods, false), "configured competing taskbar mod prevents simultaneous Opsis overlay");
+    Check(!OpsisModCompatibility.EvaluateWindhawkMods(new (string Id, bool? Disabled)[] { ("windows-11-taskbar-styler", true) }).Any(), "disabled competing Windhawk mod does not block Opsis");
     Check(OpsisModCore.Catalog.Count >= 10, "unified module catalog available");
     Check(OpsisModCore.Read().Enabled.Count == 0, "module flags disabled by default");
     OpsisModCore.SetModule("windows.hot-corners", true, 22631, false);
@@ -222,7 +225,12 @@ try
     Check(WindowsUpdateGuard.EvaluateStartup(), "changed Windows build triggers review");
     Check(WindowsUpdateGuard.RequiresReview, "hold persists after change");
     WindowsUpdateGuard.ApproveCurrentBuild();
-    Check(!WindowsUpdateGuard.RequiresReview, "user approval clears hold");
+    Check(!WindowsUpdateGuard.RequiresReview && !WindowsUpdateGuard.RuntimeHold, "user approval clears hold");
+    File.WriteAllText(stateFile, "{ malformed");
+    Check(WindowsUpdateGuard.RequiresReview && WindowsUpdateGuard.RuntimeHold, "malformed guard state fails closed");
+    File.WriteAllText(stateFile, JsonSerializer.Serialize(new WindowsUpdateGuard.State { LastApprovedFingerprint = OpsisRecoveryHub.WindowsFingerprint() }));
+    WindowsUpdateGuard.ApproveCurrentBuild();
+    Check(!WindowsUpdateGuard.RequiresReview, "explicit approval after valid state restored clears runtime latch");
 
     var windowsInventory = OpsisRecoveryHub.InspectWindowsShell();
     Check(windowsInventory.Files.Count == 6, "Windows shell file inventory includes six monitored binaries");

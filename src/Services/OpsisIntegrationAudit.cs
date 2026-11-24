@@ -85,7 +85,7 @@ public static class OpsisIntegrationAudit
                 "Resolve source precedence/version; display just one Gallery item."));
         if (replaceWindowsTaskbar)
         {
-            foreach (var externalShell in external.Where(x => x.Risk == "High"))
+            foreach (var externalShell in external.Where(OpsisModCompatibility.BlocksTaskbarOverlay))
                 problems.Add(new Collision("Block", "shell.taskbar",
                     "Opsis replacement taskbar overlaps with " + externalShell.Product,
                     "Disable the competing shell replacement or disable Opsis taskbar overlay."));
@@ -94,7 +94,7 @@ public static class OpsisIntegrationAudit
         // Surface potential taskbar overlaps through the existing audit UI.
         if (replaceWindowsTaskbar)
             foreach (var mod in external.Where(x => x.Product.StartsWith("Windhawk: ", StringComparison.Ordinal) &&
-                         (x.Area == "Taskbar" || x.Area == "System tray")))
+                         (x.Area == "Taskbar" || x.Area == "System tray") && !OpsisModCompatibility.BlocksTaskbarOverlay(x)))
                 problems.Add(new Collision("Review", "shell.taskbar", mod.Product + ": " + mod.Advice,
                     "Choose a single taskbar owner after inspecting enabled mods and testing compatibility."));
         if (autoTileEnabled && windowRulesEnabled)
@@ -176,7 +176,7 @@ public static class OpsisIntegrationAudit
         bool optedIn, IEnumerable<OpsisModCompatibility.Finding> external,
         bool windowsReviewPending) =>
         optedIn && !windowsReviewPending && !SafeModeService.IsSafeMode &&
-        !external.Any(x => x.Risk == "High");
+        !external.Any(OpsisModCompatibility.BlocksTaskbarOverlay);
 
     /// <summary>Nonexecuting inventory of candidate packages on disk, including approval-pending packages.</summary>
     public static IReadOnlyList<string> CandidatePluginFolders()

@@ -54,8 +54,19 @@ public static class OpsisModCompatibility
         ["taskbar-tray-system-icon-tweaks"] = "System tray",
         ["windows-11-notification-center-styler"] = "Notification center",
         ["taskbar-volume-control"] = "Taskbar",
-        ["disable-taskbar-thumbnails"] = "Taskbar"
+        ["disable-taskbar-thumbnails"] = "Taskbar",
+        ["taskbar-margin"] = "Taskbar",
+        ["taskbar-drag-lock"] = "Taskbar",
+        ["taskbar-notification-icon-spacing"] = "System tray"
     };
+
+    // Only explicit competing visual/geometry providers cause an automatic hold.
+    // Other known mods remain advisory; a configured mod is not proof of injection.
+    private static readonly HashSet<string> ExclusiveTaskbarMods = new(StringComparer.OrdinalIgnoreCase)
+    { "windows-11-taskbar-styler", "taskbar-margin", "taskbar-drag-lock" };
+
+    public static bool BlocksTaskbarOverlay(Finding finding) =>
+        finding.Risk == "High" || (finding.Risk == "Hold" && finding.Area == "Taskbar");
 
     public static IReadOnlyList<Finding> EvaluateWindhawkMods(IEnumerable<(string Id, bool? Disabled)> mods)
     {
@@ -66,7 +77,7 @@ public static class OpsisModCompatibility
             {
                 bool configured = g.Any(m => m.Disabled == false);
                 var known = WindhawkAreas.TryGetValue(g.Key, out var area);
-                return new Finding("Windhawk: " + g.Key, "Review", area ?? "Unknown mod",
+                return new Finding("Windhawk: " + g.Key, configured && ExclusiveTaskbarMods.Contains(g.Key) ? "Hold" : "Review", area ?? "Unknown mod",
                     (configured ? "Configured enabled; runtime injection not verified. " : "Enabled state unknown. ") +
                     (known ? "Check overlap with Opsis before changing this shell area."
                            : "Review this mod manually; no automatic compatibility assumption."));

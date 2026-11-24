@@ -19,14 +19,14 @@ namespace MotionDesk.Services
             _openOpsis = openOpsis;
             _timer.Tick += (_, _) => Tick();
         }
-        public void Start() => _timer.Start();
+        public void Start() { if (!WindowsUpdateGuard.RequiresReview) _timer.Start(); }
         public void Stop() => _timer.Stop();
         public void Dispose() { _timer.Stop(); _timer.Dispose(); }
 
         private void Tick()
         {
             var settings = AppSettings.Peek();
-            if (!settings.HotCornersEnabled || SystemInformation.TerminalServerSession)
+            if (WindowsUpdateGuard.RuntimeHold || !settings.HotCornersEnabled || SystemInformation.TerminalServerSession)
             {
                 Reset();
                 return;

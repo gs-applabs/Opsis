@@ -40,10 +40,13 @@ Benchmark criteria: same workload, resolution and DPI; CPU/GPU, memory, GDI hand
 | 15 | P2 | Volume Flyout customization | pending; existing audio controls do not equal native flyout styling |
 | 16 | P2 | Independent appearance profiles per monitor | partial; existing per-monitor wallpaper profiles not full shell profiles |
 | 17 | P2 | Custom Taskbar gestures | pending |
-| 18 | P0 | Conflicts per enabled Windhawk mod | read-only registry inventory and audit warnings added; portable/per-user scopes and live injection not verified |
-| 19 | P0 | Automatic isolation after Windows Update | WindowsUpdateGuard exists; per-capability validation and runtime tests pending |
+| 18 | P0 | Conflicts per enabled Windhawk mod | read-only registry inventory; explicit competing taskbar styles hold Opsis overlay; portable/per-user scopes and live injection not verified |
+| 19 | P0 | Automatic isolation after Windows Update | existing UpdateGuard now latches on state failure and isolates running taskbar, tiling, window rules, hot corners, cursor FX, appearance and plugin starts; tests pending |
 | 20 | P1 | Shared Shell visual profile editor | AppearancePresets + existing studios; unified native shell profiles pending |
 
 P0 order: 18, 19, 1, 2, 3. CI compilation repair is a cross-cutting prerequisite, not a replacement for any numbered task. P1: 20, then 4–12. P2: 13–17. DeskFlip, Rainmeter and wallpaper tasks remain supplementary and do not count as completion of these twenty. No benchmark winner until measured. Do not equate Opsis overlay styling with native Windows shell styling.
 
 CI evidence: RC run 45389933784 and comparison 45389933797, installer 45389933931, plugin 45389933822 all reported CS0136 in OpsisStartButtonArt.cs. Electron job passed. Fixed only local variable names; no skin change. Added RC target branch to existing PR workflow filters. New CI results pending. Registry location and Disabled semantics referenced from https://github.com/ramensoftware/windhawk/discussions/73 and https://github.com/ramensoftware/windhawk/discussions/155. No third-party settings are written.
+
+### P0 18/19 — runtime isolation increment
+No new service or timer. Existing 60-second experience timer checks persisted review and refreshes opted-in taskbar conflict scan; Windows fingerprint interval remains 15 minutes. Explicit configured competing taskbar style/geometry mods hold Opsis overlay without changing Windhawk; unknown mods remain advisory. Portable configuration and actual injection still not certified. Existing WindowsUpdateGuard now fails closed on unreadable or invalid state, latches before writes, and clears on successful user approval. Runtime stop is best-effort; in-process plugin DLLs remain resident, so restart is required after approval. Existing preferences are not overwritten. Runtime isolation does not prove native Shell modification compatibility. CI must pass before claiming completion.
