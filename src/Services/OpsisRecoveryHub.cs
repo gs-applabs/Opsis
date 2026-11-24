@@ -54,7 +54,7 @@ public static class OpsisRecoveryHub
     {
         var p = path.Replace('\\', '/');
         if (p.Contains("..", StringComparison.Ordinal) || p.StartsWith('/') || p.Contains(':')) return false;
-        if (p is "settings.json" or "wallpaper.json" or "module-core.json" or "automations.json") return true;
+        if (p is "settings.json" or "wallpaper.json" or "module-core.json" or "automations.json" or "window-rules.json" or "start-studio.json") return true;
         if (p.StartsWith("weather-scenes/", StringComparison.OrdinalIgnoreCase) &&
             p.EndsWith(".json", StringComparison.OrdinalIgnoreCase) && p.Count(ch => ch == '/') == 1)
             return true;
@@ -68,6 +68,8 @@ public static class OpsisRecoveryHub
         yield return "module-core.json";
         yield return "wallpaper.json";
         yield return "automations.json";
+        yield return "window-rules.json";
+        yield return "start-studio.json";
         var sceneFolder = Path.Combine(AppPaths.AppDataFolder, "weather-scenes");
         if (Directory.Exists(sceneFolder) && (File.GetAttributes(sceneFolder) & FileAttributes.ReparsePoint) == 0)
             foreach (var path in Directory.EnumerateFiles(sceneFolder, "*.json", SearchOption.TopDirectoryOnly).Take(250))
