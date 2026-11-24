@@ -26,21 +26,54 @@ public static class OpsisModCore
 
     // Explicitly state what's implemented versus a future feature. Never list third-party
     // binary injection as compatible with Opsis when no native implementation exists.
+    // Feature registry is the single inventory for core, optional mods and plugin
+    // contributions. HasNativeImplementation means an Opsis-owned implementation
+    // exists; it does not imply a Windows shell replacement is production-certified.
     public static IReadOnlyList<ModuleDefinition> Catalog { get; } = new[]
     {
-        new ModuleDefinition("wallpaper.weather", "Desktop", "Weather Wallpaper", Array.Empty<string>(), Array.Empty<string>(), 19041, true),
-        new ModuleDefinition("widgets.opsis", "Widgets", "Opsis Widgets", Array.Empty<string>(), Array.Empty<string>(), 19041, true),
-        new ModuleDefinition("widgets.rainmeter-bridge", "Widgets", "Rainmeter-compatible skin bridge (planned)", Array.Empty<string>(), Array.Empty<string>()),
-        new ModuleDefinition("start.launcher", "Start", "Opsis Start Studio", Array.Empty<string>(), Array.Empty<string>(), 19041, true),
-        new ModuleDefinition("start.shell-replacement", "Start", "Native shell replacement (planned)", Array.Empty<string>(), new[] { "start.external-replacement" }, 22000),
-        new ModuleDefinition("taskbar.native", "Taskbar", "Native taskbar preferences", Array.Empty<string>(), Array.Empty<string>(), 22000, true),
+        new ModuleDefinition("safety.compat-guard", "Safety", "Windows Compatibility Guard", Array.Empty<string>(), Array.Empty<string>(), 19041, true),
+        new ModuleDefinition("safety.recovery-hub", "Safety", "Opsis Recovery Hub", Array.Empty<string>(), Array.Empty<string>(), 19041, true),
+        new ModuleDefinition("system.diagnostics", "Safety", "Desktop Diagnostics", Array.Empty<string>(), Array.Empty<string>(), 19041, true),
+        new ModuleDefinition("start.launcher", "Start", "Start Studio 2.0 (shortcut launcher)", Array.Empty<string>(), Array.Empty<string>(), 19041, true),
+        new ModuleDefinition("start.shell-replacement", "Start", "Custom Windows Start replacement (planned)", Array.Empty<string>(), new[] { "start.external-replacement" }, 22000),
+        new ModuleDefinition("taskbar.native", "Taskbar", "Windows Taskbar options", Array.Empty<string>(), Array.Empty<string>(), 22000, true),
         new ModuleDefinition("taskbar.opsis-replacement", "Taskbar", "Opsis Replacement Taskbar", Array.Empty<string>(), new[] { "taskbar.external-replacement" }, 19041, true),
-        new ModuleDefinition("explorer.native", "Explorer", "Explorer view options", Array.Empty<string>(), Array.Empty<string>(), 19041, true),
-        new ModuleDefinition("windows.hot-corners", "Automation", "Opsis Hot Corners", Array.Empty<string>(), Array.Empty<string>(), 19041, true),
-        new ModuleDefinition("windows.window-rules", "Automation", "Window rules (planned)", Array.Empty<string>(), Array.Empty<string>()),
-        new ModuleDefinition("cursor.trails", "Mouse", "Native Windows pointer trails", Array.Empty<string>(), Array.Empty<string>(), 19041, true),
+        new ModuleDefinition("taskbar.designer", "Taskbar", "Advanced visual Taskbar Designer (planned)", new[] { "taskbar.opsis-replacement" }, Array.Empty<string>()),
+        new ModuleDefinition("taskbar.animation", "Taskbar", "Animated Taskbar materials (planned)", new[] { "taskbar.opsis-replacement" }, Array.Empty<string>()),
+        new ModuleDefinition("explorer.native", "Explorer", "Explorer view preferences", Array.Empty<string>(), Array.Empty<string>(), 19041, true),
+        new ModuleDefinition("explorer.advanced", "Explorer", "Explorer Studio 2.0 extensions (planned)", Array.Empty<string>(), Array.Empty<string>()),
+        new ModuleDefinition("explorer.context-menu", "Explorer", "Context Menu Studio (planned)", Array.Empty<string>(), Array.Empty<string>()),
+        new ModuleDefinition("windows.hot-corners", "Desktop", "Hot Corners", Array.Empty<string>(), Array.Empty<string>(), 19041, true),
+        new ModuleDefinition("windows.window-rules", "Desktop", "Window Rules", Array.Empty<string>(), Array.Empty<string>(), 19041, true),
+        new ModuleDefinition("desktop.snap-layouts", "Desktop", "Desktop Snap Layouts and AutoTile", Array.Empty<string>(), Array.Empty<string>(), 19041, true),
+        new ModuleDefinition("desktop.spaces", "Desktop", "Virtual Workspaces", Array.Empty<string>(), Array.Empty<string>(), 19041, true),
+        new ModuleDefinition("desktop.multi-monitor", "Desktop", "Per-monitor profiles and wallpaper", Array.Empty<string>(), Array.Empty<string>(), 19041, true),
+        new ModuleDefinition("desktop.command-palette", "Desktop", "Opsis Command Palette", Array.Empty<string>(), Array.Empty<string>(), 19041, true),
+        new ModuleDefinition("desktop.lock-screen", "Desktop", "Lock Screen settings", Array.Empty<string>(), Array.Empty<string>(), 19041, true),
+        new ModuleDefinition("cursor.trails", "Mouse", "Native pointer trails", Array.Empty<string>(), Array.Empty<string>(), 19041, true),
+        new ModuleDefinition("cursor.effects", "Mouse", "Custom Ripple/Spotlight FX (planned)", Array.Empty<string>(), Array.Empty<string>()),
+        new ModuleDefinition("screensaver.native", "Desktop", "Windows Screen Saver controls", Array.Empty<string>(), Array.Empty<string>(), 19041, true),
+        new ModuleDefinition("screensaver.creator", "Desktop", "Opsis Screen Saver Creator (planned)", Array.Empty<string>(), Array.Empty<string>()),
         new ModuleDefinition("theme.appearance-presets", "Themes", "Appearance Presets", Array.Empty<string>(), Array.Empty<string>(), 19041, true),
-        new ModuleDefinition("wallpaper.scene-composer", "Desktop", "Scene Composer (planned)", new[] { "wallpaper.weather" }, Array.Empty<string>())
+        new ModuleDefinition("theme.icon-atlas", "Themes", "IconAtlas pack manager", Array.Empty<string>(), Array.Empty<string>(), 19041, true),
+        new ModuleDefinition("theme.dynamic-accent", "Themes", "Wallpaper-derived accent colors (planned)", Array.Empty<string>(), Array.Empty<string>()),
+        new ModuleDefinition("theme.gallery-marketplace", "Themes", "Theme Marketplace (planned)", Array.Empty<string>(), Array.Empty<string>()),
+        new ModuleDefinition("theme.pack-export", "Themes", "Unified Theme Pack import/export (planned)", Array.Empty<string>(), Array.Empty<string>()),
+        new ModuleDefinition("wallpaper.weather", "Wallpaper", "Live Weather Wallpaper", Array.Empty<string>(), Array.Empty<string>(), 19041, true),
+        new ModuleDefinition("wallpaper.scene-composer", "Wallpaper", "Weather Scene Composer", new[] { "wallpaper.weather" }, Array.Empty<string>(), 19041, true),
+        new ModuleDefinition("wallpaper.scene-rules", "Wallpaper", "Weather Scene scheduled rules", new[] { "wallpaper.scene-composer" }, Array.Empty<string>(), 19041, true),
+        new ModuleDefinition("wallpaper.scene-3d", "Wallpaper", "Spatial Weather 3D (separate PR)", Array.Empty<string>(), Array.Empty<string>()),
+        new ModuleDefinition("wallpaper.performance", "Wallpaper", "Adaptive wallpaper performance profiles", Array.Empty<string>(), Array.Empty<string>(), 19041, true),
+        new ModuleDefinition("wallpaper.gpu-manager", "Wallpaper", "GPU rendering controls", Array.Empty<string>(), Array.Empty<string>(), 19041, true),
+        new ModuleDefinition("widgets.opsis", "Widgets", "Opsis native widget engine", Array.Empty<string>(), Array.Empty<string>(), 19041, true),
+        new ModuleDefinition("widgets.rainmeter-bridge", "Widgets", "Rainmeter-like declarative skin importer (planned)", Array.Empty<string>(), Array.Empty<string>()),
+        new ModuleDefinition("widgets.designer", "Widgets", "Drag-and-drop widget Designer (planned)", Array.Empty<string>(), Array.Empty<string>()),
+        new ModuleDefinition("widgets.data-sources", "Widgets", "Widget Data Sources and Plugin feeds", Array.Empty<string>(), Array.Empty<string>(), 19041, true),
+        new ModuleDefinition("automation.studio", "Automation", "Opsis Automation Studio", Array.Empty<string>(), Array.Empty<string>(), 19041, true),
+        new ModuleDefinition("automation.profile-scheduler", "Automation", "Scheduled appearance and scene profiles", new[] { "automation.studio" }, Array.Empty<string>(), 19041, true),
+        new ModuleDefinition("plugin.sdk", "Plugins", "Opsis Plugin SDK and ABI", Array.Empty<string>(), Array.Empty<string>(), 19041, true),
+        new ModuleDefinition("plugin.gallery", "Plugins", "Unified contribution Gallery", Array.Empty<string>(), Array.Empty<string>(), 19041, true),
+        new ModuleDefinition("control.opsis-center", "Control Center", "Unified Opsis Control Center", Array.Empty<string>(), Array.Empty<string>(), 19041, true)
     };
 
     private static string ConfigPath => Path.Combine(AppPaths.AppDataFolder, "module-core.json");
