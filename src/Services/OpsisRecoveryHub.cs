@@ -55,6 +55,8 @@ public static class OpsisRecoveryHub
         var p = path.Replace('\\', '/');
         if (p.Contains("..", StringComparison.Ordinal) || p.StartsWith('/') || p.Contains(':')) return false;
         if (p is "settings.json" or "wallpaper.json" or "module-core.json" or "automations.json" or "window-rules.json" or "start-studio.json") return true;
+        if (p is "native-profiles/explorer-view-before-opsis.json" or
+            "native-profiles/taskbar-before-opsis.json") return true;
         if (p.StartsWith("widget-designs/", StringComparison.OrdinalIgnoreCase) &&
             p.EndsWith(".json", StringComparison.OrdinalIgnoreCase) && p.Count(ch => ch == '/') == 1)
             return true;
@@ -65,8 +67,19 @@ public static class OpsisRecoveryHub
                p.EndsWith(".json", StringComparison.OrdinalIgnoreCase) && p.Count(ch => ch == '/') == 1;
     }
 
+    private static string SourceFor(string relative) => relative switch
+    {
+        "native-profiles/explorer-view-before-opsis.json" => ExplorerViewProfiles.BackupPath,
+        "native-profiles/taskbar-before-opsis.json" => TaskbarViewProfiles.BackupPath,
+        _ => Path.Combine(AppPaths.AppDataFolder, relative.Replace('/', Path.DirectorySeparatorChar))
+    };
+
     private static IEnumerable<string> OwnedFiles()
     {
+        if (File.Exists(ExplorerViewProfiles.BackupPath))
+            yield return "native-profiles/explorer-view-before-opsis.json";
+        if (File.Exists(TaskbarViewProfiles.BackupPath))
+            yield return "native-profiles/taskbar-before-opsis.json";
         yield return "settings.json";
         yield return "module-core.json";
         yield return "wallpaper.json";
@@ -103,7 +116,7 @@ public static class OpsisRecoveryHub
             long total = 0;
             foreach (var relative in OwnedFiles().Where(IsAllowed).Distinct(StringComparer.OrdinalIgnoreCase))
             {
-                var source = Path.Combine(AppPaths.AppDataFolder, relative.Replace('/', Path.DirectorySeparatorChar));
+                var source = SourceFor(relative);
                 if (!File.Exists(source)) continue;
                 var info = new FileInfo(source);
                 if ((info.Attributes & FileAttributes.ReparsePoint) != 0) continue;
@@ -155,7 +168,7 @@ public static class OpsisRecoveryHub
                 if (!IsAllowed(entry.RelativePath)) throw new InvalidDataException("Unsupported restore path.");
                 var rel = entry.RelativePath.Replace('/', Path.DirectorySeparatorChar);
                 var source = Path.Combine(folder, "files", rel);
-                var destination = Path.Combine(AppPaths.AppDataFolder, rel);
+                var destination = SourceFor(entry.RelativePath);
                 if (!File.Exists(source) ||
                     (File.GetAttributes(source) & FileAttributes.ReparsePoint) != 0 ||
                     !Sha(source).Equals(entry.Sha256, StringComparison.OrdinalIgnoreCase))
