@@ -105,6 +105,8 @@ public static class WeatherSceneComposer
         var s = WallpaperSettings.Load();
         // Capture original settings once before any user-directed change.
         OpsisRecoveryHub.Snapshot("Before applying Weather scene " + scene.Name);
+        // Scene activation always selects the existing native Weather renderer.
+        s.Mode = "Weather";
         s.WeatherSimulation = scene.Weather;
         s.TimeSimulation = scene.Time;
         s.WindSimulation = scene.Wind;
