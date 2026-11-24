@@ -39,8 +39,8 @@ public static class OpsisEcosystemGallery
         string PluginId, string Id, string Type, string Category, string Title,
         string Author, string Description, string AssetPath, string Origin);
 
-    private static bool SafeToken(string value) =>
-        value.Length is >= 1 and <= 80 &&
+    private static bool SafeToken(string? value) =>
+        value != null && value.Length is >= 1 and <= 80 &&
         value.All(x => char.IsAsciiLetterOrDigit(x) || x is '.' or '_' or '-');
 
     private static bool SafeRelative(string value)
@@ -57,6 +57,92 @@ public static class OpsisEcosystemGallery
         yield return (Path.Combine(AppContext.BaseDirectory, "plugins"), "installed");
         yield return (Path.Combine(AppPaths.AppDataFolder, "plugins"), "user");
         yield return (Path.Combine(AppPaths.AppDataFolder, "gallery-packs"), "gallery-pack");
+    }
+
+    private static readonly HashSet<string> ImageExtensions = new(StringComparer.OrdinalIgnoreCase)
+        { ".png", ".jpg", ".jpeg", ".webp", ".gif", ".bmp" };
+
+    private static bool HasLinkedPathComponents(string root, string file)
+    {
+        var relative = Path.GetRelativePath(root, file);
+        var current = root;
+        foreach (var part in relative.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar))
+        {
+            current = Path.Combine(current, part);
+            if ((File.GetAttributes(current) & FileAttributes.ReparsePoint) != 0) return true;
+        }
+        return false;
+    }
+
+    /// <summary>
+    /// Load a declarative Clock/Date/Text widget from an approved contribution.
+    /// Never interpret HTML/JS, load executable modules or run arbitrary data sources.
+    /// </summary>
+    public static OpsisWidgetDesigner.Layout ReadWidgetContribution(Item item)
+    {
+        var extension = Path.GetExtension(item.AssetPath);
+        if (!string.Equals(item.Type, "widget", StringComparison.OrdinalIgnoreCase) ||
+            extension is not (".json" or ".ini"))
+            throw new InvalidDataException("Only native JSON or supported Rainmeter INI widget metadata is permitted.");
+        var selected = Discover().FirstOrDefault(x => x.Id == item.Id &&
+            string.Equals(x.PluginId, item.PluginId, StringComparison.OrdinalIgnoreCase) &&
+            string.Equals(x.AssetPath, item.AssetPath, StringComparison.OrdinalIgnoreCase));
+        if (selected == null || new FileInfo(selected.AssetPath).Length > 32 * 1024)
+            throw new InvalidDataException("Widget contribution missing or too large.");
+        if (string.Equals(extension, ".ini", StringComparison.OrdinalIgnoreCase))
+        {
+            var imported = OpsisRainmeterSkinImporter.PreviewFile(selected.AssetPath);
+            var data = new OpsisWidgetDesigner.Layout
+            {
+                Name = imported.Name, Binding = imported.Binding, Text = imported.Text,
+                AccentHex = imported.AccentHex, FontSize = imported.FontSize,
+                Width = imported.Width, Height = imported.Height
+            };
+            OpsisWidgetDesigner.Validate(data);
+            return data;
+        }
+        var widget = JsonSerializer.Deserialize<OpsisWidgetDesigner.Layout>(
+            File.ReadAllText(selected.AssetPath))
+            ?? throw new InvalidDataException("Widget contribution not valid JSON.");
+        OpsisWidgetDesigner.Validate(widget);
+        return widget;
+    }
+
+    /// <summary>
+    /// Install an explicitly chosen signed-by-content (SHA-256 manifest) declarative
+    /// theme bundle from the same plugin Gallery. Does not auto-apply settings.
+    /// </summary>
+    public static string InstallThemeContribution(Item item)
+    {
+        if (!string.Equals(item.Type, "theme", StringComparison.OrdinalIgnoreCase) ||
+            !string.Equals(Path.GetExtension(item.AssetPath), ".opsis-theme", StringComparison.OrdinalIgnoreCase))
+            throw new InvalidDataException("This Gallery item is not an Opsis theme.");
+        var selected = Discover().FirstOrDefault(x => x.Id == item.Id &&
+            string.Equals(x.PluginId, item.PluginId, StringComparison.OrdinalIgnoreCase) &&
+            string.Equals(x.AssetPath, item.AssetPath, StringComparison.OrdinalIgnoreCase));
+        if (selected == null || new FileInfo(selected.AssetPath).Length > 1024 * 1024)
+            throw new InvalidDataException("Theme contribution missing or too large.");
+        return OpsisThemeBundle.Import(selected.AssetPath);
+    }
+
+    /// <summary>Apply only a selected, verified static image contribution. Never execute plugin code.</summary>
+    public static void ApplyStaticWallpaper(Item item)
+    {
+        if (!string.Equals(item.Type, "wallpaper", StringComparison.OrdinalIgnoreCase) ||
+            !ImageExtensions.Contains(Path.GetExtension(item.AssetPath)))
+            throw new InvalidDataException("Only static image wallpaper contributions can be applied here.");
+        var discovered = Discover().FirstOrDefault(x => x.Id == item.Id && x.PluginId == item.PluginId &&
+            string.Equals(x.AssetPath, item.AssetPath, StringComparison.OrdinalIgnoreCase));
+        if (discovered == null) throw new InvalidDataException("Wallpaper contribution no longer exists.");
+        if (new FileInfo(discovered.AssetPath).Length > 64L * 1024 * 1024)
+            throw new InvalidDataException("Wallpaper image too large.");
+        OpsisRecoveryHub.Snapshot("Before applying Gallery wallpaper " + item.Id);
+        var wallpaper = MotionDesk.Widgets.WallpaperSettings.Load();
+        wallpaper.Mode = "Image";
+        wallpaper.ImagePath = discovered.AssetPath;
+        wallpaper.Save();
+        MotionDesk.Widgets.WallpaperHostEngine.Instance.Enable();
+        MotionDesk.Widgets.WallpaperHostEngine.Instance.RefreshAll();
     }
 
     public static IReadOnlyList<Item> Discover()
@@ -78,13 +164,15 @@ public static class OpsisEcosystemGallery
                         manifest.Contributions?.Count > 100) continue;
                     foreach (var item in manifest.Contributions ?? new List<Contribution>())
                     {
-                        if (!SafeToken(item.Id) || !Types.Contains(item.Type) ||
-                            !SafeRelative(item.Asset) || item.Title.Length is < 1 or > 120 ||
-                            item.Category.Length is < 1 or > 60) continue;
+                        if (item == null || !SafeToken(item.Id) || !Types.Contains(item.Type) ||
+                            !SafeRelative(item.Asset) || string.IsNullOrWhiteSpace(item.Title) ||
+                            item.Title.Length > 120 || string.IsNullOrWhiteSpace(item.Category) ||
+                            item.Category.Length > 60 || (item.Author?.Length ?? 0) > 120 ||
+                            (item.Description?.Length ?? 0) > 1024) continue;
                         var filename = Path.GetFullPath(Path.Combine(dir, item.Asset.Replace('/', Path.DirectorySeparatorChar)));
                         var basePath = Path.GetFullPath(dir) + Path.DirectorySeparatorChar;
                         if (!filename.StartsWith(basePath, StringComparison.OrdinalIgnoreCase) || !File.Exists(filename)) continue;
-                        if ((File.GetAttributes(filename) & FileAttributes.ReparsePoint) != 0 ||
+                        if (HasLinkedPathComponents(dir, filename) ||
                             new FileInfo(filename).Length > 500L * 1024 * 1024) continue;
                         var key = manifest.PluginId + ":" + item.Id;
                         if (results.ContainsKey(key)) continue;

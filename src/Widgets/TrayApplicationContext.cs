@@ -25,6 +25,8 @@ namespace MotionDesk.Widgets
         // πρέπει να ζει όσο ζει η ίδια η εφαρμογή, ανεξάρτητα από το αν το wallpaper είναι ενεργό.
         private readonly ExplorerRestartWatcher _taskbarWatcher = new();
         private readonly HotCornersService _hotCorners;
+        private readonly System.Windows.Forms.Timer _experienceTimer = new() { Interval = 60_000 };
+        private int _experienceChecks;
 
         public static event Action? ExitRequested;
         public static void RequestExit() => ExitRequested?.Invoke();
@@ -41,6 +43,14 @@ namespace MotionDesk.Widgets
             // 30s επιτυχούς λειτουργίας (one-shot timer πιο κάτω), όχι αμέσως, ώστε ένα crash λίγο
             // μετά την εκκίνηση να εξακολουθεί να μετράει.
             bool safeMode = SafeModeService.IsSafeMode;
+            bool reviewRequired = false;
+            try
+            {
+                reviewRequired = WindowsUpdateGuard.EvaluateStartup();
+                if (reviewRequired)
+                    RotatingLogger.Write("New Windows build detected. Opsis shell replacement held for compatibility review.");
+            }
+            catch (Exception e) { RotatingLogger.Write("Windows compatibility guard failed: " + e.Message); reviewRequired = true; }
             if (safeMode)
             {
                 RotatingLogger.Write("Starting in SAFE MODE - plugins/wallpaper/last-session skipped.");
@@ -57,7 +67,13 @@ namespace MotionDesk.Widgets
             PluginHost.Instance.NavigationRequested += key => ShowMainWindow("plugin:" + key);
             // Plugins from user-writable folders run code inside Opsis: ask once, show the content hash, remember the approval (plugin-trust.json).
             // (the approval question is NOT asked while starting: see PluginHost.ConsiderFolder / ResolvePending)
-            if (!safeMode) { PluginHost.Instance.StartAll(); SchedulePluginApproval(); try { MotionDesk.Appearance.AppearanceService.Instance.Start(); } catch (Exception) { } }
+            if (!safeMode)
+            {
+                if (!reviewRequired) { PluginHost.Instance.StartAll(); SchedulePluginApproval(); }
+                else RotatingLogger.Write("Optional plugins held until Windows build compatibility review and Opsis restart.");
+                try { MotionDesk.Appearance.AppearanceService.Instance.Start(); }
+                catch (Exception e) { RotatingLogger.Write("Appearance service: " + e.Message); }
+            }
             // Start-up before the other start-up apps: switched on ONCE after the first run when Start with Windows is on (Settings can turn it off; never repeated)
             try
             {
@@ -191,9 +207,42 @@ namespace MotionDesk.Widgets
             if (!safeMode && AppSettings.Load().QuickHideDoubleClickEnabled) DesktopIconVisibilityEngine.Instance.Start();
             else DesktopIconVisibilityEngine.Instance.RestoreIfHidden();
             AppActivity.Start();
+            if (!safeMode && !reviewRequired)
+            {
+                if (AppSettings.Load().WindowRulesEnabled) WindowRulesEngine.Instance.Start();
+                if (AppSettings.Load().CursorFxEnabled)
+                {
+                    try { MotionDesk.UI.OpsisCursorFx.Start(); }
+                    catch (Exception e) { RotatingLogger.Write("Cursor FX startup: " + e.Message); }
+                }
+            }
+            // No background thread or I/O during idle except a once-per-minute rule check.
+            // Build fingerprint is read only every 15 minutes; no Windows file hashing in the timer.
+            if (!safeMode)
+            {
+                try { if (!reviewRequired) OpsisAutomationStudio.ExecuteDue(true); }
+                catch (Exception e) { RotatingLogger.Write("Automation startup: " + e.Message); }
+                _experienceTimer.Tick += (_, _) =>
+                {
+                    try
+                    {
+                        if ((++_experienceChecks % 15) == 0)
+                        {
+                            WindowsUpdateGuard.EvaluateStartup();
+                            // Opsis-only accent; no Windows registry writes and only
+                            // one settings save when the actual color changes.
+                            try { WallpaperAccentEngine.RefreshIfChanged(); }
+                            catch (Exception e) { RotatingLogger.Write("Wallpaper accent refresh: " + e.Message); }
+                        }
+                        OpsisAutomationStudio.ExecuteDue(false);
+                    }
+                    catch (Exception e) { RotatingLogger.Write("Opsis experience check: " + e.Message); }
+                };
+                _experienceTimer.Start();
+            }
             if (!safeMode) _hotCorners.Start();
             DesktopToolbar.RefreshSettings();
-            ReplacementTaskbar.RefreshSettings();
+            if (!reviewRequired) ReplacementTaskbar.RefreshSettings();
             if (!safeMode) VirtualWorkspaces.Start();
             AutoTileService.RefreshSettings();
             MotionDesk.Services.DiscordPresence.Instance.Apply();
@@ -607,6 +656,9 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
             PluginHost.Instance.StopAll();
             try { MotionDesk.Appearance.AppearanceService.Instance.Stop(); } catch (Exception) { }   // taskbar look and window effects always go back to Windows
             _hotkeys.Dispose();
+            _experienceTimer.Stop(); _experienceTimer.Dispose();
+            MotionDesk.UI.OpsisCursorFx.Stop();
+            WindowRulesEngine.Instance.Dispose();
             _hotCorners.Dispose();
             _taskbarWatcher.Dispose();
             try { _nativeContainers?.Dispose(); } catch { }

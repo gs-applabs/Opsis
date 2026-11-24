@@ -1,0 +1,80 @@
+using System;
+using System.Drawing;
+using System.Windows.Forms;
+using MotionDesk.Services;
+
+namespace MotionDesk.UI;
+
+/// <summary>
+/// Small, standalone user-designed widget, powered by the same WinForms
+/// process/theme as Opsis. No WebView2, plugin DLLs, polling threads or scripts.
+/// </summary>
+public sealed class OpsisCustomWidgetWindow : Form
+{
+    private readonly OpsisWidgetDesigner.Layout _layout;
+    private readonly Label _content;
+    private readonly System.Windows.Forms.Timer _refresh = new() { Interval = 1000 };
+    public OpsisCustomWidgetWindow(OpsisWidgetDesigner.Layout layout)
+    {
+        OpsisWidgetDesigner.Validate(layout);
+        _layout = layout;
+        Text = "Opsis Widget — " + layout.Name;
+        StartPosition = FormStartPosition.CenterScreen;
+        Size = new Size(layout.Width, layout.Height);
+        MinimumSize = new Size(190, 80);
+        TopMost = layout.AlwaysOnTop;
+        Opacity = layout.OpacityPercent / 100.0;
+        FormBorderStyle = FormBorderStyle.SizableToolWindow;
+        BackColor = UiTheme.Surface;
+        var accent = ColorTranslator.FromHtml(layout.AccentHex);
+        _content = new Label
+        {
+            AutoSize = false,
+            Size = new Size(Math.Min(330, Math.Max(160, layout.Width - 40)), Math.Min(115, Math.Max(60, layout.Height - 30))),
+            TextAlign = ContentAlignment.MiddleCenter,
+            ForeColor = accent,
+            BackColor = UiTheme.Surface,
+            Font = new Font("Segoe UI Variable Display", layout.FontSize, FontStyle.Regular),
+            AutoEllipsis = true,
+            BorderStyle = layout.ShowWidgetBorder ? BorderStyle.FixedSingle : BorderStyle.None
+        };
+        Controls.Add(_content);
+        void PositionContent()
+        {
+            var (x, y) = OpsisWidgetDesigner.Position(ClientSize.Width, ClientSize.Height,
+                _content.Width, _content.Height, layout.ContentXPercent, layout.ContentYPercent);
+            _content.Location = new Point(x, y);
+        }
+        Resize += (_, _) => PositionContent();
+        PositionContent();
+        _refresh.Tick += (_, _) => UpdateText();
+        Shown += (_, _) => { UpdateText(); if (layout.Binding != "Text") _refresh.Start(); };
+        FormClosed += (_, _) => { _refresh.Stop(); _refresh.Dispose(); _content.Font.Dispose(); };
+    }
+
+    private void UpdateText()
+    {
+        try
+        {
+            var system = _layout.Binding is "CPU" or "RAM"
+                ? AdvancedSystemMonitorService.Instance.GetSnapshot() : default;
+            _content.Text = _layout.Binding switch
+            {
+                "Clock" => DateTime.Now.ToString("HH:mm:ss"),
+                "Date" => DateTime.Now.ToString("dddd, dd MMMM yyyy"),
+                "CPU" => $"CPU {system.CpuPercent:0.0}%",
+                "RAM" => system.TotalMemoryMb > 0
+                    ? $"RAM {(system.TotalMemoryMb - system.AvailableMemoryMb) / system.TotalMemoryMb * 100:0.0}%"
+                    : "RAM —",
+                "Battery" => SystemInformation.PowerStatus.BatteryLifePercent is >= 0 and <= 1
+                    ? $"Battery {SystemInformation.PowerStatus.BatteryLifePercent * 100:0}%"
+                    : "Battery —",
+                _ => _layout.Text
+            };
+        }
+        catch (Exception)
+        {
+            _content.Text = _layout.Binding + " —";
+        }
+    }
+}

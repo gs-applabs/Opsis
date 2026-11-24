@@ -2613,6 +2613,7 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
             var panel = CreatePagePanel();
             AddText(panel, LocalizationManager.T("Personalization.Intro"));
             BuildWindowsAppearance(panel);   // Windows look, themes, safety (2.6.0): the same Personalization tab, no sub-tab
+            BuildEcosystemStudios(panel); // Shared P3/P4/P5 controls, backed by the Opsis Core contracts
 
             // ---------- Unified Opsis ecosystem: core modules, gallery, recovery ----------
             var coreCard = AddCardSection(panel, LocalizationManager.CurrentLanguage == "el"
@@ -2667,6 +2668,32 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                     catch (Exception ex) { MessageBox.Show(this, ex.Message, "Opsis Core", MessageBoxButtons.OK, MessageBoxIcon.Error); }
                 }));
 
+            AddButtonGrid(coreCard,
+                (LocalizationManager.CurrentLanguage == "el" ? "Εναλλαγή λειτουργίας" : "Toggle selected feature", (_, _) =>
+                {
+                    if (coreCatalog.SelectedItems.Count != 1 ||
+                        coreCatalog.SelectedItems[0].Tag is not OpsisModCore.ModuleDefinition module) return;
+                    if (!OpsisFeatureSwitcher.CanSwitch(module.Id))
+                    {
+                        MessageBox.Show(this,
+                            StudioText("This feature has its own dedicated settings or is still planned; there is no independent activation adapter.",
+                                "Η λειτουργία έχει δικές της ρυθμίσεις ή βρίσκεται υπό σχεδιασμό. Δεν υπάρχει ανεξάρτητος διακόπτης."),
+                            "Opsis Core", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        return;
+                    }
+                    var next = !OpsisFeatureSwitcher.IsEnabled(module.Id);
+                    if (MessageBox.Show(this,
+                        (next ? StudioText("Enable ", "Ενεργοποίηση ") : StudioText("Disable ", "Απενεργοποίηση ")) +
+                        module.Label + "?",
+                        "Opsis Core", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes) return;
+                    try
+                    {
+                        OpsisFeatureSwitcher.Set(module.Id, next);
+                        _statusLabel.Text = "Opsis Core — " + module.Label + (next ? " enabled" : " disabled");
+                    }
+                    catch (Exception ex) { MessageBox.Show(this, ex.Message, "Opsis Core", MessageBoxButtons.OK, MessageBoxIcon.Error); }
+                }));
+
             var ecosystemCard = AddCardSection(panel, LocalizationManager.CurrentLanguage == "el"
                 ? "Προσθήκες οικοσυστήματος — Gallery" : "Ecosystem contributions — Gallery");
             AddText(ecosystemCard, LocalizationManager.CurrentLanguage == "el"
@@ -2679,25 +2706,132 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
             ecosystemList.Columns.Add(LocalizationManager.CurrentLanguage == "el" ? "Τύπος" : "Type", 135);
             ecosystemList.Columns.Add(LocalizationManager.CurrentLanguage == "el" ? "Κατηγορία" : "Category", 155);
             ecosystemList.Columns.Add(LocalizationManager.CurrentLanguage == "el" ? "Περιεχόμενο" : "Contribution", 315);
+            var galleryFilters = new FlowLayoutPanel
+            {
+                Width = 720, AutoSize = true, WrapContents = true
+            };
+            var galleryType = new ComboBox { Width = 150, DropDownStyle = ComboBoxStyle.DropDownList };
+            galleryType.Items.AddRange(new object[]
+            {
+                "All", "wallpaper", "widget", "theme", "icon-pack", "cursor-pack",
+                "automation-template", "layout"
+            });
+            galleryType.SelectedIndex = 0;
+            var galleryCategory = new ComboBox { Width = 200, DropDownStyle = ComboBoxStyle.DropDownList };
+            galleryCategory.Items.Add("All"); galleryCategory.SelectedIndex = 0;
+            var gallerySearch = new TextBox
+            {
+                Width = 285, PlaceholderText = StudioText("Search Gallery", "Αναζήτηση στη Gallery")
+            };
+            galleryFilters.Controls.Add(galleryType);
+            galleryFilters.Controls.Add(galleryCategory);
+            galleryFilters.Controls.Add(gallerySearch);
+            ecosystemCard.Controls.Add(galleryFilters);
             ecosystemCard.Controls.Add(ecosystemList);
+            System.Collections.Generic.IReadOnlyList<OpsisEcosystemGallery.Item> contributions =
+                Array.Empty<OpsisEcosystemGallery.Item>();
+
+            void DrawContributions()
+            {
+                var type = galleryType.SelectedItem?.ToString() ?? "All";
+                var category = galleryCategory.SelectedItem?.ToString() ?? "All";
+                var search = gallerySearch.Text.Trim();
+                ecosystemList.BeginUpdate();
+                try
+                {
+                    ecosystemList.Items.Clear();
+                    ecosystemList.Groups.Clear();
+                    var groups = new System.Collections.Generic.Dictionary<string, ListViewGroup>(
+                        StringComparer.OrdinalIgnoreCase);
+                    foreach (var item in contributions.Where(x =>
+                        (type == "All" || string.Equals(x.Type, type, StringComparison.OrdinalIgnoreCase)) &&
+                        (category == "All" || string.Equals(x.Category, category, StringComparison.OrdinalIgnoreCase)) &&
+                        (search.Length == 0 ||
+                            x.Title.Contains(search, StringComparison.CurrentCultureIgnoreCase) ||
+                            x.PluginId.Contains(search, StringComparison.CurrentCultureIgnoreCase) ||
+                            x.Category.Contains(search, StringComparison.CurrentCultureIgnoreCase))))
+                    {
+                        var groupKey = item.Type + " / " + item.Category;
+                        if (!groups.TryGetValue(groupKey, out var group))
+                        {
+                            group = new ListViewGroup(groupKey);
+                            groups[groupKey] = group;
+                            ecosystemList.Groups.Add(group);
+                        }
+                        var line = new ListViewItem(item.Type, group);
+                        line.SubItems.Add(item.Category);
+                        line.SubItems.Add(item.Title + " [" + item.PluginId + "]");
+                        line.Tag = item;
+                        ecosystemList.Items.Add(line);
+                    }
+                }
+                finally { ecosystemList.EndUpdate(); }
+            }
+
             void RefreshContributions()
             {
-                ecosystemList.Items.Clear();
-                foreach (var item in OpsisEcosystemGallery.Discover())
+                contributions = OpsisEcosystemGallery.Discover();
+                var category = galleryCategory.SelectedItem?.ToString() ?? "All";
+                galleryCategory.BeginUpdate();
+                try
                 {
-                    var line = new ListViewItem(item.Type);
-                    line.SubItems.Add(item.Category);
-                    line.SubItems.Add(item.Title + " [" + item.PluginId + "]");
-                    line.Tag = item;
-                    ecosystemList.Items.Add(line);
+                    galleryCategory.Items.Clear();
+                    galleryCategory.Items.Add("All");
+                    foreach (var name in contributions.Select(x => x.Category)
+                                 .Distinct(StringComparer.OrdinalIgnoreCase)
+                                 .OrderBy(x => x, StringComparer.CurrentCultureIgnoreCase))
+                        galleryCategory.Items.Add(name);
+                    galleryCategory.SelectedItem = galleryCategory.Items.Contains(category) ? category : "All";
                 }
+                finally { galleryCategory.EndUpdate(); }
+                DrawContributions();
             }
+            galleryType.SelectedIndexChanged += (_, _) => DrawContributions();
+            galleryCategory.SelectedIndexChanged += (_, _) => DrawContributions();
+            gallerySearch.TextChanged += (_, _) => DrawContributions();
             try { RefreshContributions(); }
             catch (Exception ex) { RotatingLogger.Write("Ecosystem Gallery discovery: " + ex.Message); }
             AddButtonGrid(ecosystemCard,
                 (LocalizationManager.CurrentLanguage == "el" ? "Ανανέωση προσθηκών" : "Refresh contributions", (_, _) =>
                 {
                     try { RefreshContributions(); }
+                    catch (Exception ex) { MessageBox.Show(this, ex.Message, "Opsis Gallery", MessageBoxButtons.OK, MessageBoxIcon.Error); }
+                }),
+                (LocalizationManager.CurrentLanguage == "el" ? "Εγκατάσταση θέματος plugin" : "Install contributed theme", (_, _) =>
+                {
+                    if (ecosystemList.SelectedItems.Count != 1 ||
+                        ecosystemList.SelectedItems[0].Tag is not OpsisEcosystemGallery.Item item) return;
+                    if (MessageBox.Show(this,
+                        StudioText("Install the selected data-only theme without applying any Windows changes?",
+                            "Να εγκατασταθεί το επιλεγμένο θέμα μόνο ως δεδομένα χωρίς αλλαγές Windows;"),
+                        "Opsis Gallery", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes) return;
+                    try
+                    {
+                        var name = OpsisEcosystemGallery.InstallThemeContribution(item);
+                        MessageBox.Show(this, StudioText("Theme added to available profiles: ",
+                            "Το θέμα προστέθηκε στα διαθέσιμα προφίλ: ") + name,
+                            "Opsis Gallery", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    }
+                    catch (Exception ex) { MessageBox.Show(this, ex.Message, "Opsis Gallery", MessageBoxButtons.OK, MessageBoxIcon.Error); }
+                }),
+                (LocalizationManager.CurrentLanguage == "el" ? "Άνοιγμα widget plugin" : "Open contributed widget", (_, _) =>
+                {
+                    if (ecosystemList.SelectedItems.Count != 1 ||
+                        ecosystemList.SelectedItems[0].Tag is not OpsisEcosystemGallery.Item item) return;
+                    try
+                    {
+                        var layout = OpsisEcosystemGallery.ReadWidgetContribution(item);
+                        new OpsisCustomWidgetWindow(layout).Show(this);
+                    }
+                    catch (Exception ex) { MessageBox.Show(this, ex.Message, "Opsis Gallery", MessageBoxButtons.OK, MessageBoxIcon.Error); }
+                }),
+                (LocalizationManager.CurrentLanguage == "el" ? "Ορισμός ως wallpaper" : "Set as wallpaper", (_, _) =>
+                {
+                    if (ecosystemList.SelectedItems.Count != 1 ||
+                        ecosystemList.SelectedItems[0].Tag is not OpsisEcosystemGallery.Item item) return;
+                    if (MessageBox.Show(this, StudioText("Apply selected static image wallpaper?", "Να εφαρμοστεί το επιλεγμένο στατικό wallpaper;"),
+                        "Opsis Gallery", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes) return;
+                    try { OpsisEcosystemGallery.ApplyStaticWallpaper(item); _statusLabel.Text = "Opsis — gallery wallpaper applied."; }
                     catch (Exception ex) { MessageBox.Show(this, ex.Message, "Opsis Gallery", MessageBoxButtons.OK, MessageBoxIcon.Error); }
                 }),
                 (LocalizationManager.CurrentLanguage == "el" ? "Πληροφορίες περιεχομένου" : "Contribution information", (_, _) =>
@@ -3789,11 +3923,32 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                 ("WorkProfile", string.Format(profileFmt, "Work")),
                 ("GamingProfile", string.Format(profileFmt, "Gaming")),
                 ("FocusProfile", string.Format(profileFmt, "Focus")),
+                ("OpsisTaskbarDesigner", StudioText("Taskbar Visual Designer", "Οπτικός σχεδιαστής Taskbar")),
+                ("OpsisExplorerStudio", StudioText("Explorer Studio", "Στούντιο Explorer")),
+                ("OpsisStartStudio", StudioText("Start Studio", "Στούντιο Έναρξης")),
+                ("OpsisScreensaverStudio", StudioText("Screensaver Studio", "Στούντιο προφύλαξης οθόνης")),
+                ("OpsisEcosystem", StudioText("Unified Opsis Mod and Plugin Gallery", "Κοινή Gallery mods και plugins")),
             };
             // Οι σελίδες των plugin (π.χ. News Crawler) εμφανίζονται κι εδώ.
             var commandList = commandDefs.ToList();
             foreach (var pluginPage in Services.PluginHost.Instance.GetNavigationItems())
                 commandList.Add(("plugin:" + pluginPage.Key, Services.PluginHost.TitleOf(pluginPage)));
+            // Command Palette 2.0: all implemented core modules are searchable
+            // alongside plugin page commands; planned modules are not advertised
+            // as executable, and Gallery metadata never executes third-party code.
+            foreach (var module in OpsisModCore.Catalog.Where(x => x.HasNativeImplementation))
+                commandList.Add(("feature:" + module.Id, "Opsis · " + module.Label));
+            var galleryCommands = new Dictionary<string, OpsisEcosystemGallery.Item>(StringComparer.OrdinalIgnoreCase);
+            try
+            {
+                foreach (var asset in OpsisEcosystemGallery.Discover().Take(150))
+                {
+                    var id = "gallery:" + asset.PluginId + ":" + asset.Id;
+                    galleryCommands.TryAdd(id, asset);
+                    commandList.Add((id, "Gallery · " + asset.Title + " (" + asset.Category + ")"));
+                }
+            }
+            catch (Exception ex) { RotatingLogger.Write("Command Gallery indexing: " + ex.Message); }
             // v2.0.0 (t35, "Start Menu replacement" σε ασφαλή μορφή): το Ctrl+K γίνεται και app
             // launcher — ΧΩΡΙΣ να πειράζει το πραγματικό Start. Πρώτα οι καρφιτσωμένες της taskbar,
             // μετά οι συντομεύσεις του Start Menu· Enter τις εκκινεί (όπως ένα διπλό-κλικ σε .lnk).
@@ -3871,6 +4026,47 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                     case "Personalization": NavigateTo("Personalization"); break; case "Settings": NavigateTo("Settings"); break;
                     case "About": NavigateTo("About"); break;
                     case "AudioEnhancement": NavigateTo("AudioEnhancement"); break;
+                    case "OpsisTaskbarDesigner":
+                        using (var form = new OpsisTaskbarDesignerForm()) form.ShowDialog(this);
+                        break;
+                    case "OpsisExplorerStudio":
+                        using (var form = new OpsisExplorerStudioForm()) form.ShowDialog(this);
+                        break;
+                    case "OpsisStartStudio":
+                        using (var form = new StartStudioForm()) form.ShowDialog(this);
+                        break;
+                    case "OpsisScreensaverStudio":
+                    case "OpsisEcosystem": NavigateTo("Personalization"); break;
+                    case string featureId when featureId.StartsWith("feature:", StringComparison.Ordinal):
+                        NavigateTo("Personalization"); break;
+                    case string galleryId when galleryId.StartsWith("gallery:", StringComparison.Ordinal):
+                        if (galleryCommands.TryGetValue(galleryId, out var asset))
+                        {
+                            try
+                            {
+                                if (asset.Type.Equals("widget", StringComparison.OrdinalIgnoreCase))
+                                    new OpsisCustomWidgetWindow(OpsisEcosystemGallery.ReadWidgetContribution(asset)).Show(this);
+                                else if (asset.Type.Equals("wallpaper", StringComparison.OrdinalIgnoreCase))
+                                {
+                                    if (MessageBox.Show(this, StudioText("Apply this plugin wallpaper?", "Εφαρμογή αυτού του wallpaper;"),
+                                        "Opsis Gallery", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
+                                        OpsisEcosystemGallery.ApplyStaticWallpaper(asset);
+                                }
+                                else if (asset.Type.Equals("theme", StringComparison.OrdinalIgnoreCase))
+                                {
+                                    if (MessageBox.Show(this, StudioText("Import this theme?", "Εισαγωγή αυτού του θέματος;"),
+                                        "Opsis Gallery", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
+                                        OpsisEcosystemGallery.InstallThemeContribution(asset);
+                                }
+                                else NavigateTo("Personalization");
+                            }
+                            catch (Exception ex)
+                            {
+                                RotatingLogger.Write("Gallery command failed: " + ex.Message);
+                                MessageBox.Show(this, ex.Message, "Opsis Gallery", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                            }
+                        }
+                        break;
                     case string pluginId when pluginId.StartsWith("plugin:", StringComparison.Ordinal): NavigateTo(pluginId); break;
                     case string appId when appId.StartsWith("app:", StringComparison.Ordinal):
                         if (appByLabel.TryGetValue(appId[4..], out var appPath) && MotionDesk.Services.SafeLaunch.IsAllowed(appPath))
