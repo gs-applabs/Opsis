@@ -169,6 +169,53 @@ public static class OpsisRecoveryHub
         "windows.storage.dll", "user32.dll", "uxtheme.dll"
     };
 
+    /// <summary>
+    /// Archive a bounded selection of original Windows shell binaries for forensics.
+    /// Do NOT restore these copies over protected system files: use DISM/SFC/System
+    /// Restore to repair Windows. The archive is not a full OS/system image backup.
+    /// </summary>
+    public static SystemInventory BackupMonitoredWindowsOriginals()
+    {
+        lock (Sync)
+        {
+            var fingerprint = WindowsFingerprint();
+            var folderId = Convert.ToHexString(SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(fingerprint)))[..20];
+            var target = Path.Combine(Root, "WindowsOriginals", folderId);
+            var manifestPath = Path.Combine(target, "manifest.json");
+            if (File.Exists(manifestPath))
+            {
+                if (new FileInfo(manifestPath).Length > 64 * 1024)
+                    throw new InvalidDataException("Windows originals manifest exceeds limit.");
+                var old = JsonSerializer.Deserialize<SystemInventory>(File.ReadAllText(manifestPath));
+                if (old != null && old.Fingerprint == fingerprint) return old;
+            }
+            var result = new SystemInventory { RecordedUtc = DateTime.UtcNow, Fingerprint = fingerprint };
+            var windows = Environment.GetFolderPath(Environment.SpecialFolder.Windows);
+            var system = Environment.GetFolderPath(Environment.SpecialFolder.System);
+            var bytes = 0L;
+            foreach (var name in MonitoredNames)
+            {
+                var source = name == "explorer.exe" ? Path.Combine(windows, name) : Path.Combine(system, name);
+                if (!File.Exists(source)) { result.Files.Add(new SystemFile(name, "", "", false)); continue; }
+                var info = new FileInfo(source);
+                if ((info.Attributes & FileAttributes.ReparsePoint) != 0 ||
+                    info.Length > 96 * 1024 * 1024 || (bytes += info.Length) > 320 * 1024 * 1024)
+                    throw new InvalidDataException("Windows original file archive exceeded safety limit.");
+                var sha = Sha(source);
+                var destination = Path.Combine(target, "files", name);
+                Directory.CreateDirectory(Path.GetDirectoryName(destination)!);
+                if (!File.Exists(destination)) File.Copy(source, destination, false);
+                if (!Sha(destination).Equals(sha, StringComparison.OrdinalIgnoreCase))
+                    throw new InvalidDataException("Windows archive checksum mismatch: " + name);
+                result.Files.Add(new SystemFile(name,
+                    FileVersionInfo.GetVersionInfo(source).FileVersion ?? "", sha, true));
+            }
+            Directory.CreateDirectory(target);
+            AtomicFile.WriteAllText(manifestPath, JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true }));
+            return result;
+        }
+    }
+
     public static SystemInventory InspectWindowsShell()
     {
         var inventory = new SystemInventory { RecordedUtc = DateTime.UtcNow, Fingerprint = WindowsFingerprint() };
