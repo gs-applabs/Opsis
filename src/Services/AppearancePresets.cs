@@ -99,6 +99,32 @@ public static class AppearancePresets
         AtomicFile.WriteAllText(path, JsonSerializer.Serialize(preset, Json));
     }
 
+    /// <summary>Export validated, data-only JSON without changing the desktop.</summary>
+    public static void ExportPortable(string name, string destination)
+    {
+        var preset = Read(name);
+        if (!string.Equals(Path.GetExtension(destination), ".json", StringComparison.OrdinalIgnoreCase))
+            throw new ArgumentException("Appearance exports must use .json.", nameof(destination));
+        if (File.Exists(destination))
+            throw new IOException("The destination already exists.");
+        Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(destination))!);
+        AtomicFile.WriteAllText(destination, JsonSerializer.Serialize(preset, Json));
+    }
+
+    /// <summary>Import untrusted data only after schema/size/value validation. Never apply it automatically.</summary>
+    public static string ImportPortable(string source)
+    {
+        if (!string.Equals(Path.GetExtension(source), ".json", StringComparison.OrdinalIgnoreCase))
+            throw new ArgumentException("Appearance imports must use .json.", nameof(source));
+        if (new FileInfo(source).Length > 32 * 1024)
+            throw new InvalidDataException("Appearance preset exceeds 32 KB.");
+        var preset = JsonSerializer.Deserialize<Preset>(AtomicFile.ReadAllText(source))
+            ?? throw new InvalidDataException("Invalid appearance preset JSON.");
+        Validate(preset);
+        SavePortable(preset);
+        return preset.Name;
+    }
+
     public static Preset Read(string name)
     {
         var path = FilePath(name);
