@@ -186,6 +186,26 @@ try
     OpsisRecoveryHub.RestoreOwnedSettings(snapshot.Id);
     Check(File.ReadAllText(Path.Combine(folder, "module-core.json")) == before, "recovery restored original settings");
     Check(OpsisRecoveryHub.List().Count >= 2, "restore creates pre-restore safety snapshot");
+    var tamper = OpsisRecoveryHub.Snapshot("Tamper-detection test");
+    var tamperFile = Path.Combine(OpsisRecoveryHub.Root, "snapshots", tamper.Id, "files", "module-core.json");
+    File.AppendAllText(tamperFile, "tampered");
+    var untouched = File.ReadAllText(Path.Combine(folder, "module-core.json"));
+    rejected = false;
+    try { OpsisRecoveryHub.RestoreOwnedSettings(tamper.Id); }
+    catch (InvalidDataException) { rejected = true; }
+    Check(rejected, "recovery detects altered backup hash");
+    Check(File.ReadAllText(Path.Combine(folder, "module-core.json")) == untouched,
+        "failed recovery cannot modify live settings");
+
+    // High repetition of the pure rules planner does not spawn work or touch
+    // disk. Clock-bound and startup actions must remain mutually exclusive.
+    var planned = OpsisAutomationStudio.Read();
+    var dueCount = 0;
+    for (var i = 0; i < 10_000; i++)
+        dueCount += OpsisAutomationStudio.Plan(planned,
+            new DateTime(2026, 11, 24, 9, i % 60, 0), false).Count;
+    Check(dueCount > 0 && dueCount < 10_000, "ten thousand in-memory automation evaluations stable");
+
 
     Console.WriteLine($"COMPLETE {passed} validated assertions");
 }
