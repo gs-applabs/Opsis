@@ -16,6 +16,7 @@ public static class StartStudioPreferences
         // Native Opsis launcher presentation; does not replace Windows Start.
         public string DisplayStyle { get; set; } = "List"; // List | Tiles | Compact
         public bool GroupByFolder { get; set; } = true;
+        public string StartButtonStyle { get; set; } = "Opsis Glass"; // Safe, Opsis-owned taskbar only
     }
     private static readonly object Gate = new();
     private static string Config => Path.Combine(AppPaths.AppDataFolder, "start-studio.json");
@@ -45,7 +46,8 @@ public static class StartStudioPreferences
                 ?? throw new InvalidDataException("Invalid Start Studio settings.");
             if (data.Schema != 1 || data.PinnedShortcuts?.Count > 250 ||
                 data.PinnedShortcuts == null || data.PinnedShortcuts.Any(p => !SafePath(p)) ||
-                data.DisplayStyle is not ("List" or "Tiles" or "Compact"))
+                data.DisplayStyle is not ("List" or "Tiles" or "Compact") ||
+                !MotionDesk.UI.OpsisStartButtonArt.IsValid(data.StartButtonStyle))
                 throw new InvalidDataException("Invalid pinned shortcut metadata.");
             return data;
         }
@@ -65,6 +67,20 @@ public static class StartStudioPreferences
             Directory.CreateDirectory(Path.GetDirectoryName(Config)!);
             AtomicFile.WriteAllText(Config,
                 JsonSerializer.Serialize(data, new JsonSerializerOptions { WriteIndented = true }));
+        }
+    }
+
+    public static void SetStartButton(string style)
+    {
+        if (!MotionDesk.UI.OpsisStartButtonArt.IsValid(style))
+            throw new ArgumentOutOfRangeException(nameof(style));
+        lock (Gate)
+        {
+            var data = Read();
+            if (data.StartButtonStyle == style) return; // Avoid needless SSD writes.
+            data.StartButtonStyle = style;
+            Directory.CreateDirectory(Path.GetDirectoryName(Config)!);
+            AtomicFile.WriteAllText(Config, JsonSerializer.Serialize(data, new JsonSerializerOptions { WriteIndented = true }));
         }
     }
 
