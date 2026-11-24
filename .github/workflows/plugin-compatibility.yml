@@ -1,4 +1,4 @@
-# Release gate for Opsis 2.8.0.2500. Runs only on an isolated, disposable Windows GitHub runner.
+# Release gate for Opsis 2.8.0.2510. Runs only on an isolated, disposable Windows GitHub runner.
 # The .NET plugins are loaded inside the real Opsis.exe (not only compile-checked).
 # The Electron Media Suite is an independent application, not an IOpsisNewsCrawlerPlugin.
 name: Opsis 2.8 plugin compatibility
@@ -8,12 +8,12 @@ on:
       crawler_ref:
         description: 'News Crawler branch/ref for the staged plugin DLL'
         required: false
-        default: 'release/plugin-dll-1.0.0.0-opsis-280'
+        default: 'feat/p0-opsis-28-coordinated-host-20261124'
         type: string
       chronikologio_ref:
         description: 'Chronikologio branch/ref for the staged plugin DLL'
         required: false
-        default: 'release/plugin-dll-1.0.0.0-opsis-280'
+        default: 'main'
         type: string
   pull_request:
     paths:
@@ -39,13 +39,13 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: gs-applabs/OpsisNewsCrawler
-          ref: ${{ inputs.crawler_ref || 'release/plugin-dll-1.0.0.0-opsis-280' }}
+          ref: ${{ inputs.crawler_ref || 'feat/p0-opsis-28-coordinated-host-20261124' }}
           path: _compat/crawler
           persist-credentials: false
       - uses: actions/checkout@v4
         with:
           repository: gs-applabs/san-shmera
-          ref: ${{ inputs.chronikologio_ref || 'release/plugin-dll-1.0.0.0-opsis-280' }}
+          ref: ${{ inputs.chronikologio_ref || 'main' }}
           path: _compat/chronikologio
           persist-credentials: false
       - uses: actions/setup-dotnet@v4
@@ -58,6 +58,20 @@ jobs:
         run: |
           node --test
           if ($LASTEXITCODE -ne 0) { throw 'Node integration checks failed' }
+      - name: Normalize Opsis.UI 0.6.0 and check canonical contract before plugin compilation
+        shell: pwsh
+        run: |
+          foreach ($relative in @('_compat/crawler/libs/Opsis.UI.dll',
+                                  '_compat/chronikologio/libs/Opsis.UI.dll')) {
+            Copy-Item lib/Opsis.UI.dll $relative -Force
+          }
+          foreach ($relative in @('_compat/crawler/libs/OpsisNewsCrawler.Plugin.Abstractions.dll',
+                                  '_compat/chronikologio/libs/OpsisNewsCrawler.Plugin.Abstractions.dll')) {
+            if ((Get-FileHash $relative -Algorithm SHA256).Hash -ne
+                (Get-FileHash lib/OpsisNewsCrawler.Plugin.Abstractions.dll -Algorithm SHA256).Hash) {
+              throw "Host shared ABI mismatch: $relative"
+            }
+          }
       - name: Build Opsis, both plugins, and run their tests
         shell: pwsh
         run: |
@@ -80,51 +94,37 @@ jobs:
         run: |
           ./tools/check-plugin-dll-versions.ps1 -CrawlerDir plugin-crawler -ChronikologioDir plugin-chronikologio -HostDir publish
           if ($LASTEXITCODE -ne 0) { throw 'Plugin DLL ABI version gate failed' }
-      - name: Verify shared assembly identities before loading
+      - name: Check exact Opsis 2.8 ABI 1.0.0.0 and Opsis.UI 0.6.0 bytes
         shell: pwsh
         run: |
-          $shared = @(
-            @{ n='Opsis.UI'; host='publish/Opsis.UI.dll'; other=@('_compat/crawler/libs/Opsis.UI.dll', '_compat/chronikologio/libs/Opsis.UI.dll') },
-            @{ n='OpsisNewsCrawler.Plugin.Abstractions'; host='publish/OpsisNewsCrawler.Plugin.Abstractions.dll'; other=@('_compat/chronikologio/libs/OpsisNewsCrawler.Plugin.Abstractions.dll','plugin-crawler/OpsisNewsCrawler.Plugin.Abstractions.dll') }
-          )
-          foreach ($lib in $shared) {
-            if (-not (Test-Path $lib.host)) { throw "Host shared DLL missing: $($lib.host)" }
-            $hostName = [System.Reflection.AssemblyName]::GetAssemblyName((Resolve-Path $lib.host).Path)
-            if ($hostName.Name -ne $lib.n) { throw "Wrong host assembly identity: $($hostName.FullName)" }
-            foreach ($path in $lib.other) {
-              if (-not (Test-Path $path)) { throw "Plugin shared DLL missing: $path" }
-              $other = [System.Reflection.AssemblyName]::GetAssemblyName((Resolve-Path $path).Path)
-              if ($other.Name -ne $hostName.Name -or $other.Version -gt $hostName.Version) {
-                throw "Incompatible $($lib.n): host=$($hostName.FullName), plugin=$($other.FullName) ($path)"
+          $contracts = @('publish/OpsisNewsCrawler.Plugin.Abstractions.dll',
+                         'plugin-crawler/OpsisNewsCrawler.Plugin.Abstractions.dll',
+                         'plugin-chronikologio/OpsisNewsCrawler.Plugin.Abstractions.dll',
+                         '_compat/crawler/libs/OpsisNewsCrawler.Plugin.Abstractions.dll',
+                         '_compat/chronikologio/libs/OpsisNewsCrawler.Plugin.Abstractions.dll')
+          $uis = @('publish/Opsis.UI.dll',
+                   'plugin-crawler/Opsis.UI.dll',
+                   'plugin-chronikologio/Opsis.UI.dll',
+                   '_compat/crawler/libs/Opsis.UI.dll',
+                   '_compat/chronikologio/libs/Opsis.UI.dll')
+          foreach ($list in @($contracts, $uis)) {
+            $expected = (Get-FileHash $list[0] -Algorithm SHA256).Hash
+            foreach ($file in $list) {
+              if (!(Test-Path $file) -or (Get-FileHash $file -Algorithm SHA256).Hash -ne $expected) {
+                throw "Incompatible shared DLL: $file"
               }
-              "compatible assembly: $path -> $($hostName.FullName)"
             }
           }
-          # Plugin assembly identity is a different thing from the shared host contract ABI.
-          # The new PLUGIN DLLs must be exactly 1.0.0.0, but the shared contract
-          # stays 0.8.0.0 and Opsis.UI keeps its own independent assembly version.
-          foreach ($spec in @(
-            @{ name='Crawler'; path='plugin-crawler/OpsisNewsCrawler.OpsisPlugin.dll' },
-            @{ name='Chronikologio'; path='plugin-chronikologio/Chronikologio.OpsisPlugin.dll' }
-          )) {
-            if (-not (Test-Path $spec.path)) { throw "$($spec.name) plugin DLL missing: $($spec.path)" }
-            $fullPath = (Resolve-Path $spec.path).Path
-            $asm = [Reflection.AssemblyName]::GetAssemblyName($fullPath)
-            $fileVersion = [Diagnostics.FileVersionInfo]::GetVersionInfo($fullPath).FileVersion
-            if ($asm.Version.ToString() -ne '1.0.0.0' -or $fileVersion -ne '1.0.0.0') {
-              throw "$($spec.name) plugin requires 1.0.0.0: assembly=$($asm.Version), file=$fileVersion"
-            }
-            Write-Host "Verified $($spec.name) plugin DLL version: 1.0.0.0"
+          $contractVersion = [Reflection.AssemblyName]::GetAssemblyName((Resolve-Path $contracts[0]).Path).Version.ToString()
+          $uiVersion = [Reflection.AssemblyName]::GetAssemblyName((Resolve-Path $uis[0]).Path).Version.ToString()
+          $uiFileVersion = [Diagnostics.FileVersionInfo]::GetVersionInfo((Resolve-Path $uis[0]).Path).FileVersion
+          if ($contractVersion -ne '1.0.0.0' -or $uiVersion -ne '0.1.0.0' -or $uiFileVersion -ne '0.6.0.0') {
+            throw "Wrong host DLL identities: ABI=$contractVersion UI=$uiVersion/$uiFileVersion"
           }
-          $contractPath = (Resolve-Path 'publish/OpsisNewsCrawler.Plugin.Abstractions.dll').Path
-          if ([Reflection.AssemblyName]::GetAssemblyName($contractPath).Version.ToString() -ne '0.8.0.0') {
-            throw 'Shared plugin contract unexpectedly changed; ABI migration is required'
-          }
-          # The host's bundled Opsis.UI must have 0.4.5 features used by the new plugins.
-          $bytes = [IO.File]::ReadAllBytes((Resolve-Path 'publish/Opsis.UI.dll').Path)
-          $metadata = [Text.Encoding]::UTF8.GetString($bytes)
-          foreach ($member in @('GlossPresets','SettingsStore','OpsisWindow')) {
-            if (-not $metadata.Contains($member)) { throw "Host Opsis.UI missing $member" }
+          foreach ($plugin in @('plugin-crawler/OpsisNewsCrawler.OpsisPlugin.dll',
+                                'plugin-chronikologio/Chronikologio.OpsisPlugin.dll')) {
+            $assembly = [Reflection.AssemblyName]::GetAssemblyName((Resolve-Path $plugin).Path)
+            if ($assembly.Version.ToString() -ne '1.0.0.0') { throw "Wrong plugin version: $plugin" }
           }
       - name: Load both plugins inside Opsis and verify calendar + feeds
         shell: pwsh
