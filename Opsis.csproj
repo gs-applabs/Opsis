@@ -21,6 +21,11 @@
     <Using Include="Opsis.UI" />
     <!-- tests\ holds separate projects (e.g. AtomicWriteCrashHarness with top-level statements): they must NEVER be compiled into the app, or their Main replaces the real entry point and Opsis exits with code 2 at start-up -->
     <Compile Remove="tests/**" />
+    <!-- CI checks out external plugin repos into _compat; never compile their sources into the Opsis host. -->
+    <Compile Remove="_compat/**" />
+    <EmbeddedResource Remove="_compat/**" />
+    <None Remove="_compat/**" />
+    <Content Remove="_compat/**" />
     <EmbeddedResource Remove="tests/**" />
     <None Remove="tests/**" />
     <Reference Include="lib/*.dll" Exclude="lib/WebView2Loader.dll;lib/libMonoPosixHelper.dll;lib/MonoPosixHelper.dll">
