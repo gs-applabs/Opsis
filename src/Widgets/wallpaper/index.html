@@ -189,7 +189,7 @@ function resizeCanvas() {
     canvas.style.height = window.innerHeight + 'px';
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     // το Weather σκηνικό δουλεύει σε φυσικά pixels (ταυτοτικός μετασχηματισμός) — βλ. drawWeather
-    if (isWeatherMode(cfg.mode)) WeatherWallpaper.resize(width, height);
+    if (usesAtmosphere(cfg.mode)) WeatherWallpaper.resize(width, height);
     if (cfg.mode === 'Ancient Athens') drawAthens(true);
 }
 window.addEventListener('resize', () => { resizeCanvas(); lastFrameTime = 0; });
@@ -652,16 +652,7 @@ function updateWeatherInfo() {
     if (!box) return;
     if (!cfg.weatherInfo || !window.WeatherWallpaper) { box.style.display = 'none'; return; }   // το cfg.weatherInfo ισχύει ήδη ανά mode (βλ. C#)
     const ancientAthens = cfg.mode === 'Ancient Athens';
-    const weatherInfo = WeatherWallpaper.info();
-    // Do not inject Athens observations into the regular Weather renderer:
-    // returning to the user's city must never momentarily show Athens data.
-    const i = ancientAthens
-        ? { ...weatherInfo, temp: ancientAthensWeather?.ok ? ancientAthensWeather.temp : null,
-            code: ancientAthensWeather?.ok ? ancientAthensWeather.code : null,
-            windKmh: ancientAthensWeather?.ok ? Math.round(ancientAthensWeather.wind || 0) : null,
-            source: ancientAthensWeather?.source, observedAt: ancientAthensWeather?.observedAt,
-            fetchedAt: ancientAthensWeather?.fetchedAt, stale: !!ancientAthensWeather?.stale }
-        : weatherInfo;
+    const i = WeatherWallpaper.info();
     // 1.7.8: 14 γλώσσες (ίδιες με το GearWin) - το cfg.lang είναι ο κωδικός της εφαρμογής (el/en/de/fr/...).
     const LOCALES = { el: 'el-GR', en: 'en-US', de: 'de-DE', fr: 'fr-FR', es: 'es-ES', ko: 'ko-KR', zh: 'zh-CN', it: 'it-IT',
                       ru: 'ru-RU', ja: 'ja-JP', pt: 'pt-PT', tr: 'tr-TR', ar: 'ar-SA', hi: 'hi-IN' };
@@ -736,7 +727,6 @@ function updateWeatherInfo() {
 }
 
 let weatherTimer = null;
-let ancientAthensWeather = null; // independent Athens cache for this host instance
 let rotationTimer = null; // εναλλαγή βίντεο ανά N λεπτά (Video mode)
 let weatherPollHandles = [];
 let weatherRevision = 0;
@@ -747,10 +737,7 @@ async function pollWeatherOnce(revision) {
         const data = JSON.parse(await (cfg.mode === 'Ancient Athens'
             ? b.GetAncientAthensWeatherJson() : b.GetWeatherJson()));
         if (revision !== weatherRevision || isPaused) return false;
-        if (cfg.mode === 'Ancient Athens') {
-            if (data.ok === true) ancientAthensWeather = data;
-            OpsisAncientAthens.setWeather(data);
-        } else WeatherWallpaper.setWeather(data);
+        WeatherWallpaper.setWeather(data);
         updateWeatherInfo();
         return data.ok === true;
     } catch (e) { return false; }   // κρατάει τα προηγούμενα δεδομένα
@@ -779,18 +766,19 @@ async function refreshWeather() {
 function isWeatherMode(mode) { return mode === 'Weather'; }
 function usesAtmosphere(mode) { return isWeatherMode(mode) || mode === 'Ancient Athens'; }
 
-function drawAthens(force = false) {
+function drawAthens(force = false, dt = .04) {
     const second = Math.floor(Date.now() / 1000);
     const lowPower = cfg.performanceMode === 'Battery' || cfg.performanceMode === 'Low Power';
-    if (!force && (lowPower || reduceWallpaperMotion()) && second === athensSecond) return;
+    const reduced = reduceWallpaperMotion();
+    if (!force && (lowPower || reduced) && second === athensSecond) return;
     athensSecond = second;
-    OpsisAncientAthens.draw(ctx, canvas.width, canvas.height, cfg.athensPhase, force,
-        { reducedMotion: reduceWallpaperMotion(), lowPower });
+    WeatherWallpaper.resize(canvas.width, canvas.height);
+    drawWeather(reduced ? 0 : lowPower ? .1 : dt);
 }
 
 let studioTime = 0;
 function renderFrame(dt) {
-    if (cfg.mode === 'Ancient Athens') drawAthens();
+    if (cfg.mode === 'Ancient Athens') drawAthens(false, dt);
     else if (OpsisStudioScenes.has(cfg.mode)) {
         studioTime += dt;
         OpsisStudioScenes.draw(ctx, cfg.mode, canvas.width, canvas.height, studioTime);
@@ -1081,7 +1069,7 @@ async function doRefresh() {
     if (previousMode !== cfg.mode || scaleReset) { adaptiveScale = 1; resetFrameStats(); }
     if (previousMode !== cfg.mode || previousScale !== cfg.perf?.renderScale || scaleReset) {
         if (wasAthens && cfg.mode !== 'Ancient Athens') OpsisAncientAthens.release();
-        if (isWeatherMode(previousMode) && !isWeatherMode(cfg.mode)) WeatherWallpaper.release();
+        if (usesAtmosphere(previousMode) && !usesAtmosphere(cfg.mode)) WeatherWallpaper.release();
         resizeCanvas();
     }
 
@@ -1089,7 +1077,24 @@ async function doRefresh() {
         const wx = isWeatherMode(cfg.mode);
         window.OpsisWeatherSpatial?.setMode(wx ? (cfg.weatherSpatialMode || 'Off') : 'Off');
         if (wx) window.OpsisLandmarks?.setCities(cfg.cityScenes);   // οι προσομοιώσεις (καιρός/ώρα/άνεμος) ισχύουν μόνο στο Weather mode — τα υπόλοιπα modes δείχνουν την πραγματική ώρα/θερμοκρασία
-        WeatherWallpaper.setConfig({ realistic: wx, spatialMode: wx ? (cfg.weatherSpatialMode || 'Off') : 'Off', reducedMotion: reduceWallpaperMotion(), weatherSim: wx ? (cfg.weatherSim || 'Auto') : 'Auto', timeSim: wx ? (cfg.timeSim || 'Auto') : 'Auto', windSim: wx ? (cfg.windSim || 'Auto') : 'Auto', glass: cfg.weatherGlass !== false, rainGlassIntensity: cfg.rainGlassIntensity, rainLandscapeIntensity: cfg.rainLandscapeIntensity, photoFocusX: cfg.weatherPhotoFocusX, skylinePreview: cfg.weatherSkylinePreview === true, skyEdits: cfg.weatherSkyEdits || {}, landmarks: cfg.weatherLandmarks !== false, landmarkId: cfg.weatherLandmarkId || 'Auto', lat: cfg.weatherLat, lon: cfg.weatherLon });
+        const historical = cfg.mode === 'Ancient Athens';
+        const atmospheric = wx || historical;
+        WeatherWallpaper.setConfig({
+            realistic: atmospheric,
+            historicalAthens: historical, athensPhase: cfg.athensPhase || 'Auto',
+            spatialMode: wx ? (cfg.weatherSpatialMode || 'Off') : 'Off',
+            reducedMotion: reduceWallpaperMotion(),
+            weatherSim: atmospheric ? (cfg.weatherSim || 'Auto') : 'Auto',
+            timeSim: historical ? (cfg.athensPhase || 'Auto') : wx ? (cfg.timeSim || 'Auto') : 'Auto',
+            windSim: atmospheric ? (cfg.windSim || 'Auto') : 'Auto',
+            glass: cfg.weatherGlass !== false, rainGlassIntensity: cfg.rainGlassIntensity,
+            rainLandscapeIntensity: cfg.rainLandscapeIntensity,
+            photoFocusX: cfg.weatherPhotoFocusX, skylinePreview: cfg.weatherSkylinePreview === true,
+            skyEdits: cfg.weatherSkyEdits || {}, landmarks: cfg.weatherLandmarks !== false,
+            landmarkId: cfg.weatherLandmarkId || 'Auto',
+            lat: historical ? 37.9715 : cfg.weatherLat,
+            lon: historical ? 23.7267 : cfg.weatherLon
+        });
     }
     stopPolling();
     if (!isPaused && (usesAtmosphere(cfg.mode) || cfg.weatherInfo))
