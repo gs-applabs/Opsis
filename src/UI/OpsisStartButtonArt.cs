@@ -8,7 +8,7 @@ namespace MotionDesk.UI;
 /// <summary>Reusable, GDI+ rendered Opsis Start emblems. No shell hooks, DLL injection or bitmap assets.</summary>
 public static class OpsisStartButtonArt
 {
-    public static readonly string[] Styles = { "Opsis Glass", "Crystal", "Aurora", "Obsidian", "Minimal", "Classic" };
+    public static readonly string[] Styles = { "Opsis Glass", "Crystal", "Aurora", "Obsidian", "Minimal", "Classic", "Win11 Fluent", "Win11 Glass", "Win11 Dark", "Win11 Sharp", "Opsis Square" };
     public static bool IsValid(string? style) => Array.IndexOf(Styles, style) >= 0;
 
     public static void Draw(Graphics graphics, Rectangle bounds, string? style, Icon? applicationIcon = null)
@@ -23,6 +23,41 @@ public static class OpsisStartButtonArt
             g.InterpolationMode = InterpolationMode.HighQualityBicubic;
             var side = Math.Min(bounds.Width - 4, bounds.Height - 4);
             var rect = new Rectangle(bounds.X + (bounds.Width - side) / 2, bounds.Y + (bounds.Height - side) / 2, side, side);
+            if (style.StartsWith("Win11 ", StringComparison.Ordinal) || style == "Opsis Square")
+            {
+                var sharp = style == "Win11 Sharp";
+                var useLogo = style == "Opsis Square";
+                var inset = Math.Max(2, side / 12);
+                var square = Rectangle.Inflate(rect, -inset, -inset);
+                var radius = sharp ? Math.Max(2, side / 14f) : Math.Max(4, side / 5f);
+                using var path = RoundedSquare(square, radius);
+                var top = style switch
+                {
+                    "Win11 Dark" => Color.FromArgb(246, 52, 62, 86),
+                    "Win11 Fluent" => Color.FromArgb(250, 73, 165, 237),
+                    "Win11 Glass" => Color.FromArgb(230, 191, 235, 255),
+                    "Win11 Sharp" => Color.FromArgb(248, 58, 116, 201),
+                    _ => Color.FromArgb(238, 135, 222, 255)
+                };
+                var bottom = style switch
+                {
+                    "Win11 Dark" => Color.FromArgb(252, 13, 17, 31),
+                    "Win11 Glass" => Color.FromArgb(237, 31, 100, 181),
+                    _ => Color.FromArgb(248, 20, 53, 138)
+                };
+                using var fill = new LinearGradientBrush(square, top, bottom, 87f);
+                using var border = new Pen(Color.FromArgb(195, 219, 244, 255), Math.Max(1f, side / 36f));
+                g.FillPath(fill, path);
+                g.DrawPath(border, path);
+                if (style == "Win11 Glass" || useLogo)
+                {
+                    using var light = new SolidBrush(Color.FromArgb(60, Color.White));
+                    var gleam = new RectangleF(square.X + square.Width * .12f, square.Y + square.Height * .11f, square.Width * .76f, square.Height * .24f);
+                    g.FillEllipse(light, gleam);
+                }
+                DrawMark(g, square, Color.White, useLogo, applicationIcon);
+                return;
+            }
             if (style == "Minimal")
             {
                 using var pen = new Pen(Color.FromArgb(235, 211, 245, 255), Math.Max(1.4f, side / 18f));
@@ -52,6 +87,18 @@ public static class OpsisStartButtonArt
             DrawMark(g, rect, Color.White, style == "Opsis Glass", applicationIcon);
         }
         finally { g.Restore(state); }
+    }
+
+    private static GraphicsPath RoundedSquare(Rectangle r, float radius)
+    {
+        var p = new GraphicsPath();
+        var d = Math.Min(Math.Min(r.Width, r.Height), radius * 2);
+        p.AddArc(r.X, r.Y, d, d, 180, 90);
+        p.AddArc(r.Right - d, r.Y, d, d, 270, 90);
+        p.AddArc(r.Right - d, r.Bottom - d, d, d, 0, 90);
+        p.AddArc(r.X, r.Bottom - d, d, d, 90, 90);
+        p.CloseFigure();
+        return p;
     }
 
     private static void DrawMark(Graphics g, Rectangle r, Color color, bool useLogo, Icon? applicationIcon)
