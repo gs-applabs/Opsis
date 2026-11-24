@@ -89,3 +89,43 @@ test('Ancient Athens weather is fixed to Athens coordinates, not the user select
     assert.match(index,/usesAtmosphere\(mode\)/);
     assert.match(index,/ancient-athens-effects\.js/);
 });
+
+test('MacLike uses one Weather engine with cached masked foreground and isolated city state', async () => {
+    const log = { foreground:0, legacy:0, paints:0, masks:0 };
+    const shade=()=>({addColorStop(){}});
+    const context=()=>new Proxy({
+        createRadialGradient:shade, createLinearGradient:shade,
+        createImageData:(w,h)=>({data:new Uint8ClampedArray(w*h*4)}),
+        getImageData:(x,y,w,h)=>({data:new Uint8ClampedArray(w*h*4)}),
+        drawImage(){log.paints++;}, measureText(){return {width:12};},
+        createPattern(){return {};}, globalAlpha:1
+    },{get:(t,k)=>k in t?t[k]:(()=>{})});
+    const document={createElement(){return {width:0,height:0,getContext:context};}};
+    const window={OpsisSkyMask:{
+        detect(){log.masks++;return {width:512,height:288};},
+        refinePhotoSky(image,mask){return mask;}
+    }};
+    class Image { constructor(){this.naturalWidth=1920;this.naturalHeight=1080;} decode(){return Promise.resolve();} }
+    const sandbox={window,document,Image,Date,Intl,Math,Promise,performance:{now:()=>100}};
+    for(const file of ['ancient-athens.js','weather.js'])
+        vm.runInNewContext(fs.readFileSync(path.join(root,file),'utf8'),sandbox,{filename:file});
+    const athens=window.OpsisAncientAthens,original=athens.draw;
+    athens.draw=(...args)=>{
+        if(args[5]?.sharedWeather)log.foreground++;
+        else log.legacy++;
+        return original(...args);
+    };
+    await athens.prepare(640,360,'Day');
+    const wx=window.WeatherWallpaper;
+    wx.resize(640,360);
+    wx.setConfig({historicalAthens:true,athensPhase:'Day',timeSim:'Day',lat:37.9715,lon:23.7267,
+        weatherSim:'Rain',realistic:true,glass:false,spatialMode:'Off'});
+    for(let i=0;i<3;i++)wx.draw(context(),.1,{id:'Balanced'});
+    assert.equal(log.foreground,3);
+    assert.equal(log.legacy,0);
+    assert.equal(log.masks,1);
+    assert.ok(wx._state().TGT.rain>0);
+    wx.setConfig({historicalAthens:false,lat:51.5,lon:-.12,weatherSim:'Clear',timeSim:'Auto'});
+    assert.equal(wx._state().TGT.rain,0);
+    assert.equal(wx.info().temp,null);
+});
