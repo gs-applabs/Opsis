@@ -59,7 +59,9 @@ public static class OpsisIntegrationAudit
         IEnumerable<string> moduleIds, IEnumerable<PluginEntry> pluginEntries,
         IEnumerable<(string PluginId, string ItemId, string Origin)> contributions,
         bool replaceWindowsTaskbar, IEnumerable<OpsisModCompatibility.Finding> external,
-        bool guardRequiresReview)
+        bool guardRequiresReview, bool autoTileEnabled = false, bool windowRulesEnabled = false,
+        bool desktopToolbarEnabled = false, bool deskStripEnabled = false,
+        bool wallpaperAccentEnabled = false, bool followWindowsAccent = false)
     {
         var problems = new List<Collision>();
         var modules = moduleIds.ToArray();
@@ -87,6 +89,22 @@ public static class OpsisIntegrationAudit
                     "Opsis replacement taskbar overlaps with " + externalShell.Product,
                     "Disable the competing shell replacement or disable Opsis taskbar overlay."));
         }
+        if (autoTileEnabled && windowRulesEnabled)
+            problems.Add(new Collision("Block", "desktop.window-position",
+                "AutoTile and Window Rules both try to position application windows.",
+                "Disable AutoTile or Window Rules; never let two engines move the same window."));
+        if (replaceWindowsTaskbar && deskStripEnabled)
+            problems.Add(new Collision("Review", "desktop.docks",
+                "Opsis Taskbar and DeskStrip may duplicate pinned/running app docks.",
+                "Use separate monitor/edge placements, or disable one dock."));
+        if (replaceWindowsTaskbar && desktopToolbarEnabled)
+            problems.Add(new Collision("Review", "desktop.docks",
+                "Opsis Taskbar and Desktop Toolbar both draw desktop-edge controls.",
+                "Verify they occupy different screen edges or disable one."));
+        if (wallpaperAccentEnabled && followWindowsAccent)
+            problems.Add(new Collision("Review", "theme.accent",
+                "Both wallpaper-derived and Windows-following accent preferences are enabled.",
+                "Use one authority; Opsis wallpaper accent takes precedence in ThemeManager."));
         if (guardRequiresReview)
             problems.Add(new Collision("Block", "windows.update",
                 "Windows build has not passed the Opsis compatibility review.",
@@ -127,7 +145,23 @@ public static class OpsisIntegrationAudit
             assets.Count,
             Evaluate(OpsisModCore.Catalog.Select(x => x.Id), plugins,
                 OpsisEcosystemGallery.ContributionOrigins(),
-                s.ReplaceWindowsTaskbar, external, WindowsUpdateGuard.RequiresReview));
+                s.ReplaceWindowsTaskbar, external, WindowsUpdateGuard.RequiresReview,
+                autoTileEnabled: s.AutoTileEnabled,
+                windowRulesEnabled: s.WindowRulesEnabled,
+                desktopToolbarEnabled: s.DesktopToolbarEnabled,
+                deskStripEnabled: SafeDeskStripEnabled(),
+                wallpaperAccentEnabled: s.WallpaperAccentEnabled,
+                followWindowsAccent: s.FollowWindowsAccent));
+    }
+
+    private static bool SafeDeskStripEnabled()
+    {
+        try { return MotionDesk.Widgets.DeskStripHostEngine.Instance.GetSettings().StartEnabled; }
+        catch (Exception ex)
+        {
+            RotatingLogger.Write("Integration audit DeskStrip settings: " + ex.Message);
+            return false;
+        }
     }
 
     public static bool TaskbarOverlayAllowed(
