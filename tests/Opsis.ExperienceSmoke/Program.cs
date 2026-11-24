@@ -43,6 +43,23 @@ try
     Check(OpsisIntegrationAudit.TaskbarOverlayAllowed(true,
         Array.Empty<OpsisModCompatibility.Finding>(), false),
         "shell guard permits explicitly requested Opsis taskbar without known conflicts");
+    var placementConflict = OpsisIntegrationAudit.Evaluate(
+        Array.Empty<string>(), Array.Empty<OpsisIntegrationAudit.PluginEntry>(),
+        Array.Empty<(string, string, string)>(), false,
+        Array.Empty<OpsisModCompatibility.Finding>(), false,
+        autoTileEnabled: true, windowRulesEnabled: true);
+    Check(placementConflict.Any(x => x.Severity == "Block" &&
+        x.Domain == "desktop.window-position"),
+        "only one native engine may own app window placement");
+    var dockAndAccentOverlaps = OpsisIntegrationAudit.Evaluate(
+        Array.Empty<string>(), Array.Empty<OpsisIntegrationAudit.PluginEntry>(),
+        Array.Empty<(string, string, string)>(), true,
+        Array.Empty<OpsisModCompatibility.Finding>(), false,
+        desktopToolbarEnabled: true, deskStripEnabled: true,
+        wallpaperAccentEnabled: true, followWindowsAccent: true);
+    Check(dockAndAccentOverlaps.Count(x => x.Severity == "Review") >= 3,
+        "audit warns about overlapping taskbar, DeskStrip, toolbar and accent owners");
+
 
     Check(OpsisModCore.Catalog.Count >= 10, "unified module catalog available");
     Check(OpsisModCore.Read().Enabled.Count == 0, "module flags disabled by default");
