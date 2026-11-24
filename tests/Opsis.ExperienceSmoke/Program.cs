@@ -91,6 +91,28 @@ try
     WindowsUpdateGuard.ApproveCurrentBuild();
     Check(!WindowsUpdateGuard.RequiresReview, "user approval clears hold");
 
+    var windowsInventory = OpsisRecoveryHub.InspectWindowsShell();
+    Check(windowsInventory.Files.Count == 6, "Windows shell file inventory includes six monitored binaries");
+    Check(windowsInventory.Files.Any(x => x.Available), "Windows shell inventory found genuine system binaries");
+    var originalArchive = OpsisRecoveryHub.BackupMonitoredWindowsOriginals();
+    Check(originalArchive.Files.Count == 6, "original Windows shell archive manifest created");
+    Check(OpsisRecoveryHub.BackupMonitoredWindowsOriginals().Fingerprint == originalArchive.Fingerprint,
+        "Windows original archive deduplicates matching OS versions");
+    var previousShell = new OpsisRecoveryHub.SystemInventory
+    {
+        Fingerprint = "Build=OUTDATED;UBR=0", RecordedUtc = DateTime.UtcNow
+    };
+    File.WriteAllText(Path.Combine(OpsisRecoveryHub.Root, "system-inventory.json"),
+        JsonSerializer.Serialize(previousShell));
+    var detectedChange = OpsisRecoveryHub.InspectUpdateImpact();
+    Check(detectedChange.Contains("fingerprint changed"), "shell impact inspection detects build change");
+    Check(OpsisRecoveryHub.ReadLastUpdateImpact().Contains("OUTDATED"),
+        "prior update report persists after comparison");
+    OpsisRecoveryHub.InspectUpdateImpact();
+    Check(OpsisRecoveryHub.ReadLastUpdateImpact().Contains("OUTDATED"),
+        "repeat no-change scan does not erase update evidence");
+
+
     Check(OpsisFeatureSwitcher.CanSwitch("windows.hot-corners"), "core module has operational hot corner adapter");
     Check(!OpsisFeatureSwitcher.CanSwitch("start.shell-replacement"), "planned Start replacement not switchable");
     OpsisFeatureSwitcher.Set("windows.hot-corners", true);
