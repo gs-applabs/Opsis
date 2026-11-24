@@ -19,6 +19,7 @@ internal sealed class ReplacementTaskbar : Form
     private readonly Button _clock = new();
     private string? _content;
     private bool _vertical;
+    private OpsisTaskbarDesigner.Profile _visual = OpsisTaskbarDesigner.Default;
 
     internal static void RefreshSettings()
     {
@@ -134,7 +135,11 @@ internal sealed class ReplacementTaskbar : Form
     {
         bool vertical = Height > Width;
         var list = windows.Where(window => window.Handle != Handle).ToArray();
+        // These are Opsis-owned visuals; native Windows taskbar remains unchanged.
+        try { _visual = OpsisTaskbarDesigner.Read(); }
+        catch (Exception e) { RotatingLogger.Write("Taskbar visual profile: " + e.Message); _visual = OpsisTaskbarDesigner.Default; }
         BackColor = UiTheme.NavBackground;
+        Opacity = _visual.Style == "Glass" ? _visual.OpacityPercent / 100.0 : 1.0;
         _start.BackColor = UiTheme.Surface;
         _start.ForeColor = UiTheme.TextPrimary;
         _clock.Text = DateTime.Now.ToString(vertical ? "HH:mm" : "ddd  HH:mm");
@@ -142,16 +147,20 @@ internal sealed class ReplacementTaskbar : Form
         _clock.BackColor = UiTheme.Surface;
         _taskView.ForeColor = UiTheme.TextPrimary;
         _taskView.BackColor = UiTheme.Surface;
-        string key = $"{vertical}|{active}|{UiTheme.TextPrimary.ToArgb()}|{UiTheme.Surface.ToArgb()}|" +
+        string key = $"{vertical}|{active}|{_visual.Style}|{_visual.Alignment}|{_visual.ButtonWidth}|{_visual.ButtonGap}|{_visual.ShowTaskView}|{_visual.ShowClock}|{UiTheme.TextPrimary.ToArgb()}|{UiTheme.Surface.ToArgb()}|" +
             string.Join('|', pins) + "|" + string.Join('|', list.Select(window => $"{window.Handle}:{window.Title}"));
         if (_content == key) return;
         _content = key;
         _vertical = vertical;
         _start.Dock = _taskView.Dock = vertical ? DockStyle.Top : DockStyle.Left;
         _clock.Dock = vertical ? DockStyle.Bottom : DockStyle.Right;
-        _start.Size = new Size(66, 38);
-        _taskView.Size = new Size(42, 36);
-        _clock.Size = new Size(104, 42);
+        _taskView.Visible = _visual.ShowTaskView;
+        _clock.Visible = _visual.ShowClock;
+        _apps.FlowDirection = vertical ? FlowDirection.TopDown : FlowDirection.LeftToRight;
+        _apps.Padding = (!vertical && _visual.Alignment == "Center") ? new Padding(Math.Min(80, Width / 10), 0, 0, 0) : Padding.Empty;
+        _start.Size = new Size(_visual.Style == "Compact" ? 60 : 66, _visual.Style == "Compact" ? 32 : 38);
+        _taskView.Size = new Size(_visual.Style == "Compact" ? 35 : 42, _visual.Style == "Compact" ? 32 : 36);
+        _clock.Size = new Size(104, _visual.Style == "Compact" ? 35 : 42);
         foreach (var fixedButton in new[] { _start, _taskView, _clock }) fixedButton.FlatStyle = FlatStyle.Flat;
         _apps.FlowDirection = vertical ? FlowDirection.TopDown : FlowDirection.LeftToRight;
         _apps.SuspendLayout();
@@ -185,8 +194,9 @@ internal sealed class ReplacementTaskbar : Form
     private void AddItem(string label, Action click, bool active)
     {
         var item = new Button { Text = label, AutoEllipsis = true, AccessibleName = label,
-            Width = _vertical ? Math.Max(40, Width - 7) : 128, Height = _vertical ? 44 : Math.Max(23, Height - 6),
-            Margin = new Padding(2), FlatStyle = FlatStyle.Flat, Cursor = Cursors.Hand,
+            Width = _vertical ? Math.Max(40, Width - 7) : _visual.ButtonWidth,
+            Height = OpsisTaskbarDesigner.ButtonHeight(_visual, _vertical, Height),
+            Margin = new Padding(_visual.ButtonGap), FlatStyle = FlatStyle.Flat, Cursor = Cursors.Hand,
             BackColor = active ? UiTheme.SurfaceHover : UiTheme.Surface, ForeColor = active ? UiTheme.AccentCyan : UiTheme.TextPrimary };
         item.FlatAppearance.BorderSize = 0;
         item.Click += (_, _) => click();
