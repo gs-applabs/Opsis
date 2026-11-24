@@ -141,8 +141,9 @@ public sealed class OpsisTaskbarDesignerForm : Form
     private void DrawPreview()
     {
         if (_preview.IsDisposed || _preview.Width < 120) return;
-        foreach (Control child in _preview.Controls) child.Dispose();
-        _preview.Controls.Clear();
+        // Disposing a child removes it from ControlCollection; do not mutate
+        // a collection while iterating its enumerator.
+        while (_preview.Controls.Count > 0) _preview.Controls[0].Dispose();
         _preview.BackColor = UiTheme.NavBackground;
         var items = new[] { "Opsis", "Explorer", "Browser" };
         var total = items.Length * ((int)_width.Value + (int)_gap.Value * 2);
