@@ -59,12 +59,57 @@ public static class WallpaperAccentEngine
 
     public static string ToHex(Color c) => $"#{c.R:X2}{c.G:X2}{c.B:X2}";
 
+    /// <summary>
+    /// For live Weather compositions, select a stable accent from the current
+    /// time/weather *scene*, rather than treating synthetic pixels as a sampled photo.
+    /// True local images are pixel-sampled above. No internet lookup occurs here.
+    /// </summary>
+    public static Color WeatherSceneAccent(string time, string weather, int localHour)
+    {
+        var cold = weather is "Snow" or "Fog";
+        var storm = weather is "Rain" or "HeavyRain" or "Thunderstorm";
+        var phase = time == "Auto" ? (localHour < 6 || localHour >= 21 ? "Night"
+            : localHour < 9 ? "Dawn" : localHour >= 18 ? "Dusk" : "Day") : time;
+        var color = phase switch
+        {
+            "Dawn" => Color.FromArgb(222, 143, 92),
+            "Dusk" => Color.FromArgb(202, 118, 145),
+            "Night" => Color.FromArgb(106, 138, 218),
+            _ => Color.FromArgb(58, 160, 219)
+        };
+        if (cold) color = Color.FromArgb(137, 190, 221);
+        else if (storm) color = Color.FromArgb(108, 139, 191);
+        return color;
+    }
+
     public static string PreviewCurrent()
     {
         var settings = WallpaperSettings.Load();
+        if (settings.Mode == "Weather")
+            return ToHex(WeatherSceneAccent(settings.TimeSimulation,
+                settings.WeatherSimulation, DateTime.Now.Hour));
         if (string.IsNullOrWhiteSpace(settings.ImagePath) || !File.Exists(settings.ImagePath))
-            throw new FileNotFoundException("Select an installed local image wallpaper first.");
+            throw new FileNotFoundException("Select an installed local image wallpaper or Weather mode first.");
         return ToHex(Extract(settings.ImagePath));
+    }
+
+    /// <summary>Low-frequency refresh; only writes when the calculated accent changes.</summary>
+    public static bool RefreshIfChanged()
+    {
+        var snapshot = AppSettings.Peek();
+        if (!snapshot.WallpaperAccentEnabled) return false;
+        var wallpaper = WallpaperSettings.Load();
+        if (wallpaper.Mode != "Weather" &&
+            (wallpaper.Mode != "Image" || !File.Exists(wallpaper.ImagePath))) return false;
+        var color = PreviewCurrent();
+        if (string.Equals(snapshot.WallpaperAccentHex, color, StringComparison.OrdinalIgnoreCase))
+            return false;
+        var settings = AppSettings.Load();
+        if (!settings.WallpaperAccentEnabled) return false;
+        settings.WallpaperAccentHex = color;
+        settings.Save();
+        MotionDesk.UI.ThemeManager.RefreshOpsisAccent();
+        return true;
     }
 
     public static void ApplyCurrent()
