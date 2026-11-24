@@ -178,6 +178,32 @@ try
     }
     catch (InvalidDataException) { rejected = true; }
     Check(rejected, "Rainmeter bang commands rejected");
+    rejected = false;
+    try
+    {
+        OpsisRainmeterSkinImporter.PreviewIni(
+            "[MeterA]\\nMeter=String\\nText=Hello\\n[MeterB]\\nMeter=String\\nText=World".Replace("\\\\n", "\\n"),
+            "Two Meters");
+    }
+    catch (InvalidDataException) { rejected = true; }
+    Check(rejected, "Rainmeter multiple meters fail closed instead of losing elements");
+    rejected = false;
+    try
+    {
+        OpsisRainmeterSkinImporter.PreviewIni(new string('A', 66_000), "Oversized");
+    }
+    catch (InvalidDataException) { rejected = true; }
+    Check(rejected, "Rainmeter oversized INI refused");
+    rejected = false;
+    try
+    {
+        OpsisRainmeterSkinImporter.PreviewIni(
+            "[MeterA]\\nMeter=String\\nText=Hello\\nPlugin=RunCommand".Replace("\\\\n", "\\n"),
+            "Extra Commands");
+    }
+    catch (InvalidDataException) { rejected = true; }
+    Check(rejected, "Rainmeter unknown executable meter property refused");
+
 
     var widget = new OpsisWidgetDesigner.Layout {
         Name = "Clock Demo", Binding = "Clock", AccentHex = "#00D2FF", FontSize = 30
