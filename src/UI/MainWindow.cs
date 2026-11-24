@@ -3193,6 +3193,15 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                 new[] { 0, 1, 3, 2 }, () => TaskbarViewProfiles.ReadOption("SearchboxTaskbarMode"),
                 value => TaskbarViewProfiles.ApplyOption("SearchboxTaskbarMode", value), TaskbarViewProfiles.IsWindows11);
 
+            AddShellOption(StudioText("Taskbar: Combine buttons", "Taskbar: Ομαδοποίηση κουμπιών"),
+                new[] { StudioText("Always", "Πάντα"), StudioText("When full", "Όταν γεμίσει"), StudioText("Never", "Ποτέ") },
+                new[] { 0, 1, 2 }, () => TaskbarViewProfiles.ReadOption("TaskbarGlomLevel"),
+                value => TaskbarViewProfiles.ApplyOption("TaskbarGlomLevel", value), TaskbarViewProfiles.IsWindows11);
+            AddShellOption(StudioText("Secondary taskbars: Combine buttons", "Δευτερεύουσες Taskbar: Ομαδοποίηση"),
+                new[] { StudioText("Always", "Πάντα"), StudioText("When full", "Όταν γεμίσει"), StudioText("Never", "Ποτέ") },
+                new[] { 0, 1, 2 }, () => TaskbarViewProfiles.ReadOption("MMTaskbarGlomLevel"),
+                value => TaskbarViewProfiles.ApplyOption("MMTaskbarGlomLevel", value), TaskbarViewProfiles.IsWindows11);
+
             // ---------- P1 Start Studio ----------
             AddButtonGrid(shellAdvancedCard, (LocalizationManager.CurrentLanguage == "el"
                 ? "Άνοιγμα Start Studio" : "Open Start Studio", (_, _) =>

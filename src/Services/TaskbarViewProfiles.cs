@@ -20,7 +20,9 @@ namespace MotionDesk.Services
             (Advanced, "TaskbarAl"),           // 0 left, 1 center (Windows 11)
             (Advanced, "TaskbarDa"),           // Widgets visibility
             (Advanced, "ShowTaskViewButton"), // Task View visibility
-            (Search, "SearchboxTaskbarMode")   // Search display (build dependent)
+            (Search, "SearchboxTaskbarMode"),   // Search display (build dependent)
+            (Advanced, "TaskbarGlomLevel"),
+            (Advanced, "MMTaskbarGlomLevel")
         };
 
         public sealed class SavedValue
@@ -41,6 +43,7 @@ namespace MotionDesk.Services
         public static void ApplyMinimal()
         {
             if (!IsWindows11) throw new PlatformNotSupportedException("This taskbar profile requires Windows 11.");
+            CheckWritable();
             BackupIfMissing();
             Set(Advanced, "TaskbarAl", 0);
             Set(Advanced, "TaskbarDa", 0);
@@ -52,6 +55,7 @@ namespace MotionDesk.Services
         public static void ApplyStandard()
         {
             if (!IsWindows11) throw new PlatformNotSupportedException("This taskbar profile requires Windows 11.");
+            CheckWritable();
             BackupIfMissing();
             Set(Advanced, "TaskbarAl", 1);
             Set(Advanced, "TaskbarDa", 1);
@@ -72,6 +76,7 @@ namespace MotionDesk.Services
                 "TaskbarDa" => 1,
                 "ShowTaskViewButton" => 1,
                 "SearchboxTaskbarMode" => 1,
+                "TaskbarGlomLevel" or "MMTaskbarGlomLevel" => 0,
                 _ => 0
             };
         }
@@ -82,57 +87,73 @@ namespace MotionDesk.Services
             if (!IsWindows11) throw new PlatformNotSupportedException("Windows 11 is required.");
             var index = Array.FindIndex(Keys, entry => entry.Name == name);
             if (index < 0) throw new ArgumentOutOfRangeException(nameof(name));
-            bool valid = name == "SearchboxTaskbarMode" ? value >= 0 && value <= 3
-                : value is 0 or 1;
+            bool valid = IsValid(name, value);
             if (!valid) throw new ArgumentOutOfRangeException(nameof(value));
+            CheckWritable();
+            if (ReadOption(name) == value) return;
             BackupIfMissing();
             Set(Keys[index].Path, name, value);
             NotifyShell();
         }
 
+        public static bool IsValid(string name, int value) =>
+            Array.FindIndex(Keys, x => x.Name == name) >= 0 &&
+            (name == "SearchboxTaskbarMode" ? value is >= 0 and <= 3 :
+            name is "TaskbarGlomLevel" or "MMTaskbarGlomLevel" ? value is >= 0 and <= 2 : value is 0 or 1);
+
+        private static void CheckWritable()
+        {
+            if (!IsWindows11 || SafeModeService.IsSafeMode || WindowsUpdateGuard.RequiresReview)
+                throw new InvalidOperationException("Windows compatibility review required.");
+            foreach (var mod in OpsisModCompatibility.ScanCached())
+                if (mod.Risk == "High" || mod.Product.StartsWith("Windhawk: ", StringComparison.Ordinal) && mod.Area == "Taskbar")
+                    throw new InvalidOperationException("Competing Taskbar customization detected: " + mod.Product);
+        }
+
+        private static List<SavedValue> ReadBackup()
+        {
+            if (new FileInfo(BackupPath).Length > 32768) throw new InvalidDataException("Taskbar backup too large.");
+            var values = JsonSerializer.Deserialize<List<SavedValue>>(File.ReadAllText(BackupPath))
+                ?? throw new InvalidDataException("Invalid Taskbar backup.");
+            if (values.Count < 4 || values.Count > Keys.Length) throw new InvalidDataException("Unexpected Taskbar backup.");
+            foreach (var value in values)
+                if (Array.FindIndex(Keys, x => x.Path == value.Path && x.Name == value.Name) < 0 ||
+                    values.FindAll(x => x.Name == value.Name).Count != 1)
+                    throw new InvalidDataException("Invalid Taskbar backup item.");
+            foreach (var (_, name) in Keys[..4])
+                if (!values.Exists(x => x.Name == name)) throw new InvalidDataException("Missing original Taskbar backup item.");
+            return values;
+        }
+
         public static void Restore()
         {
+            CheckWritable();
             if (!HasBackup) throw new FileNotFoundException("Taskbar backup missing.", BackupPath);
-            var values = JsonSerializer.Deserialize<List<SavedValue>>(File.ReadAllText(BackupPath))
-                         ?? throw new InvalidDataException("Invalid Taskbar backup.");
-            if (values.Count != Keys.Length)
-                throw new InvalidDataException("Unexpected Taskbar backup.");
-            foreach (var (path, name) in Keys)
+            foreach (var value in ReadBackup())
             {
-                var matches = values.FindAll(x => x.Path == path && x.Name == name);
-                if (matches.Count != 1) throw new InvalidDataException("Invalid backup item: " + name);
-            }
-            foreach (var (path, name) in Keys)
-            {
-                var value = values.Find(x => x.Path == path && x.Name == name)!;
-                using var key = Registry.CurrentUser.CreateSubKey(path)
+                using var key = Registry.CurrentUser.CreateSubKey(value.Path)
                     ?? throw new InvalidOperationException("Could not access Taskbar registry settings.");
-                if (value.Exists) key.SetValue(name, value.Value, RegistryValueKind.DWord);
-                else key.DeleteValue(name, false);
+                if (value.Exists) key.SetValue(value.Name, value.Value, RegistryValueKind.DWord);
+                else key.DeleteValue(value.Name, false);
             }
             NotifyShell();
         }
 
         private static void BackupIfMissing()
         {
-            if (HasBackup) return;
-            var values = new List<SavedValue>();
+            var values = HasBackup ? ReadBackup() : new List<SavedValue>();
+            int originalCount = values.Count;
             foreach (var (path, name) in Keys)
             {
+                if (values.Exists(x => x.Path == path && x.Name == name)) continue;
                 using var key = Registry.CurrentUser.OpenSubKey(path);
                 var raw = key?.GetValue(name);
-                if (raw != null && raw is not int)
-                    throw new InvalidOperationException("Unexpected Taskbar registry value type: " + name);
+                if (raw != null && raw is not int) throw new InvalidOperationException("Unexpected Taskbar registry value type: " + name);
                 values.Add(new SavedValue { Path = path, Name = name, Exists = raw is int, Value = raw is int i ? i : 0 });
             }
+            if (originalCount == values.Count) return;
             Directory.CreateDirectory(Path.GetDirectoryName(BackupPath)!);
-            var temp = BackupPath + ".tmp";
-            try
-            {
-                File.WriteAllText(temp, JsonSerializer.Serialize(values, new JsonSerializerOptions { WriteIndented = true }));
-                File.Move(temp, BackupPath, false);
-            }
-            finally { if (File.Exists(temp)) File.Delete(temp); }
+            AtomicFile.WriteAllText(BackupPath, JsonSerializer.Serialize(values, new JsonSerializerOptions { WriteIndented = true }));
         }
 
         private static void Set(string path, string name, int value)

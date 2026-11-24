@@ -417,6 +417,23 @@ try
     catch (InvalidDataException) { rejected = true; }
     Check(rejected, "taskbar animation rejects extremely fast CPU-intensive polling");
 
+    var desktop = new System.Drawing.Rectangle(-1920, 0, 1920, 1080);
+    var work = new System.Drawing.Rectangle(-1920, 0, 1920, 1032);
+    var nativeBar = new System.Drawing.Rectangle(-1920, 1032, 1920, 48);
+    Check(OpsisTaskbarDesigner.CalculateBounds(new OpsisTaskbarDesigner.Profile(), desktop, work, nativeBar, 3) == nativeBar,
+        "unchanged taskbar profile preserves native bounds");
+    foreach (var edge in new[] { "Top", "Bottom", "Left", "Right" })
+    {
+        var geometry = new OpsisTaskbarDesigner.Profile { Edge = edge, Floating = true, Segmented = true, DynamicSize = true };
+        var small = OpsisTaskbarDesigner.CalculateBounds(geometry, desktop, work, nativeBar, 2);
+        var large = OpsisTaskbarDesigner.CalculateBounds(geometry, desktop, work, nativeBar, 15);
+        Check(work.Contains(small) && work.Contains(large) && !small.IntersectsWith(nativeBar) &&
+            (edge is "Left" or "Right" ? large.Height >= small.Height : large.Width >= small.Width),
+            "detached adaptive bar respects work area at " + edge);
+    }
+    Check(TaskbarViewProfiles.IsValid("TaskbarGlomLevel", 2) && !TaskbarViewProfiles.IsValid("TaskbarGlomLevel", 3) &&
+        ExplorerViewProfiles.IsValid("ShowStatusBar", 0) && !ExplorerViewProfiles.IsValid("ShowStatusBar", 2),
+        "native Explorer and Taskbar options validate without touching registry");
     Check(OpsisTaskbarDesigner.ButtonHeight(taskbar, false, 44) == 38,
         "taskbar designer calculates horizontal button geometry");
     rejected = false;

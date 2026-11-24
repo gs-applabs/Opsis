@@ -14,6 +14,9 @@ public sealed class OpsisExplorerStudioForm : Form
     private readonly CheckBox _extensions = new() { Text = "Show file extensions / Επεκτάσεις αρχείων", AutoSize = true };
     private readonly CheckBox _hidden = new() { Text = "Show hidden items / Κρυφά στοιχεία", AutoSize = true };
     private readonly CheckBox _compact = new() { Text = "Compact file spacing / Συμπαγής προβολή", AutoSize = true };
+    private readonly CheckBox _statusBar = new() { Text = "Status bar / Γραμμή κατάστασης", AutoSize = true };
+    private readonly CheckBox _sync = new() { Text = "Sync provider notifications / Ειδοποιήσεις συγχρονισμού", AutoSize = true };
+    private readonly CheckBox _handlers = new() { Text = "Preview handlers / Χειριστές προεπισκόπησης", AutoSize = true };
     private readonly ComboBox _home = new() { DropDownStyle = ComboBoxStyle.DropDownList, Width = 210 };
     private readonly Label _preview = new() { AutoSize = false, Height = 122, Dock = DockStyle.Bottom };
 
@@ -21,7 +24,7 @@ public sealed class OpsisExplorerStudioForm : Form
     {
         Text = "Opsis — Explorer Studio";
         StartPosition = FormStartPosition.CenterParent;
-        ClientSize = new Size(650, 430);
+        ClientSize = new Size(700, 560);
         MinimumSize = new Size(560, 390);
         BackColor = UiTheme.PageBackground;
         ForeColor = UiTheme.TextPrimary;
@@ -41,6 +44,7 @@ public sealed class OpsisExplorerStudioForm : Form
         options.Controls.Add(_extensions);
         options.Controls.Add(_hidden);
         options.Controls.Add(_compact);
+        options.Controls.Add(_statusBar); options.Controls.Add(_sync); options.Controls.Add(_handlers);
         options.Controls.Add(new Label { Text = "Open Explorer at / Εκκίνηση Explorer", AutoSize = true });
         options.Controls.Add(_home);
         Controls.Add(options);
@@ -79,7 +83,7 @@ public sealed class OpsisExplorerStudioForm : Form
                 return;
             }
             if (MessageBox.Show(this,
-                "Apply these four HKCU Explorer preferences? A complete Opsis backup is saved first.",
+                "Apply these seven HKCU Explorer preferences? A complete Opsis backup is saved first.",
                 "Opsis Explorer", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes) return;
             try
             {
@@ -89,6 +93,9 @@ public sealed class OpsisExplorerStudioForm : Form
                 ExplorerViewProfiles.ApplyOption("Hidden", _hidden.Checked ? 1 : 2);
                 ExplorerViewProfiles.ApplyOption("UseCompactMode", _compact.Checked ? 1 : 0);
                 ExplorerViewProfiles.ApplyOption("LaunchTo", _home.SelectedIndex == 0 ? 1 : 2);
+                ExplorerViewProfiles.ApplyOption("ShowStatusBar", _statusBar.Checked ? 1 : 0);
+                ExplorerViewProfiles.ApplyOption("ShowSyncProviderNotifications", _sync.Checked ? 1 : 0);
+                ExplorerViewProfiles.ApplyOption("ShowPreviewHandlers", _handlers.Checked ? 1 : 0);
                 MessageBox.Show(this, "Explorer settings applied. Some changes may appear in the next Explorer window.",
                     "Opsis Explorer", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
@@ -115,6 +122,9 @@ public sealed class OpsisExplorerStudioForm : Form
             _extensions.Checked = ExplorerViewProfiles.ReadOption("HideFileExt") == 0;
             _hidden.Checked = ExplorerViewProfiles.ReadOption("Hidden") == 1;
             _compact.Checked = ExplorerViewProfiles.ReadOption("UseCompactMode") == 1;
+            _statusBar.Checked = ExplorerViewProfiles.ReadOption("ShowStatusBar") == 1;
+            _sync.Checked = ExplorerViewProfiles.ReadOption("ShowSyncProviderNotifications") == 1;
+            _handlers.Checked = ExplorerViewProfiles.ReadOption("ShowPreviewHandlers") == 1;
             _home.SelectedIndex = ExplorerViewProfiles.ReadOption("LaunchTo") == 1 ? 0 : 1;
         }
         catch (Exception ex)

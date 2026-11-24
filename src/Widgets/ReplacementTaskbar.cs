@@ -118,18 +118,22 @@ internal sealed class ReplacementTaskbar : Form
         var shellBounds = NativeTaskbars();
         var active = WinApi.GetForegroundWindow();
         var pins = DeskStripHostEngine.Instance.GetPinnedApps();
+        OpsisTaskbarDesigner.Profile profile;
+        try { profile = OpsisTaskbarDesigner.Read(); }
+        catch (Exception e) { RotatingLogger.Write("Taskbar visual profile: " + e.Message); profile = OpsisTaskbarDesigner.Default; }
         foreach (var (id, screen) in screens)
         {
             if (!Bars.TryGetValue(id, out var bar)) Bars[id] = bar = new ReplacementTaskbar();
             var native = shellBounds.FirstOrDefault(bounds => Screen.FromRectangle(bounds).DeviceName == id);
-            if (native.IsEmpty && !screen.Primary) { bar.Hide(); continue; }
-            var bounds = native.IsEmpty ? new Rectangle(screen.Bounds.Left, screen.Bounds.Bottom - 44, screen.Bounds.Width, 44)
-                : Rectangle.Intersect(native, screen.Bounds);
+            if (native.IsEmpty && !screen.Primary && !OpsisTaskbarDesigner.IsDetached(profile)) { bar.Hide(); continue; }
+            var localWindows = _windows.Where(window => Screen.FromHandle(window.Handle).DeviceName == id).ToArray();
+            var bounds = OpsisTaskbarDesigner.CalculateBounds(profile, screen.Bounds, screen.WorkingArea, native,
+                Math.Min(14, pins.Count) + localWindows.Length);
             if (bounds.Width < 24 || bounds.Height < 24) { bar.Hide(); continue; }
             if (bar.Bounds != bounds) bar.Bounds = bounds;
             if (AppActivity.IsFullscreenOn(screen)) { bar.Hide(); continue; }
             if (!bar.Visible) bar.Show();
-            bar.ApplyState(pins, _windows.Where(window => Screen.FromHandle(window.Handle).DeviceName == id), active);
+            bar.ApplyState(pins, localWindows, active, profile);
             // Keep the overlay above Explorer without raising it over an open Start panel or another app.
             for (IntPtr preceding = GetWindow(bar.Handle, 3); preceding != IntPtr.Zero; preceding = GetWindow(preceding, 3))
             {
@@ -187,15 +191,19 @@ internal sealed class ReplacementTaskbar : Form
         Controls.Add(_root);
     }
 
-    private void ApplyState(IReadOnlyList<string> pins, IEnumerable<WinApi.AppWindow> windows, IntPtr active)
+    private void ApplyState(IReadOnlyList<string> pins, IEnumerable<WinApi.AppWindow> windows, IntPtr active, OpsisTaskbarDesigner.Profile profile)
     {
         bool vertical = Height > Width;
         var list = windows.Where(window => window.Handle != Handle).ToArray();
         // These are Opsis-owned visuals; native Windows taskbar remains unchanged.
-        try { _visual = OpsisTaskbarDesigner.Read(); }
-        catch (Exception e) { RotatingLogger.Write("Taskbar visual profile: " + e.Message); _visual = OpsisTaskbarDesigner.Default; }
-        BackColor = UiTheme.NavBackground;
-        Opacity = _visual.Style == "Glass" ? _visual.OpacityPercent / 100.0 : 1.0;
+        _visual = profile;
+        // Color-key transparency creates real gaps between existing controls.
+        // No second taskbar window, no continuous animation and no native HWND edits.
+        var gapColor = Color.FromArgb(255, 0, 254);
+        var background = _visual.Segmented ? gapColor : UiTheme.NavBackground;
+        TransparencyKey = _visual.Segmented ? gapColor : Color.Empty;
+        BackColor = _root.BackColor = _apps.BackColor = background;
+        Opacity = _visual.Style == "Glass" && !_visual.Segmented ? _visual.OpacityPercent / 100.0 : 1.0;
         try { _startArtStyle = StartStudioPreferences.Read().StartButtonStyle; }
         catch (Exception ex) { RotatingLogger.Write("Opsis Start design: " + ex.Message); _startArtStyle = "Opsis Glass"; }
         _start.BackColor = UiTheme.Surface;
@@ -205,7 +213,7 @@ internal sealed class ReplacementTaskbar : Form
         _clock.BackColor = UiTheme.Surface;
         _taskView.ForeColor = UiTheme.TextPrimary;
         _taskView.BackColor = UiTheme.Surface;
-        string key = $"{_startArtStyle}|{vertical}|{active}|{_visual.Style}|{_visual.Alignment}|{_visual.ButtonWidth}|{_visual.ButtonGap}|{_visual.ShowTaskView}|{_visual.ShowClock}|{_visual.ActiveButtonAnimation}|{_visual.AnimationIntervalMs}|{UiTheme.TextPrimary.ToArgb()}|{UiTheme.Surface.ToArgb()}|" +
+        string key = $"{_startArtStyle}|{vertical}|{Width}|{Height}|{_visual.Segmented}|{active}|{_visual.Style}|{_visual.Alignment}|{_visual.ButtonWidth}|{_visual.ButtonGap}|{_visual.ShowTaskView}|{_visual.ShowClock}|{_visual.ActiveButtonAnimation}|{_visual.AnimationIntervalMs}|{UiTheme.TextPrimary.ToArgb()}|{UiTheme.Surface.ToArgb()}|" +
             string.Join('|', pins) + "|" + string.Join('|', list.Select(window => $"{window.Handle}:{window.Title}"));
         if (_content == key)
         {
@@ -265,9 +273,9 @@ internal sealed class ReplacementTaskbar : Form
     private void AddItem(string label, Action click, bool active)
     {
         var item = new Button { Text = label, AutoEllipsis = true, AccessibleName = label,
-            Width = _vertical ? Math.Max(40, Width - 7) : _visual.ButtonWidth,
+            Width = _vertical ? Math.Max(24, Width - 2 * Math.Max(3, _visual.ButtonGap) - 2) : _visual.ButtonWidth,
             Height = OpsisTaskbarDesigner.ButtonHeight(_visual, _vertical, Height),
-            Margin = new Padding(_visual.ButtonGap), FlatStyle = FlatStyle.Flat, Cursor = Cursors.Hand,
+            Margin = new Padding(_visual.Segmented ? Math.Max(3, _visual.ButtonGap) : _visual.ButtonGap), FlatStyle = FlatStyle.Flat, Cursor = Cursors.Hand,
             BackColor = active ? UiTheme.SurfaceHover : UiTheme.Surface, ForeColor = active ? UiTheme.AccentCyan : UiTheme.TextPrimary };
         item.FlatAppearance.BorderSize = active ? 1 : 0;
         if (active) _activeItem = item;

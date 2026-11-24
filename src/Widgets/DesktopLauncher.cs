@@ -33,8 +33,9 @@ internal sealed class DesktopLauncher : Form
         window.FormClosed += (_, _) => { if (ReferenceEquals(_visible, window)) _visible = null; };
         var screen = Screen.FromRectangle(bar).WorkingArea;
         window.StartPosition = FormStartPosition.Manual;
-        int x = bar.Left + (bar.Height > bar.Width && bar.Left <= screen.Left ? bar.Width : 0);
-        int y = bar.Top > screen.Top + screen.Height / 2 ? bar.Top - window.Height : bar.Bottom;
+        bool vertical = bar.Height > bar.Width;
+        int x = vertical ? (bar.Left < screen.Left + screen.Width / 2 ? bar.Right : bar.Left - window.Width) : bar.Left;
+        int y = vertical ? bar.Top : bar.Top > screen.Top + screen.Height / 2 ? bar.Top - window.Height : bar.Bottom;
         window.Location = new Point(Math.Clamp(x, screen.Left, Math.Max(screen.Left, screen.Right - window.Width)),
             Math.Clamp(y, screen.Top, Math.Max(screen.Top, screen.Bottom - window.Height)));
         window.Show();

@@ -24,12 +24,12 @@ Benchmark criteria: same workload, resolution and DPI; CPU/GPU, memory, GDI hand
 | ID | Priority | Task | Verified baseline / current work |
 |---:|---|---|---|
 | 1 | P0 | Full native Start Menu customization | Native Start current-user settings editor added (layout, all pins, recommendations), first-change backup and restore; advanced native styling and actual Win11 rendering pending |
-| 2 | P0 | Advanced Explorer Styler | ExplorerViewProfiles + Explorer Studio; native visual styling pending |
-| 3 | P0 | Native Taskbar customization | TaskbarViewProfiles has four HKCU settings; full native visual controls pending |
-| 4 | P1 | Taskbar on all screen edges | ReplacementTaskbar follows native bounds; independent native placement pending |
-| 5 | P1 | Floating Taskbar | pending |
-| 6 | P1 | Segmented Taskbar | pending |
-| 7 | P1 | Dynamic Taskbar sizing | existing designer button sizing; native dynamic height pending |
+| 2 | P0 | Advanced Explorer Styler | existing Explorer Studio adds status bar, preview handlers, sync notices; full native XAML styling pending |
+| 3 | P0 | Native Taskbar customization | existing TaskbarViewProfiles adds primary/secondary button grouping; full native XAML styling pending |
+| 4 | P1 | Taskbar on all screen edges | existing Opsis bar supports explicit four edges in work area; native Windows bar remains unchanged |
+| 5 | P1 | Floating Taskbar | Opsis-owned floating geometry added; VM pending |
+| 6 | P1 | Segmented Taskbar | transparent gaps in existing Opsis bar; VM pending |
+| 7 | P1 | Dynamic Taskbar sizing | existing Opsis bar adaptive length and configurable thickness; native dynamic height pending |
 | 8 | P1 | Custom Start power menus | verify DesktopLauncher; native integration pending |
 | 9 | P1 | Explorer Command Bar customization | pending |
 | 10 | P1 | Advanced Explorer tabs | pending |
@@ -42,7 +42,7 @@ Benchmark criteria: same workload, resolution and DPI; CPU/GPU, memory, GDI hand
 | 17 | P2 | Custom Taskbar gestures | pending |
 | 18 | P0 | Conflicts per enabled Windhawk mod | read-only registry inventory; explicit competing taskbar styles hold Opsis overlay; portable/per-user scopes and live injection not verified |
 | 19 | P0 | Automatic isolation after Windows Update | existing UpdateGuard now latches on state failure and isolates running taskbar, tiling, window rules, hot corners, cursor FX, appearance and plugin starts; tests pending |
-| 20 | P1 | Shared Shell visual profile editor | AppearancePresets + existing studios; unified native shell profiles pending |
+| 20 | P1 | Shared Shell visual profile editor | AppearancePresets extends portable profiles with Opsis bar geometry and Start button style; native advanced settings incomplete |
 
 P0 order: 18, 19, 1, 2, 3. CI compilation repair is a cross-cutting prerequisite, not a replacement for any numbered task. P1: 20, then 4–12. P2: 13–17. DeskFlip, Rainmeter and wallpaper tasks remain supplementary and do not count as completion of these twenty. No benchmark winner until measured. Do not equate Opsis overlay styling with native Windows shell styling.
 
@@ -53,3 +53,6 @@ No new service or timer. Existing 60-second experience timer checks persisted re
 
 ### P0 task 1 — native Start increment
 Existing Start Studio now opens a native Windows Start preferences dialog, separate from its Opsis overlay styles. Uses the three documented current-user DWORD preferences Start_Layout, ShowAllPinsList, Start_IrisRecommendations; explicit confirmation, no-op suppression, allowlist, original-value/missing-value backup and best-effort rollback. Native Start and folder settings use official ms-settings URIs. No forced group policy, pin database edits, process injection, or automatic Explorer restart. Windows 11 interactive behavior (including newest Start layout and policy constraints) not yet verified; full native visual styler still pending. Microsoft references: https://learn.microsoft.com/en-us/windows/apps/develop/settings/settings-windows-11 and https://learn.microsoft.com/en-us/windows/apps/develop/launch/launch-settings. Fixed over-escaped Rainmeter smoke fixtures rather than weakening importer validation. Prior RC run 45460131412 passed update guard assertions but failed at Rainmeter fixture. Previous installer and resource workflows passed; not evidence for this commit.
+
+### P0 2/3 and P1 20/4–7 increment
+Documented HKCU options added to existing Explorer and Taskbar services, with additive backup migration retaining the original first four values; original backups remain readable. Start/Explorer/Taskbar native XAML styling is NOT implemented. Existing Opsis replacement bar supports explicit four-edge companion placement, floating margins/length, color-key segmented gaps, adaptive length and thickness. Uses existing timer, controls and designer; detached variants stay inside Windows work area and do not relocate or hide native taskbar. AppearancePresets captures additive optional Opsis geometry and Start artwork; older presets do not overwrite these fields. New tests cover geometry and allowlists, not visual certification. Sources: Microsoft Windows settings reference and common settings reference. No production version bump. Remaining P0 Windhawk portable/live detection and full native styling remain blocked on real desktop validation. P1 8–12 and P2 13–17 remain pending.
