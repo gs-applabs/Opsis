@@ -83,3 +83,17 @@ Remaining release gates: Windows 11 desktop UI/manual screenshot testing, multi-
 ## Remaining gaps / strict release qualification
 
 Full shell patching and Start replacement, pixel-accurate Taskbar Designer, direct Rainmeter skin execution, third-party Windhawk mod integration, deep Explorer context-menu rewriting, a drag-and-drop visual widget layout canvas, cursor click animations, independent 3D screensaver executables and a downloadable online marketplace are **not** complete. The native widget studio is a safe preset-based creator, not yet a free-position drag-and-drop designer. Changes must pass the current head CI and real Windows 11 desktop interaction tests before merge or release.
+
+
+## New delivered work — Visual Widget / Rainmeter bridge / grouped Gallery
+
+- Native **Visual Widget Designer**: mouse drag within a guarded canvas, live preview of data-binding/text/accent/font/opacity, normalized content X/Y positions, border setting, backed-up updates and Save As. The standalone widget renderer now honors the same layout positions and border.
+- **Rainmeter compatibility subset**: read-only parsing of small `.ini` skins with exactly one `String` meter and optionally a built-in `Time` measure, translating to native Opsis widgets. Explicitly rejects `!Bang` commands, Lua/script/plugin measures, unsupported meter types, dynamic variables, embedded expressions, large/duplicate INI sections and unknown settings. This is **not** the entire Rainmeter engine.
+- Common plugin Gallery now supports safe Rainmeter INI previews as native widgets in addition to `opsis-contributions.json` wallpapers, regular widget JSON and `.opsis-theme` theme packs.
+- Gallery users can **filter by type, category and text**, with automatic group headers; the same Gallery is reused for all plugin contributions instead of a separate app per content type.
+- Widget tests cover geometry/clamping, persisted drag positions, invalid 0–100 coordinates, GDI-backed native forms on an STA thread, Rainmeter parsing/blocked directives, plugin contributions and restoration of widget design backups.
+- Build workflow now also invokes the **published Opsis.exe --run-selftest** with an isolated data directory; the test verifies that a machine-readable JSON report and four checks are present. The two Windows VM runs must complete before these additions can be called verified.
+
+### Current integration boundaries
+
+The importers do not execute Windhawk mods, install third-party Rainmeter DLLs or alter protected Explorer/Taskbar code. Rich Rainmeter syntax remains unsupported and must report an explicit validation error. Full visual customization of the native Windows Start/Taskbar and context-menu command extensions remains future work. No final release or installer should be published without passing the latest Windows build, security and installer workflows.
