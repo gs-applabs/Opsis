@@ -594,6 +594,11 @@ public sealed partial class MainWindow
         {
             try
             {
+                if (windowEnabled.Checked && AppSettings.Load().AutoTileEnabled)
+                {
+                    windowEnabled.Checked = false;
+                    throw new InvalidOperationException("Disable AutoTile first: it already owns window placement.");
+                }
                 if (windowEnabled.Checked && (SafeModeService.IsSafeMode || WindowsUpdateGuard.RequiresReview))
                 {
                     windowEnabled.Checked = false;
