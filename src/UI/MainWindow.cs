@@ -3333,6 +3333,46 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                     }
                     catch (Exception ex) { MessageBox.Show(this, ex.Message, "Opsis — P2", MessageBoxButtons.OK, MessageBoxIcon.Error); }
                 }),
+                (LocalizationManager.CurrentLanguage == "el" ? "Εξαγωγή JSON" : "Export JSON", (_, _) =>
+                {
+                    if (presetPicker.SelectedItem is not string selected) return;
+                    using var dialog = new SaveFileDialog
+                    {
+                        Filter = "Opsis appearance preset (*.json)|*.json",
+                        FileName = selected + ".json",
+                        Title = "Export Opsis appearance preset",
+                        OverwritePrompt = false
+                    };
+                    if (dialog.ShowDialog(this) != DialogResult.OK) return;
+                    try
+                    {
+                        AppearancePresets.ExportPortable(selected, dialog.FileName);
+                        _statusLabel.Text = "Opsis — appearance preset exported.";
+                    }
+                    catch (Exception ex) { MessageBox.Show(this, ex.Message, "Opsis — P2", MessageBoxButtons.OK, MessageBoxIcon.Error); }
+                }),
+                (LocalizationManager.CurrentLanguage == "el" ? "Εισαγωγή JSON" : "Import JSON", (_, _) =>
+                {
+                    using var dialog = new OpenFileDialog
+                    {
+                        Filter = "Opsis appearance preset (*.json)|*.json",
+                        CheckFileExists = true, Multiselect = false,
+                        Title = "Import data-only Opsis appearance preset"
+                    };
+                    if (dialog.ShowDialog(this) != DialogResult.OK) return;
+                    try
+                    {
+                        var importedName = AppearancePresets.ImportPortable(dialog.FileName);
+                        ReloadPresets();
+                        presetPicker.SelectedItem = importedName;
+                        MessageBox.Show(this,
+                            LocalizationManager.CurrentLanguage == "el"
+                              ? "Το προφίλ εισήχθη χωρίς να εφαρμοστεί. Χρησιμοποίησε την προεπισκόπηση πριν από την εφαρμογή."
+                              : "Preset imported without applying changes. Review the preview before applying.",
+                            "Opsis — P2", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    }
+                    catch (Exception ex) { MessageBox.Show(this, ex.Message, "Opsis — P2", MessageBoxButtons.OK, MessageBoxIcon.Error); }
+                }),
                 (LocalizationManager.CurrentLanguage == "el" ? "Διαγραφή προφίλ" : "Delete preset", (_, _) =>
                 {
                     if (presetPicker.SelectedItem is not string selected) return;
