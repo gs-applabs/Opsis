@@ -349,7 +349,13 @@ public sealed partial class MainWindow
             try
             {
                 var s = AppSettings.Load(); s.WindowRulesEnabled = windowEnabled.Checked; s.Save();
-                if (!windowEnabled.Checked) WindowRulesEngine.Instance.Restore();
+                if (windowEnabled.Checked)
+                {
+                    if (SafeModeService.IsSafeMode || WindowsUpdateGuard.RequiresReview)
+                        throw new InvalidOperationException("Windows compatibility review is required.");
+                    WindowRulesEngine.Instance.Start();
+                }
+                else { WindowRulesEngine.Instance.Stop(); WindowRulesEngine.Instance.Restore(); }
             }
             catch (Exception ex) { MessageBox.Show(this, ex.Message, "Window Rules", MessageBoxButtons.OK, MessageBoxIcon.Error); }
         };
