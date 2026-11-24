@@ -179,6 +179,9 @@ namespace MotionDesk.Services
         [DllImport("shell32.dll")]
         private static extern UIntPtr SHAppBarMessage(uint message, ref AppBarData data);
 
+        [DllImport("user32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+        private static extern IntPtr FindWindow(string className, string? windowName);
+
         private static AppBarData AppBar() => new() { Size = (uint)Marshal.SizeOf<AppBarData>() };
         public static int ReadAutoHide()
         {
@@ -189,8 +192,11 @@ namespace MotionDesk.Services
         private static void SetAutoHide(int value)
         {
             var data = AppBar();
-            var flags = SHAppBarMessage(4, ref data).ToUInt64();
-            data.Parameter = new IntPtr((long)((flags & 2) | (uint)value));
+            // ABM_SETSTATE requires the HWND. Windows 7+ always-on-top is
+            // implicit and ABM_GETSTATE no longer returns its bit.
+            data.Window = FindWindow("Shell_TrayWnd", null);
+            if (data.Window == IntPtr.Zero) throw new InvalidOperationException("Native taskbar is not available.");
+            data.Parameter = new IntPtr(2 | value);
             SHAppBarMessage(10, ref data);
             if (ReadAutoHide() != value) throw new InvalidOperationException("Native taskbar did not accept auto-hide change.");
         }

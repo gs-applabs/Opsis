@@ -20,7 +20,7 @@ public static class ExplorerSessionStore
         if (string.IsNullOrWhiteSpace(path) || path.Length > 1024 || path.Any(char.IsControl) ||
             path.Length < 3 || !char.IsAsciiLetter(path[0]) || path[1] != ':' || path[2] != '\\')
             return false;
-        if (path[3..].Contains(':') || path.Contains('"') || path.Split('\\').Any(x => x is "." or ".."))
+        if (path[3..].Contains(':') || path.Contains('/') || path.Contains('"') || path.Split('\\').Any(x => x is "." or ".."))
             return false;
         try { return Path.IsPathFullyQualified(path) && new DriveInfo(Path.GetPathRoot(path)!).DriveType is DriveType.Fixed or DriveType.Removable; }
         catch (Exception e) when (e is IOException or ArgumentException or UnauthorizedAccessException) { return false; }

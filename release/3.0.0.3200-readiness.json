@@ -36,17 +36,17 @@
     {
       "id": "unified-win2022-win2025-build-tests",
       "status": "in-review",
-      "evidence": "Prior commit 9b3fb2e Windows audit 45462736778 and installer 45462736804 succeeded; P2 head must pass again."
+      "evidence": "5b4d25d Windows audit 45464077316 and installer 45464077225 passed; latest changes must pass separately, workflow queued."
     },
     {
       "id": "webview2-gpu-weather-renderer-captures",
       "status": "in-review",
-      "evidence": "Prior commit 9b3fb2e Windows audit 45462736778 and installer 45462736804 succeeded; P2 head must pass again."
+      "evidence": "5b4d25d Windows audit 45464077316 and installer 45464077225 passed; latest changes must pass separately, workflow queued."
     },
     {
       "id": "installer-install-reinstall-uninstall-windows-vm",
       "status": "in-review",
-      "evidence": "Prior commit 9b3fb2e Windows audit 45462736778 and installer 45462736804 succeeded; P2 head must pass again."
+      "evidence": "5b4d25d Windows audit 45464077316 and installer 45464077225 passed; latest changes must pass separately, workflow queued."
     },
     {
       "id": "integrated-plugins-e2e",
@@ -61,7 +61,7 @@
     {
       "id": "complete-original-feature-list",
       "status": "incomplete",
-      "evidence": "Native shell XAML, portable/live Windhawk, Rainmeter full runtime, advanced tabs, marketplace, SCR and high-fidelity landscape assets incomplete; see canonical progress document."
+      "evidence": "Native Shell XAML engine, guaranteed native Explorer tab grouping, Rainmeter full runtime, HDR, verified geographical assets and all final tests remain incomplete; photo-first and composite widget increments, actual 200-image abstract pack delivered; see canonical progress log."
     },
     {
       "id": "approved-version-bump-and-production-release",

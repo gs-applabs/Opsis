@@ -270,7 +270,7 @@ public sealed partial class MainWindow
                 if (original.Width <= 0 || original.Height <= 0 || (long)original.Width * original.Height > 40_000_000) return null;
                 return width > 0 ? new Bitmap(original, width, Math.Clamp((int)((long)original.Height * width / original.Width), 1, 960)) : new Bitmap(original);
             }
-            catch (Exception ex) when (ex is IOException or ArgumentException or System.Runtime.InteropServices.ExternalException or DllNotFoundException or TypeInitializationException) { return null; }
+            catch (Exception ex) when (ex is IOException or ArgumentException or System.Runtime.InteropServices.ExternalException or DllNotFoundException or TypeInitializationException or InvalidDataException) { return null; }
         }
 
         protected override void OnMouseEnter(EventArgs e) { base.OnMouseEnter(e); _pointer = true; StartPreview(); }
