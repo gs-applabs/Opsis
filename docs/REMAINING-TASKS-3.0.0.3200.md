@@ -64,3 +64,25 @@ Build 0 errors → `--run-selftest` → `node --test` → ExperienceSmoke/RcUiSm
 | 18 | VERIFIED existing — Windhawk is inventoried from registry/INI only (no CLI is spawned), bounded reads, reparse points rejected |
 | 8 | VERIFIED existing — power menu is configurable, confirms, never uses `/f` |
 | 20, 16, 12 | OPEN |
+
+## Supplement: Plugin SDK 2.0 and P3–P5 proposals (OPSIS-Plugin-SDK-2.0-and-Remaining-Proposals-EL.md)
+Rules kept: assembly ABI 1.0.0.0 unchanged, 205 baseline settings, one PluginHost; no in-process "sandbox" claims — untrusted executables only in a restricted separate process with authenticated bounded IPC, otherwise the feature is disabled. Status of every item below: **OPEN** (nothing implemented yet).
+
+| ID | Pri | Task | Effort |
+|---|---|---|---|
+| X15 | P0 | Reconcile the original 100-improvement backlog and the 30-item P3–P5 roadmap against source/tests (#12, #17, #20, #24, #32, #40, #97); unrecoverable records are marked unverified | M |
+| X13 | P0 | Recovery and migration hardening: atomic profile migration, interrupted update / power-loss simulation, restore of the previous working config | M |
+| SDK1 | P0 | SDK/API version negotiation separate from ABI 1.0.0.0, legacy adapter, lifecycle, cancellation, duplicate IDs | M |
+| SDK2 | P0 | Least-privilege manifest, per-capability consent, SHA-bound trust and re-approval; out-of-process isolation for untrusted executables | L |
+| SDK3 | P1 | Dependency DAG and version ranges, hash/signature check before staging, atomic update and rollback | M |
+| SDK4 | P1 | Developer kit: docs, sample plugin, contract tests, package validator, shared contributions | M |
+| X3 | P1 | Advanced snap layouts + desktop spaces, one positioning owner (AutoTile vs Window Rules) | M |
+| X7 | P1 | Automation Studio 2.0 + profile scheduler (dry run, undo, no scripts) | M |
+| X8 | P1 | Command Palette 2.0 over a single command registry | M |
+| X10 | P1 | Performance auto-tuner / GPU effects budgets | M |
+| X11 | P1 | Context Menu Studio + per-app window styles | M |
+| X12 | P1 | Opsis.UI 6: SettingsEditSession, EffectsPolicy, shared tokens | L |
+| X1 | P1 | Screen Saver Creator: real .scr (/s /c /p) | L |
+| X2, X4, X5, X6, X9, X14, X16 | P2 | Marketplace, animated taskbar effects, icon packs 2.0, lock screen, widget data sources, weather previews/privacy, diagnostics centre | L |
+
+Release gates for the SDK: tests for legacy plugin, new API, incompatible API, duplicate ID, dependency cycle, denied permission, changed hash, interrupted update, crashed/slow/disabled plugin, uninstall/rollback; real Crawler, Chronikologio and Media Suite binaries.
