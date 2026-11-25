@@ -65,6 +65,38 @@ public sealed partial class MainWindow
         AddTile(library, "Particles", StudioText("Particles", "Σωματίδια"), StudioText("Floating particles", "Αιωρούμενα σωματίδια"), null);
         page.Controls.Add(weatherDepth);
         page.Controls.Add(library);
+        var europeanPhotos = EuropeanPhotoCatalog.Discover();
+        if (europeanPhotos.Count > 0)
+        {
+            AddSection(page, StudioText("European Capitals — live weather", "Ευρωπαϊκές πρωτεύουσες — ζωντανός καιρός"));
+            var grid = NewGrid();
+            addonGrids.Add(grid);
+            foreach (var entry in europeanPhotos)
+            {
+                var city = entry.Scene;
+                var tile = new WallpaperTile("Weather", StudioGreek ? city.Name : city.NameEn,
+                    StudioText("Live local weather", "Ζωντανός τοπικός καιρός"), null, false, null, entry.Poster);
+                tile.Click += (_, _) =>
+                {
+                    if (!EuropeanPhotoCatalog.Discover().Any(e => e.Scene.Id == city.Id)) { ShowWallpaper(); return; }
+                    var s = WallpaperSettings.Load();
+                    s.WeatherLandmarkId = city.Id;
+                    s.WeatherLandmarks = true;
+                    s.WeatherCity = StudioGreek ? city.Name : city.NameEn;
+                    s.WeatherLat = city.Lat; s.WeatherLon = city.Lon;
+                    s.WeatherPlaceSource = "OPSIS Europe";
+                    s.WeatherPlaceDetail = city.NameEn;
+                    s.Mode = "Weather";
+                    s.Save();
+                    host.Enable();
+                    host.RefreshAll();
+                    Sync();
+                };
+                grid.Controls.Add(tile);
+                tiles.Add(tile);
+            }
+            page.Controls.Add(grid);
+        }
         var installed = WallpaperGalleryCatalog.Discover();
         if (installed.Count > 0)
         {

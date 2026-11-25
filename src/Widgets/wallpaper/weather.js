@@ -915,6 +915,26 @@ function startScenePhoto(id) {
         try { photoState.skyMask = window.OpsisSkyMask?.detect(image, photo.file, cfg.skyEdits?.[photo.file]); }
         catch { /* Keep the photo opaque when pixels cannot be read. */ }
         photoState.ready = true;
+        if (photo.skyMask) {
+            const mask = new Image();
+            mask.onload = () => {
+                if (photoState.img !== image || mask.naturalWidth !== image.naturalWidth || mask.naturalHeight !== image.naturalHeight) return;
+                try {
+                    const c = makeCanvas(mask.naturalWidth, mask.naturalHeight);
+                    const g = c.getContext('2d', { willReadFrequently: true });
+                    g.drawImage(mask, 0, 0);
+                    const pixels = g.getImageData(0, 0, c.width, c.height);
+                    for (let i = 0; i < pixels.data.length; i += 4) {
+                        const opacity = pixels.data[i];
+                        pixels.data[i] = pixels.data[i+1] = pixels.data[i+2] = 255;
+                        pixels.data[i+3] = opacity;
+                    }
+                    g.putImageData(pixels, 0, 0);
+                    photoState.skyMask = c; photoState.fineMask = null; photoState.key = '';
+                } catch { /* Conservative existing fallback. */ }
+            };
+            mask.src = photo.skyMask;
+        }
     };
     image.onerror = () => { if (photoState.img === image) photoState.ready = false; };
     image.src = photo.file;
@@ -1600,7 +1620,8 @@ function draw(target, dt, profile) {
     // ---- sky canvas
     const graded = drawSkyLayer(sky, t, sr, ss);
     const historical = cfg.historicalAthens === true;
-    const location = !historical && cfg.realistic && cfg.spatialMode === '3D' && resolveLandmark();
+    const selectedLocation = !historical && resolveLandmark();
+    const location = selectedLocation && !landmarkScene.city?.skyMask && cfg.realistic && cfg.spatialMode === '3D' && selectedLocation;
     const mesh = window.OpsisWeatherSpatial?.update(dt,
         { rain: S.rain, snow: S.snow, windX: S.windX, seconds: animTime },
         profile?.id || 'Balanced', cfg.reducedMotion === true,
