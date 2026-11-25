@@ -1,0 +1,25 @@
+name: Europe integration checks R24
+on:
+  push:
+    branches: [feat/europe-photo-installer-r24]
+permissions:
+  contents: read
+jobs:
+  source-checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install Pillow
+      - run: python addons/opsis-100/authoring/test-stage-approved-europe.py
+      - run: node --check src/Widgets/wallpaper/weather.js
+  windows-build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '11.0.x'
+      - run: dotnet build Opsis.csproj -c Release -p:Platform=x64

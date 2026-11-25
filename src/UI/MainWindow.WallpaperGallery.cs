@@ -75,7 +75,7 @@ public sealed partial class MainWindow
             {
                 var city = entry.Scene;
                 var tile = new WallpaperTile("Weather", StudioGreek ? city.Name : city.NameEn,
-                    StudioText("Live local weather", "Ζωντανός τοπικός καιρός"), null, false, null, entry.Poster);
+                    StudioText("Live local weather", "Ζωντανός τοπικός καιρός"), null, false, null, entry.Poster, city.Id);
                 tile.Click += (_, _) =>
                 {
                     if (!EuropeanPhotoCatalog.Discover().Any(e => e.Scene.Id == city.Id)) { ShowWallpaper(); return; }
@@ -186,7 +186,9 @@ public sealed partial class MainWindow
             details.Text = mode == "Weather" ? StudioText("Weather settings", "Ρυθμίσεις Weather") : StudioText("Wallpaper settings", "Ρυθμίσεις φόντου");
             foreach (var tile in tiles)
                 tile.SetActive(host.IsEnabled && tile.Mode == mode &&
-                    (tile.PagePath != null
+                    (mode == "Weather" ? (tile.LandmarkId != null
+                        ? tile.LandmarkId == selection.WeatherLandmarkId
+                        : !tiles.Any(t => t.LandmarkId == selection.WeatherLandmarkId)) : tile.PagePath != null
                         ? string.Equals(tile.PagePath, selection.PageSource, StringComparison.OrdinalIgnoreCase)
                         : mode != "Page" || !tiles.Any(t => t.PagePath != null &&
                             string.Equals(t.PagePath, selection.PageSource, StringComparison.OrdinalIgnoreCase))));
@@ -245,15 +247,16 @@ public sealed partial class MainWindow
         internal string? PagePath { get; }
 
         internal WallpaperTile(string mode, string title, string subtitle, string? asset, bool animate,
-            string? pagePath = null, string? posterPath = null)
+            string? pagePath = null, string? posterPath = null, string? landmarkId = null)
         {
             Mode = mode;
             PagePath = pagePath;
+            LandmarkId = landmarkId;
             Text = title;
             _subtitle = subtitle;
             AccessibleName = title;
             AccessibleDescription = subtitle;
-            Name = "wallpaper-tile-" + (pagePath != null ? Path.GetFileName(Path.GetDirectoryName(pagePath)) : asset ?? mode).ToLowerInvariant();
+            Name = "wallpaper-tile-" + (pagePath != null ? Path.GetFileName(Path.GetDirectoryName(pagePath)) : landmarkId ?? asset ?? mode).ToLowerInvariant();
             FlatStyle = FlatStyle.Flat;
             FlatAppearance.BorderSize = 0;
             UseVisualStyleBackColor = false;
@@ -268,7 +271,7 @@ public sealed partial class MainWindow
                 if (animate) _previewPath = Path.Combine(folder, asset + ".preview.jpg");
             }
             if (posterPath != null) _posterPath = posterPath;
-            _builtIn = pagePath == null ? BuiltInWallpaperPreview.Create(mode) : null;
+            _builtIn = pagePath == null && landmarkId == null ? BuiltInWallpaperPreview.Create(mode) : null;
             _timer.Interval = _builtIn?.Animated == true ? 50 : 100;
             _timer.Tick += (_, _) =>
             {
@@ -277,6 +280,8 @@ public sealed partial class MainWindow
                 Invalidate();
             };
         }
+
+        internal string? LandmarkId { get; }
 
         internal void SetActive(bool active)
         {
