@@ -3961,8 +3961,9 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
             AddText(panel, string.Format(LocalizationManager.T("About.VersionLine"), AppVersion.Label));
             AddText(panel, LocalizationManager.T("About.Body"));
             // what this version brings (the family section is further down, from the shared catalogue; the full history is behind the button)
-            var notes260 = LocalizationManager.T("VersionNotes.2.6.0");
-            if (!string.IsNullOrWhiteSpace(notes260) && !notes260.StartsWith("VersionNotes.")) { AddSection(panel, Lx("Τι φέρνει η 2.6.0", "What 2.6.0 brings")); AddText(panel, notes260); }
+            // the notes of the RUNNING version (never a fixed old version number)
+            var currentNotes = LocalizationManager.T("VersionNotes." + AppVersion.Short);
+            if (!string.IsNullOrWhiteSpace(currentNotes) && !currentNotes.StartsWith("VersionNotes.")) { AddSection(panel, string.Format(LocalizationManager.T("About.WhatBrings"), AppVersion.Label)); AddText(panel, currentNotes); }
 
             // Κάρτες ανά θέμα (πρώην ξεχωριστή σελίδα "Βοήθεια") — ζητήθηκε ρητά να ενσωματωθεί
             // εδώ αφού είχαν ίδιες πληροφορίες με τη σελίδα Σχετικά (About.InstructionsList/
@@ -3994,8 +3995,8 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
 
             // #97: source-controlled compatibility matrix, with honest validation status.
             // Showing a branch name or intended ABI here must never imply an E2E pass.
-            AddSection(panel, StudioText("Plugin compatibility for 2.8.0.2510",
-                "Συμβατότητα plugins για 2.8.0.2510"));
+            AddSection(panel, StudioText("Plugin compatibility for " + AppVersion.Short,
+                "Συμβατότητα plugins για " + AppVersion.Short));
             foreach (var plugin in PluginCompatibilityCatalog.Read())
             {
                 var observed = PluginCompatibilityCatalog.Probe(plugin);

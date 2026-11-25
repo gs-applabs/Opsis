@@ -526,7 +526,7 @@ namespace MotionDesk.Services
                     var identity = AssemblyName.GetAssemblyName(dll);
                     if (identity.Version != new Version(1, 0, 0, 0))
                     {
-                        Log($"Plugin '{fileName}' skipped: ABI {identity.Version} (2.8.0.2510 requires 1.0.0.0). Update this plugin before enabling it.");
+                        Log($"Plugin '{fileName}' skipped: ABI {identity.Version} (" + AppVersion.Short + " requires 1.0.0.0). Update this plugin before enabling it.");
                         continue;
                     }
                 }
