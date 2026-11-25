@@ -18,7 +18,7 @@ public sealed partial class MainWindow
     private static void AddSkinSelector(Control card, Control origin)
     {
         var choices = Enum.GetValues<WindowSkin>();
-        string[] labels = choices.Select(skin => skin == WindowSkin.Classic ? StudioText("Classic 2.6.0", "Κλασικό 2.6.0") : skin.ToString()).ToArray();
+        string[] labels = choices.Select(skin => skin == WindowSkin.Classic ? StudioText("Classic", "Κλασικό") : skin.ToString()).ToArray();
         FxCombo(card, StudioText("Window skin", "Skin παραθύρου"), labels,
             labels[Array.IndexOf(choices, SelectedSkin(AppSettings.Load()))],
             label => (origin.FindForm() as MainWindow)?.SetWindowSkin(choices[Array.IndexOf(labels, label)]));
