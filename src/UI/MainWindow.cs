@@ -3961,8 +3961,9 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
             AddText(panel, string.Format(LocalizationManager.T("About.VersionLine"), AppVersion.Label));
             AddText(panel, LocalizationManager.T("About.Body"));
             // what this version brings (the family section is further down, from the shared catalogue; the full history is behind the button)
-            var notes260 = LocalizationManager.T("VersionNotes.2.6.0");
-            if (!string.IsNullOrWhiteSpace(notes260) && !notes260.StartsWith("VersionNotes.")) { AddSection(panel, Lx("Τι φέρνει η 2.6.0", "What 2.6.0 brings")); AddText(panel, notes260); }
+            // the notes of the RUNNING version (never a fixed old version number)
+            var currentNotes = LocalizationManager.T("VersionNotes." + AppVersion.Short);
+            if (!string.IsNullOrWhiteSpace(currentNotes) && !currentNotes.StartsWith("VersionNotes.")) { AddSection(panel, string.Format(LocalizationManager.T("About.WhatBrings"), AppVersion.Label)); AddText(panel, currentNotes); }
 
             // Κάρτες ανά θέμα (πρώην ξεχωριστή σελίδα "Βοήθεια") — ζητήθηκε ρητά να ενσωματωθεί
             // εδώ αφού είχαν ίδιες πληροφορίες με τη σελίδα Σχετικά (About.InstructionsList/
