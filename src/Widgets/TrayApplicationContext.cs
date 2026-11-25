@@ -11,6 +11,8 @@ namespace MotionDesk.Widgets
 {
     public class TrayApplicationContext : ApplicationContext
     {
+        private MotionDesk.Containers.ContainerHost? _nativeContainers;
+        private Opsis.Containers.PipeServer? _controlPipe;
         private readonly NotifyIcon _trayIcon = null!;
         private MainWindow? _mainWindow;
         private readonly HotkeyManager _hotkeys = new();
@@ -26,8 +28,12 @@ namespace MotionDesk.Widgets
         public static event Action? ExitRequested;
         public static void RequestExit() => ExitRequested?.Invoke();
 
-        public TrayApplicationContext()
+        /// <summary>Lets any window ("Settings…" in its own right-click menu) open a page of the main window.</summary>
+        public static Action<string>? OpenPage;
+
+        public TrayApplicationContext(string? desktopAction = null)
         {
+            OpenPage = p => { try { ShowMainWindow(p); } catch (Exception) { } };
             // Safe mode (v2.0 handoff, Φάση 1 §S): αν ενεργό, παραλείπονται plugins/wallpaper/
             // "Last Session" παρακάτω — μόνο το βασικό UI. Ο μετρητής crash μηδενίζεται μετά από
             // 30s επιτυχούς λειτουργίας (one-shot timer πιο κάτω), όχι αμέσως, ώστε ένα crash λίγο
@@ -43,10 +49,24 @@ namespace MotionDesk.Widgets
             healthyTimer.Start();
 
             // Plugin (π.χ. News Crawler): ξεκινούν πριν χτιστεί το μενού ώστε να προσθέσουν τα δικά τους στοιχεία.
+            // Dock monitor fingerprint and window return (opt-in); never captures user files.
+            var dockRestorer = new DockWindowRestorer();
+            Application.ApplicationExit += (_, _) => dockRestorer.Dispose();
             PluginHost.Instance.NavigationRequested += key => ShowMainWindow("plugin:" + key);
             // Plugins from user-writable folders run code inside Opsis: ask once, show the content hash, remember the approval (plugin-trust.json).
             // (the approval question is NOT asked while starting: see PluginHost.ConsiderFolder / ResolvePending)
-            if (!safeMode) { PluginHost.Instance.StartAll(); SchedulePluginApproval(); }
+            if (!safeMode) { PluginHost.Instance.StartAll(); SchedulePluginApproval(); try { MotionDesk.Appearance.AppearanceService.Instance.Start(); } catch (Exception) { } }
+            // Start-up before the other start-up apps: switched on ONCE after the first run when Start with Windows is on (Settings can turn it off; never repeated)
+            try
+            {
+                var early = AppSettings.Load();
+                if (!early.StartEarlyInitialized)
+                {
+                    early.StartEarlyInitialized = true; early.Save();
+                    if (StartupManager.IsStartupEnabled()) System.Threading.Tasks.Task.Run(() => StartupTask.Set(true));
+                }
+            }
+            catch (Exception) { }
 
             // Δημιουργία Context Menu για το Tray Icon — ομαδοποιημένο σε: παράθυρο, DeskZones,
             // wallpaper, γρήγορα προφίλ, γρήγορες ρυθμίσεις, έξοδος.
@@ -55,6 +75,7 @@ namespace MotionDesk.Widgets
             contextMenu.Items.Add(LocalizationManager.T("Tray.Open"), null, (s, e) => ShowMainWindow());
             contextMenu.Items.Add(LocalizationManager.T("Tray.CommandPalette"), null, (s, e) => { ShowMainWindow(); _mainWindow?.OpenCommandPalette(); });
             contextMenu.Items.Add(LocalizationManager.T("Tray.Settings"), null, (s, e) => ShowMainWindow("Settings"));
+            contextMenu.Items.Add(LocalizationManager.T("Tray.ToggleLightDark"), null, (s, e) => { try { var a = MotionDesk.Appearance.AppearanceService.Instance; a.Backup(); a.Engine.SetDark(!a.Engine.IsDark); } catch (Exception) { } });
             // Opsis' own help entries: ONE welcome guide and ONE family window for the whole suite (plugins do not offer them when hosted: PluginHost.IsHostOwnedEntry)
             contextMenu.Items.Add(LocalizationManager.T("Tray.Welcome"), null, (s, e) => FamilyWindows.ShowWelcome());
             contextMenu.Items.Add(LocalizationManager.T("Tray.Family"), null, (s, e) => FamilyWindows.ShowFamily());
@@ -76,7 +97,7 @@ namespace MotionDesk.Widgets
             contextMenu.Items.Add(wallpaperMenu);
 
             // ---- DeskContainers (items and state come from the engine through the bridge)
-            if (ContainersEngine.IsAvailable) contextMenu.Items.Add(BuildContainersTrayMenu());
+            if (AppSettings.Load().UseNativeContainers) contextMenu.Items.Add(BuildContainersTrayMenu());
 
             // ---- Desktop tools
             var desktopMenu = new ToolStripMenuItem(LocalizationManager.T("Tray.GroupDesktop"));
@@ -89,6 +110,17 @@ namespace MotionDesk.Widgets
                 gridSnapItem.Checked = WidgetSnapEngine.EnableGridSnap;
             };
             desktopMenu.DropDownItems.Add(gridSnapItem);
+            desktopMenu.DropDownItems.Add(new ToolStripSeparator());
+            desktopMenu.DropDownItems.Add("OPSIS: " + (LocalizationManager.CurrentLanguage.StartsWith("el") ? "Αποθήκευση θέσεων εικονιδίων" : "Capture desktop icon positions"), null, (_, _) =>
+            {
+                var count=DesktopIconVisibilityEngine.CapturePositionsForUndo();
+                MessageBox.Show(count>0 ? $"Captured {count} icon positions for undo." : "No positions captured (desktop unavailable or auto-arrange enabled).", "OPSIS");
+            });
+            desktopMenu.DropDownItems.Add("OPSIS: " + (LocalizationManager.CurrentLanguage.StartsWith("el") ? "Αναίρεση μετακίνησης εικονιδίων" : "Undo desktop icon move"), null, (_, _) =>
+            {
+                var count=DesktopIconVisibilityEngine.UndoLastBulkMove();
+                MessageBox.Show(count>0 ? $"Restored {count} icon positions." : "There is no usable icon move snapshot.", "OPSIS");
+            });
             contextMenu.Items.Add(desktopMenu);
 
             // ---- Workspace profiles (Work / Gaming / Focus keep their names in every language: they are profile ids)
@@ -125,31 +157,20 @@ namespace MotionDesk.Widgets
             // λογότυπο του sidebar μέσα στο κύριο παράθυρο, όχι πλέον στο tray).
             _trayIcon = new NotifyIcon()
             {
-                Icon = LoadTrayIcon(),
+                Icon = MotionDesk.UI.AppWindowIcon.Value,
                 ContextMenuStrip = contextMenu,
-                Text = "Opsis",
+                Text = "Opsis - Desktop Customization " + AppVersion.Label,
                 Visible = true
             };
 
             _trayIcon.DoubleClick += (s, e) => ShowMainWindow();
 
-            // ---- high-usage alerts + update check (GearWin-style self-update, βλ. AutoCheckForUpdatesAsync)
-            _uiContext = System.Threading.SynchronizationContext.Current ?? new WindowsFormsSynchronizationContext();
             _alertTimer = new System.Windows.Forms.Timer { Interval = 5000 };
             _alertTimer.Tick += (_, _) => UsageAlertTick();
             _alertTimer.Start();
-            _trayIcon.BalloonTipClicked += (_, _) => OpenPendingUpdate();
-            _ = AutoCheckForUpdatesAsync();
-            // Σε ΚΑΘΕ εκκίνηση (παραπάνω) ΚΑΙ μετά κάθε ~12 ώρες (ίδια λογική με το self-update του
-            // GearWin, ήδη portαρισμένο/δοκιμασμένο στο OpsisNewsCrawler) — αντικαθιστά το
-            // προηγούμενο "μία φορά τον μήνα". Το Opsis είναι tray-resident εφαρμογή που συχνά μένει
-            // ανοιχτή για πολύ καιρό χωρίς restart, οπότε χρειάζεται ΚΑΙ περιοδικό επαναέλεγχο, όχι
-            // μόνο στην εκκίνηση.
-            _updateCheckTimer = new System.Windows.Forms.Timer { Interval = (int)UpdateCheckService.AutoCheckInterval.TotalMilliseconds };
-            _updateCheckTimer.Tick += (_, _) => { _ = AutoCheckForUpdatesAsync(); };
-            _updateCheckTimer.Start();
 
             _hotkeys.RegisterCtrlAlt('F', () => DeskFlipEngine.Show());
+            if (!safeMode) _hotkeys.RegisterCtrlAltShift(Keys.K, DesktopLauncher.Open);
             // 2.4.6.1: ενημέρωση χρήστη αν κάποια global συντόμευση ήταν ήδη πιασμένη (δεν θα δουλέψει).
             var failedHotkeys = HotkeyManager.TakeFailureSummary();
             if (failedHotkeys.Length > 0)
@@ -166,11 +187,51 @@ namespace MotionDesk.Widgets
             };
 
             if (!safeMode && AppSettings.Load().QuickHideDoubleClickEnabled) DesktopIconVisibilityEngine.Instance.Start();
+            else DesktopIconVisibilityEngine.Instance.RestoreIfHidden();
             AppActivity.Start();
+            DesktopToolbar.RefreshSettings();
+            ReplacementTaskbar.RefreshSettings();
+            if (!safeMode) VirtualWorkspaces.Start();
+            AutoTileService.RefreshSettings();
             MotionDesk.Services.DiscordPresence.Instance.Apply();
             BackdropContrast.EnsureStarted();
-            if (!safeMode && ContainersEngine.Enabled) ContainersEngine.Start();
-            ContainersEngine.SettingsRequested += () => ShowMainWindow("DeskZones");
+            if (!safeMode)
+            {
+                try
+                {
+                    _controlPipe = new Opsis.Containers.PipeServer(DesktopMenu.PipeName, new DesktopMenu.Api());
+                    _controlPipe.Start();
+                    DesktopMenu.Apply(AppSettings.Load().DesktopMenuEnabled);
+                }
+                catch (Exception ex) { RotatingLogger.Write("Desktop menu setup failed: " + ex.Message); }
+            }
+            if (!safeMode) { try { StudioMusic.Start(); } catch (Exception ex) { RotatingLogger.Write("music overlay failed to start: " + ex.Message); } }
+            if (!safeMode && DeskStripHostEngine.Instance.GetSettings().StartEnabled)
+                DeskStripHostEngine.Instance.Enable();
+            if (!safeMode && AppSettings.Load().UseNativeContainers)
+            {
+                try
+                {
+                    var nativeStore = new Opsis.Containers.ContainersStore(Path.Combine(AppPaths.AppDataFolder, "containers-native.json"));
+                    try
+                    {
+                        var mons = Screen.AllScreens.Select(sc => new Opsis.Containers.MonitorInfo(sc.DeviceName, sc.Bounds, sc.Primary)).ToList();
+                        var note = MotionDesk.Containers.NativeMigration.ImportIfNeeded(nativeStore, Path.Combine(AppPaths.AppDataFolder, "containers"), mons);
+                        if (note != null) RotatingLogger.Write(note);
+                    }
+                    catch (Exception ex) { RotatingLogger.Write("native containers: legacy import failed: " + ex.Message); }
+                    var host = _nativeContainers = new MotionDesk.Containers.ContainerHost(nativeStore, DesktopMenu.ContainerPipeName);
+                    // global hotkeys of the native containers: Ctrl+Alt+Shift+H = hide / show all, Ctrl+Alt+Shift+N = new container at the cursor (neither is a Windows default)
+                    _hotkeys.RegisterCtrlAltShift(Keys.H, () => host.ToggleAll());
+                    _hotkeys.RegisterCtrlAltShift(Keys.Space, host.TogglePeek);
+                    _hotkeys.RegisterCtrlAltShift(Keys.N, () => host.NewContainerAtCursor());
+                    _hotkeys.RegisterCtrl(Keys.Oemtilde, () => host.ShowSpotSearch());                              // Spot Search (Ctrl+`), as in the old engine
+                    _hotkeys.RegisterCtrlAltShift(Keys.F, () => host.FocusNext());                                    // focus-container hotkey
+                    _hotkeys.RegisterCtrlAltShift(Keys.OemCloseBrackets, () => host.CycleSnapshot(1));            // next / previous layout snapshot = profile hotkeys
+                    _hotkeys.RegisterCtrlAltShift(Keys.OemOpenBrackets, () => host.CycleSnapshot(-1));
+                }
+                catch (Exception ex) { RotatingLogger.Write("native containers failed to start: " + ex.Message); }
+            }
 
             // Restore lightweight persistent preferences before showing the manager.
             var appSettings = AppSettings.Load();
@@ -202,19 +263,39 @@ namespace MotionDesk.Widgets
             // διαχείρισης να αναδύεται κάθε φορά. Το MainWindow ΔΗΜΙΟΥΡΓΕΙΤΑΙ κανονικά (ώστε να
             // τρέξει η επαναφορά του "Last Session" — widgets/DeskContainers/wallpaper μέσα στον
             // constructor του), απλά δεν καλείται Show() πάνω του.
-            bool launchedInBackground = Environment.GetCommandLineArgs().Any(a => a.Equals("--background", StringComparison.OrdinalIgnoreCase));
+            bool launchedInBackground = desktopAction != null || Environment.GetCommandLineArgs().Any(a => a.Equals("--background", StringComparison.OrdinalIgnoreCase));
             if (launchedInBackground)
             {
                 _mainWindow = new MainWindow();
                 _mainWindow.FormClosed += (s, e) => _mainWindow = null;
+                if (!safeMode && desktopAction != null && AppSettings.Load().DesktopMenuEnabled) DesktopMenu.Run(desktopAction);
             }
             else
             {
                 // "--page <key>": ανοίγει κατευθείαν σε μια σελίδα (χρήσιμο για δοκιμές και συντομεύσεις), π.χ. --page plugin:OpsisNewsCrawler
                 var cmd = Environment.GetCommandLineArgs();
                 int pageArg = Array.FindIndex(cmd, a => a.Equals("--page", StringComparison.OrdinalIgnoreCase));
+                using var intro = pageArg < 0 && !safeMode ? CreateStartupIntro() : null;
+                intro?.Show();
+                intro?.Refresh();
                 ShowMainWindow(pageArg >= 0 && pageArg + 1 < cmd.Length ? cmd[pageArg + 1] : null);
             }
+        }
+
+        private static Form CreateStartupIntro()
+        {
+            var form = new Form
+            {
+                Text = $"Opsis - Desktop Customization {AppVersion.Label}",
+                StartPosition = FormStartPosition.CenterScreen,
+                FormBorderStyle = FormBorderStyle.FixedToolWindow,
+                ClientSize = new Size(545, 300),
+                ShowInTaskbar = false, ControlBox = false,
+                BackColor = UiTheme.PageBackground
+            };
+            form.Controls.Add(new Label { Dock = DockStyle.Fill, Padding = new Padding(18),
+                Text = LocalizationManager.T("Welcome.Body"), Font = UiTheme.FontBody, ForeColor = UiTheme.TextPrimary });
+            return form;
         }
 
         private ContextMenuStrip? _pluginMenuHost;
@@ -281,9 +362,27 @@ namespace MotionDesk.Widgets
             using var owner = new Form { TopMost = true, ShowInTaskbar = false, FormBorderStyle = FormBorderStyle.None, Opacity = 0, Size = new System.Drawing.Size(1, 1), StartPosition = FormStartPosition.CenterScreen };
             owner.Show();
             PluginHost.Instance.ResolvePending(req => MessageBox.Show(owner,
-                string.Format(LocalizationManager.T("Plugin.TrustBody"), req.Name, req.Folder, req.Sha256.Substring(0, 16)),
+                string.Format(LocalizationManager.T("Plugin.TrustBody"), req.Name, req.Folder, req.Sha256.Substring(0, 16))
+                + Environment.NewLine + Environment.NewLine
+                + "Publisher / Εκδότης: " + req.Publisher
+                + Environment.NewLine + "Signature / Υπογραφή: " + req.SignatureStatus
+                + Environment.NewLine + "Requested capabilities / Δηλωμένες δυνατότητες: " + req.Capabilities
+                + Environment.NewLine + Environment.NewLine
+                + "⚠ In-process plugins are not sandboxed. / Τα DLL plugins εκτελούνται χωρίς sandbox.",
                 LocalizationManager.T("Plugin.TrustTitle"), MessageBoxButtons.YesNo, MessageBoxIcon.Warning, MessageBoxDefaultButton.Button2) == DialogResult.Yes);
             UpdatePluginApprovalItem();
+        }
+
+        // Privacy boundary for our own Windows toast/balloon messages. Windows and
+        // third-party application notifications are outside Opsis' control.
+        private void ShowPrivateBalloon(int timeout, string title, string message, ToolTipIcon icon)
+        {
+            var ids = AppSettings.Peek().PresentationMonitorIds;
+            if (ids != null && Screen.AllScreens.Any(screen => ids.Any(id =>
+                    id.Equals(screen.DeviceName, StringComparison.OrdinalIgnoreCase) ||
+                    id.Equals(MonitorTopologyService.ForDevice(screen.DeviceName)?.Id, StringComparison.OrdinalIgnoreCase))))
+                return;
+            _trayIcon.ShowBalloonTip(timeout, title, message, icon);
         }
 
         private void ShowMainWindow(string? page = null)
@@ -344,7 +443,7 @@ namespace MotionDesk.Widgets
         private void ApplyProfile(string name)
         {
             WorkspaceProfileService.Load(name);
-            _trayIcon.ShowBalloonTip(1500, "Opsis", string.Format(LocalizationManager.T("Tray.ProfileAppliedFormat"), name), ToolTipIcon.Info);
+            ShowPrivateBalloon(1500, "Opsis", string.Format(LocalizationManager.T("Tray.ProfileAppliedFormat"), name), ToolTipIcon.Info);
         }
 
         private void ToggleWallpaper()
@@ -407,12 +506,9 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
             _ = WallpaperHostEngine.Instance.RefreshAllAsync();
         }
 
-        private System.Threading.SynchronizationContext _uiContext = null!;
         private System.Windows.Forms.Timer? _alertTimer;
-        private System.Windows.Forms.Timer? _updateCheckTimer;
         private int _cpuHighTicks, _ramHighTicks;
         private DateTime _lastAlertUtc = DateTime.MinValue;
-        private bool _pendingUpdateAvailable;
 
         // Called every 5 s: CPU or memory >= 90% for 12 consecutive ticks (one minute) -> one tray balloon, then a 10-minute pause
         private void UsageAlertTick()
@@ -429,68 +525,15 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                 {
                     _lastAlertUtc = DateTime.UtcNow; _ramHighTicks = 0;
                     var top = TopProcessesService.TopByMemory(1).FirstOrDefault();
-                    _trayIcon.ShowBalloonTip(8000, LocalizationManager.T("Alert.Title"), string.Format(LocalizationManager.T("Alert.RamHigh"), top.Name ?? "?"), ToolTipIcon.Warning);
+                    ShowPrivateBalloon(8000, LocalizationManager.T("Alert.Title"), string.Format(LocalizationManager.T("Alert.RamHigh"), top.Name ?? "?"), ToolTipIcon.Warning);
                 }
                 else if (_cpuHighTicks >= 12)
                 {
                     _lastAlertUtc = DateTime.UtcNow; _cpuHighTicks = 0;
-                    _trayIcon.ShowBalloonTip(8000, LocalizationManager.T("Alert.Title"), LocalizationManager.T("Alert.CpuHigh"), ToolTipIcon.Warning);
+                    ShowPrivateBalloon(8000, LocalizationManager.T("Alert.Title"), LocalizationManager.T("Alert.CpuHigh"), ToolTipIcon.Warning);
                 }
             }
             catch (Exception) { /* an alert must never break the tray */ }
-        }
-
-        // Ίδια λογική με το self-update του GearWin (ζητήθηκε ρητά· ήδη portαρισμένο/ζωντανά
-        // δοκιμασμένο στο OpsisNewsCrawler, βλ. TickerHost.AutoCheckForUpdatesAsync): έλεγχος σε
-        // κάθε εκκίνηση ΚΑΙ μετά κάθε ~12 ώρες, offline retry (1 λεπτό, έως 4 φορές), ΜΙΑ
-        // ειδοποίηση ανά ΈΚΔΟΣΗ (όχι ανά check — AppSettings.LastNotifiedUpdateTag).
-        private bool _autoCheckingUpdate;
-
-        private async Task AutoCheckForUpdatesAsync()
-        {
-            if (_autoCheckingUpdate) return;
-            _autoCheckingUpdate = true;
-            try
-            {
-                await Task.Delay(TimeSpan.FromSeconds(25)); // do not compete with the startup work
-                if (!AppSettings.Load().UpdateCheckEnabled) return;
-
-                for (int attempt = 0; attempt < 4; attempt++)
-                {
-                    var result = await UpdateCheckService.CheckAsync();
-                    if (result.Succeeded)
-                    {
-                        var s = AppSettings.Load();
-                        s.LastUpdateCheckUtc = DateTime.UtcNow;
-                        if (result.Update != null && !string.Equals(s.LastNotifiedUpdateTag, result.Update.Tag, StringComparison.Ordinal))
-                        {
-                            s.LastNotifiedUpdateTag = result.Update.Tag;
-                            s.Save();
-                            var found = result.Update;
-                            _uiContext.Post(_ =>
-                            {
-                                _pendingUpdateAvailable = true;
-                                _trayIcon.ShowBalloonTip(10000, LocalizationManager.T("Update.Title"),
-                                    string.Format(LocalizationManager.T("Update.Available"), found.Version.ToString(3)), ToolTipIcon.Info);
-                            }, null);
-                        }
-                        else s.Save();
-                        return;
-                    }
-                    await Task.Delay(TimeSpan.FromMinutes(1)); // offline: wait for the network
-                }
-            }
-            catch (Exception) { /* offline etc. */ }
-            finally { _autoCheckingUpdate = false; }
-        }
-
-        // Το κλικ στο balloon ανοίγει την κάρτα ενημερώσεων μέσα στην εφαρμογή (About), όχι
-        // απευθείας το browser — εκεί υπάρχει πλέον και το κουμπί "Λήψη & εγκατάσταση".
-        private void OpenPendingUpdate()
-        {
-            if (!_pendingUpdateAvailable) return;
-            _pendingUpdateAvailable = false;
-            ShowMainWindow("About");
         }
 
         // Κοινός, πλήρης καθαρισμός εξόδου — καλείται ΚΑΙ από το μενού "Έξοδος" ΚΑΙ από ένα
@@ -498,65 +541,57 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
         // αποθηκεύεται η συνεδρία και να σταματούν σωστά τα plugins/hotkeys πριν το Application.Exit().
         // DeskContainers group of the tray menu. The engine publishes its state (profiles, switches, hidden containers) in bridge\state.json;
         // the submenu is rebuilt every time it opens, and every entry sends a command to the engine through the bridge.
+        // The tray menu of the NEW native DeskContainers (UseNativeContainers): same group, entries talk to the in-process host instead of the WPF engine.
+        private void FillNativeContainersMenu(ToolStripMenuItem menu, MotionDesk.Containers.ContainerHost host)
+        {
+            string T(string key) => LocalizationManager.T(key);
+            menu.DropDownItems.Add(T("DCM.BackupNow"), null, (s, e) => { try { host.Backup(true); } catch (Exception) { } });
+            menu.DropDownItems.Add(T("DCM.NewContainer"), null, (s, e) => host.NewContainerAtCursor());
+            menu.DropDownItems.Add(T("DCX.NewNote"), null, (s, e) => host.NewContainerAtCursor("Note"));
+            menu.DropDownItems.Add(T("DCM.NewPortal"), null, (s, e) => host.NewContainerAtCursor("Portal"));
+            menu.DropDownItems.Add(MainWindow.StudioText("Preview containers", "Προσωρινή εμφάνιση containers"), null, (_, _) => host.TogglePeek());
+            menu.DropDownItems.Add(new ToolStripSeparator());
+            var list = host.Containers();
+            var focus = new ToolStripMenuItem(T("DCM.FocusContainer")) { Enabled = list.Any(c => !c.Hidden) };
+            var hidden = new ToolStripMenuItem(T("DCM.HiddenContainers")) { Enabled = list.Any(c => c.Hidden) };
+            foreach (var c in list)
+            {
+                string id = c.Id; string title = string.IsNullOrWhiteSpace(c.Title) ? id[..Math.Min(6, id.Length)] : c.Title;
+                if (c.Hidden) hidden.DropDownItems.Add(title, null, (s, e) => host.SetHidden(id, false));
+                else focus.DropDownItems.Add(title, null, (s, e) => host.Focus(id));
+            }
+            menu.DropDownItems.Add(focus); menu.DropDownItems.Add(hidden);
+            var snaps = new ToolStripMenuItem(T("DCM.Snapshots"));
+            snaps.DropDownItems.Add(T("DCM.SaveSnapshot"), null, (s, e) => host.SaveSnapshot("Layout " + DateTime.Now.ToString("yyyy-MM-dd HH.mm")));
+            var names = host.SnapshotNames();
+            if (names.Count > 0) snaps.DropDownItems.Add(new ToolStripSeparator());
+            foreach (var n in names) { string name = n; snaps.DropDownItems.Add(name, null, (s, e) => host.LoadSnapshot(name)); }
+            menu.DropDownItems.Add(snaps);
+            menu.DropDownItems.Add(new ToolStripSeparator());
+            menu.DropDownItems.Add(T("DCM.QuickHide") + " / " + T("DCM.QuickShow"), null, (s, e) => host.ToggleAll());
+            menu.DropDownItems.Add(T("DCM.RestoreIcons"), null, (s, e) => { DesktopIconVisibilityEngine.Instance.RestoreIfHidden(); });
+            menu.DropDownItems.Add(T("DCM.OpenSettingsPage"), null, (s, e) => ShowMainWindow("DeskZones"));
+        }
+
         private ToolStripMenuItem BuildContainersTrayMenu()
         {
             string T(string key) => LocalizationManager.T(key);
             var menu = new ToolStripMenuItem(T("DCM.GroupTitle"));
             void Fill()
             {
-                foreach (ToolStripItem old in menu.DropDownItems) old.Dispose();
+                var previous = menu.DropDownItems.Cast<ToolStripItem>().ToArray();
                 menu.DropDownItems.Clear();
-                void Add(ToolStripItemCollection to, string key, string cmd) => to.Add(T(key), null, (s, e) => ContainersBridge.Command(cmd));
-                if (!ContainersEngine.IsRunning)
+                foreach (var old in previous) old.Dispose();
+                try
                 {
-                    menu.DropDownItems.Add(T("DCM.StartEngine"), null, (s, e) => ContainersEngine.Start());
-                    menu.DropDownItems.Add(T("DCM.OpenSettingsPage"), null, (s, e) => ShowMainWindow("DeskZones"));
-                    return;
+                    if (MotionDesk.Containers.ContainerHost.Current is { } native)
+                    {
+                        FillNativeContainersMenu(menu, native);
+                        return;
+                    }
                 }
-                var state = ContainersBridge.ReadState();
-                Add(menu.DropDownItems, "DCM.NewContainer", "new-fence");
-                Add(menu.DropDownItems, "DCM.NewNote", "new-note");
-                menu.DropDownItems.Add(new ToolStripSeparator());
-
-                var profiles = new ToolStripMenuItem(T("DCM.Profiles"));
-                foreach (var name in state.Profiles)
-                {
-                    string n = name;
-                    var it = new ToolStripMenuItem(n) { Checked = string.Equals(n, state.Profile, StringComparison.OrdinalIgnoreCase) };
-                    it.Click += (s, e) => ContainersBridge.Command("profile:" + n);
-                    profiles.DropDownItems.Add(it);
-                }
-                if (profiles.DropDownItems.Count > 0) profiles.DropDownItems.Add(new ToolStripSeparator());
-                Add(profiles.DropDownItems, "DCM.ManageProfiles", "manage-profiles");
-                Add(profiles.DropDownItems, "DCM.ManageAutomation", "manage-automation");
-                var auto = new ToolStripMenuItem(T("DCM.ProfileAutomation")) { Checked = state.Automation };
-                auto.Click += (s, e) => ContainersBridge.Command("toggle-automation");
-                profiles.DropDownItems.Add(auto);
-                menu.DropDownItems.Add(profiles);
-
-                var smart = new ToolStripMenuItem(T("DCM.Smart"));
-                var org = new ToolStripMenuItem(T("DCM.AutoOrganize")) { Checked = state.AutoOrganize };
-                org.Click += (s, e) => ContainersBridge.Command("toggle-autoorganize");
-                smart.DropDownItems.Add(org);
-                Add(smart.DropDownItems, "DCM.SmartRules", "smart-rules");
-                Add(smart.DropDownItems, "DCM.OrganizeNow", "organize-now");
-                menu.DropDownItems.Add(smart);
-
-                var hidden = new ToolStripMenuItem(T("DCM.HiddenContainers")) { Enabled = state.Hidden.Length > 0 };
-                foreach (var title in state.Hidden)
-                {
-                    string t = title;
-                    hidden.DropDownItems.Add(t, null, (s, e) => ContainersBridge.Command("show-hidden:" + t));
-                }
-                menu.DropDownItems.Add(hidden);
-                Add(menu.DropDownItems, "DCM.FocusContainer", "focus-fence");
-                menu.DropDownItems.Add(new ToolStripSeparator());
-                Add(menu.DropDownItems, "DCM.QuickHide", "quick-hide");
-                Add(menu.DropDownItems, "DCM.QuickShow", "quick-show");
-                Add(menu.DropDownItems, "DCM.Reload", "reload-all");
-                Add(menu.DropDownItems, "DCM.Backup", "backup");
-                menu.DropDownItems.Add(new ToolStripSeparator());
-                menu.DropDownItems.Add(T("DCM.OpenSettingsPage"), null, (s, e) => ShowMainWindow("DeskZones"));
+                catch (Exception ex) { RotatingLogger.Write("DeskContainers tray submenu: " + ex.Message); }
+                menu.DropDownItems.Add(T("DCM.OpenSettingsPage"), null, (_, _) => ShowMainWindow("DeskZones"));
             }
             menu.DropDownOpening += (s, e) => Fill();
             Fill();
@@ -567,8 +602,17 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
         {
             try { WorkspaceProfileService.Save("Last Session"); WorkspaceProfileService.ExitSaveDone = true; } catch { }
             PluginHost.Instance.StopAll();
+            try { MotionDesk.Appearance.AppearanceService.Instance.Stop(); } catch (Exception) { }   // taskbar look and window effects always go back to Windows
             _hotkeys.Dispose();
             _taskbarWatcher.Dispose();
+            try { _nativeContainers?.Dispose(); } catch { }
+            try { StudioMusic.Stop(); } catch { }
+            DesktopToolbar.Stop();
+            ReplacementTaskbar.Stop();
+            VirtualWorkspaces.Stop();
+            AutoTileService.Stop();
+            try { DeskStripHostEngine.Instance.CloseForExit(); } catch { }
+            try { _controlPipe?.Dispose(); } catch { }
             DesktopIconVisibilityEngine.Instance.Stop();
             _trayIcon.Visible = false;
             Application.Exit();
@@ -582,12 +626,6 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                 int added = WallpaperHostEngine.Instance.AddVideoFolder(dialog.SelectedPath);
                 if (added > 0 && !_wallpaperEnabled) ToggleWallpaper();
             }
-        }
-
-        private static Icon LoadTrayIcon()
-        {
-            var path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "assets", "Opsis.ico");
-            return File.Exists(path) ? new Icon(path) : SystemIcons.Application;
         }
 
         // Το DeskZones έγινε πραγματικό FancyZones-style στυλ (κανένα μόνιμα ορατό

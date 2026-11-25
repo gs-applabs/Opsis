@@ -72,41 +72,58 @@ namespace MotionDesk.UI
                     WallpaperHostEngine.Instance.RefreshAll();
                 };
                 panel.Controls.Add(fit);
+                // #32/#33: opt-in panoramic photo on exactly two monitors.
+                if (Screen.AllScreens.Length >= 2)
+                {
+                    AddText(panel, L("Panoramic photo: select two adjacent monitors; others remain independent.",
+                        "Πανοραμική φωτογραφία: επίλεξε δύο γειτονικές οθόνες. Οι υπόλοιπες παραμένουν ανεξάρτητες."));
+                    var first = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 200 };
+                    var second = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 200 };
+                    var monitorIds = new[] { "(None)" }.Concat(Screen.AllScreens.Select(x => x.DeviceName)).ToArray();
+                    first.Items.AddRange(monitorIds); second.Items.AddRange(monitorIds);
+                    first.SelectedItem = monitorIds.Contains(settings.PanoramaFirstMonitor) ? settings.PanoramaFirstMonitor : "(None)";
+                    second.SelectedItem = monitorIds.Contains(settings.PanoramaSecondMonitor) ? settings.PanoramaSecondMonitor : "(None)";
+                    var gap = new NumericUpDown { Minimum = 0, Maximum = 400, Width = 78,
+                        Value = Math.Clamp(settings.PanoramaBezelGapPx, 0, 400) };
+                    var pair = new FlowLayoutPanel { AutoSize = true, WrapContents = true };
+                    pair.Controls.Add(first); pair.Controls.Add(second);
+                    pair.Controls.Add(new Label { AutoSize = true, Text = L("Bezel gap (px)", "Κενό πλαισίων (px)") });
+                    pair.Controls.Add(gap);
+                    var usePanorama = MediaButton(L("Apply panorama", "Εφαρμογή πανοράματος"));
+                    usePanorama.Click += (_, _) =>
+                    {
+                        var a = first.SelectedItem?.ToString() ?? "(None)";
+                        var b = second.SelectedItem?.ToString() ?? "(None)";
+                        if ((a == "(None)") != (b == "(None)"))
+                        { MessageBox.Show(this, L("Select both monitors or disable panorama for both.", "Επίλεξε και τις δύο οθόνες ή απενεργοποίησε το πανόραμα.")); return; }
+                        if (a != "(None)" && b != "(None)")
+                        {
+                            if (a == b)
+                            { MessageBox.Show(this, L("Select two different monitors.", "Επίλεξε δύο διαφορετικές οθόνες.")); return; }
+                            var left = Screen.AllScreens.FirstOrDefault(m => m.DeviceName == a);
+                            var right = Screen.AllScreens.FirstOrDefault(m => m.DeviceName == b);
+                            if (left == null || right == null ||
+                                (Math.Abs(left.Bounds.Right - right.Bounds.Left) > 40 &&
+                                 Math.Abs(right.Bounds.Right - left.Bounds.Left) > 40))
+                            {
+                                MessageBox.Show(this, L("The selected monitors must be horizontally adjacent. Current configuration was not changed.",
+                                    "Οι επιλεγμένες οθόνες πρέπει να είναι οριζόντια γειτονικές. Δεν άλλαξαν οι ρυθμίσεις."));
+                                return;
+                            }
+                        }
+                        var cfg = WallpaperSettings.Load();
+                        cfg.PanoramaFirstMonitor = a == "(None)" ? string.Empty : a;
+                        cfg.PanoramaSecondMonitor = b == "(None)" ? string.Empty : b;
+                        cfg.PanoramaBezelGapPx = (int)gap.Value;
+                        cfg.Save(); WallpaperHostEngine.Instance.RefreshAll();
+                    };
+                    pair.Controls.Add(usePanorama); panel.Controls.Add(pair);
+                }
                 return;
             }
 
             BuildPackageRow(panel);
             BuildPageProperties(panel, settings);
-        }
-
-        // ---- "Application" wallpaper -------------------------------------------------------------------------------------------------------------
-        private void BuildApplicationSection(FlowLayoutPanel panel, WallpaperSettings settings)
-        {
-            AddSection(panel, L("Application wallpaper", "Wallpaper από εφαρμογή"));
-            AddText(panel, L("Choose a program (.exe) with its own window: Opsis starts it, shows its window as the wallpaper behind the icons, pauses it when the wallpaper pauses and closes it when you change the mode. Works best with programs made to run full screen without input (scenes, visualisers).",
-                             "Διάλεξε ένα πρόγραμμα (.exe) με δικό του παράθυρο: το Opsis το ανοίγει, δείχνει το παράθυρό του ως wallpaper πίσω από τα εικονίδια, το παγώνει όταν παγώνει το wallpaper και το κλείνει όταν αλλάζεις τρόπο. Ταιριάζει σε προγράμματα φτιαγμένα να τρέχουν σε πλήρη οθόνη χωρίς είσοδο (σκηνές, visualisers)."));
-            var row = new FlowLayoutPanel { AutoSize = true, WrapContents = false, Margin = new Padding(0, 0, 0, 6) };
-            var path = new TextBox { Width = 380, Text = settings.AppWallpaperPath, BackColor = UiTheme.Surface, ForeColor = UiTheme.TextPrimary, BorderStyle = BorderStyle.FixedSingle, Font = UiTheme.FontBody, Margin = new Padding(0, 5, 10, 0) };
-            var browse = MediaButton(LocalizationManager.T("Wallpaper.Browse"));
-            browse.Click += (_, _) =>
-            {
-                using var dlg = new OpenFileDialog { Filter = "Programs (*.exe)|*.exe", Title = browse.Text };
-                if (dlg.ShowDialog(this) == DialogResult.OK) path.Text = dlg.FileName;
-            };
-            row.Controls.Add(path); row.Controls.Add(browse);
-            panel.Controls.Add(row);
-            var row2 = new FlowLayoutPanel { AutoSize = true, WrapContents = false, Margin = new Padding(0, 0, 0, 10) };
-            row2.Controls.Add(new Label { Text = L("Arguments", "Παράμετροι"), AutoSize = false, Width = 90, Height = 28, TextAlign = ContentAlignment.MiddleLeft, Font = UiTheme.FontBody, ForeColor = UiTheme.TextSecondary });
-            var args = new TextBox { Width = 290, Text = settings.AppWallpaperArgs, BackColor = UiTheme.Surface, ForeColor = UiTheme.TextPrimary, BorderStyle = BorderStyle.FixedSingle, Font = UiTheme.FontBody, Margin = new Padding(0, 3, 10, 0) };
-            var apply = MediaButton(LocalizationManager.T("Wallpaper.Apply"));
-            apply.Click += (_, _) =>
-            {
-                var s = WallpaperSettings.Load(); s.AppWallpaperPath = path.Text.Trim().Trim('"'); s.AppWallpaperArgs = args.Text.Trim(); s.Save();
-                WallpaperHostEngine.Instance.Enable();
-                WallpaperHostEngine.Instance.RefreshAll();
-            };
-            row2.Controls.Add(args); row2.Controls.Add(apply);
-            panel.Controls.Add(row2);
         }
 
         // ---- packages and samples ----------------------------------------------------------------------------------------------------------
@@ -120,6 +137,16 @@ namespace MotionDesk.UI
                 if (dlg.ShowDialog(this) != DialogResult.OK) return;
                 try
                 {
+                    var preview = WallpaperPackages.Inspect(dlg.FileName);
+                    string listed = string.Join(Environment.NewLine, preview.Files.Take(24).Select(f => "  • " + f));
+                    if (preview.Files.Count > 24) listed += Environment.NewLine +
+                        L($"… and {preview.Files.Count - 24} more files", $"… και άλλα {preview.Files.Count - 24} αρχεία");
+                    string summary = L(
+                        $"Entry point: {preview.EntryPoint}\nFiles: {preview.Files.Count}  ·  Unpacked: {preview.UncompressedBytes / 1048576d:F1} MiB\n\n{listed}\n\nWallpaper packages can run HTML/JavaScript. Only import packages you trust. Proceed?",
+                        $"Αρχική σελίδα: {preview.EntryPoint}\nΑρχεία: {preview.Files.Count}  ·  Χωρίς συμπίεση: {preview.UncompressedBytes / 1048576d:F1} MiB\n\n{listed}\n\nΤα πακέτα wallpaper μπορούν να εκτελούν HTML/JavaScript. Εισήγαγε μόνο αξιόπιστα πακέτα. Συνέχεια?");
+                    if (MessageBox.Show(this, summary, L("Review wallpaper package", "Προεπισκόπηση πακέτου wallpaper"),
+                            MessageBoxButtons.YesNo, MessageBoxIcon.Warning, MessageBoxDefaultButton.Button2) != DialogResult.Yes)
+                        return;
                     string index = WallpaperPackages.Import(dlg.FileName);
                     var s = WallpaperSettings.Load(); s.PageSource = index; s.Save();
                     WallpaperHostEngine.Instance.Enable(); WallpaperHostEngine.Instance.RefreshAll();
@@ -226,7 +253,7 @@ namespace MotionDesk.UI
                     }
                     case "checkbox":
                     {
-                        var cb = new FlatCheckBox { Text = "", AutoSize = false, Width = 30, Height = 30, Checked = current.Equals("true", StringComparison.OrdinalIgnoreCase), BackColor = UiTheme.Background, Margin = new Padding(0, 4, 0, 0) };
+                        var cb = new FlatCheckBox { Text = "", AutoSize = false, Width = 30, Height = 30, Checked = current.Equals("true", StringComparison.OrdinalIgnoreCase), BackColor = UiTheme.PageBackground, Margin = new Padding(0, 4, 0, 0) };
                         cb.CheckedChanged += (_, _) => Save(prop, cb.Checked ? "true" : "false");
                         row.Controls.Add(cb);
                         break;
@@ -277,7 +304,6 @@ namespace MotionDesk.UI
             "network" => L("Network", "Δίκτυο"),
             "disks" => L("Disks", "Δίσκοι"),
             "battery" => L("Battery", "Μπαταρία"),
-            "audio" => L("Audio spectrum", "Φάσμα ήχου"),
             _ => id,
         };
 
@@ -316,7 +342,7 @@ namespace MotionDesk.UI
             {
                 var id = el.Id;
                 var row = new FlowLayoutPanel { AutoSize = true, WrapContents = false, Margin = new Padding(0, 0, 0, 4) };
-                var cb = new FlatCheckBox { Text = ElementName(id), AutoSize = false, Width = 190, Height = 28, Checked = el.Enabled, BackColor = UiTheme.Background, Margin = new Padding(0, 4, 8, 0) };
+                var cb = new FlatCheckBox { Text = ElementName(id), AutoSize = false, Width = 190, Height = 28, Checked = el.Enabled, BackColor = UiTheme.PageBackground, Margin = new Padding(0, 4, 8, 0) };
                 cb.CheckedChanged += (_, _) => Commit(s => s.Elements.First(e => e.Id == id).Enabled = cb.Checked);
                 row.Controls.Add(cb);
 
@@ -333,8 +359,10 @@ namespace MotionDesk.UI
             }
 
             var opt = new FlowLayoutPanel { AutoSize = true, WrapContents = false, Margin = new Padding(0, 6, 0, 10) };
-            var card = new FlatToggle { RowWidth = 440, Text = L("Frosted card behind the elements", "Θολό πλαίσιο πίσω από τα στοιχεία"),  Checked = settings.ElementsCard, BackColor = UiTheme.Background, Margin = new Padding(0, 4, 8, 0) };
+            var card = new FlatToggle { RowWidth = 440, Text = L("Frosted card behind the elements", "Θολό πλαίσιο πίσω από τα στοιχεία"),  Checked = settings.ElementsCard, BackColor = UiTheme.PageBackground, Margin = new Padding(0, 4, 8, 0) };
             card.CheckedChanged += (_, _) => Commit(s => s.ElementsCard = card.Checked);
+            var autoColor = new FlatToggle { RowWidth = 440, Text = L("Text colour follows the wallpaper (when there is no card)", "Το χρώμα του κειμένου ακολουθεί το φόντο (όταν δεν υπάρχει πλαίσιο)"), Checked = settings.ElementsAutoColor, BackColor = UiTheme.PageBackground, Margin = new Padding(0, 4, 8, 0) };
+            autoColor.CheckedChanged += (_, _) => Commit(s => s.ElementsAutoColor = autoColor.Checked);
             var accent = new Button { Width = 60, Height = 26, FlatStyle = FlatStyle.Flat, Margin = new Padding(0, 2, 8, 0), Cursor = Cursors.Hand, TabStop = false };
             Color Parse(string t) { try { return ColorTranslator.FromHtml(t); } catch (Exception) { return Color.FromArgb(0, 210, 255); } }
             accent.BackColor = Parse(settings.ElementsAccent);
@@ -346,7 +374,7 @@ namespace MotionDesk.UI
                 accent.BackColor = dlg.Color;
                 Commit(s => s.ElementsAccent = $"#{dlg.Color.R:X2}{dlg.Color.G:X2}{dlg.Color.B:X2}");
             };
-            opt.Controls.Add(card);
+            opt.Controls.Add(card); opt.Controls.Add(autoColor);
             opt.Controls.Add(new Label { Text = L("Accent colour", "Χρώμα έμφασης"), AutoSize = true, Font = UiTheme.FontBody, ForeColor = UiTheme.TextSecondary, Margin = new Padding(0, 8, 6, 0) });
             opt.Controls.Add(accent);
             panel.Controls.Add(opt);

@@ -9,6 +9,8 @@ public sealed class AutomationRule
     public string TriggerProcess { get; set; } = string.Empty;
     public string Profile { get; set; } = string.Empty;
     public bool Enabled { get; set; } = true;
+    public string PowerCondition { get; set; } = "Any"; // Any | Battery | AC
+    public int BatteryBelowPercent { get; set; } // 0: no battery threshold
 }
 
 public sealed class AutomationService : IDisposable
@@ -35,9 +37,21 @@ public sealed class AutomationService : IDisposable
     // τα widgets/containers (flicker) και έσβηνε τις χειροκίνητες αλλαγές του χρήστη.
     private void Evaluate()
     {
-        foreach (var r in Rules.Where(x => x.Enabled && !string.IsNullOrWhiteSpace(x.TriggerProcess) && !string.IsNullOrWhiteSpace(x.Profile)).ToList())
+        var power = System.Windows.Forms.SystemInformation.PowerStatus;
+        foreach (var r in Rules.Where(x => x.Enabled && !string.IsNullOrWhiteSpace(x.Profile) &&
+            (!string.IsNullOrWhiteSpace(x.TriggerProcess) || x.PowerCondition is "Battery" or "AC" || x.BatteryBelowPercent > 0)).ToList())
         {
-            bool running = RunningProcessCache.IsRunningByName(Path.GetFileNameWithoutExtension(r.TriggerProcess));
+            bool powerMatches = r.PowerCondition switch
+            {
+                "Battery" => power.PowerLineStatus == System.Windows.Forms.PowerLineStatus.Offline,
+                "AC" => power.PowerLineStatus == System.Windows.Forms.PowerLineStatus.Online,
+                _ => true
+            };
+            if (r.BatteryBelowPercent > 0)
+                powerMatches &= power.BatteryLifePercent is >= 0 and <= 1 &&
+                    power.BatteryLifePercent * 100 <= Math.Clamp(r.BatteryBelowPercent, 1, 100);
+            bool running = powerMatches && (string.IsNullOrWhiteSpace(r.TriggerProcess) ||
+                RunningProcessCache.IsRunningByName(Path.GetFileNameWithoutExtension(r.TriggerProcess)));
             if (!running) { _wasRunning.Remove(r.Name); continue; }
             if (!_wasRunning.Add(r.Name)) continue; // ήδη τρέχει και το έχουμε εφαρμόσει
             if (WorkspaceProfileService.Load(r.Profile)) { _lastApplied[r.Name] = DateTime.UtcNow; StatusChanged?.Invoke(this, $"Automation: loaded {r.Profile}"); }

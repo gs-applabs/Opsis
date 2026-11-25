@@ -16,7 +16,7 @@ namespace MotionDesk.Services
     }
 
     // Backing service for the "Quick Settings" widget (ήχος/φωτεινότητα/σχέδιο ενέργειας σε ένα
-    // πάνελ) — ζητήθηκε ρητά SeelenUI-inspired, το δικό τους "quick-settings" popup. Κάθε κομμάτι
+    // πάνελ) — για το widget γρήγορων ρυθμίσεων. Κάθε κομμάτι
     // χρησιμοποιεί ήδη τεκμηριωμένα APIs, όχι κάτι εύθραυστο/χωρίς επίσημη υποστήριξη.
     public static class SystemControlService
     {

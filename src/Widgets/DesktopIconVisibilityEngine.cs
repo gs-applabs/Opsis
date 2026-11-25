@@ -9,31 +9,14 @@ using System.Text.Json;
 
 namespace MotionDesk.Widgets
 {
-    // Fences-style: διπλό-κλικ σε κενό σημείο της επιφάνειας εργασίας κρύβει όλα τα εικονίδια
-    // εκτός από μια λίστα εξαιρέσεων (Ο Υπολογιστής μου / φάκελος χρήστη / Πίνακας Ελέγχου / Κάδος
-    // Ανακύκλωσης) — ζητήθηκε ρητά. Windows δεν εκθέτει καμία επίσημη API για "απόκρυψη
-    // συγκεκριμένου εικονιδίου" (μόνο global on/off για ΟΛΑ μαζί) — η μόνη γνωστή τεχνική, ίδια με
-    // αυτή που χρησιμοποιεί το ίδιο το Stardock Fences και κάθε clone του, είναι να μετακινηθεί
-    // κάθε μη-εξαιρούμενο item του SysListView32 της επιφάνειας εργασίας εκτός ορατής περιοχής
-    // (LVM_SETITEMPOSITION) — αυτό ΔΕΝ διαγράφει/μετονομάζει τίποτα, είναι πλήρως αναστρέψιμο
-    // (αποθηκεύουμε τις αρχικές θέσεις και τις επαναφέρουμε στο επόμενο διπλό-κλικ).
-    //
-    // Επειδή το SysListView32 της επιφάνειας εργασίας ανήκει στη διεργασία explorer.exe (άλλη
-    // διεργασία), η ανάγνωση κειμένου/θέσης ανά item απαιτεί κλασική cross-process τεχνική
-    // (VirtualAllocEx/WriteProcessMemory/ReadProcessMemory/VirtualFreeEx στη διεργασία explorer.exe)
-    // — ακριβώς η ίδια τεχνική που χρησιμοποιεί κάθε υπάρχον εργαλείο αυτής της κατηγορίας. Το
-    // LVM_SETITEMPOSITION δεν χρειάζεται δείκτη (packed lParam), οπότε είναι απλό SendMessage.
+    // Quick Hide parks desktop list entries off screen and journals their original coordinates.
+    // Explorer keeps ownership of the desktop items and their underlying files.
     public sealed class DesktopIconVisibilityEngine
     {
         private static DesktopIconVisibilityEngine? _instance;
         public static DesktopIconVisibilityEngine Instance => _instance ??= new DesktopIconVisibilityEngine();
 
-        // Μένουν ορατά (με επιλογή του χρήστη, βλ. AppSettings.QuickHideKeep*): Ο Υπολογιστής μου / Αυτός ο υπολογιστής, ο φάκελος του
-        // χρήστη, ο Πίνακας Ελέγχου και ο Κάδος Ανακύκλωσης — + όποια άλλα εικονίδια διαλέξει ο χρήστης.
-        // ΔΙΟΡΘΩΣΗ: τα ονόματα ΔΕΝ μπορούν να είναι hardcoded — στα ελληνικά Windows 11 το εικονίδιο λέγεται «Αυτός ο υπολογιστής»
-        // (δεν ήταν στη λίστα), και ο φάκελος χρήστη δείχνει το ΠΛΗΡΕΣ όνομα (π.χ. «Giorgos Stergiopoulos») και όχι το login
-        // (Environment.UserName), οπότε έκρυβε το εικονίδιο του χρήστη. Τα ονόματα ζητούνται από το ίδιο το κέλυφος των Windows
-        // (display name των ειδικών φακέλων, στη γλώσσα του συστήματος) + στατικά ονόματα εφεδρικά.
+        // Resolve both the known folder and the desktop namespace item's localized label.
         internal static readonly Guid ThisPcId = new("0AC0837C-BBF8-452A-850D-79D08E667CA7");
         internal static readonly Guid ProfileId = new("5E6C858F-0E22-4760-9AFE-EA3317B67173");
         internal static readonly Guid ControlPanelId = new("82A74AEB-AEB4-465C-A014-D097EE346D63");
@@ -43,59 +26,51 @@ namespace MotionDesk.Widgets
         internal static readonly string[] ControlPanelFallback = { "Control Panel", "Πίνακας Ελέγχου" };
         internal static readonly string[] RecycleBinFallback = { "Recycle Bin", "Κάδος Ανακύκλωσης" };
 
-        /// <summary>Τα ονόματα που μένουν ορατά ΤΩΡΑ, σύμφωνα με τις ρυθμίσεις του χρήστη. Υπολογίζεται μία φορά ανά απόκρυψη/επαναφορά.</summary>
+        internal static HashSet<string> SpecialIconNames(Guid id)
+        {
+            var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            void Add(string? name) { if (!string.IsNullOrWhiteSpace(name)) names.Add(name.Trim()); }
+            Add(ShellDisplayName(id));
+            var (classId, fallback) =
+                id == ThisPcId ? ("20D04FE0-3AEA-1069-A2D8-08002B30309D", ThisPcFallback)
+                : id == ProfileId ? ("59031A47-3F72-44A7-89C5-5595FE6B30EE", new[] { Environment.UserName, "User’s Files", "User's Files", "Αρχεία χρήστη" })
+                : id == ControlPanelId ? ("5399E694-6CE5-4D6C-8FCE-1D8870FDCBA0", ControlPanelFallback)
+                : ("645FF040-5081-101B-9F08-00AA002F954E", RecycleBinFallback);
+            Add(ShellDisplayNameByParsing("::{" + classId + "}"));
+            if (id == ProfileId) Add(AccountDisplayName());
+            foreach (string name in fallback) Add(name);
+            return names;
+        }
+
         internal static HashSet<string> BuildWhitelist(Services.AppSettings? settings = null)
         {
             var a = settings ?? Services.AppSettings.Load();
             var set = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            void Keep(bool on, Guid id, params string[] fallback)
-            {
-                if (!on) return;
-                var name = ShellDisplayName(id);
-                if (!string.IsNullOrWhiteSpace(name)) set.Add(name);
-                foreach (var f in fallback) set.Add(f);
-            }
-            Keep(a.QuickHideKeepThisPc, ThisPcId, ThisPcFallback);
-            Keep(a.QuickHideKeepUserFolder, ProfileId, Environment.UserName);
-            if (a.QuickHideKeepUserFolder)
-            {
-                // Το εικονίδιο "Αρχεία χρήστη" της επιφάνειας εργασίας δείχνει το ΠΛΗΡΕΣ όνομα του λογαριασμού (π.χ. "Giorgos Stergiopoulos"),
-                // όχι το όνομα του φακέλου (π.χ. "Log9"): ζητείται από το κέλυφος (CLSID User's Files) και από το GetUserNameEx(NameDisplay).
-                var full = ShellDisplayNameByParsing("::{59031a47-3f72-44a7-89c5-5595fe6b30ee}");
-                if (!string.IsNullOrWhiteSpace(full)) set.Add(full);
-                var display = AccountDisplayName();
-                if (!string.IsNullOrWhiteSpace(display)) set.Add(display);
-            }
-            Keep(a.QuickHideKeepControlPanel, ControlPanelId, ControlPanelFallback);
-            Keep(a.QuickHideKeepRecycleBin, RecycleBinId, RecycleBinFallback);
-            foreach (var extra in a.QuickHideExtraKept) if (!string.IsNullOrWhiteSpace(extra)) set.Add(extra);
+            if (a.QuickHideKeepThisPc) set.UnionWith(SpecialIconNames(ThisPcId));
+            if (a.QuickHideKeepUserFolder) set.UnionWith(SpecialIconNames(ProfileId));
+            if (a.QuickHideKeepControlPanel) set.UnionWith(SpecialIconNames(ControlPanelId));
+            if (a.QuickHideKeepRecycleBin) set.UnionWith(SpecialIconNames(RecycleBinId));
+            foreach (var name in a.QuickHideExtraKept ?? []) if (!string.IsNullOrWhiteSpace(name)) set.Add(name.Trim());
             return set;
         }
 
-        /// <summary>Όνομα εμφάνισης (στη γλώσσα του συστήματος) ενός ειδικού φακέλου — για το παράθυρο επιλογής.</summary>
-        internal static string? DisplayNameOf(Guid knownFolder) => ShellDisplayName(knownFolder);
-
-        /// <summary>Τα ονόματα των εικονιδίων που υπάρχουν τώρα στην επιφάνεια εργασίας (για το παράθυρο επιλογής). Όταν είναι κρυμμένα, από το αποθηκευμένο state.</summary>
         public static List<string> ListDesktopItemNames()
         {
-            var names = new List<string>();
+            var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             try
             {
-                if (File.Exists(StateFilePath)) { foreach (var sv in LoadState()) names.Add(sv.Name); return names.Distinct(StringComparer.OrdinalIgnoreCase).ToList(); }
-                IntPtr list = FindDesktopListView();
-                if (list == IntPtr.Zero) return names;
-                GetWindowThreadProcessId(list, out uint pid);
-                IntPtr hProcess = OpenProcess(PROCESS_VM_OPERATION | PROCESS_VM_READ | PROCESS_VM_WRITE, false, pid);
-                if (hProcess == IntPtr.Zero) return names;
-                try
+                WithDesktopList((process, list, count) =>
                 {
-                    int count = SendMessage(list, LVM_GETITEMCOUNT, IntPtr.Zero, IntPtr.Zero).ToInt32();
-                    for (int i = 0; i < count; i++) { string n = GetItemTextRemote(hProcess, list, i); if (n.Length > 0) names.Add(n); }
-                }
-                finally { CloseHandle(hProcess); }
+                    for (int i = 0; i < count; i++)
+                    {
+                        string name = GetItemTextRemote(process, list, i).Trim();
+                        if (name.Length > 0) names.Add(name);
+                    }
+                });
             }
             catch (Exception) { }
-            return names.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+            if (names.Count == 0) names.UnionWith(LoadState().Positions.Select(x => x.Name));
+            return names.OrderBy(name => name, StringComparer.CurrentCultureIgnoreCase).ToList();
         }
 
         private static string? ShellDisplayName(Guid knownFolder)
@@ -154,12 +129,145 @@ namespace MotionDesk.Widgets
         private uint _lastDownTime;
         private Point _lastDownPos;
         private bool _hidden;
+        private bool _originalRecoveryDone;
+        private System.Threading.SynchronizationContext? _uiContext;
+
+        // ---- originals of icons that were dropped into a container (2.6.0): ONE mechanism (the same remote list-view calls as the quick-hide), its own state file ----
+        // Hiding moves the desktop icon out of the screen and remembers where it was; restoring puts it back BY NAME. The state file lives only while icons are hidden, so every start of
+        // Opsis (after an exit, a crash, a kill or an upgrade) and the command "Opsis.exe --restore-desktop-icons" can bring them back.
+        private static string OriginalsStatePath => Path.Combine(Services.AppPaths.AppDataFolder, "desktop-originals-hidden.json");
+
+        private static IEnumerable<string> IconNames(string path)
+        {
+            var n = Path.GetFileName(path.TrimEnd('\\', '/')); if (string.IsNullOrEmpty(n)) yield break;
+            yield return n; var w = Path.GetFileNameWithoutExtension(n); if (!string.IsNullOrEmpty(w) && w != n) yield return w;
+        }
+
+        private static bool IsOnDesktop(string path)
+        {
+            try
+            {
+                var dir = Path.GetDirectoryName(Path.GetFullPath(path.TrimEnd('\\', '/'))) ?? "";
+                return string.Equals(dir, Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory), StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(dir, Environment.GetFolderPath(Environment.SpecialFolder.CommonDesktopDirectory), StringComparison.OrdinalIgnoreCase);
+            }
+            catch (Exception) { return false; }
+        }
+
+        private static List<SavedIconPos> LoadOriginals() { try { return File.Exists(OriginalsStatePath) ? JsonSerializer.Deserialize<List<SavedIconPos>>(File.ReadAllText(OriginalsStatePath)) ?? new() : new(); } catch (Exception) { return new(); } }
+
+        private static void WithDesktopList(Action<IntPtr, IntPtr, int> work)
+        {
+            IntPtr list = FindDesktopListView(); if (list == IntPtr.Zero) return;
+            GetWindowThreadProcessId(list, out uint pid);
+            IntPtr hp = OpenProcess(PROCESS_VM_OPERATION | PROCESS_VM_READ | PROCESS_VM_WRITE, false, pid); if (hp == IntPtr.Zero) return;
+            try { work(hp, list, SendMessage(list, LVM_GETITEMCOUNT, IntPtr.Zero, IntPtr.Zero).ToInt32()); } finally { CloseHandle(hp); }
+        }
+
+        [DllImport("user32.dll")] private static extern bool ClientToScreen(IntPtr hWnd, ref Point p);
+        /// <summary>Screen position of the middle of the desktop icon of <paramref name="path"/> (for tests that use the real mouse), or null when it is not on the desktop right now.</summary>
+        public static Point? DesktopIconCenter(string path)
+        {
+            Point? found = null; var want = IconNames(path).ToHashSet(StringComparer.OrdinalIgnoreCase);
+            try
+            {
+                WithDesktopList((hp, list, count) =>
+                {
+                    for (int i = 0; i < count; i++)
+                    {
+                        if (!want.Contains(GetItemTextRemote(hp, list, i))) continue;
+                        var pos = GetItemPositionRemote(hp, list, i); var p = new Point(pos.X + 38, pos.Y + 32);
+                        if (ClientToScreen(list, ref p)) found = p; return;
+                    }
+                });
+            }
+            catch (Exception) { }
+            return found;
+        }
+
+        /// <summary>True when the point is over the desktop icon list (not over another window).</summary>
+        public static bool IsDesktopListAt(Point screenPos) { try { var l = FindDesktopListView(); return l != IntPtr.Zero && WindowFromPoint(screenPos) == l; } catch (Exception) { return false; } }
+
+        /// <summary>Full paths of the desktop icons that are selected right now (rubber-band or Ctrl+click), matched by name in the user and the public desktop folders.</summary>
+        public static List<string> SelectedDesktopPaths()
+        {
+            var names = new List<string>();
+            try { WithDesktopList((hp, list, count) => { for (int i = 0; i < count; i++) if ((SendMessage(list, 0x102C, (IntPtr)i, (IntPtr)2).ToInt32() & 2) != 0) names.Add(GetItemTextRemote(hp, list, i)); }); } catch (Exception) { }
+            var dirs = new[] { Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory), Environment.GetFolderPath(Environment.SpecialFolder.CommonDesktopDirectory) };
+            var result = new List<string>();
+            foreach (var n in names)
+            {
+                foreach (var d in dirs)
+                {
+                    try { var hit = Directory.EnumerateFileSystemEntries(d).FirstOrDefault(f => string.Equals(Path.GetFileName(f), n, StringComparison.OrdinalIgnoreCase) || string.Equals(Path.GetFileNameWithoutExtension(f), n, StringComparison.OrdinalIgnoreCase)); if (hit != null) { result.Add(hit); break; } } catch (Exception) { }
+                }
+            }
+            return result;
+        }
+
+        /// <summary>Hides the desktop icons of the given files (only files that really are on the desktop). Returns how many were hidden.</summary>
+        public static int HideOriginals(IEnumerable<string> paths)
+        {
+            var want = paths.Where(IsOnDesktop).SelectMany(IconNames).ToHashSet(StringComparer.OrdinalIgnoreCase); if (want.Count == 0) return 0;
+            int hidden = 0;
+            try
+            {
+                var saved = LoadOriginals();
+                WithDesktopList((hp, list, count) =>
+                {
+                    for (int i = 0; i < count; i++)
+                    {
+                        var name = GetItemTextRemote(hp, list, i);
+                        if (!want.Contains(name) || saved.Any(x => string.Equals(x.Name, name, StringComparison.OrdinalIgnoreCase))) continue;
+                        var pos = GetItemPositionRemote(hp, list, i);
+                        if (pos.X <= -5000) continue;                                         // already hidden by the quick-hide: do not overwrite its saved place
+                        saved.Add(new SavedIconPos { Index = i, Name = name, X = pos.X, Y = pos.Y });
+                        SetItemPositionRemote(list, i, -10000, -10000); hidden++;
+                    }
+                });
+                if (hidden > 0) { Directory.CreateDirectory(Path.GetDirectoryName(OriginalsStatePath)!); MotionDesk.Services.AtomicFile.WriteAllText(OriginalsStatePath, JsonSerializer.Serialize(saved)); }
+            }
+            catch (Exception) { }
+            return hidden;
+        }
+
+        /// <summary>Puts hidden originals back (all of them, or only those of <paramref name="onlyPath"/>). Safe to call at any time; returns how many came back.</summary>
+        public static int RestoreOriginals(string? onlyPath = null) =>
+            RestoreOriginalsByName(onlyPath == null ? null : IconNames(onlyPath).ToHashSet(StringComparer.OrdinalIgnoreCase));
+
+        internal static int RestoreOriginalsForPaths(IEnumerable<string> paths) =>
+            RestoreOriginalsByName(paths.Where(IsOnDesktop).SelectMany(IconNames).ToHashSet(StringComparer.OrdinalIgnoreCase));
+
+        private static int RestoreOriginalsByName(HashSet<string>? only)
+        {
+            if (only is { Count: 0 }) return 0;
+            var saved = LoadOriginals(); if (saved.Count == 0) return 0;
+            int back = 0;
+            try
+            {
+                WithDesktopList((hp, list, count) =>
+                {
+                    for (int i = 0; i < count; i++)
+                    {
+                        var name = GetItemTextRemote(hp, list, i);
+                        var sv = saved.FirstOrDefault(x => string.Equals(x.Name, name, StringComparison.OrdinalIgnoreCase));
+                        if (sv == null || (only != null && !only.Contains(name))) continue;
+                        if (SetItemPositionRemote(list, i, sv.X, sv.Y)) { saved.Remove(sv); back++; }
+                    }
+                });
+                if (saved.Count == 0) { try { File.Delete(OriginalsStatePath); } catch (Exception) { } }
+                else MotionDesk.Services.AtomicFile.WriteAllText(OriginalsStatePath, JsonSerializer.Serialize(saved));
+            }
+            catch (Exception) { }
+            return back;
+        }
 
         private static string StateFilePath => Path.Combine(Services.AppPaths.AppDataFolder, "desktopicons_hidden_state.json");
 
         public void Start()
         {
             if (_hookHandle != IntPtr.Zero) return;
+            _uiContext = System.Threading.SynchronizationContext.Current is System.Windows.Forms.WindowsFormsSynchronizationContext ui ? ui : null;
             try
             {
                 _hookProc = HookProc;
@@ -172,11 +280,94 @@ namespace MotionDesk.Widgets
             // Αν η εφαρμογή τερματίστηκε/κράσαρε ενώ τα εικονίδια ήταν κρυμμένα (το state file υπάρχει
             // ΜΟΝΟ όσο είναι κρυμμένα), τα εικονίδια έμεναν για πάντα εκτός οθόνης (-10000,-10000).
             // Τα επαναφέρουμε στην εκκίνηση.
-            if (File.Exists(StateFilePath)) RestoreIfHidden();
+            if (File.Exists(StateFilePath)) RestoreQuickHide();
+            if (File.Exists(OriginalsStatePath) && !_originalRecoveryDone) RestoreOriginals();
+            _originalRecoveryDone = true;            // originals hidden by a container that never got to give them back (crash, kill, upgrade)
         }
+
+        /// <summary>Rescue / test helpers (2.6.0 beta). DumpPositions is read-only: one line "name TAB x TAB y" per desktop icon.</summary>
+        public static List<string> DumpPositions()
+        {
+            var lines = new List<string>();
+            IntPtr list = FindDesktopListView(); if (list == IntPtr.Zero) return lines;
+            GetWindowThreadProcessId(list, out uint pid);
+            IntPtr hp = OpenProcess(PROCESS_VM_OPERATION | PROCESS_VM_READ | PROCESS_VM_WRITE, false, pid); if (hp == IntPtr.Zero) return lines;
+            try
+            {
+                int count = SendMessage(list, LVM_GETITEMCOUNT, IntPtr.Zero, IntPtr.Zero).ToInt32();
+                for (int i = 0; i < count; i++) { var p = GetItemPositionRemote(hp, list, i); lines.Add(GetItemTextRemote(hp, list, i) + "\t" + p.X + "\t" + p.Y); }
+            }
+            finally { CloseHandle(hp); }
+            return lines;
+        }
+
+        // Snapshot BEFORE a bulk operation, never every animation frame. This is a separate undo
+        // file from quick-hide and from hidden-originals recovery to avoid overwriting either.
+        private static string BulkUndoPath => Path.Combine(Services.AppPaths.AppDataFolder, "desktop-icon-move-undo.json");
+        public static int CapturePositionsForUndo()
+        {
+            var snapshot = new List<SavedIconPos>();
+            try
+            {
+                WithDesktopList((process,list,count) =>
+                {
+                    if (HasAutoArrange(list)) return; // Explorer owns automatic layout.
+                    for (int i=0;i<count;i++)
+                    {
+                        var name=GetItemTextRemote(process,list,i).Trim();
+                        var point=ReadItemPosition(process,list,i);
+                        if (name.Length==0 || point == null || IsParked(point.Value)) continue;
+                        snapshot.Add(new SavedIconPos { Name=name,Index=i,X=point.Value.X,Y=point.Value.Y });
+                    }
+                });
+                if(snapshot.Count < 2) return 0;
+                Services.AtomicFile.WriteAllText(BulkUndoPath,JsonSerializer.Serialize(snapshot));
+                return snapshot.Count;
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { return 0; }
+        }
+
+        public static int UndoLastBulkMove()
+        {
+            if(!File.Exists(BulkUndoPath)) return 0;
+            List<SavedIconPos> saved;
+            try { saved=JsonSerializer.Deserialize<List<SavedIconPos>>(Services.AtomicFile.ReadAllText(BulkUndoPath)) ?? new(); }
+            catch(Exception ex) when(ex is IOException or UnauthorizedAccessException or JsonException) { return 0; }
+            if(saved.Count==0 || saved.Count>10000) return 0;
+            var previous=saved.GroupBy(x=>x.Name,StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(x=>x.Key,x=>x.ToList(),StringComparer.OrdinalIgnoreCase);
+            var restored=0;
+            try
+            {
+                WithDesktopList((hp,list,count)=>
+                {
+                    if(HasAutoArrange(list)) return;
+                    for(int i=0;i<count;i++)
+                    {
+                        var name=GetItemTextRemote(hp,list,i).Trim();
+                        if(!previous.TryGetValue(name,out var candidates) || candidates.Count==0) continue;
+                        var old=candidates.Find(x=>x.Index==i) ?? candidates[0];
+                        if(ReadItemPosition(hp,list,i) is not Point current || IsParked(current)) continue;
+                        if(SetItemPositionRemote(list,i,old.X,old.Y)) { restored++; candidates.Remove(old); }
+                    }
+                });
+                if(restored>0 && restored==saved.Count) File.Delete(BulkUndoPath);
+            }
+            catch(Exception ex) when(ex is IOException or UnauthorizedAccessException) { }
+            return restored;
+        }
+
+        /// <summary>Test only: hides the icons exactly like the double-click gesture does (state file written), without any hook.</summary>
+        public void HideForTest() { var l = FindDesktopListView(); if (l != IntPtr.Zero && !_hidden) ToggleDesktopIcons(l); }
 
         // Επαναφέρει τα κρυμμένα εικονίδια (αν υπάρχουν) — καλείται στην έξοδο και στην εκκίνηση.
         public void RestoreIfHidden()
+        {
+            RestoreQuickHide();
+            try { RestoreOriginals(); } catch (Exception) { }
+        }
+
+        private void RestoreQuickHide()
         {
             if (!_hidden && !File.Exists(StateFilePath)) return;
             try
@@ -189,7 +380,7 @@ namespace MotionDesk.Widgets
                 try { RestorePositions(hProcess, list); }
                 finally { CloseHandle(hProcess); }
                 _hidden = false;
-                MotionDesk.Services.ContainersBridge.Command("quick-show");
+                MotionDesk.Containers.ContainerHost.Current?.SetAllHidden(false);
             }
             catch { }
         }
@@ -211,30 +402,95 @@ namespace MotionDesk.Widgets
             return defView == IntPtr.Zero ? IntPtr.Zero : FindWindowEx(defView, IntPtr.Zero, "SysListView32", null);
         }
 
-        // Επαναφορά ΒΑΣΕΙ ΟΝΟΜΑΤΟΣ (όχι index): αν προστέθηκε/διαγράφηκε αρχείο στην επιφάνεια εργασίας
-        // όσο τα εικονίδια ήταν κρυμμένα, τα indexes μετατοπίζονται και η επαναφορά κατά index
-        // τοποθετούσε λάθος εικονίδια σε λάθος θέσεις.
-        private static void RestorePositions(IntPtr hProcess, IntPtr hwndList)
+        private static void RestorePositions(IntPtr process, IntPtr list)
         {
-            var keep = BuildWhitelist();
-            var byName = new Dictionary<string, SavedIconPos>(StringComparer.OrdinalIgnoreCase);
-            foreach (var sv in LoadState()) byName.TryAdd(sv.Name, sv);
-
-            int count = SendMessage(hwndList, LVM_GETITEMCOUNT, IntPtr.Zero, IntPtr.Zero).ToInt32();
+            var session = LoadState();
+            var saved = session.Positions.GroupBy(x => x.Name, StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(g => g.Key, g => g.OrderBy(x => x.Index).ToList(), StringComparer.OrdinalIgnoreCase);
+            var originals = LoadOriginals().Select(x => x.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
+            bool incomplete = false;
+            int count = SendMessage(list, LVM_GETITEMCOUNT, IntPtr.Zero, IntPtr.Zero).ToInt32();
             for (int i = 0; i < count; i++)
             {
-                string name = GetItemTextRemote(hProcess, hwndList, i);
-                if (keep.Contains(name) && !byName.ContainsKey(name)) continue;       // ένα εικονίδιο που δεν κρύφτηκε ποτέ
-                if (byName.TryGetValue(name, out var sv)) SetItemPositionRemote(hwndList, i, sv.X, sv.Y);
+                string name = GetItemTextRemote(process, list, i).Trim();
+                if (originals.Contains(name) || !saved.TryGetValue(name, out var positions) || positions.Count == 0) continue;
+                if (ReadItemPosition(process, list, i) is not Point position) { incomplete = true; continue; }
+                if (!IsParked(position)) continue;
+                var previous = positions.Find(p => p.Index == i) ?? positions[0];
+                if (SetItemPositionRemote(list, i, previous.X, previous.Y)) positions.Remove(previous);
+                else incomplete = true;
             }
-            try { File.Delete(StateFilePath); } catch { }
+            if (incomplete) throw new IOException("Some desktop icon positions could not be restored.");
+            if (session.RestoreAutoArrange) SetAutoArrange(list, true);
+            File.Delete(StateFilePath);
         }
+
+        private static bool IsParked(Point p) => p.X < -5000 && p.Y < -5000;
+
+        public void ApplyKeepSettings()
+        {
+            if (!_hidden) return;
+            try { WithDesktopList((process, list, count) => ApplyQuickHide(process, list, count, LoadState())); }
+            catch (Exception) { }
+        }
+
+        private static void ApplyQuickHide(IntPtr process, IntPtr list, int count, QuickHideSession session)
+        {
+            var keep = BuildWhitelist();
+            var originals = LoadOriginals().Select(x => x.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
+            var savedByName = session.Positions.ToLookup(x => x.Name, StringComparer.OrdinalIgnoreCase);
+            var changes = new List<(int Index, Point Target)>();
+            for (int i = 0; i < count; i++)
+            {
+                string name = GetItemTextRemote(process, list, i).Trim();
+                if (name.Length == 0 || originals.Contains(name) || ReadItemPosition(process, list, i) is not Point pos) continue;
+                var previous = savedByName[name];
+                var saved = previous.FirstOrDefault(x => x.Index == i);
+                if (saved == null && previous.Count() == 1) saved = previous.First();
+                if (keep.Contains(name))
+                {
+                    if (saved != null && IsParked(pos))
+                        changes.Add((i, new Point(saved.X, saved.Y)));
+                    continue;
+                }
+                if (IsParked(pos)) continue;
+                if (saved == null || saved.Index != i || saved.X != pos.X || saved.Y != pos.Y)
+                {
+                    if (saved?.Index == i) session.Positions.Remove(saved);
+                    session.Positions.Add(new SavedIconPos { Index = i, Name = name, X = pos.X, Y = pos.Y });
+                }
+                changes.Add((i, new Point(-10000, -10000)));
+            }
+            if (changes.Count > 0 && HasAutoArrange(list)) session.RestoreAutoArrange = true;
+            // Persist recovery positions before changing Explorer, including the arrangement flag.
+            SaveState(session);
+            if (changes.Count > 0 && session.RestoreAutoArrange) SetAutoArrange(list, false);
+            foreach (var change in changes) SetItemPositionRemote(list, change.Index, change.Target.X, change.Target.Y);
+        }
+
+        private const int WindowStyle = -16;
+        private const int AutoArrangeStyle = 0x0100;
+
+        private static bool HasAutoArrange(IntPtr list) => (GetWindowLong(list, WindowStyle) & AutoArrangeStyle) != 0;
+
+        private static void SetAutoArrange(IntPtr list, bool enabled)
+        {
+            int style = GetWindowLong(list, WindowStyle);
+            int next = enabled ? style | AutoArrangeStyle : style & ~AutoArrangeStyle;
+            if (next != style) SetWindowLong(list, WindowStyle, next);
+        }
+
+        [DllImport("user32.dll", EntryPoint = "GetWindowLongW")]
+        private static extern int GetWindowLong(IntPtr hwnd, int index);
+        [DllImport("user32.dll", EntryPoint = "SetWindowLongW")]
+        private static extern int SetWindowLong(IntPtr hwnd, int index, int value);
 
         public void Stop()
         {
-            RestoreIfHidden(); // μην αφήνεις τα εικονίδια του χρήστη εκτός οθόνης όταν κλείνει η εφαρμογή
+            RestoreQuickHide();
             if (_hookHandle != IntPtr.Zero) { UnhookWindowsHookEx(_hookHandle); _hookHandle = IntPtr.Zero; }
             _hookProc = null;
+            _uiContext = null;
         }
 
         private IntPtr HookProc(int nCode, IntPtr wParam, IntPtr lParam)
@@ -255,7 +511,9 @@ namespace MotionDesk.Widgets
                     if (isDoubleClick)
                     {
                         _lastDownTime = 0; // "καταναλώνει" το ζευγάρι — ένα τρίτο συνεχόμενο κλικ δεν μετράει ξανά ως 2ο μισό
-                        HandlePossibleDesktopDoubleClick(pos);
+                        if (_uiContext is { } ui)
+                            ui.Post(_ => { if (_hookHandle != IntPtr.Zero) HandlePossibleDesktopDoubleClick(pos); }, null);
+                        else HandlePossibleDesktopDoubleClick(pos);
                     }
                 }
             }
@@ -266,27 +524,13 @@ namespace MotionDesk.Widgets
         private void HandlePossibleDesktopDoubleClick(Point screenPos)
         {
             IntPtr hwnd = WindowFromPoint(screenPos);
-            if (hwnd == IntPtr.Zero) return;
-            if (GetClassNameOf(hwnd) != "SysListView32") return;
-
-            // Επιβεβαίωση ότι είναι όντως το ListView της επιφάνειας εργασίας (μέσα σε
-            // SHELLDLL_DefView) και όχι κάποιο άλλο ListView (π.χ. σε παράθυρο Explorer).
-            IntPtr parent = GetParent(hwnd);
-            if (GetClassNameOf(parent) != "SHELLDLL_DefView") return;
+            if (hwnd == IntPtr.Zero || hwnd != FindDesktopListView()) return;
 
             var client = screenPos;
             ScreenToClient(hwnd, ref client);
             if (!IsEmptyAreaHit(hwnd, client)) return;
 
             ToggleDesktopIcons(hwnd);
-        }
-
-        private static string GetClassNameOf(IntPtr hwnd)
-        {
-            if (hwnd == IntPtr.Zero) return string.Empty;
-            var sb = new StringBuilder(256);
-            GetClassName(hwnd, sb, sb.Capacity);
-            return sb.ToString();
         }
 
         private void ToggleDesktopIcons(IntPtr hwndList)
@@ -302,17 +546,8 @@ namespace MotionDesk.Widgets
             {
                 if (!_hidden)
                 {
-                    var keep = BuildWhitelist();
-                    var saved = new List<SavedIconPos>();
-                    for (int i = 0; i < count; i++)
-                    {
-                        string name = GetItemTextRemote(hProcess, hwndList, i);
-                        var pos = GetItemPositionRemote(hProcess, hwndList, i);
-                        saved.Add(new SavedIconPos { Index = i, Name = name, X = pos.X, Y = pos.Y });
-                        if (!keep.Contains(name))
-                            SetItemPositionRemote(hwndList, i, -10000, -10000);
-                    }
-                    SaveState(saved);
+                    if (File.Exists(StateFilePath)) RestorePositions(hProcess, hwndList);
+                    ApplyQuickHide(hProcess, hwndList, count, new QuickHideSession());
                     _hidden = true;
                 }
                 else
@@ -324,7 +559,7 @@ namespace MotionDesk.Widgets
                 // Ίδια χειρονομία, ίδια συμπεριφορά με τα πραγματικά Fences: το quick-hide της
                 // επιφάνειας εργασίας κρύβει/ξαναδείχνει επίσης όλα τα DeskContainers, εκτός από
                 // όσα ο χρήστης έχει σημειώσει ρητά "Exclude from quick-hide".
-                MotionDesk.Services.ContainersBridge.Command(_hidden ? "quick-hide" : "quick-show");
+                MotionDesk.Containers.ContainerHost.Current?.SetAllHidden(_hidden);
             }
             catch { }
             finally { CloseHandle(hProcess); }
@@ -385,48 +620,58 @@ namespace MotionDesk.Widgets
             }
         }
 
-        private static Point GetItemPositionRemote(IntPtr hProcess, IntPtr hwndList, int index)
+        private static Point GetItemPositionRemote(IntPtr hProcess, IntPtr hwndList, int index) =>
+            ReadItemPosition(hProcess, hwndList, index) ?? Point.Empty;
+
+        private static Point? ReadItemPosition(IntPtr hProcess, IntPtr hwndList, int index)
         {
             IntPtr remotePt = IntPtr.Zero;
             try
             {
                 remotePt = VirtualAllocEx(hProcess, IntPtr.Zero, (uint)Marshal.SizeOf<POINT>(), MEM_COMMIT, PAGE_READWRITE);
-                if (remotePt == IntPtr.Zero) return Point.Empty;
-                SendMessage(hwndList, LVM_GETITEMPOSITION, (IntPtr)index, remotePt);
+                if (remotePt == IntPtr.Zero) return null;
+                if (SendMessage(hwndList, LVM_GETITEMPOSITION, (IntPtr)index, remotePt) == IntPtr.Zero) return null;
                 var buf = new byte[Marshal.SizeOf<POINT>()];
-                if (!ReadProcessMemory(hProcess, remotePt, buf, buf.Length, out _)) return Point.Empty;
+                if (!ReadProcessMemory(hProcess, remotePt, buf, buf.Length, out _)) return null;
                 return new Point(BitConverter.ToInt32(buf, 0), BitConverter.ToInt32(buf, 4));
             }
-            catch { return Point.Empty; }
+            catch { return null; }
             finally { if (remotePt != IntPtr.Zero) VirtualFreeEx(hProcess, remotePt, 0, MEM_RELEASE); }
         }
 
-        private static void SetItemPositionRemote(IntPtr hwndList, int index, int x, int y)
+        private static bool SetItemPositionRemote(IntPtr hwndList, int index, int x, int y)
         {
             IntPtr lParam = (IntPtr)(((y & 0xFFFF) << 16) | (x & 0xFFFF));
-            SendMessage(hwndList, LVM_SETITEMPOSITION, (IntPtr)index, lParam);
+            return SendMessage(hwndList, LVM_SETITEMPOSITION, (IntPtr)index, lParam) != IntPtr.Zero;
         }
 
-        private static void SaveState(List<SavedIconPos> saved)
+        private static void SaveState(QuickHideSession session)
         {
-            try
-            {
-                Directory.CreateDirectory(Path.GetDirectoryName(StateFilePath)!);
-                MotionDesk.Services.AtomicFile.WriteAllText(StateFilePath, JsonSerializer.Serialize(saved));
-            }
-            catch (IOException) { }
+            Directory.CreateDirectory(Path.GetDirectoryName(StateFilePath)!);
+            MotionDesk.Services.AtomicFile.WriteAllText(StateFilePath, JsonSerializer.Serialize(session));
         }
 
-        private static List<SavedIconPos> LoadState()
+        private static QuickHideSession LoadState()
         {
             try
             {
                 if (File.Exists(StateFilePath))
-                    return JsonSerializer.Deserialize<List<SavedIconPos>>(File.ReadAllText(StateFilePath)) ?? new();
+                {
+                    var data = File.ReadAllText(StateFilePath);
+                    if (data.AsSpan().TrimStart().StartsWith("["))
+                        return new QuickHideSession { Positions = JsonSerializer.Deserialize<List<SavedIconPos>>(data) ?? [] };
+                    return JsonSerializer.Deserialize<QuickHideSession>(data) ?? new();
+                }
             }
             catch (JsonException) { }
             catch (IOException) { }
             return new();
+        }
+
+        private sealed class QuickHideSession
+        {
+            public List<SavedIconPos> Positions { get; set; } = [];
+            public bool RestoreAutoArrange { get; set; }
         }
 
         private sealed class SavedIconPos
@@ -492,8 +737,6 @@ namespace MotionDesk.Widgets
         [DllImport("user32.dll")] private static extern uint GetDoubleClickTime();
         [DllImport("user32.dll")] private static extern int GetSystemMetrics(int nIndex);
         [DllImport("user32.dll")] private static extern IntPtr WindowFromPoint(Point p);
-        [DllImport("user32.dll")] private static extern IntPtr GetParent(IntPtr hWnd);
-        [DllImport("user32.dll", CharSet = CharSet.Unicode)] private static extern int GetClassName(IntPtr hWnd, StringBuilder lpClassName, int nMaxCount);
         [DllImport("user32.dll")] private static extern bool ScreenToClient(IntPtr hWnd, ref Point lpPoint);
         [DllImport("user32.dll")] private static extern void GetWindowThreadProcessId(IntPtr hWnd, out uint processId);
         [DllImport("user32.dll", CharSet = CharSet.Auto)] private static extern IntPtr SendMessage(IntPtr hWnd, uint Msg, IntPtr wParam, IntPtr lParam);

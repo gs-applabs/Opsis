@@ -26,93 +26,123 @@ namespace MotionDesk.Services
     // γυρνάει null αντί να πετάξει exception — το widget δείχνει "—" σε αυτή την περίπτωση.
     public sealed class GpuMonitorService : IDisposable
     {
-        // Lazy (thread-safe): το Instance προσπελαύνεται ΤΑΥΤΟΧΡΟΝΑ από το background warm-up Task και από
-        // το UI thread — το απλό "??=" μπορούσε να δημιουργήσει ΔΥΟ Computer instances (διπλό, αργό
-        // hardware scan και διπλά ανοιχτοί sensors).
-        private static readonly Lazy<GpuMonitorService> _lazy = new(() => new GpuMonitorService());
-        public static GpuMonitorService Instance => _lazy.Value;
-        private readonly object _sync = new(); // το LibreHardwareMonitor ΔΕΝ είναι thread-safe
-
-        private readonly Computer? _computer;
+        public static GpuMonitorService Instance { get; } = new();
+        private const int RefreshIntervalMs = 1500;
+        private readonly object _hardwareLock = new();
         private readonly UpdateVisitor _visitor = new();
-        private readonly bool _opened;
+        private Computer? _computer;
+        private bool _initializationAttempted;
+        private bool _disposed;
+        private int _sampling;
+        private long _nextSample;
+        private GpuSnapshot[]? _readings;
 
-        private GpuMonitorService()
-        {
-            try
-            {
-                _computer = new Computer { IsGpuEnabled = true };
-                _computer.Open();
-                _opened = true;
-            }
-            catch { _computer = null; _opened = false; }
-        }
+        private GpuMonitorService() { }
 
-        /// <summary>Number of graphics adapters found (dedicated AND integrated).</summary>
-        public int Count
-        {
-            get
-            {
-                try { lock (_sync) return _opened && _computer != null ? Adapters(_computer.Hardware.Select(h => (h.HardwareType, h.Name))).Count : 0; }
-                catch { return 0; }
-            }
-        }
+        public bool HasSample => Volatile.Read(ref _readings) != null;
+        public int Count => RequestSample().Length;
 
-        /// <summary>Dedicated adapters (NVIDIA/AMD) first, then integrated (Intel), each group in the order the driver reports them. Pure, so it can be tested.</summary>
-        public static System.Collections.Generic.List<(HardwareType Type, string Name)> Adapters(System.Collections.Generic.IEnumerable<(HardwareType Type, string Name)> all) =>
+        /// <summary>Dedicated adapters first, integrated adapters last, in driver order within each group.</summary>
+        public static List<(HardwareType Type, string Name)> Adapters(IEnumerable<(HardwareType Type, string Name)> all) =>
             all.Where(h => h.Type is HardwareType.GpuNvidia or HardwareType.GpuAmd or HardwareType.GpuIntel)
-               .Select((h, i) => (h, i)).OrderBy(x => x.h.Type == HardwareType.GpuIntel ? 1 : 0).ThenBy(x => x.i).Select(x => x.h).ToList();
+               .OrderBy(h => h.Type == HardwareType.GpuIntel).ToList();
 
         public GpuSnapshot GetSnapshot() => GetSnapshot(0);
 
-        /// <summary>Every graphics adapter (dedicated first, integrated last), e.g. for the wallpaper GPU element which lists them all.</summary>
-        public System.Collections.Generic.List<GpuSnapshot> GetAllSnapshots()
-        {
-            var list = new System.Collections.Generic.List<GpuSnapshot>();
-            int n = Math.Max(1, Count);
-            for (int i = 0; i < n; i++) { var s = GetSnapshot(i); if (s.Available) list.Add(s); }
-            return list;
-        }
+        public List<GpuSnapshot> GetAllSnapshots() => RequestSample().Select(Copy).ToList();
 
-        /// <summary>Snapshot of the adapter at <paramref name="index"/> (wraps around, so a stored index stays valid when an adapter disappears).</summary>
         public GpuSnapshot GetSnapshot(int index)
         {
-            var snap = new GpuSnapshot();
-            if (!_opened || _computer == null) return snap;
+            var samples = RequestSample();
+            if (samples.Length == 0) return new GpuSnapshot();
+            return Copy(samples[((index % samples.Length) + samples.Length) % samples.Length]);
+        }
+
+        // UI, wallpaper and widgets can request readings at once. Only the background sampler
+        // touches drivers, and it updates every adapter in a single pass.
+        private GpuSnapshot[] RequestSample()
+        {
+            if (!Volatile.Read(ref _disposed) && Environment.TickCount64 >= Volatile.Read(ref _nextSample) &&
+                Interlocked.CompareExchange(ref _sampling, 1, 0) == 0)
+                _ = Task.Run(ReadSensors);
+            return Volatile.Read(ref _readings) ?? [];
+        }
+
+        private void ReadSensors()
+        {
             try
             {
-                lock (_sync) _computer.Accept(_visitor);
-                var gpus = _computer.Hardware.Where(h => h.HardwareType is HardwareType.GpuNvidia or HardwareType.GpuAmd or HardwareType.GpuIntel)
-                    .Select((h, i) => (h, i)).OrderBy(x => x.h.HardwareType == HardwareType.GpuIntel ? 1 : 0).ThenBy(x => x.i).Select(x => x.h).ToList();
-                if (gpus.Count == 0) return snap;
-                snap.Count = gpus.Count;
-                var gpu = gpus[((index % gpus.Count) + gpus.Count) % gpus.Count];
-
-                snap.Name = gpu.Name;
-                snap.Available = true;
-                foreach (var sensor in gpu.Sensors)
+                lock (_hardwareLock)
                 {
-                    if (sensor.Value == null) continue;
-                    switch (sensor.SensorType)
+                    if (_disposed) return;
+                    if (!_initializationAttempted)
                     {
-                        case SensorType.Load when sensor.Name.Contains("Core", StringComparison.OrdinalIgnoreCase) && snap.LoadPercent == null:
-                            snap.LoadPercent = sensor.Value; break;
-                        case SensorType.Temperature when snap.TemperatureC == null:
-                            snap.TemperatureC = sensor.Value; break;
-                        case SensorType.Voltage when snap.CoreVoltage == null:
-                            snap.CoreVoltage = sensor.Value; break;
-                        case SensorType.SmallData when sensor.Name.Contains("Memory Used", StringComparison.OrdinalIgnoreCase) && snap.MemoryUsedMb == null:
-                            snap.MemoryUsedMb = sensor.Value; break;
+                        _initializationAttempted = true;
+                        _computer = new Computer { IsGpuEnabled = true };
+                        try { _computer.Open(); }
+                        catch
+                        {
+                            try { _computer.Close(); } catch (Exception) { }
+                            _computer = null;
+                        }
                     }
+
+                    if (_computer == null) { Volatile.Write(ref _readings, []); return; }
+                    _computer.Accept(_visitor);
+                    var adapters = _computer.Hardware
+                        .Where(h => h.HardwareType is HardwareType.GpuNvidia or HardwareType.GpuAmd or HardwareType.GpuIntel)
+                        .OrderBy(h => h.HardwareType == HardwareType.GpuIntel).ToArray();
+                    Volatile.Write(ref _readings, adapters.Select(gpu => ReadAdapter(gpu, adapters.Length)).ToArray());
                 }
             }
-            catch { }
-            return snap;
+            catch (Exception)
+            {
+                lock (_hardwareLock)
+                    if (!_disposed && _readings == null) Volatile.Write(ref _readings, []);
+            }
+            finally
+            {
+                Volatile.Write(ref _nextSample, Environment.TickCount64 + RefreshIntervalMs);
+                Volatile.Write(ref _sampling, 0);
+            }
         }
+
+        private static GpuSnapshot ReadAdapter(IHardware gpu, int count)
+        {
+            var reading = new GpuSnapshot { Name = gpu.Name, Available = true, Count = count };
+            foreach (var sensor in gpu.Sensors)
+            {
+                if (sensor.Value is not float value) continue;
+                switch (sensor.SensorType)
+                {
+                    case SensorType.Load when reading.LoadPercent == null && sensor.Name.Contains("Core", StringComparison.OrdinalIgnoreCase):
+                        reading.LoadPercent = value; break;
+                    case SensorType.Temperature when reading.TemperatureC == null:
+                        reading.TemperatureC = value; break;
+                    case SensorType.Voltage when reading.CoreVoltage == null:
+                        reading.CoreVoltage = value; break;
+                    case SensorType.SmallData when reading.MemoryUsedMb == null && sensor.Name.Contains("Memory Used", StringComparison.OrdinalIgnoreCase):
+                        reading.MemoryUsedMb = value; break;
+                }
+            }
+            return reading;
+        }
+
+        private static GpuSnapshot Copy(GpuSnapshot value) => new()
+        {
+            Name = value.Name, Available = value.Available, Count = value.Count, LoadPercent = value.LoadPercent,
+            CoreVoltage = value.CoreVoltage, TemperatureC = value.TemperatureC, MemoryUsedMb = value.MemoryUsedMb
+        };
 
         public void Dispose()
         {
-            try { if (_opened) _computer?.Close(); } catch { }
+            lock (_hardwareLock)
+            {
+                Volatile.Write(ref _disposed, true);
+                try { _computer?.Close(); } catch (Exception) { }
+                _computer = null;
+                Volatile.Write(ref _readings, []);
+            }
         }
 
         private sealed class UpdateVisitor : IVisitor

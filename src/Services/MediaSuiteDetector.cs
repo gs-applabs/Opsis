@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -18,7 +18,7 @@ namespace MotionDesk.Services
             string pf86 = Environment.GetEnvironmentVariable("ProgramFiles(x86)") ?? "";
             foreach (var root in new[] { Path.Combine(local, "Programs"), pf, pf86 })
             {
-                if (root.Length == 0) continue;
+                if (string.IsNullOrWhiteSpace(root) || !Path.IsPathFullyQualified(root)) continue;
                 foreach (var name in new[] { "Opsis Media Suite", "waveframe", "Waveframe" })
                     yield return Path.Combine(root, name);
             }

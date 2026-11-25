@@ -1,5 +1,9 @@
 using System;
+using System.Diagnostics;
+using System.IO;
 using System.Runtime.InteropServices;
+using System.Threading;
+using System.Threading.Tasks;
 using Microsoft.Win32;
 
 namespace MotionDesk.Services
@@ -13,6 +17,40 @@ namespace MotionDesk.Services
     // συστήματος ακόμα κι αν αλλάξουν από αλλού (π.χ. τα ίδια τα Windows Settings).
     public static class WindowsSystemSettings
     {
+        [DllImport("user32.dll")] private static extern IntPtr GetShellWindow();
+        [DllImport("user32.dll")] private static extern uint GetWindowThreadProcessId(IntPtr window, out uint processId);
+        private static readonly SemaphoreSlim ExplorerRestart = new(1, 1);
+
+        public static async Task RestartExplorerAsync()
+        {
+            if (!await ExplorerRestart.WaitAsync(0)) return;
+            try
+            {
+                IntPtr shell = GetShellWindow();
+                if (shell == IntPtr.Zero || GetWindowThreadProcessId(shell, out uint pid) == 0)
+                    throw new InvalidOperationException(LocalizationManager.T("Win.ExplorerUnavailable"));
+                using var explorer = Process.GetProcessById((int)pid);
+                using var current = Process.GetCurrentProcess();
+                if (!string.Equals(explorer.ProcessName, "explorer", StringComparison.OrdinalIgnoreCase) ||
+                    explorer.SessionId != current.SessionId || GetShellWindow() != shell)
+                    throw new InvalidOperationException(LocalizationManager.T("Win.ExplorerUnavailable"));
+
+                explorer.Kill();
+                using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+                await explorer.WaitForExitAsync(timeout.Token);
+                await Task.Delay(1500);
+                if (GetShellWindow() == IntPtr.Zero)
+                {
+                    string path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "explorer.exe");
+                    using var replacement = Process.Start(new ProcessStartInfo(path) { UseShellExecute = false });
+                }
+            }
+            finally
+            {
+                ExplorerRestart.Release();
+            }
+        }
+
         // HKCU — καμία αυξημένη άδεια δεν χρειάζεται, ισχύει άμεσα χωρίς restart.
         public static bool GetTransparencyEffectsEnabled()
         {
@@ -31,15 +69,18 @@ namespace MotionDesk.Services
             {
                 using var key = Registry.CurrentUser.CreateSubKey(@"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize");
                 key?.SetValue("EnableTransparency", enabled ? 1 : 0, RegistryValueKind.DWord);
+                HangTrace.Mark("Transparency: registry written");
                 // Η εγγραφή στο μητρώο από μόνη της δεν αρκεί — DWM/Explorer/taskbar διαβάζουν αυτή
                 // την τιμή μόνο όταν λάβουν το ίδιο broadcast που στέλνει το πραγματικό Windows Settings
                 // όταν αλλάζει αυτός ο διακόπτης, αλλιώς η αλλαγή "πιάνει" μόνο μετά από logoff/restart.
                 BroadcastSettingChange("ImmersiveColorSet");
+                HangTrace.Mark("Transparency: broadcast sent");
                 // Συμπλήρωμα του registry+broadcast: ζητά απευθείας από τον DWM να κάνει blur-behind
                 // την ίδια την Taskbar (ίδια τεχνική με το TranslucentTB, χωρίς καμία μορφή injection —
                 // βλ. GlassBlur.SetTaskbarTranslucency) — πιο αξιόπιστα ορατό από το να περιμένουμε τον
                 // Explorer να εφαρμόσει μόνος του το registry/broadcast.
                 MotionDesk.UI.GlassBlur.SetTaskbarTranslucency(enabled);
+                HangTrace.Mark("Transparency: taskbar blur set");
                 return true;
             }
             catch { return false; }

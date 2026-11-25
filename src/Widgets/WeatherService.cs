@@ -145,7 +145,9 @@ namespace MotionDesk.Services
             string key = $"{lat.ToString(CultureInfo.InvariantCulture)},{lon.ToString(CultureInfo.InvariantCulture)}";
             lock (_wpLock)
             {
-                if (_wpCacheKey == key && _wpCacheJson != null) return _wpCacheJson;
+                if (_wpCacheKey == key && _wpCacheJson != null)
+                    return DateTime.UtcNow - _wpCacheAt >= TimeSpan.FromMinutes(10)
+                        ? MarkStale(_wpCacheJson) : _wpCacheJson;
             }
             return "{\"ok\":false,\"pending\":true}";
         }
@@ -190,7 +192,11 @@ namespace MotionDesk.Services
                     json = JsonSerializer.Serialize(new
                     {
                         ok = true, code = CodeForCondition(fallback.Condition), temp = fallback.TemperatureC, humidity = fallback.HumidityPercent ?? -1,
-                        precip = 0.0, cloud = -1, wind = fallback.WindKmh, windDir = 270, isDay = true, utcOffsetSec = (int?)null, source = fallback.Source
+                        precip = 0.0, cloud = -1, wind = fallback.WindKmh, windDir = 270,
+                        isDay = SolarCalc.IsDay(DateTime.UtcNow, lat, lon),
+                        utcOffsetSec = WeatherPayload.GuessOffsetSeconds(lon, DateTime.UtcNow),
+                        source = fallback.Source, observedAt = DateTime.UtcNow.ToString("o", CultureInfo.InvariantCulture),
+                        fetchedAt = DateTime.UtcNow.ToString("o", CultureInfo.InvariantCulture), stale = false
                     });
             }
 
@@ -229,6 +235,7 @@ namespace MotionDesk.Services
             public double Lon { get; set; }
             public string Name { get; set; } = "";
             public string Country { get; set; } = "";
+            public string Source { get; set; } = "Open-Meteo (CC BY 4.0)";
         }
 
         // Ζητήθηκε ρητά μετά από αναφορά χρήστη: η αναζήτηση έβγαζε "δεν βρέθηκε" για "Αθηνα" στα
@@ -242,6 +249,20 @@ namespace MotionDesk.Services
         public static async Task<System.Collections.Generic.List<GeocodeMatch>> GeocodeMultipleAsync(string cityName, int count = 5)
         {
             var matches = new System.Collections.Generic.List<GeocodeMatch>();
+            string term = MotionDesk.UI.PageSearch.Normalize(cityName.Trim());
+            var local = MotionDesk.Widgets.LandmarkCatalog.Cities.FirstOrDefault(city => city.Id != "patras-harbor" &&
+                (MotionDesk.UI.PageSearch.Normalize(city.Name) == term || MotionDesk.UI.PageSearch.Normalize(city.NameEn) == term));
+            bool attica = term is "αττικη" or "attica" or "athina";
+            if (attica) local = MotionDesk.Widgets.LandmarkCatalog.Cities.FirstOrDefault(city => city.Id == "parthenon");
+            if (local != null)
+            {
+                bool greek = LocalizationManager.CurrentLanguage == "el";
+                return [new GeocodeMatch
+                {
+                    Lat = local.Lat, Lon = local.Lon, Name = attica ? (greek ? "Αθήνα, Αττική" : "Athens, Attica") : (greek ? local.Name : local.NameEn),
+                    Country = greek ? "Ελλάδα" : "Greece", Source = "Opsis"
+                }];
+            }
             try
             {
                 string lang = string.IsNullOrWhiteSpace(LocalizationManager.CurrentLanguage) ? "en" : LocalizationManager.CurrentLanguage;

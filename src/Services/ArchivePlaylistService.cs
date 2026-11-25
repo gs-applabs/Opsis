@@ -107,9 +107,10 @@ namespace MotionDesk.Services
                 if (proc == null) return false;
                 // Το 7z γράφει συνεχώς λίστα αρχείων στο stdout — αν το pipe δεν διαβάζεται γεμίζει και
                 // το 7z μπλοκάρει για πάντα (το UI thread περιμένει εδώ). Αδειάζουμε και τα δύο ασύγχρονα.
-                _ = proc.StandardOutput.ReadToEndAsync();
-                _ = proc.StandardError.ReadToEndAsync();
+                var drainOutput = proc.StandardOutput.BaseStream.CopyToAsync(Stream.Null);
+                var drainErrors = proc.StandardError.BaseStream.CopyToAsync(Stream.Null);
                 proc.WaitForExit();
+                System.Threading.Tasks.Task.WhenAll(drainOutput, drainErrors).GetAwaiter().GetResult();
                 return proc.ExitCode == 0;
             }
             catch { return false; }

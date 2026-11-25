@@ -38,13 +38,17 @@ namespace MotionDesk.UI
         /// <summary>Εκτελεί μια μαζική αλλαγή (π.χ. αλλαγή σελίδας) χωρίς ενδιάμεσα repaints και ζωγραφίζει ΜΙΑ φορά στο τέλος.</summary>
         public static void BatchRedraw(Control c, Action work)
         {
-            if (c == null || !c.IsHandleCreated) { work(); return; }
-            SendMessage(c.Handle, WM_SETREDRAW, IntPtr.Zero, IntPtr.Zero);
+            if (c == null || !c.IsHandleCreated || !c.Visible) { work(); return; }
+            IntPtr handle = c.Handle;
+            SendMessage(handle, WM_SETREDRAW, IntPtr.Zero, IntPtr.Zero);
             try { work(); }
             finally
             {
-                SendMessage(c.Handle, WM_SETREDRAW, new IntPtr(1), IntPtr.Zero);
-                c.Invalidate(true);
+                if (c.IsHandleCreated && c.Handle == handle)
+                {
+                    SendMessage(handle, WM_SETREDRAW, new IntPtr(1), IntPtr.Zero);
+                    c.Invalidate(true);
+                }
             }
         }
     }

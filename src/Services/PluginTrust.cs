@@ -23,15 +23,15 @@ namespace MotionDesk.Services
             string full = Normalize(dir);
             var roots = protectedRoots ?? new[]
             {
-                Environment.GetEnvironmentVariable("ProgramFiles") ?? "",
-                Environment.GetEnvironmentVariable("ProgramFiles(x86)") ?? "",
-                Environment.GetEnvironmentVariable("ProgramW6432") ?? "",
+                Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
+                Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86),
             };
             foreach (var r in roots)
             {
                 if (string.IsNullOrWhiteSpace(r)) continue;
                 string root = Normalize(r);
-                if (full.StartsWith(root + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase)) return true;
+                if (full.StartsWith(root + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase)
+                    && PackagePaths.IsExistingUnlinkedPath(root, full)) return true;
             }
             return false;
         }
@@ -42,8 +42,8 @@ namespace MotionDesk.Services
         public static string HashFolder(string folder)
         {
             using var total = SHA256.Create();
-            var files = Directory.EnumerateFiles(folder, "*", SearchOption.AllDirectories)
-                .Where(f => f.EndsWith(".dll", StringComparison.OrdinalIgnoreCase) || f.EndsWith(".deps.json", StringComparison.OrdinalIgnoreCase))
+            var files = PluginFiles(folder)
+                .Where(f => f.EndsWith(".dll", StringComparison.OrdinalIgnoreCase) || (f.EndsWith(".deps.json", StringComparison.OrdinalIgnoreCase) || f.EndsWith("opsis-permissions.json", StringComparison.OrdinalIgnoreCase)))
                 .OrderBy(f => f, StringComparer.OrdinalIgnoreCase).ToList();
             var sb = new StringBuilder();
             foreach (var f in files)
@@ -54,6 +54,24 @@ namespace MotionDesk.Services
                 sb.Append(Path.GetRelativePath(folder, f).ToLowerInvariant()).Append('|').Append(h).Append('\n');
             }
             return Convert.ToHexString(total.ComputeHash(Encoding.UTF8.GetBytes(sb.ToString())));
+        }
+
+        private static IEnumerable<string> PluginFiles(string folder)
+        {
+            var directories = new Stack<string>();
+            directories.Push(folder);
+            while (directories.TryPop(out var directory))
+            {
+                if (PackagePaths.IsLink(directory)) throw new InvalidDataException("Linked plugin folders are not supported.");
+                foreach (string entry in Directory.EnumerateFileSystemEntries(directory))
+                {
+                    var attributes = File.GetAttributes(entry);
+                    if ((attributes & FileAttributes.ReparsePoint) != 0)
+                        throw new InvalidDataException("Linked plugin files are not supported.");
+                    if ((attributes & FileAttributes.Directory) != 0) directories.Push(entry);
+                    else yield return entry;
+                }
+            }
         }
 
         public sealed class Entry
@@ -78,6 +96,13 @@ namespace MotionDesk.Services
             public bool IsApproved(string name, string sha256) =>
                 _entries.Any(e => string.Equals(e.Name, name, StringComparison.OrdinalIgnoreCase) && string.Equals(e.Sha256, sha256, StringComparison.OrdinalIgnoreCase));
 
+            public void Revoke(string name)
+            {
+                _entries.RemoveAll(e => string.Equals(e.Name, name, StringComparison.OrdinalIgnoreCase));
+                Directory.CreateDirectory(Path.GetDirectoryName(_path)!);
+                AtomicFile.WriteAllText(_path, JsonSerializer.Serialize(_entries));
+            }
+
             public void Approve(string name, string sha256)
             {
                 _entries.RemoveAll(e => string.Equals(e.Name, name, StringComparison.OrdinalIgnoreCase));      // one approved content per plugin name
@@ -88,5 +113,39 @@ namespace MotionDesk.Services
         }
     }
 
-    public sealed record PluginTrustRequest(string Name, string Folder, string Sha256);
+    public sealed record PluginTrustRequest(string Name, string Folder, string Sha256,
+        string Publisher = "Unknown / Άγνωστος", string SignatureStatus = "Unknown / Άγνωστη", string Capabilities = "Not declared / Δεν δηλώθηκαν");
+
+    /// <summary>
+    /// Inspect both publisher certificate METADATA and Windows Authenticode
+    /// verification. An embedded certificate alone is not proof of trust.
+    /// Offline verification avoids unexpected network traffic in the approval UI;
+    /// certificate revocation is therefore not verified and is reported as such.
+    /// </summary>
+    internal static class PluginPublisherInfo
+    {
+        internal static (string Publisher, string SignatureStatus) Inspect(string folder)
+        {
+            try
+            {
+                var dll = Directory.EnumerateFiles(folder, "*Plugin.dll", SearchOption.TopDirectoryOnly)
+                    .FirstOrDefault(path => (File.GetAttributes(path) & FileAttributes.ReparsePoint) == 0);
+                if (dll == null) return ("Unknown", "No plugin entry DLL found");
+                string publisher = "Unknown / Άγνωστος";
+                try
+                {
+                    using var cert = System.Security.Cryptography.X509Certificates.X509Certificate.CreateFromSignedFile(dll);
+                    publisher = cert.Subject;
+                }
+                catch (System.Security.Cryptography.CryptographicException)
+                {
+                    // An unsigned DLL has no embedded publisher certificate.
+                }
+                var signature = AuthenticodeVerifier.VerifyOffline(dll);
+                return (publisher, signature);
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException)
+            { return ("Unknown", "Could not inspect: " + ex.GetType().Name); }
+        }
+    }
 }

@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "updated": "2026-11-12",
+  "updated": "2026-11-23",
   "owner": "gs-applabs",
   "apps": [
     {
@@ -65,6 +65,36 @@
           "Τιμές, χαρτοφυλάκιο και ειδοποιήσεις ορίων· καιρός και προειδοποιήσεις έντονων φαινομένων",
           "Διάφανη μπάρα στον ελεύθερο χώρο της γραμμής εργασιών ή στην επιφάνεια εργασίας",
           "Αυτόνομη εφαρμογή ή plugin του Opsis"
+        ]
+      }
+    },
+    {
+      "id": "chronikologio",
+      "name": "Χρονικολόγιο — Timeline Calendar",
+      "repo": "san-shmera",
+      "installerAsset": "^ChronikologioSetup\\.exe$",
+      "checksumAsset": "ChronikologioSetup.exe.sha256",
+      "uninstallDisplayName": "Χρονικολόγιο",
+      "paths": [
+        "%ProgramFiles%\\Chronikologio\\Chronikologio.exe",
+        "%LocalAppData%\\Programs\\Chronikologio\\Chronikologio.exe"
+      ],
+      "tagline": {
+        "en": "Name days and historical events, integrated with Opsis and Crawler",
+        "el": "Εορτολόγιο και ιστορικά γεγονότα με widget και ροή στον Crawler"
+      },
+      "capabilities": {
+        "en": [
+          "Daily name days and historical timelines for Greece and Cyprus",
+          "Replaces the built-in calendar with a rich widget",
+          "Adds the “On this day” feed to Opsis News Crawler",
+          "Runs standalone or integrated with Opsis"
+        ],
+        "el": [
+          "Άγιοι, εορτές και ιστορικά γεγονότα Ελλάδας/Κύπρου",
+          "Πλούσιο widget στη θέση του ενσωματωμένου ημερολογίου",
+          "Ροή «Σαν σήμερα» στον Opsis News Crawler",
+          "Αυτόνομο ή ενσωματωμένο στο Opsis"
         ]
       }
     },
@@ -139,20 +169,28 @@
       "uninstallDisplayName": "Opsis Media Suite",
       "paths": [
         "%ProgramFiles%\\Opsis Media Suite\\Opsis Media Suite.exe",
-        "%LocalAppData%\\Programs\\Opsis Media Suite\\Opsis Media Suite.exe"
+        "%LocalAppData%\\Programs\\Opsis Media Suite\\Opsis Media Suite.exe",
+        "%ProgramFiles%\\Waveframe\\Waveframe.exe",
+        "%LocalAppData%\\Programs\\waveframe\\Waveframe.exe"
       ],
       "tagline": {
-        "en": "Video and audio player, converter and photo tools",
-        "el": "Player βίντεο και ήχου, μετατροπέας και εργαλεία φωτογραφίας"
+        "en": "Media player, audio enhancer, converter and photo editor",
+        "el": "Αναπαραγωγή, ενίσχυση ήχου, μετατροπές και επεξεργασία φωτογραφιών"
       },
       "capabilities": {
         "en": [
-          "Video and audio player with equalizer and effects",
-          "Video converter and photo enhancement tools"
+          "Audio and video player with playlists, subtitles, SMTC and mini-player",
+          "10-band equalizer with compressor, limiter, spatial effects and LUFS normalization",
+          "Batch export/conversion of audio and video through FFmpeg with GPU encoding where available",
+          "Non-destructive photo corrections, galleries and original-resolution export",
+          "20 languages, selectable skins and standalone installation"
         ],
         "el": [
-          "Player βίντεο και ήχου με ισοσταθμιστή και εφέ",
-          "Μετατροπέας βίντεο και εργαλεία βελτίωσης φωτογραφιών"
+          "Player ήχου και βίντεο με λίστες, υπότιτλους, SMTC και mini-player",
+          "Ισοσταθμιστής 10 ζωνών με compressor, limiter, χωρικά εφέ και κανονικοποίηση LUFS",
+          "Μαζικές μετατροπές ήχου και βίντεο μέσω FFmpeg με GPU κωδικοποίηση όπου υποστηρίζεται",
+          "Μη καταστροφικές διορθώσεις φωτογραφιών και εξαγωγή στην αρχική ανάλυση",
+          "20 γλώσσες, επιλογή εμφάνισης και ανεξάρτητη εγκατάσταση"
         ]
       }
     }

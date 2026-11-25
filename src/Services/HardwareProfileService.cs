@@ -46,7 +46,7 @@ namespace MotionDesk.Services
 
         public static HardwareTier? GetOverride()
         {
-            var raw = AppSettings.Load().HardwareProfileOverride;
+            var raw = AppSettings.Peek().HardwareProfileOverride;
             return !string.IsNullOrEmpty(raw) && Enum.TryParse<HardwareTier>(raw, out var t) ? t : null;
         }
 

@@ -13,21 +13,32 @@ using System.Windows.Forms;
 
 namespace MotionDesk.Widgets
 {
-    public enum DockPosition { Bottom, Top, Left, Right }
-
     /// <summary>Ρυθμίσεις του DeskStrip (αποθηκεύονται μαζί με τα καρφιτσωμένα στο deskstrip\config.json).</summary>
     public sealed class DeskStripSettings
     {
         public List<string> Paths { get; set; } = new();
+        /// <summary>Ids of Opsis-family apps already offered for automatic pinning (an app the user unpins stays unpinned).</summary>
+        public List<string> AutoPinnedFamily { get; set; } = new();
+        /// <summary>Monitor-specific pinned icon ordering (the base list remains the canonical membership).</summary>
+        public Dictionary<string, List<string>> MonitorPinnedOrder { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+        /// <summary>Named launch groups: absolute app paths in exact user-specified start order.</summary>
+        public Dictionary<string, List<string>> LaunchGroups { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+        public bool StartEnabled { get; set; }
         public DockPosition Position { get; set; } = DockPosition.Bottom;
         public bool AutoHide { get; set; } = false;
         public int IconSize { get; set; } = 44;               // 28..72
+        public int LabelFontScalePercent { get; set; } = 100; // dock tooltip and window titles, independent from cards
         public bool Magnify { get; set; } = true;
         public bool ShowRunning { get; set; } = true;          // τρέχουσες (μη καρφιτσωμένες) εφαρμογές στο dock
-        public bool ShowPreviews { get; set; } = true;         // προεπισκόπηση παραθύρου στο hover
+        public string? Monitor { get; set; }
+        public bool OnlyLocalWindows { get; set; }
+        public bool AllMonitors { get; set; }
+        public bool HideOnFullscreen { get; set; } = true;
+        public bool ShowPreviews { get; set; } = true;
+        public bool ShowWorkspaceLabel { get; set; } = false; // small live badge after the icons         // προεπισκόπηση παραθύρου στο hover
     }
 
-    // "DeskStrip" — dock εφαρμογών στο πνεύμα του Weg του SeelenUI: καρφιτσωμένες + ΤΡΕΧΟΥΣΕΣ εφαρμογές με ένδειξη
+    // "DeskStrip" — dock εφαρμογών του Opsis: καρφιτσωμένες + ΤΡΕΧΟΥΣΕΣ εφαρμογές με ένδειξη
     // ενεργού παραθύρου, μεγέθυνση στο hover, προεπισκόπηση παραθύρου (DWM thumbnail), auto-hide από οποιαδήποτε ακμή,
     // μενού δεξιού κλικ (άνοιγμα, διαχειριστής, τοποθεσία αρχείου, κλείσιμο, pin), σύρσιμο για αναδιάταξη και απόθεση αρχείων.
     // ΕΝΑ custom-painted παράθυρο (όχι ένα control ανά εικονίδιο): ένας μόνο animation timer που τρέχει ΜΟΝΟ όσο υπάρχει κίνηση.
@@ -49,7 +60,11 @@ namespace MotionDesk.Widgets
             public string Title = "";
         }
 
-        private readonly DeskStripSettings _s = new();
+        private readonly DeskStripSettings _s;
+        private readonly string? _screenOverride;
+        private int _displayIconSize;
+        private string _workspaceLabel = "";
+        internal event Action<DeskStripWindow>? SettingsChanged;
         private readonly List<Item> _items = new();
         private readonly Dictionary<string, string?> _lnkCache = new(StringComparer.OrdinalIgnoreCase);
         private readonly Dictionary<string, Bitmap?> _iconCache = new(StringComparer.OrdinalIgnoreCase);
@@ -73,13 +88,30 @@ namespace MotionDesk.Widgets
 
         private const string ReorderFormat = "application/x-opsis-deskstrip-item";
         private bool Low => PerformanceProfile.ForFeature(PerfFeature.DeskStrip).Tier == HardwareTier.Low;
+        private Screen DockScreen => Screen.AllScreens.FirstOrDefault(screen => screen.DeviceName == (_screenOverride ?? _s.Monitor))
+            ?? Screen.PrimaryScreen ?? Screen.AllScreens[0];
+        private bool WantsGpu => !Low && DesktopMaterials.Get(DesktopSurface.DeskStrip).Mode != "Solid" && GlassService.Manager != null;
+        private int MaterialRadius => DesktopMaterials.Get(DesktopSurface.DeskStrip) is { UsesCustom: true } style ? style.Radius : 20;
         private bool Vertical => _s.Position is DockPosition.Left or DockPosition.Right;
         private double Cell => _s.IconSize * 1.32;
         private double MaxScale => _s.Magnify && !Low ? 1.5 : 1.0;
         private const int Pad = 10, IndicatorSpace = 12, Gap = 10;
 
-        public DeskStripWindow()
+        // 2.6.0 GPU glass: when on, this window is a LAYERED per-pixel-alpha window that only draws icons / dots (transparent background); the glass itself is a pane of
+        // Opsis.Glass directly below it (real transparency, live refraction of what is behind). When off or unavailable everything is as before (DWM blur).
+        private bool _wantGpu;
+        private int _glassPane = -1;
+        private LayeredSurface? _layered;
+        private bool _layeredDirty;
+        private readonly System.Windows.Forms.Timer _layeredTimer = new() { Interval = 8 };
+
+        public DeskStripWindow() : this(null, null) { }
+
+        internal DeskStripWindow(DeskStripSettings? shared, string? screenOverride)
         {
+            _s = shared ?? new DeskStripSettings();
+            _screenOverride = screenOverride;
+            _wantGpu = WantsGpu;
             MotionDesk.UI.Flicker.Attach(this);
             FormBorderStyle = FormBorderStyle.None;
             StartPosition = FormStartPosition.Manual;
@@ -90,15 +122,19 @@ namespace MotionDesk.Widgets
             SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.UserPaint | ControlStyles.OptimizedDoubleBuffer | ControlStyles.ResizeRedraw, true);
 
             _saveTimer.Tick += (_, _) => { _saveTimer.Stop(); SaveState(); };
+            _layeredTimer.Tick += (_, _) => { if (_layeredDirty) RepaintLayered(); else _layeredTimer.Stop(); };
             _animTimer.Interval = Low ? 33 : 16;
             _animTimer.Tick += (_, _) => AnimateStep();
             _pollTimer = new System.Windows.Forms.Timer { Interval = Low ? 3500 : 1500 };
-            _pollTimer.Tick += (_, _) => PollTick();
+            _pollTimer.Tick += (_, _) => { PollTick(); UpdateWorkspaceLabel(); };
             _hideTimer.Tick += (_, _) => AutoHideTick();
             _hoverTimer.Tick += (_, _) => { _hoverTimer.Stop(); ShowPopupForHover(); };
 
-            LoadState();
+            if (shared == null) LoadState();
+            _hiddenByAutoHide = _s.AutoHide;
+            _displayIconSize = _s.IconSize;
             SyncItems();
+            UpdateWorkspaceLabel();
             ApplyLayout(animate: false);
             _pollTimer.Start();
             if (_s.AutoHide) _hideTimer.Start();
@@ -106,8 +142,11 @@ namespace MotionDesk.Widgets
 
             Microsoft.Win32.SystemEvents.DisplaySettingsChanged += OnScreenChanged;
             Microsoft.Win32.SystemEvents.UserPreferenceChanged += OnScreenChanged;
+            Action look = () => { if (IsHandleCreated && !IsDisposed) try { BeginInvoke(() => { RefreshMaterial(); ApplyLayout(animate: false); Invalidate(); }); } catch (Exception) { } };
+            MotionDesk.UI.ThemeManager.Changed += look; MotionDesk.UI.ThemeManager.Repainted += look;                       // live: theme / tint / glass changes repaint the open strip
             FormClosed += (_, _) =>
             {
+                MotionDesk.UI.ThemeManager.Changed -= look; MotionDesk.UI.ThemeManager.Repainted -= look;
                 Microsoft.Win32.SystemEvents.DisplaySettingsChanged -= OnScreenChanged;
                 Microsoft.Win32.SystemEvents.UserPreferenceChanged -= OnScreenChanged;
                 _saveTimer.Stop(); _pollTimer.Stop(); _animTimer.Stop(); _hideTimer.Stop(); _hoverTimer.Stop();
@@ -120,63 +159,180 @@ namespace MotionDesk.Widgets
 
         public DeskStripSettings Settings => _s;
         public IReadOnlyList<string> PinnedApps => _s.Paths;
+        private IReadOnlyList<string> PinnedForThisMonitor()
+        {
+            var name = DockScreen.DeviceName;
+            if (!_s.MonitorPinnedOrder.TryGetValue(name, out var order) || order == null) return _s.Paths;
+            var valid = _s.Paths.ToHashSet(StringComparer.OrdinalIgnoreCase);
+            return order.Where(valid.Contains).Distinct(StringComparer.OrdinalIgnoreCase)
+                .Concat(_s.Paths.Where(path => !order.Contains(path, StringComparer.OrdinalIgnoreCase))).ToList();
+        }
+        private const string SearchPrefix = "opsis://search/";
+        internal static bool IsPinnedSearch(string path) => path.StartsWith(SearchPrefix, StringComparison.OrdinalIgnoreCase);
+        private static string SearchQuery(string path) => Uri.UnescapeDataString(path[SearchPrefix.Length..]);
 
         /// <summary>Αλλαγή ρυθμίσεων από το UI: εφαρμόζεται αμέσως και αποθηκεύεται.</summary>
         public void UpdateSettings(Action<DeskStripSettings> change)
         {
-            var oldPos = _s.Position; var oldSize = _s.IconSize;
+            var oldPos = _s.Position;
             change(_s);
             _s.IconSize = Math.Clamp(_s.IconSize, 28, 72);
+            _s.LabelFontScalePercent = Math.Clamp(_s.LabelFontScalePercent, 85, 150);
+            _popup?.HidePopup(); _popup?.Dispose(); _popup = null; // re-create with new font size on next hover
             _s.Paths = _s.Paths.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
-            if (_s.IconSize != oldSize) { foreach (var b in _iconCache.Values) b?.Dispose(); _iconCache.Clear(); foreach (var it in _items) it.Icon = null; }
-            if (_s.AutoHide) _hideTimer.Start(); else { _hideTimer.Stop(); _hiddenByAutoHide = false; }
-            SyncItems();
-            ApplyLayout(animate: oldPos == _s.Position);
+            // Keep per-monitor order lists bounded to installed/pinned app ids.
+            foreach (var monitor in _s.MonitorPinnedOrder.Keys.ToArray())
+                _s.MonitorPinnedOrder[monitor] = _s.MonitorPinnedOrder[monitor]
+                    .Where(path => _s.Paths.Contains(path, StringComparer.OrdinalIgnoreCase)).Take(300).ToList();
+            ApplySharedSettings(animate: oldPos == _s.Position);
             QueueSave();
+        }
+
+        internal void ApplySharedSettings(bool animate = false)
+        {
+            if (_displayIconSize != _s.IconSize)
+            {
+                foreach (var b in _iconCache.Values) b?.Dispose();
+                _iconCache.Clear();
+                foreach (var it in _items) it.Icon = null;
+                _displayIconSize = _s.IconSize;
+            }
+            if (_s.AutoHide && !_hideTimer.Enabled)
+            {
+                _hiddenByAutoHide = true;
+                _hideTimer.Start();
+            }
+            else if (!_s.AutoHide)
+            {
+                _hideTimer.Stop();
+                _hiddenByAutoHide = false;
+            }
+            SyncItems();
+            UpdateWorkspaceLabel();
+            ApplyLayout(animate);
+            UpdateDockVisibility();
+        }
+
+        internal void OpenDock()
+        {
+            // Create the native window even when starting hidden so Close releases the strip.
+            _ = Handle;
+            _hiddenByFullscreen = _s.HideOnFullscreen && AppActivity.IsFullscreenOn(DockScreen);
+            UpdateDockVisibility();
+        }
+
+        private void UpdateDockVisibility()
+        {
+            if (_hiddenByAutoHide || _hiddenByFullscreen)
+            {
+                HidePopup();
+                _mouse = null;
+                _hoverIndex = -1;
+                _animTimer.Stop();
+                if (Visible) Hide();
+            }
+            else if (!Visible)
+            {
+                ApplyLayout(animate: false);
+                Show();
+                StartAnim();
+            }
         }
 
         private void OnScreenChanged(object? sender, EventArgs e)
         {
-            if (IsHandleCreated && !IsDisposed) BeginInvoke(new Action(() => ApplyLayout(animate: false)));
+            if (IsHandleCreated && !IsDisposed) BeginInvoke(new Action(() => { MotionDesk.Services.HangTrace.Mark("DeskStrip.ApplyLayout: start"); ApplyLayout(animate: false); MotionDesk.Services.HangTrace.Mark("DeskStrip.ApplyLayout: done"); }));
         }
 
         // ---- ανίχνευση παραθύρων ----------------------------------------------------------------------------------
-        private void PollTick()
+        private int _familyCheck;
+
+        /// <summary>Pins the installed Opsis-family apps (suite/apps.json) once each. Cheap: a handful of File.Exists, run at start and then about once a minute.</summary>
+        private void AutoPinFamily()
         {
-            bool fs = AppActivity.IsFullscreenAppActive;
-            if (fs != _hiddenByFullscreen) { _hiddenByFullscreen = fs; Visible = !fs; if (!fs) Invalidate(); }
-            if (fs) return;
-            if (SyncItems()) ApplyLayout(animate: true);
-            else UpdateActiveFlags();
+            try
+            {
+                var offered = new HashSet<string>(_s.AutoPinnedFamily, StringComparer.OrdinalIgnoreCase);
+                var found = FamilyApp.AutoPinCandidates(FamilyApp.Load(), offered, a => a.InstalledPath);
+                if (found.Count == 0) return;
+                foreach (var (id, path) in found)
+                {
+                    _s.AutoPinnedFamily.Add(id);
+                    if (!_s.Paths.Contains(path, StringComparer.OrdinalIgnoreCase)) { _s.Paths.Add(path); _pendingEntrance.Add(path); }
+                }
+                SyncItems(); ApplyLayout(animate: true); QueueSave();
+            }
+            catch (Exception) { }
         }
 
-        /// <summary>Συγχρονίζει τη λίστα (καρφιτσωμένα + τρέχοντα). Επιστρέφει true αν άλλαξε το πλήθος των στοιχείων.</summary>
-        private bool SyncItems()
+        private void PollTick()
         {
-            var windows = _s.ShowRunning || _s.Paths.Count > 0 ? WinApi.EnumerateAppWindows() : new List<WinApi.AppWindow>();
+            if (_familyCheck++ % 40 == 0) AutoPinFamily();
+            RefreshMaterial();
+            bool fs = _s.HideOnFullscreen && AppActivity.IsFullscreenOn(DockScreen);
+            if (fs != _hiddenByFullscreen)
+            {
+                _hiddenByFullscreen = fs;
+                if (fs && _s.AutoHide) _hiddenByAutoHide = true;
+                UpdateDockVisibility();
+            }
+            if (fs) return;
+            // Plan 9.1: the window enumeration (EnumWindows + the image path of every window) is the expensive part: it runs on a worker thread and only
+            // the cheap merge into the item list happens on the UI thread. One enumeration at a time; a slow one is simply skipped, never queued.
+            if (_enumerating) return;
+            if (!(_s.ShowRunning || _s.Paths.Count > 0)) { if (SyncItems()) ApplyLayout(animate: true); else UpdateActiveFlags(); return; }
+            _enumerating = true;
+            Task.Run(WinApi.EnumerateAppWindows).ContinueWith(t =>
+            {
+                try
+                {
+                    if (IsDisposed || !IsHandleCreated) return;
+                    BeginInvoke(new Action(() =>
+                    {
+                        _enumerating = false;
+                        if (IsDisposed || t.IsFaulted) return;
+                        if (SyncItems(t.Result)) ApplyLayout(animate: true); else UpdateActiveFlags();
+                    }));
+                }
+                catch (Exception) { _enumerating = false; }
+            });
+        }
+
+        private volatile bool _enumerating;
+
+        /// <summary>Συγχρονίζει τη λίστα (καρφιτσωμένα + τρέχοντα). Επιστρέφει true αν άλλαξε το πλήθος των στοιχείων.</summary>
+        private bool SyncItems(List<WinApi.AppWindow>? enumerated = null)
+        {
+            var windows = enumerated ?? (_s.ShowRunning || _s.Paths.Count > 0 ? WinApi.EnumerateAppWindows() : new List<WinApi.AppWindow>());
             int before = _items.Count;
             var previous = new Dictionary<string, Item>(StringComparer.OrdinalIgnoreCase);
             foreach (var i in _items) previous[i.Key] = i;
             var list = new List<Item>();
 
-            foreach (var path in _s.Paths)
+            foreach (var path in PinnedForThisMonitor())
             {
                 if (!previous.TryGetValue(path, out var it) || !it.Pinned)
                     it = new Item { Key = path, Pinned = true, Display = Path.GetFileNameWithoutExtension(path), Entrance = _pendingEntrance.Contains(path) ? 0 : 1 };
-                it.Target ??= ResolveTarget(path);
+                it.Target ??= IsPinnedSearch(path) ? null : ResolveTarget(path);
+                if (IsPinnedSearch(path)) it.Display = "🔎 " + SearchQuery(path);
                 it.Icon ??= IconFor(path);
                 it.Windows = new List<IntPtr>();
                 list.Add(it);
             }
+            // dictionaries instead of a linear search per window (windows x items)
+            var pinnedByExe = new Dictionary<string, Item>(StringComparer.OrdinalIgnoreCase);
+            foreach (var i in list) { if (!i.Pinned) continue; if (i.Target != null) pinnedByExe.TryAdd(i.Target, i); pinnedByExe.TryAdd(i.Key, i); }
+            var runningByKey = new Dictionary<string, Item>(StringComparer.OrdinalIgnoreCase);
             foreach (var w in windows)
             {
-                var pinned = list.FirstOrDefault(i => i.Pinned && SameApp(i, w.ExePath));
+                if (_s.OnlyLocalWindows && Screen.FromHandle(w.Handle).DeviceName != DockScreen.DeviceName) continue;
+                pinnedByExe.TryGetValue(w.ExePath, out var pinned);
                 if (pinned != null) { pinned.Windows.Add(w.Handle); pinned.Title = w.Title; continue; }
                 if (!_s.ShowRunning) continue;
                 // Οι UWP εφαρμογές (Αριθμομηχανή, Ρυθμίσεις...) τρέχουν όλες μέσα στο ApplicationFrameHost.exe: κάθε παράθυρο είναι δική του εφαρμογή.
                 bool uwp = Path.GetFileName(w.ExePath).Equals("ApplicationFrameHost.exe", StringComparison.OrdinalIgnoreCase);
                 string key = uwp ? w.ExePath + "#" + w.Handle.ToInt64() : w.ExePath;
-                var run = list.FirstOrDefault(i => !i.Pinned && string.Equals(i.Key, key, StringComparison.OrdinalIgnoreCase));
+                runningByKey.TryGetValue(key, out var run);
                 if (run == null)
                 {
                     if (!previous.TryGetValue(key, out run) || run.Pinned)
@@ -184,7 +340,7 @@ namespace MotionDesk.Widgets
                     run.Display = uwp ? w.Title : Path.GetFileNameWithoutExtension(w.ExePath);
                     run.Windows = new List<IntPtr>();
                     run.Icon ??= uwp ? WinApi.WindowIcon(w.Handle) ?? IconFor(w.ExePath) : IconFor(w.ExePath) ?? WinApi.WindowIcon(w.Handle);
-                    list.Add(run);
+                    list.Add(run); runningByKey[key] = run;
                 }
                 run.Windows.Add(w.Handle); run.Title = w.Title;
             }
@@ -234,6 +390,18 @@ namespace MotionDesk.Widgets
         private Bitmap? IconFor(string path)
         {
             if (_iconCache.TryGetValue(path, out var c)) return c;
+            if (IsPinnedSearch(path))
+            {
+                var icon = new Bitmap(64, 64);
+                using (var g = Graphics.FromImage(icon))
+                {
+                    g.SmoothingMode = SmoothingMode.AntiAlias;
+                    using var pen = new Pen(Color.White, 5);
+                    g.DrawEllipse(pen, 10, 9, 32, 32);
+                    g.DrawLine(pen, 38, 38, 56, 56);
+                }
+                return _iconCache[path] = icon;
+            }
             Bitmap? bmp = null;
             try
             {
@@ -259,7 +427,22 @@ namespace MotionDesk.Widgets
         private int SeparatorIndex() => _items.FindLastIndex(i => i.Pinned) + 1;      // πρώτο μη καρφιτσωμένο
         private bool HasSeparator => _items.Any(i => i.Pinned) && _items.Any(i => !i.Pinned);
 
-        private double AxisLength() => Pad * 2 + _items.Count * Cell + (HasSeparator ? Gap : 0);
+        private const int WorkspaceBadgeWidth = 112;
+        private double AxisLength() => Pad * 2 + _items.Count * Cell + (HasSeparator ? Gap : 0)
+            + (_s.ShowWorkspaceLabel ? WorkspaceBadgeWidth : 0);
+
+        private void UpdateWorkspaceLabel()
+        {
+            if (!_s.ShowWorkspaceLabel) { _workspaceLabel = ""; return; }
+            var current = VirtualWorkspaces.CurrentDesktop();
+            var ids = VirtualWorkspaces.DesktopIds();
+            var index = Array.IndexOf(ids, current);
+            string label = current == Guid.Empty ? "Workspace" :
+                VirtualWorkspaces.Name(current) ?? $"Desktop {(index >= 0 ? index + 1 : 1)}";
+            if (string.Equals(label, _workspaceLabel, StringComparison.Ordinal)) return;
+            _workspaceLabel = label;
+            if (IsHandleCreated && !IsDisposed) Invalidate();
+        }
         private double Thickness() => Pad + _s.IconSize * MaxScale + IndicatorSpace + Pad;
 
         private double CenterOf(int i)
@@ -269,46 +452,37 @@ namespace MotionDesk.Widgets
             return c;
         }
 
-        private Rectangle TargetBounds(bool hidden)
+        private Rectangle TargetBounds(Rectangle area)
         {
-            var area = (Screen.PrimaryScreen ?? Screen.AllScreens[0]).WorkingArea;
             int len = (int)Math.Max(Cell * 2 + Pad * 2, AxisLength()), th = (int)Thickness();
             const int margin = 8;
-            Rectangle r = _s.Position switch
+            return _s.Position switch
             {
                 DockPosition.Bottom => new Rectangle(area.X + (area.Width - len) / 2, area.Bottom - th - margin, len, th),
                 DockPosition.Top => new Rectangle(area.X + (area.Width - len) / 2, area.Y + margin, len, th),
                 DockPosition.Left => new Rectangle(area.X + margin, area.Y + (area.Height - len) / 2, th, len),
                 _ => new Rectangle(area.Right - th - margin, area.Y + (area.Height - len) / 2, th, len),
             };
-            if (!hidden) return r;
-            const int sliver = 3;
-            return _s.Position switch
-            {
-                DockPosition.Bottom => new Rectangle(r.X, area.Bottom - sliver, r.Width, r.Height),
-                DockPosition.Top => new Rectangle(r.X, area.Y + sliver - r.Height, r.Width, r.Height),
-                DockPosition.Left => new Rectangle(area.X + sliver - r.Width, r.Y, r.Width, r.Height),
-                _ => new Rectangle(area.Right - sliver, r.Y, r.Width, r.Height),
-            };
         }
 
         private void ApplyLayout(bool animate)
         {
-            var r = TargetBounds(_hiddenByAutoHide);
+            var r = TargetBounds(DockScreen.WorkingArea);
             Size = r.Size;
             UpdateRegion();
-            if (!animate || !_shown || !IsHandleCreated) { _slideT = 1; Location = r.Location; Invalidate(); return; }
+            if (!animate || !_shown || !IsHandleCreated || !Visible) { _slideT = 1; Location = r.Location; Invalidate(); return; }
             _slideFrom = Location; _slideTo = r.Location; _slideT = 0;
             StartAnim();
         }
 
         private void UpdateRegion()
         {
-            try { using var p = MotionDesk.UI.UiTheme.RoundedPath(new Rectangle(0, 0, Width, Height), 20); Region = new Region(p); } catch (Exception) { }
+            if (_wantGpu) { Region = null; return; }   // the alpha of the layered window and the pane give the rounded shape
+            try { using var p = MotionDesk.UI.UiTheme.RoundedPath(new Rectangle(0, 0, Width, Height), MaterialRadius); Region = new Region(p); } catch (Exception) { }
         }
 
         // ---- animation --------------------------------------------------------------------------------------------
-        private void StartAnim() { if (!_animTimer.Enabled) _animTimer.Start(); }
+        private void StartAnim() { if (Visible && !_animTimer.Enabled) _animTimer.Start(); }
 
         private void AnimateStep()
         {
@@ -346,21 +520,22 @@ namespace MotionDesk.Widgets
         {
             if (!_s.AutoHide || _hiddenByFullscreen) return;
             var p = Cursor.Position;
-            var shown = TargetBounds(false);
-            var area = (Screen.PrimaryScreen ?? Screen.AllScreens[0]).Bounds;
-            bool inDock = shown.Contains(p);
-            bool atEdge = _s.Position switch
+            var area = DockScreen.WorkingArea;
+            var shown = TargetBounds(area);
+            bool atEdge = DeskStripEdge.RevealArea(area, shown, _s.Position).Contains(p);
+            if (_hiddenByAutoHide)
             {
-                DockPosition.Bottom => p.Y >= area.Bottom - 2 && p.X >= shown.Left && p.X <= shown.Right,
-                DockPosition.Top => p.Y <= area.Top + 1 && p.X >= shown.Left && p.X <= shown.Right,
-                DockPosition.Left => p.X <= area.Left + 1 && p.Y >= shown.Top && p.Y <= shown.Bottom,
-                _ => p.X >= area.Right - 2 && p.Y >= shown.Top && p.Y <= shown.Bottom,
-            };
-            if (_hiddenByAutoHide && (atEdge || inDock)) { _hiddenByAutoHide = false; ApplyLayout(animate: true); }
-            else if (!_hiddenByAutoHide)
+                if (!atEdge) return;
+                _hiddenByAutoHide = false;
+                _leftAt = DateTime.UtcNow;
+                UpdateDockVisibility();
+            }
+            else if (atEdge || Bounds.Contains(p) || _popup is { Visible: true } || _contextOpen || _dragActive)
+                _leftAt = DateTime.UtcNow;
+            else if (DateTime.UtcNow - _leftAt > TimeSpan.FromMilliseconds(650))
             {
-                if (inDock || _popup is { Visible: true } || _contextOpen || _dragActive) _leftAt = DateTime.UtcNow;
-                else if (DateTime.UtcNow - _leftAt > TimeSpan.FromMilliseconds(650)) { _hiddenByAutoHide = true; HidePopup(); ApplyLayout(animate: true); }
+                _hiddenByAutoHide = true;
+                UpdateDockVisibility();
             }
         }
 
@@ -382,20 +557,69 @@ namespace MotionDesk.Widgets
         }
 
         // ---- ζωγραφική --------------------------------------------------------------------------------------------
-        protected override void OnPaint(PaintEventArgs e)
+        protected override void OnPaint(PaintEventArgs e) { if (!_wantGpu) PaintStrip(e.Graphics, glass: false); }
+
+        // ---- GPU glass: layered painting ---------------------------------------------------------------------------
+        protected override void OnInvalidated(InvalidateEventArgs e)
         {
-            var g = e.Graphics;
+            base.OnInvalidated(e);
+            if (!_wantGpu || !Visible) return;
+            _layeredDirty = true;
+            if (!_layeredTimer.Enabled) _layeredTimer.Start();   // coalesce: at most one repaint per 8 ms
+        }
+
+        private void RepaintLayered()
+        {
+            if (!_wantGpu || !IsHandleCreated || IsDisposed || !Visible || Width <= 0 || Height <= 0) return;
+            _layeredDirty = false;
+            _layered ??= new LayeredSurface();
+            using (var g = _layered.Begin(Width, Height)) PaintStrip(g, glass: true);
+            _layered.Present(Handle, Location);
+        }
+
+        private void SyncGlassPane()
+        {
+            var m = MotionDesk.Services.GlassService.Manager;
+            if (!_wantGpu || m == null || !IsHandleCreated) return;
+            if (!Visible)
+            {
+                if (_glassPane >= 0) m.SetPaneVisible(_glassPane, false);
+                return;
+            }
+            if (_glassPane < 0) _glassPane = m.AddPane(Bounds, MotionDesk.Services.GlassService.Style(20, DesktopSurface.DeskStrip), clickThrough: true);
+            else { m.MovePane(_glassPane, Location); m.ResizePane(_glassPane, Size); }
+            m.PlaceBelow(_glassPane, Handle);
+            m.SetPaneVisible(_glassPane, true);
+        }
+
+        protected override void OnLocationChanged(EventArgs e) { base.OnLocationChanged(e); if (_wantGpu) { SyncGlassPane(); _layeredDirty = true; } }
+        protected override void OnSizeChanged(EventArgs e) { base.OnSizeChanged(e); if (_wantGpu) { SyncGlassPane(); _layeredDirty = true; } }
+        protected override void OnVisibleChanged(EventArgs e)
+        {
+            base.OnVisibleChanged(e);
+            if (!_wantGpu || Disposing || IsDisposed) return;
+            SyncGlassPane();
+            _layeredDirty = Visible;
+            if (Visible) _layeredTimer.Start(); else _layeredTimer.Stop();
+        }
+
+        private void PaintStrip(Graphics g, bool glass)
+        {
             g.SmoothingMode = SmoothingMode.AntiAlias;
             g.InterpolationMode = InterpolationMode.HighQualityBicubic;
-            using (var bgPath = MotionDesk.UI.UiTheme.RoundedPath(new Rectangle(0, 0, Width - 1, Height - 1), 20))
+            var material = DesktopMaterials.Get(DesktopSurface.DeskStrip);
+            if (!glass)   // with GPU glass the pane below draws the tint, the refraction and the rim
+            using (var bgPath = MotionDesk.UI.UiTheme.RoundedPath(new Rectangle(0, 0, Width - 1, Height - 1), MaterialRadius))
             {
-                using var tint = new SolidBrush(Color.FromArgb(Low ? 215 : 70, 24, 26, 34));
+                var color = material.UsesCustom ? Color.FromArgb(Math.Max(Low ? 100 : 10, material.Opacity * 255 / 100), material.Color)
+                    : Color.FromArgb(Low ? 215 : 70, 24, 26, 34);
+                using var tint = new SolidBrush(color);
                 g.FillPath(tint, bgPath);
                 using var pen = new Pen(Color.FromArgb(70, 255, 255, 255));
                 g.DrawPath(pen, bgPath);
             }
 
-            Color accent = MotionDesk.UI.UiTheme.AccentCyan;
+            Color accent = DesktopMaterial.OptionalColor(material.AccentColor, MotionDesk.UI.UiTheme.AccentCyan);
             int size = _s.IconSize;
             double edge = _s.Position switch   // συντεταγμένη της "βάσης" των εικονιδίων στον κάθετο άξονα
             {
@@ -467,6 +691,21 @@ namespace MotionDesk.Widgets
                 }
             }
 
+            if (_s.ShowWorkspaceLabel)
+            {
+                var badgeOrigin = (float)(Pad + _items.Count * Cell + (HasSeparator ? Gap : 0));
+                var rect = Vertical
+                    ? new Rectangle(3, (int)badgeOrigin + 4, Width - 6, WorkspaceBadgeWidth - 8)
+                    : new Rectangle((int)badgeOrigin + 4, 3, WorkspaceBadgeWidth - 8, Height - 6);
+                using var badgeFill = new SolidBrush(Color.FromArgb(glass ? 115 : 65, accent));
+                using var outline = MotionDesk.UI.UiTheme.RoundedPath(rect, 9);
+                g.FillPath(badgeFill, outline);
+                using var font = new Font("Segoe UI", Math.Max(8, _s.IconSize / 6f), FontStyle.Regular);
+                TextRenderer.DrawText(g, _workspaceLabel, font, rect, Color.White,
+                    TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter |
+                    TextFormatFlags.EndEllipsis | TextFormatFlags.SingleLine);
+            }
+
             if (_dropIndex >= 0)   // δείκτης σημείου απόθεσης κατά το σύρσιμο
             {
                 int pinnedCount = _items.Count(i => i.Pinned);
@@ -536,6 +775,11 @@ namespace MotionDesk.Widgets
             try
             {
                 string target = it.Pinned ? it.Key : (it.Target ?? it.Key);
+                if (IsPinnedSearch(target))
+                {
+                    MotionDesk.Containers.ContainerHost.Current?.ShowSpotSearch(SearchQuery(target));
+                    return;
+                }
                 if (MotionDesk.Services.SafeLaunch.Reject(target) is { } why) { MotionDesk.Services.AttachLog.Write("dock launch refused: " + why + " (" + target + ")"); return; }
                 var psi = new ProcessStartInfo(target) { UseShellExecute = true };
                 if (admin) psi.Verb = "runas";
@@ -558,9 +802,33 @@ namespace MotionDesk.Widgets
                 {
                     try { Process.Start(new ProcessStartInfo("explorer.exe", $"/select,\"{file}\"") { UseShellExecute = true }); } catch (Exception) { }
                 });
+            if (it.Windows.Count > 1)
+            {
+                var windowsMenu = new ToolStripMenuItem("Παράθυρα εφαρμογής / App windows");
+                var visible = WinApi.EnumerateAppWindows()
+                    .Where(w => it.Windows.Contains(w.Handle)).ToArray();
+                for (var i = 0; i < visible.Length; i++)
+                {
+                    var window = visible[i];
+                    var title = string.IsNullOrWhiteSpace(window.Title) ? $"Window {i+1}" : window.Title;
+                    windowsMenu.DropDownItems.Add(new ToolStripMenuItem(title.Length > 90 ? title[..90] + "…" : title,
+                        null, (_, _) => WinApi.BringToFront(window.Handle)));
+                }
+                menu.Items.Add(windowsMenu);
+            }
             if (it.Windows.Count > 0)
                 menu.Items.Add(it.Windows.Count > 1 ? "Κλείσιμο όλων των παραθύρων / Close all windows" : "Κλείσιμο παραθύρου / Close window", null, (_, _) => { foreach (var w in it.Windows.ToList()) WinApi.Close(w); });
             menu.Items.Add(new ToolStripSeparator());
+            var launchMenu = new ToolStripMenuItem("Ομάδες εκκίνησης / Launch groups");
+            foreach (var group in _s.LaunchGroups.ToArray())
+            {
+                string name = group.Key;
+                launchMenu.DropDownItems.Add(name, null, (_, _) => _ = LaunchGroupAsync(name));
+            }
+            launchMenu.DropDownItems.Add(new ToolStripSeparator());
+            launchMenu.DropDownItems.Add("Νέα ομάδα… / New group…", null, (_, _) => CreateLaunchGroup());
+            menu.Items.Add(launchMenu);
+            menu.Items.Add(LocalizationManager.T("DCM.DeskStripSettings"), null, (_, _) => TrayApplicationContext.OpenPage?.Invoke("DeskStrip"));
             menu.Items.Add(it.Pinned ? LocalizationManager.T("DCMenu.Unpin") : "Καρφίτσωμα στο dock / Pin to dock", null, (_, _) =>
             {
                 if (it.Pinned) UnpinApp(it.Key); else PinApp(it.Target ?? it.Key);
@@ -570,12 +838,49 @@ namespace MotionDesk.Widgets
             menu.Show(this, at);
         }
 
+        // #48: app restoration follows the saved order; failed apps do not block the rest.
+        private async Task LaunchGroupAsync(string name)
+        {
+            if (!_s.LaunchGroups.TryGetValue(name, out var paths)) return;
+            foreach (var path in paths.Take(50).ToArray())
+            {
+                if (!File.Exists(path) || !path.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) ||
+                    MotionDesk.Services.SafeLaunch.Reject(path) != null) continue;
+                try { Process.Start(new ProcessStartInfo(path) { UseShellExecute = true }); }
+                catch (Exception ex) { MotionDesk.Services.AttachLog.Write("launch group app failed: " + ex.GetType().Name); }
+                await Task.Delay(850); // ordered start without blocking WinForms
+                if (IsDisposed || Disposing) return;
+            }
+        }
+
+        private void CreateLaunchGroup()
+        {
+            using var prompt = new Form { Text = "Opsis · Launch group", Width = 450, Height = 410,
+                StartPosition = FormStartPosition.CenterParent, FormBorderStyle = FormBorderStyle.FixedDialog,
+                MaximizeBox = false, MinimizeBox = false };
+            var name = new TextBox { Left = 16, Top = 14, Width = 400, PlaceholderText = "Group name / Όνομα ομάδας" };
+            var list = new CheckedListBox { Left = 16, Top = 51, Width = 400, Height = 250, CheckOnClick = true };
+            foreach (var path in _s.Paths)
+            {
+                string? executable = ResolveTarget(path);
+                if (executable != null && File.Exists(executable) &&
+                    executable.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) &&
+                    !list.Items.Contains(executable)) list.Items.Add(executable, false);
+            }
+            var save = new Button { Left = 300, Top = 315, Width = 116, Height = 34, Text = "Save / Αποθήκευση", DialogResult = DialogResult.OK };
+            prompt.Controls.AddRange([name, list, save]); prompt.AcceptButton = save;
+            if (prompt.ShowDialog(this) != DialogResult.OK || name.Text.Trim().Length is < 1 or > 80) return;
+            var chosen = list.CheckedItems.Cast<string>().Distinct(StringComparer.OrdinalIgnoreCase).Take(50).ToList();
+            if (chosen.Count == 0) return;
+            _s.LaunchGroups[name.Text.Trim()] = chosen; QueueSave();
+        }
+
         // ---- προεπισκόπηση / tooltip -----------------------------------------------------------------------------
         private void ShowPopupForHover()
         {
             if (_hoverIndex < 0 || _hoverIndex >= _items.Count || _dragActive || _contextOpen) return;
             var it = _items[_hoverIndex];
-            _popup ??= new DockPopup();
+            _popup ??= new DockPopup(_s.LabelFontScalePercent);
             var windows = it.Windows.Take(_s.ShowPreviews && !Low ? 3 : 0).ToList();
             _popup.ShowFor(it.Windows.Count == 1 && it.Title.Length > 0 ? it.Title : it.Display, windows, ItemScreenRect(_hoverIndex), _s.Position);
         }
@@ -620,11 +925,16 @@ namespace MotionDesk.Widgets
 
         private void MovePinned(string key, int insertAt)
         {
-            int from = _s.Paths.FindIndex(p => string.Equals(p, key, StringComparison.OrdinalIgnoreCase));
+            // Rearrangement is local to this monitor when multiple docks are enabled.
+            var order = _s.AllMonitors && Screen.AllScreens.Length > 1
+                ? PinnedForThisMonitor().ToList() : _s.Paths;
+            int from = order.FindIndex(p => string.Equals(p, key, StringComparison.OrdinalIgnoreCase));
             if (from < 0) return;
-            _s.Paths.RemoveAt(from);
+            order.RemoveAt(from);
             if (insertAt > from) insertAt--;
-            _s.Paths.Insert(Math.Clamp(insertAt, 0, _s.Paths.Count), key);
+            order.Insert(Math.Clamp(insertAt, 0, order.Count), key);
+            if (!ReferenceEquals(order, _s.Paths))
+                _s.MonitorPinnedOrder[DockScreen.DeviceName] = order;
             SyncItems(); ApplyLayout(false); QueueSave();
         }
 
@@ -648,10 +958,20 @@ namespace MotionDesk.Widgets
             if (_s.Paths.RemoveAll(p => string.Equals(p, path, StringComparison.OrdinalIgnoreCase)) > 0) { SyncItems(); ApplyLayout(true); QueueSave(); }
         }
 
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                _layeredTimer.Stop(); _layeredTimer.Dispose(); _layered?.Dispose();
+                if (_glassPane >= 0) { GlassService.ExistingManager?.RemovePane(_glassPane); _glassPane = -1; }
+            }
+            base.Dispose(disposing);
+        }
+
         // ---- παράθυρο: blur, DPI ----------------------------------------------------------------------------------
         protected override CreateParams CreateParams
         {
-            get { var cp = base.CreateParams; cp.ExStyle |= 0x08000000 /*WS_EX_NOACTIVATE*/ | 0x80 /*TOOLWINDOW: όχι Alt-Tab*/; return cp; }
+            get { var cp = base.CreateParams; cp.ExStyle |= 0x08000000 /*WS_EX_NOACTIVATE*/ | 0x80 /*TOOLWINDOW: όχι Alt-Tab*/ | (_wantGpu ? 0x00080000 /*WS_EX_LAYERED: GPU glass mode*/ : 0); return cp; }
         }
 
         protected override bool ShowWithoutActivation => true;
@@ -659,6 +979,7 @@ namespace MotionDesk.Widgets
         protected override void OnHandleCreated(EventArgs e)
         {
             base.OnHandleCreated(e);
+            if (_wantGpu) { SyncGlassPane(); return; }
             ApplyBlur();
         }
 
@@ -671,8 +992,12 @@ namespace MotionDesk.Widgets
 
         private void ApplyBlur()
         {
-            if (Low) return;   // σε αδύναμα συστήματα: συμπαγές χρώμα, χωρίς acrylic
-            var accent = new ACCENT_POLICY { AccentState = 3, GradientColor = unchecked((int)0x66202228) };
+            var material = DesktopMaterials.Get(DesktopSurface.DeskStrip);
+            var tint = material.UsesCustom ? material.Color : Color.FromArgb(32, 34, 40);
+            int alpha = material.UsesCustom ? material.Opacity * 255 / 100 : 102;
+            int abgr = (alpha << 24) | (tint.B << 16) | (tint.G << 8) | tint.R;
+            var accent = new ACCENT_POLICY { AccentState = Low || material.Mode == "Solid" ? 0 : 3, GradientColor = abgr };
+            BackColor = material.Mode == "Solid" || Low && material.UsesCustom ? tint : Color.FromArgb(20, 20, 20);
             int size = Marshal.SizeOf(accent);
             IntPtr ptr = Marshal.AllocHGlobal(size);
             Marshal.StructureToPtr(accent, ptr, false);
@@ -681,9 +1006,42 @@ namespace MotionDesk.Widgets
             Marshal.FreeHGlobal(ptr);
         }
 
+        private DesktopMaterial? _shownMaterial;
+
+        private void RefreshMaterial()
+        {
+            if (!IsHandleCreated || IsDisposed) return;
+            var material = DesktopMaterials.Get(DesktopSurface.DeskStrip);
+            bool gpu = WantsGpu;
+            if (gpu != _wantGpu)
+            {
+                if (_glassPane >= 0) GlassService.ExistingManager?.RemovePane(_glassPane);
+                _glassPane = -1;
+                _wantGpu = gpu;
+                _layeredDirty = false;
+                RecreateHandle();
+                UpdateRegion();
+                Invalidate();
+            }
+            if (material == _shownMaterial) return;
+            _shownMaterial = material;
+            if (_wantGpu)
+            {
+                SyncGlassPane();
+                if (_glassPane >= 0) GlassService.Manager?.SetStyle(_glassPane, GlassService.Style(20, DesktopSurface.DeskStrip));
+            }
+            else { ApplyBlur(); UpdateRegion(); }
+            Invalidate();
+        }
+
         // ---- αποθήκευση -------------------------------------------------------------------------------------------
         private static string ConfigPath => Path.Combine(AppPaths.AppDataFolder, "deskstrip", "config.json");
-        private void QueueSave() { _saveTimer.Stop(); _saveTimer.Start(); }
+        private void QueueSave()
+        {
+            _saveTimer.Stop();
+            _saveTimer.Start();
+            SettingsChanged?.Invoke(this);
+        }
 
         private void SaveState()
         {
@@ -706,9 +1064,18 @@ namespace MotionDesk.Widgets
             {
                 var state = JsonSerializer.Deserialize<DeskStripSettings>(AtomicFile.ReadAllText(ConfigPath));
                 if (state == null) return;
-                _s.Paths = state.Paths.Where(p => File.Exists(p) || Directory.Exists(p)).ToList();
+                _s.Paths = (state.Paths ?? new()).Where(p => IsPinnedSearch(p) || File.Exists(p) || Directory.Exists(p)).ToList();
+                _s.MonitorPinnedOrder = state.MonitorPinnedOrder ?? new(StringComparer.OrdinalIgnoreCase);
+                _s.LaunchGroups = state.LaunchGroups ?? new(StringComparer.OrdinalIgnoreCase);
                 _s.Position = Enum.IsDefined(state.Position) ? state.Position : DockPosition.Bottom;
                 _s.AutoHide = state.AutoHide; _s.IconSize = Math.Clamp(state.IconSize == 0 ? 44 : state.IconSize, 28, 72);
+                _s.LabelFontScalePercent = Math.Clamp(state.LabelFontScalePercent == 0 ? 100 : state.LabelFontScalePercent, 85, 150);
+                _s.StartEnabled = state.StartEnabled;
+                _s.Monitor = state.Monitor;
+                _s.OnlyLocalWindows = state.OnlyLocalWindows;
+                _s.AllMonitors = state.AllMonitors;
+                _s.HideOnFullscreen = state.HideOnFullscreen;
+                _s.AutoPinnedFamily = state.AutoPinnedFamily ?? new();
                 _s.Magnify = state.Magnify; _s.ShowRunning = state.ShowRunning; _s.ShowPreviews = state.ShowPreviews;
             }
             catch (JsonException) { }
@@ -726,10 +1093,11 @@ namespace MotionDesk.Widgets
         private readonly List<IntPtr> _thumbs = new();
         private string _title = "";
         private const int ThumbW = 220, ThumbH = 140;
-        private readonly Font _font = new("Segoe UI Semibold", 9.5f);
+        private readonly Font _font;
 
-        public DockPopup()
+        public DockPopup(int fontScalePercent = 100)
         {
+            _font = new Font("Segoe UI Semibold", 9.5f * Math.Clamp(fontScalePercent, 85, 150) / 100f);
             FormBorderStyle = FormBorderStyle.None; ShowInTaskbar = false; TopMost = true; StartPosition = FormStartPosition.Manual;
             BackColor = Color.FromArgb(30, 32, 40); DoubleBuffered = true;
         }
@@ -744,7 +1112,8 @@ namespace MotionDesk.Widgets
             int thumbs = windows.Count;
             var textSize = TextRenderer.MeasureText(title, _font);
             int w = Math.Max(textSize.Width + 24, thumbs > 0 ? thumbs * (ThumbW + 8) + 8 : 0);
-            int h = 30 + (thumbs > 0 ? ThumbH + 10 : 0);
+            int headerH = Math.Max(30, textSize.Height + 10);
+            int h = headerH + (thumbs > 0 ? ThumbH + 10 : 0);
             Size = new Size(w, h);
             var loc = position switch
             {
@@ -758,7 +1127,7 @@ namespace MotionDesk.Widgets
             try { using var p = MotionDesk.UI.UiTheme.RoundedPath(new Rectangle(0, 0, w, h), 12); Region = new Region(p); } catch (Exception) { }
             if (!Visible) Show();
             Invalidate();
-            for (int i = 0; i < thumbs; i++) AddThumb(windows[i], new Rectangle(8 + i * (ThumbW + 8), 30, ThumbW, ThumbH));
+            for (int i = 0; i < thumbs; i++) AddThumb(windows[i], new Rectangle(8 + i * (ThumbW + 8), headerH, ThumbW, ThumbH));
         }
 
         public void HidePopup() { ClearThumbs(); if (Visible) Hide(); }
@@ -789,7 +1158,7 @@ namespace MotionDesk.Widgets
             var g = e.Graphics;
             using var pen = new Pen(Color.FromArgb(70, 255, 255, 255));
             g.DrawRectangle(pen, 0, 0, Width - 1, Height - 1);
-            TextRenderer.DrawText(g, _title, _font, new Rectangle(10, 5, Width - 20, 22), Color.White, TextFormatFlags.Left | TextFormatFlags.EndEllipsis | TextFormatFlags.VerticalCenter);
+            TextRenderer.DrawText(g, _title, _font, new Rectangle(10, 5, Width - 20, Math.Max(22, _font.Height + 4)), Color.White, TextFormatFlags.Left | TextFormatFlags.EndEllipsis | TextFormatFlags.VerticalCenter);
         }
 
         protected override void Dispose(bool disposing) { if (disposing) { ClearThumbs(); _font.Dispose(); } base.Dispose(disposing); }
@@ -898,20 +1267,77 @@ namespace MotionDesk.Widgets
         public static DeskStripHostEngine Instance => _instance ??= new DeskStripHostEngine();
 
         private DeskStripWindow? _window;
+        private readonly Dictionary<string, DeskStripWindow> _mirrors = new(StringComparer.OrdinalIgnoreCase);
+        private System.Windows.Forms.Timer? _monitorTimer;
         public bool IsEnabled => _window is { IsDisposed: false };
 
         public void Enable()
         {
             if (IsEnabled) return;
             _window = new DeskStripWindow();
-            _window.FormClosed += (_, _) => _window = null;
-            _window.Show();
+            _window.SettingsChanged += OnSettingsChanged;
+            var opened = _window;
+            opened.FormClosed += (_, _) =>
+            {
+                if (!ReferenceEquals(_window, opened)) return;
+                _window = null;
+                CloseForExit();
+            };
+            _window.OpenDock();
+            _window.UpdateSettings(settings => settings.StartEnabled = true);
+            _monitorTimer = new System.Windows.Forms.Timer { Interval = 1000 };
+            _monitorTimer.Tick += (_, _) => ReconcileMonitors();
+            _monitorTimer.Start();
         }
 
         public void Disable()
         {
-            if (_window is { IsDisposed: false }) _window.Close();
+            UpdateSettings(settings => settings.StartEnabled = false);
+            CloseForExit();
+        }
+
+        internal void CloseForExit()
+        {
+            _monitorTimer?.Dispose();
+            _monitorTimer = null;
+            var primary = _window;
             _window = null;
+            foreach (var mirror in _mirrors.Values) mirror.Close();
+            _mirrors.Clear();
+            if (primary is { IsDisposed: false }) primary.Close();
+        }
+
+        private void ReconcileMonitors()
+        {
+            if (_window is not { IsDisposed: false } primary) return;
+            var screens = Screen.AllScreens;
+            var main = screens.FirstOrDefault(screen => screen.DeviceName == primary.Settings.Monitor) ??
+                Screen.PrimaryScreen ?? screens.FirstOrDefault();
+            var required = primary.Settings.StartEnabled && primary.Settings.AllMonitors && main != null
+                ? screens.Where(screen => screen.DeviceName != main.DeviceName).Select(screen => screen.DeviceName).ToHashSet(StringComparer.OrdinalIgnoreCase)
+                : new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var id in _mirrors.Keys.Where(id => !required.Contains(id)).ToArray())
+            {
+                _mirrors[id].Close();
+                _mirrors.Remove(id);
+            }
+            foreach (var id in required)
+            {
+                if (_mirrors.ContainsKey(id)) continue;
+                var mirror = new DeskStripWindow(primary.Settings, id);
+                mirror.SettingsChanged += OnSettingsChanged;
+                _mirrors[id] = mirror;
+                mirror.OpenDock();
+            }
+        }
+
+        private void OnSettingsChanged(DeskStripWindow changed)
+        {
+            ReconcileMonitors();
+            if (_window is { IsDisposed: false } primary && !ReferenceEquals(primary, changed))
+                primary.ApplySharedSettings();
+            foreach (var peer in _mirrors.Values)
+                if (!ReferenceEquals(peer, changed)) peer.ApplySharedSettings();
         }
 
         public void PinApp(string path)
@@ -920,7 +1346,11 @@ namespace MotionDesk.Widgets
             _window?.PinApp(path);
         }
 
-        public void UnpinApp(string path) => _window?.UnpinApp(path);
+        public void UnpinApp(string path)
+        {
+            if (IsEnabled) _window?.UnpinApp(path);
+            else UpdateSettings(settings => settings.Paths.RemoveAll(item => string.Equals(item, path, StringComparison.OrdinalIgnoreCase)));
+        }
 
         public IReadOnlyList<string> GetPinnedApps() => _window?.PinnedApps ?? GetSettings().Paths;
 

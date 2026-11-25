@@ -18,6 +18,9 @@ namespace MotionDesk.UI
 
         public static Color Background => ThemeManager.Current.Background;
         public static Color Sidebar => ThemeManager.Current.Sidebar;
+        /// <summary>Background of the main window's page area and sidebar: pure black (the glass key) while the Windows backdrop is on, so the real backdrop shows through; the normal colour otherwise.</summary>
+        public static Color PageBackground => Background;
+        public static Color NavBackground => Sidebar;
         public static Color Surface => ThemeManager.Current.Surface;
         public static Color SurfaceHover => ThemeManager.Current.SurfaceHover;
         public static Color Border => ThemeManager.Current.Border;
@@ -31,18 +34,49 @@ namespace MotionDesk.UI
 
         // "Segoe UI Variable" (Display για τίτλους, Text για το υπόλοιπο) είναι η γραμματοσειρά
         // συστήματος των Windows 11 (πιο σύγχρονες αναλογίες από το παλιό "Segoe UI") — ζητήθηκε
-        // ρητά SeelenUI-inspired βελτίωση γραμματοσειρών. Σε Windows 10, όπου δεν υπάρχει
+        // ρητά βελτίωση γραμματοσειρών. Σε Windows 10, όπου δεν υπάρχει
         // εγκατεστημένη, το GDI+ κάνει σιωπηλά fallback (δεν πετάει exception) σε προεπιλεγμένη
         // γραμματοσειρά — ασφαλές και στις δύο εκδόσεις των Windows.
-        public static readonly Font FontHeading = new("Segoe UI Variable Display", 20f, FontStyle.Bold);
-        public static readonly Font FontSubheading = new("Segoe UI Variable Display", 12f, FontStyle.Bold);
-        public static readonly Font FontBody = new("Segoe UI Variable Text", 10f);
-        public static readonly Font FontIcon16 = new("Segoe Fluent Icons", 15f);
+        // 2.6.0: "UI scale / text size" (100 / 125 / 150 %). The four shared fonts are properties now; ApplyScale builds them again from the BASE sizes (never compounding).
+        // The old fonts are not disposed: controls built earlier may still draw with them until the pages are rebuilt (a few small objects per change).
+        private const float BaseHeading = 20f, BaseSubheading = 12f, BaseBody = 10f, BaseIcon = 15f;
+        public static Font FontHeading { get; private set; } = new("Segoe UI Variable Display", BaseHeading, FontStyle.Bold);
+        public static Font FontSubheading { get; private set; } = new("Segoe UI Variable Display", BaseSubheading, FontStyle.Bold);
+        public static Font FontBody { get; private set; } = new("Segoe UI Variable Text", BaseBody);
+        public static Font FontIcon16 { get; private set; } = new("Segoe Fluent Icons", BaseIcon);
+        public static int ScalePercent { get; private set; } = 100;
+        public static int CardFontScalePercent { get; private set; } = 100;
+        public static Font FontCard { get; private set; } = new("Segoe UI Variable Text", BaseBody);
+
+        public static void ApplyCardFontScale(int percent)
+        {
+            percent = Math.Clamp(percent, 85, 150);
+            if (percent == CardFontScalePercent) return;
+            CardFontScalePercent = percent;
+            // As with the main font scale, controls already displaying the old font
+            // are allowed to finish painting before the next page refresh.
+            FontCard = new Font("Segoe UI Variable Text", BaseBody * percent / 100f);
+        }
+
+        public static void ApplyScale(int percent)
+        {
+            percent = Math.Clamp(percent, 80, 200);
+            if (percent == ScalePercent) return;
+            ScalePercent = percent;
+            var k = percent / 100f;
+            FontHeading = new Font("Segoe UI Variable Display", BaseHeading * k, FontStyle.Bold);
+            FontSubheading = new Font("Segoe UI Variable Display", BaseSubheading * k, FontStyle.Bold);
+            FontBody = new Font("Segoe UI Variable Text", BaseBody * k);
+            FontIcon16 = new Font("Segoe Fluent Icons", BaseIcon * k);
+        }
 
         public static GraphicsPath RoundedPath(Rectangle bounds, int radius)
         {
-            int d = radius * 2;
             var path = new GraphicsPath();
+            if (bounds.Width <= 0 || bounds.Height <= 0) return path;
+            radius = Math.Clamp(radius, 0, Math.Min(bounds.Width, bounds.Height) / 2);
+            if (radius == 0) { path.AddRectangle(bounds); return path; }
+            int d = radius * 2;
             path.AddArc(bounds.X, bounds.Y, d, d, 180, 90);
             path.AddArc(bounds.Right - d, bounds.Y, d, d, 270, 90);
             path.AddArc(bounds.Right - d, bounds.Bottom - d, d, d, 0, 90);
@@ -53,7 +87,8 @@ namespace MotionDesk.UI
 
         public static void ApplyRoundedRegion(Control control, int radius)
         {
-            var bounds = new Rectangle(0, 0, control.Width, control.Height);
+            var bounds = control.ClientRectangle;
+            if (bounds.IsEmpty || bounds.Width <= 0 || bounds.Height <= 0) return;
             using var path = RoundedPath(bounds, radius);
             control.Region = new Region(path);
         }

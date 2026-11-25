@@ -44,6 +44,9 @@ namespace MotionDesk.Services
             if (expected is null) throw new InvalidOperationException("no-digest");
 
             Directory.CreateDirectory(UpdateDir);
+            // Preserve only a previously verified installer matching the
+            // currently-running version. Never archive an unknown setup.
+            VerifiedRollbackService.ArchiveCurrentInstallerBeforeUpdate();
             foreach (var old in Directory.GetFiles(UpdateDir))
             { try { File.Delete(old); } catch (IOException) { } catch (UnauthorizedAccessException) { } }
             var path = Path.Combine(UpdateDir, "OpsisSetup.exe");
@@ -76,6 +79,7 @@ namespace MotionDesk.Services
                 try { File.Delete(path); } catch (IOException) { }
                 throw new InvalidDataException("hash-mismatch");
             }
+            File.WriteAllText(path + ".sha256", actual); // authenticated digest for a future, explicitly approved rollback
             return (path, actual);
         }
 
@@ -105,12 +109,19 @@ namespace MotionDesk.Services
         // process right after.
         internal const string SetupArguments = "/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /CLOSEAPPLICATIONS /RESTARTOPSIS=1";
 
+        /// <summary>Where the installer writes its log of the update (the first thing to read when "it downloaded but did not install").</summary>
+        public static string LastUpdateLog => Path.Combine(UpdateDir, "last-update.log");
+
+        /// <summary>The setup arguments plus <c>/LOG</c>: a silent installer that stops (declined UAC, a locked file, the app still running) leaves no other trace.</summary>
+        internal static string BuildArguments(string logPath) => SetupArguments + " \"/LOG=" + logPath + "\"";
+
         public static void LaunchAfterExit(string setupPath, string sha256)
         {
             using var locked = OpenVerified(setupPath, sha256);
+            try { File.WriteAllText(Path.Combine(UpdateDir, "last-update-started.txt"), DateTime.Now.ToString("o") + "\nsetup=" + setupPath + "\nfrom=" + UpdateCheckService.CurrentVersion + "\n"); } catch (Exception) { }
             Process.Start(new ProcessStartInfo(setupPath)
             {
-                Arguments = SetupArguments,
+                Arguments = BuildArguments(LastUpdateLog),
                 UseShellExecute = true,                       // lets the installer's manifest ask for elevation (UAC)
                 WorkingDirectory = Path.GetDirectoryName(setupPath)!
             });

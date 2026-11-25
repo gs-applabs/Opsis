@@ -14,6 +14,8 @@ namespace MotionDesk.Services
         public static SystemMonitorService Instance => _lazy.Value;
 
         private readonly Stopwatch _clock = Stopwatch.StartNew();
+        private SystemMetrics _cached;
+        private long _sampledAt = -500;
         private ulong _lastIdle;
         private ulong _lastKernel;
         private ulong _lastUser;
@@ -34,27 +36,30 @@ namespace MotionDesk.Services
         {
             lock (_sync)
             {
-            if (ReadSystemTimes(out var idle, out var kernel, out var user))
-            {
-                var idleDelta = idle - _lastIdle;
-                var kernelDelta = kernel - _lastKernel;
-                var userDelta = user - _lastUser;
-                var totalDelta = kernelDelta + userDelta;
+                long now = _clock.ElapsedMilliseconds;
+                if (now - _sampledAt < 500) return _cached;
+                if (ReadSystemTimes(out var idle, out var kernel, out var user))
+                {
+                    var idleDelta = idle - _lastIdle;
+                    var kernelDelta = kernel - _lastKernel;
+                    var userDelta = user - _lastUser;
+                    var totalDelta = kernelDelta + userDelta;
 
-                if (totalDelta > 0)
-                    _cpuPercent = Math.Clamp((1.0 - (double)idleDelta / totalDelta) * 100.0, 0, 100);
+                    if (totalDelta > 0)
+                        _cpuPercent = Math.Clamp((1.0 - (double)idleDelta / totalDelta) * 100.0, 0, 100);
 
-                _lastIdle = idle;
-                _lastKernel = kernel;
-                _lastUser = user;
-            }
+                    _lastIdle = idle;
+                    _lastKernel = kernel;
+                    _lastUser = user;
+                }
 
-            var memory = GetMemoryStatus();
-            return new SystemMetrics(
-                CpuPercent: Math.Round(_cpuPercent, 1),
-                AvailableMemoryMb: memory.AvailableMb,
-                TotalMemoryMb: memory.TotalMb,
-                Timestamp: DateTime.Now);
+                var memory = GetMemoryStatus();
+                _sampledAt = now;
+                return _cached = new SystemMetrics(
+                    CpuPercent: Math.Round(_cpuPercent, 1),
+                    AvailableMemoryMb: memory.AvailableMb,
+                    TotalMemoryMb: memory.TotalMb,
+                    Timestamp: DateTime.Now);
             }
         }
 

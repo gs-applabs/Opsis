@@ -1,0 +1,60 @@
+{
+  "schemaVersion": 1,
+  "releaseTarget": "2.8.0.2500",
+  "sharedUi": {
+    "name": "Opsis.UI",
+    "assemblyVersion": "0.1.0.0",
+    "repository": "gs-applabs/Opsis.UI",
+    "requiredToShareHostLoadContext": true
+  },
+  "sharedContract": {
+    "name": "OpsisNewsCrawler.Plugin.Abstractions",
+    "assemblyVersion": "0.8.0.0"
+  },
+  "plugins": [
+    {
+      "name": "Opsis News Crawler",
+      "repository": "gs-applabs/OpsisNewsCrawler",
+      "integration": "in-process DLL plugin",
+      "branch": "release/plugin-dll-1.0.0.0-opsis-280",
+      "dll": "OpsisNewsCrawler.OpsisPlugin.dll",
+      "assemblyVersion": "1.0.0.0",
+      "productVersion": "0.24.1",
+      "installation": "%AppData%\\Opsis\\plugins\\; <Opsis>\\plugins\\",
+      "validation": "awaiting full Windows host E2E"
+    },
+    {
+      "name": "Χρονικολόγιο",
+      "repository": "gs-applabs/san-shmera",
+      "integration": "in-process DLL plugin",
+      "branch": "release/plugin-dll-1.0.0.0-opsis-280",
+      "dll": "Chronikologio.OpsisPlugin.dll",
+      "assemblyVersion": "1.0.0.0",
+      "productVersion": "0.9.0",
+      "installation": "<Opsis>\\plugins\\Chronikologio\\; %AppData%\\Opsis\\plugins\\Chronikologio\\",
+      "validation": "awaiting full Windows host E2E"
+    },
+    {
+      "name": "Opsis Appearance",
+      "repository": "gs-applabs/OpsisAppearance",
+      "integration": "in-process plugin",
+      "branch": "main",
+      "dll": "OpsisAppearance.Plugin.dll",
+      "assemblyVersion": null,
+      "productVersion": null,
+      "installation": "<Opsis>\\plugins\\; %AppData%\\Opsis\\plugins\\",
+      "validation": "ABI and installer paths require verification"
+    },
+    {
+      "name": "Opsis Media Suite",
+      "repository": "gs-applabs/OpsisMediaSuite",
+      "integration": "standalone Electron app (NOT a DLL plugin)",
+      "branch": "master",
+      "dll": null,
+      "assemblyVersion": null,
+      "productVersion": "2.4.1",
+      "installation": "%ProgramFiles%\\Opsis Media Suite\\",
+      "validation": "awaiting launch and lifecycle E2E"
+    }
+  ]
+}

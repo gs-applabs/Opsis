@@ -18,12 +18,21 @@ namespace MotionDesk.Services
 
         private readonly float[] _samples = new float[FftLength];
         private bool _acquired;
+        private bool _disposed;
+        // A manually selected microphone is PRIVATE to this spectrum consumer.
+        // Other widgets continue to use the shared system-output loopback.
+        private readonly VisualizerInputCapture? _privateInput;
+        private static readonly double[] Hamming = Enumerable.Range(0, FftLength)
+            .Select(i => 0.54 - 0.46 * Math.Cos(2 * Math.PI * i / (FftLength - 1))).ToArray();
         private readonly Complex[] _fftBuffer = new Complex[FftLength];
 
         public int BandCount { get; }
         private readonly float[] _bands;
+        private int _captureGeneration = -1;
+        private float _resumeFade = 1f;
         private readonly int[] _bandBinEdges;
-        public bool IsAvailable => _acquired && SharedLoopbackCapture.IsAvailable;
+        public bool IsAvailable => _acquired && (_privateInput?.IsAvailable ?? SharedLoopbackCapture.IsAvailable);
+        public bool HasRecentSignal => _acquired && (_privateInput?.HasRecentSignal ?? SharedLoopbackCapture.HasRecentSignal);
 
         // "Audio Enhancement" — ζητήθηκε ρητά, εμπνευσμένο από τη ΛΟΓΙΚΗ του FXSound (github.com/
         // fxsound2/fxsound-app), όχι αντιγραφή: το FXSound τρέχει σαν system-wide Audio Processing
@@ -45,7 +54,7 @@ namespace MotionDesk.Services
             ("Loudness", "Preset.Loudness.Desc"),
         };
 
-        public AudioSpectrumService(int bandCount = 20)
+        public AudioSpectrumService(int bandCount = 20, string? privateInputDeviceId = null)
         {
             BandCount = bandCount;
             _bands = new float[bandCount];
@@ -53,7 +62,10 @@ namespace MotionDesk.Services
             Array.Fill(BandGains, 1f);
             _bandBinEdges = BuildLogBandEdges(bandCount, FftLength / 2);
 
-            SharedLoopbackCapture.Acquire(); // κοινό capture — βλ. SharedLoopbackCapture
+            if (string.IsNullOrWhiteSpace(privateInputDeviceId))
+                SharedLoopbackCapture.Acquire(); // shared default OUTPUT for ordinary widgets
+            else
+                _privateInput = new VisualizerInputCapture(privateInputDeviceId); // isolated microphone
             _acquired = true;
         }
 
@@ -79,11 +91,24 @@ namespace MotionDesk.Services
         {
             if (!_acquired) return _bands;
 
-            SharedLoopbackCapture.CopyLatest(_samples);
+            // Bluetooth/HDMI device reconnect: fade from silence into the new live
+            // FFT stream, without a flash of full-height spectrum bars.
+            int generation = _privateInput?.Generation ?? SharedLoopbackCapture.Generation;
+            if (generation != _captureGeneration)
+            {
+                _captureGeneration = generation;
+                _resumeFade = 0f;
+            }
+            if (!(_privateInput?.CopyLatest(_samples) ?? SharedLoopbackCapture.CopyLatest(_samples)))
+            {
+                Array.Clear(_bands);
+                Array.Clear(_fftBuffer);
+                return _bands;
+            }
             {
                 for (int i = 0; i < FftLength; i++)
                 {
-                    double window = 0.54 - 0.46 * Math.Cos(2 * Math.PI * i / (FftLength - 1)); // Hamming
+                    double window = Hamming[i];
                     _fftBuffer[i].X = (float)(_samples[i] * window);
                     _fftBuffer[i].Y = 0;
                 }
@@ -108,10 +133,27 @@ namespace MotionDesk.Services
                 // dB-scale mapping: -60dB..0dB -> 0..1, τυπική αναλογία για audio visualizers.
                 double db = 20 * Math.Log10(mag + 1e-6);
                 double level = (db + 60) / 60.0 * BandGains[b];
-                _bands[b] = (float)Math.Clamp(level, 0.0, 1.0);
+                _bands[b] = (float)Math.Clamp(level * _resumeFade, 0.0, 1.0);
             }
 
+            _resumeFade = Math.Min(1f, _resumeFade + 0.10f);
             return _bands;
+        }
+
+        // Read after GetBands(), so the canvas spectrum and oscilloscope use the same captured samples.
+        internal (byte[] Frequency, byte[] Waveform) GetVisualizerFrame()
+        {
+            var frequency = new byte[FftLength / 2];
+            var waveform = new byte[256];
+            for (int i = 0; i < frequency.Length; i++)
+            {
+                float real = _fftBuffer[i].X, imaginary = _fftBuffer[i].Y;
+                double db = 20 * Math.Log10(Math.Sqrt(real * real + imaginary * imaginary) + 1e-7);
+                frequency[i] = (byte)Math.Clamp((db + 82) * 255 / 72, 0, 255);
+            }
+            for (int i = 0; i < waveform.Length; i++)
+                waveform[i] = (byte)Math.Clamp(Math.Round(128 * (1 + _samples[i * FftLength / waveform.Length])), 0, 255);
+            return (frequency, waveform);
         }
 
         // Υπολογίζει την καμπύλη κέρδους ανά ζώνη για ένα preset — οι χαμηλές ζώνες (index 0) =
@@ -133,11 +175,20 @@ namespace MotionDesk.Services
             }
         }
 
+        internal void SetActive(bool active)
+        {
+            if (_disposed || _acquired == active) return;
+            if (_privateInput != null) _privateInput.SetActive(active);
+            else if (active) SharedLoopbackCapture.Acquire();
+            else SharedLoopbackCapture.Release();
+            _acquired = active;
+        }
+
         public void Dispose()
         {
-            if (!_acquired) return;
-            _acquired = false;
-            SharedLoopbackCapture.Release();
+            SetActive(false);
+            _privateInput?.Dispose();
+            _disposed = true;
         }
     }
 }

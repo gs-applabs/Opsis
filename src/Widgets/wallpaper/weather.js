@@ -1,6 +1,6 @@
-// Opsis — "Weather" wallpaper: a procedural scene driven by the real time of day (sun/moon/stars,
+// Opsis β€” "Weather" wallpaper: a procedural scene driven by the real time of day (sun/moon/stars,
 // sunrise & sunset computed from the location) and the live weather (clouds, rain, snow, fog, thunderstorms).
-// Everything is drawn with Canvas 2D — no external assets, no network access from this file (the C# bridge supplies the weather).
+// Everything is drawn with Canvas 2D β€” no external assets, no network access from this file (the C# bridge supplies the weather).
 // Public API (used by index.html): WeatherWallpaper.setConfig(cfg), .setWeather(data), .resize(w, h, dpr), .draw(dtSeconds, profile).
 (function () {
 'use strict';
@@ -29,7 +29,7 @@ const rgba = (c, a) => `rgba(${c[0] | 0},${c[1] | 0},${c[2] | 0},${a})`;
 const lum = (c) => 0.299 * c[0] + 0.587 * c[1] + 0.114 * c[2];
 const scaleCol = (c, k) => [c[0] * k, c[1] * k, c[2] * k];
 
-// Beaufort scale (continuous 0..12) from km/h — the thresholds are the standard upper limits of Bf 0..11
+// Beaufort scale (continuous 0..12) from km/h β€” the thresholds are the standard upper limits of Bf 0..11
 const BF_LIMITS = [1, 6, 12, 20, 29, 39, 50, 62, 75, 89, 103, 118];
 function beaufort(kmh) {
     if (kmh < 1) return Math.max(0, kmh);
@@ -42,7 +42,9 @@ function beaufort(kmh) {
 let BFN = 2;           // current (eased) Beaufort number, updated every frame
 
 // ---------------------------------------------------------------- state
-let W = 0, H = 0, DPR = 1, HORIZON = 0, K = 1;
+let W = 0, H = 0, HORIZON = 0, K = 1;
+// On city and island shots the photographed foreground blends into the live sky.
+const PHOTO_SKYLINE = .39;
 let cfg = { weatherSim: 'Auto', timeSim: 'Auto', glass: true, lat: 37.9838, lon: 23.7275 };
 let data = null;                       // last weather payload from the host
 let animTime = 0;
@@ -53,10 +55,13 @@ const TGT = { cloud: 0.15, rain: 0, snow: 0, fog: 0, storm: 0, windX: 0, wind: 8
 let skyCv = null, skyCtx = null;       // sky + celestial + clouds + hills  (W x HORIZON)
 let cloudCv = null, cloudCtx = null;   // half-res cloud layer
 let sceneCv = null, sceneCtx = null;   // full composite (only when glass drops are drawn)
+let lightX = 0.3, moonSprite = null, sunSprite = null;
 let cloudSprites = [], clouds = [], hills = [], stars = [], flakeSprite = null, fogSprites = [];
 let rain = { far: [], mid: [], near: [] }, ripples = [], splashes = [], glass = [], bolt = null;
 let nextBoltIn = 4, flash = 0, shoot = null, nextShootIn = 8;
 let lastDensity = -1;
+// quality budget per performance profile (the density already follows the profile): 2 = full (High), 1 = medium (default / balanced), 0 = simple (Low Power / Battery): fewer clouds, no Milky Way, foam, trees or rock texture
+function tierLevel() { return lastDensity >= 0.95 ? 2 : lastDensity >= 0.5 ? 1 : 0; }
 
 function makeCanvas(w, h) {
     const c = document.createElement('canvas');
@@ -210,44 +215,77 @@ function computeTargets() {
 }
 
 // ---------------------------------------------------------------- generated assets
-function buildCloudSprites() {
-    cloudSprites = [];
-    for (let v = 0; v < 5; v++) {
-        const cw = 720, ch = 300, c = makeCanvas(cw, ch), g = c.getContext('2d');
-        const rnd = mulberry32(1234 + v * 77);
-        const base = [];
-        const n = 34 + v * 4;
-        for (let i = 0; i < n; i++) {
-            const px = cw * (0.14 + 0.72 * rnd());
-            const bell = Math.sin(clamp((px / cw - 0.1) / 0.8, 0, 1) * Math.PI);
-            const py = ch * (0.72 - bell * 0.36 * rnd());
-            base.push({ px, py, r: (30 + 50 * rnd()) * (0.55 + 0.75 * bell) });
-        }
-        const puff = (x, y, r, col, a0, a1, a2) => {
-            const gr = g.createRadialGradient(x, y, 0, x, y, r);
-            gr.addColorStop(0, `rgba(${col},${a0})`); gr.addColorStop(0.55, `rgba(${col},${a1})`); gr.addColorStop(0.9, `rgba(${col},${a2})`); gr.addColorStop(1, `rgba(${col},0)`);
-            g.fillStyle = gr; g.beginPath(); g.arc(x, y, r, 0, TAU); g.fill();
-        };
-        // 1) shadowed body, 2) lit mass offset up/left, 3) small bright "cauliflower" detail on the top edge
-        for (const q of base) puff(q.px, q.py, q.r, '132,142,162', 0.9, 0.7, 0.18);
-        for (const q of base) puff(q.px - q.r * 0.16, q.py - q.r * 0.2, q.r * 0.86, '214,222,236', 0.85, 0.6, 0.12);
-        for (const q of base) {
-            for (let k = 0; k < 3; k++) {
-                const ang = -Math.PI / 2 + (rnd() - 0.5) * 2.1, rr = q.r * (0.45 + rnd() * 0.35);
-                puff(q.px + Math.cos(ang) * q.r * 0.55, q.py + Math.sin(ang) * q.r * 0.55 - q.r * 0.1, rr * 0.55, '255,255,255', 0.85, 0.5, 0.08);
+// ---- value noise + fbm (tileless, small lattice): the base of the cloud and moon textures ----
+function noiseTable(seed) { const r = mulberry32(seed), t = new Float32Array(65536); for (let i = 0; i < 65536; i++) t[i] = r(); return t; }
+function vnoise(t, x, y) {
+    const xi = Math.floor(x), yi = Math.floor(y), xf = x - xi, yf = y - yi, u = xf * xf * (3 - 2 * xf), v = yf * yf * (3 - 2 * yf);
+    const x0 = xi & 255, x1 = (xi + 1) & 255, y0 = (yi & 255) << 8, y1 = ((yi + 1) & 255) << 8;
+    const a = t[y0 | x0], b = t[y0 | x1], c = t[y1 | x0], d = t[y1 | x1];
+    return a + (b - a) * u + (c - a) * v + (a - b - c + d) * u * v;
+}
+function fbm(t, x, y, oct) { let s = 0, a = 0.5, f = 1, n = 0; for (let i = 0; i < oct; i++) { s += a * vnoise(t, x * f, y * f); n += a; a *= 0.5; f *= 2.03; } return s / n; }
+
+// Cloud sprites made from a density field (fbm, domain-warped) and lit by marching toward the light: thick parts shade themselves, thin edges glow (silver lining).
+// Kinds: cumulus (flat base, cauliflower top), stratus (wide, layered), cirrus (thin streaks). Baked with the light on the LEFT; the draw loop mirrors a sprite to face the sun.
+let realisticCloudSprites = null;
+const CLOUD_KINDS = ['cumulus', 'cumulus', 'cumulus', 'stratus', 'stratus', 'cirrus'];
+function buildCloudSprites(realistic = false) {
+    const result = [];
+    const cw = realistic ? 608 : 480, ch = realistic ? 260 : 200;
+    for (let v = 0; v < CLOUD_KINDS.length; v++) {
+        const kind = CLOUD_KINDS[v], tab = noiseTable(311 + v * 59), tab2 = noiseTable(977 + v * 13);
+        const D = new Float32Array(cw * ch);
+        for (let y = 0; y < ch; y++) for (let x = 0; x < cw; x++) {
+            const u = x / cw, w = y / ch;
+            const wx = (fbm(tab2, u * 3 + 5, w * 3, 3) - 0.5) * 0.35, wy = (fbm(tab2, u * 3, w * 3 + 9, 3) - 0.5) * 0.25;     // domain warp: billows, not blobs
+            let d = 0;
+            if (kind === 'cumulus') {
+                const bump = fbm(tab, u * 2.6, 4.1, 3), qx = (u - 0.5) / 0.47, qy = (0.82 - w) / (0.66 * (0.7 + 0.6 * bump));
+                const q = qx * qx + qy * qy, m = smooth((1 - q) / 0.55) * smooth((0.84 - w) / 0.06);       // a rounded dome with a flat base, lumpy outline
+                const n = fbm(tab, u * 9 + wx * 6, w * 9 + wy * 6, 6);                                  // billows
+                d = m * 0.9 + (n - 0.5) * 1.5 * smooth(m * 2.5) - 0.12;
+                if (m <= 0.001) d = 0;
+                D[y * cw + x] = clamp((d - 0.1) / 0.7, 0, 1); continue;
+            } else if (kind === 'stratus') {
+                const m = smooth(1 - Math.abs(w - 0.55) / 0.24) * smooth(1 - Math.abs(u - 0.5) * 1.9);
+                d = m * 0.95 + (fbm(tab, u * 4 + wx * 3, w * 14 + wy * 3, 5) - 0.5) * 1.1 * smooth(m * 2);
+                if (m <= 0.001) d = 0;
+            } else {
+                const m = smooth(1 - Math.abs(w - 0.5) / 0.4) * smooth(1 - Math.abs(u - 0.5) * 1.8);
+                const streak = fbm(tab, u * 2.2 + wx * 2, w * 22 + wy * 6, 5);
+                d = (m * 0.55 + (streak - 0.5) * 1.25) * 0.8;
+                if (m <= 0.001) d = 0;
             }
+            D[y * cw + x] = clamp((d - 0.16) / 0.5, 0, 1);
         }
-        cloudSprites.push(c);
+        const c = makeCanvas(cw, ch), g = c.getContext('2d'), img = g.createImageData(cw, ch), px = img.data;
+        const lx = -1.2, ly = -1.0;                                                                 // toward the light (up-left), in pixels per march step
+        const shade = [104, 118, 152], lit = [255, 251, 244];
+        for (let y = 0; y < ch; y++) for (let x = 0; x < cw; x++) {
+            const i = y * cw + x, dens = D[i];
+            if (dens <= 0.004) continue;
+            let od = 0;
+            for (let k = 1; k <= 7; k++) { const sx = Math.round(x + lx * k * 2.2), sy = Math.round(y + ly * k * 2.2); if (sx >= 0 && sx < cw && sy >= 0 && sy < ch) od += D[sy * cw + sx]; }
+            let br = Math.exp(-od * 0.55);                                                          // light reaching this point through the cloud
+            br = 0.26 + 0.74 * br + 0.1 * (1 - dens);                                              // thin edges glow a little (silver lining)
+            br = clamp(br, 0, 1);
+            const a = smooth(dens * 1.7);
+            if (realistic) {
+                const core = Math.exp(-od * .72);
+                const edge = Math.pow(1 - dens, 1.6);
+                const densityDX = D[y * cw + Math.min(cw - 1, x + 2)] - D[y * cw + Math.max(0, x - 2)];
+                const densityDY = D[Math.min(ch - 1, y + 2) * cw + x] - D[Math.max(0, y - 2) * cw + x];
+                const texture = vnoise(tab2, x * .13, y * .15) - .5;
+                br = clamp(.23 + core * .69 + edge * .10 + (densityDX + densityDY) * .55 + texture * .075, 0, 1);
+            }
+            const o = i * 4;
+            px[o] = shade[0] + (lit[0] - shade[0]) * br; px[o + 1] = shade[1] + (lit[1] - shade[1]) * br; px[o + 2] = shade[2] + (lit[2] - shade[2]) * br;
+            px[o + 3] = (kind === 'cirrus' ? 0.55 : 0.96) * 255 * a;
+        }
+        g.putImageData(img, 0, 0);
+        result.push(c);
     }
-    // flat, soft base so the cloud bottom is not a round blob
-    for (const c of cloudSprites) {
-        const g = c.getContext('2d');
-        g.globalCompositeOperation = 'destination-out';
-        const gr = g.createLinearGradient(0, c.height * 0.68, 0, c.height * 0.86);
-        gr.addColorStop(0, 'rgba(0,0,0,0)'); gr.addColorStop(1, 'rgba(0,0,0,1)');
-        g.fillStyle = gr; g.fillRect(0, c.height * 0.68, c.width, c.height * 0.32);
-        g.globalCompositeOperation = 'source-over';
-    }
+    return result;
 }
 
 function buildFlake() {
@@ -285,28 +323,31 @@ function buildStars() {
 }
 
 function buildHills() {
+    // ridged fbm ridges: five ranges from far (pale, low) to near (dark, jagged, wooded); the middle of the picture stays open for the sun and the moon
     hills = [];
     const specs = [
-        { depth: -0.35, amp: 0.2, base: -0.005, freq: [0.8, 2.1, 4.7], seed: 3 },
-        { depth: 0.0, amp: 0.18, base: 0.0,  freq: [1.1, 2.7, 6.1], seed: 5 },
-        { depth: 0.5, amp: 0.125, base: 0.01, freq: [1.7, 3.9, 8.3], seed: 11 },
-        { depth: 1.0, amp: 0.07, base: 0.018, freq: [2.3, 5.3, 11.7], seed: 23 },
+        { depth: -0.6, amp: 0.34, base: -0.004, freq: 1.3, seed: 3, snow: 0.55, trees: false },
+        { depth: -0.2, amp: 0.3, base: 0.0,   freq: 1.8, seed: 5, snow: 0.62, trees: false },
+        { depth: 0.2,  amp: 0.22, base: 0.006, freq: 2.6, seed: 11, snow: 0.7, trees: false },
+        { depth: 0.6,  amp: 0.14,  base: 0.012, freq: 3.7, seed: 23, snow: 2, trees: true },
+        { depth: 1.0,  amp: 0.09, base: 0.02, freq: 5.5, seed: 41, snow: 2, trees: true },
     ];
-    const samples = 160;
-    for (const s of specs) {
-        const rnd = mulberry32(s.seed * 97);
-        const ph = s.freq.map(() => rnd() * TAU);
+    const samples = 260;
+    for (const sp of specs) {
+        const tab = noiseTable(sp.seed * 131);
         const pts = [];
         for (let i = 0; i <= samples; i++) {
             const x = i / samples;
-            let h = 0;
-            for (let k = 0; k < s.freq.length; k++) h += Math.sin(x * s.freq[k] * TAU * 0.5 + ph[k]) / (k + 1.2);
-            h = (h + 1.4) / 2.8;                                // ~0..1
-            // taper the middle so the sun/moon has an open horizon, keep silhouettes at the sides
-            const edge = Math.pow(Math.abs(x - 0.5) * 2, 1.4);
-            pts.push(s.base + s.amp * h * (0.3 + 0.7 * edge));
+            let r = 0, a = 0.55, f = 1, n = 0;
+            for (let o = 0; o < 5; o++) { const v = 1 - Math.abs(2 * vnoise(tab, x * sp.freq * f + 7.3, 11.1 + o * 3.7) - 1); r += a * v * v; n += a; a *= 0.5; f *= 2.1; }
+            r /= n;
+            const edge = Math.pow(Math.abs(x - 0.5) * 2, 1.35);
+            pts.push(sp.base + sp.amp * (0.12 + 0.88 * r) * (0.28 + 0.72 * edge));
         }
-        hills.push({ ...s, pts });
+        const rnd = mulberry32(sp.seed * 7);
+        const trees = [];
+        if (sp.trees) for (let i = 0; i < 70; i++) { const idx = Math.floor(rnd() * samples); trees.push({ idx, h: 0.012 + rnd() * 0.02 * (0.5 + sp.depth * 0.5), ph: rnd() * TAU, w: 0.55 + rnd() * 0.35, broad: rnd() < 0.4 }); }
+        hills.push({ ...sp, pts, trees });
     }
 }
 
@@ -316,12 +357,12 @@ function buildClouds() {
     for (let i = 0; i < 30; i++) {
         const layer = i % 3;                                    // 0 high/small/slow, 2 low/big/fast
         clouds.push({
-            sprite: i % cloudSprites.length,
+            sprite: layer === 0 ? (i % 2 ? 5 : 3) : (i % 3),
             x: rnd(), y: 0.06 + rnd() * 0.5 + layer * 0.04,
             scale: 0.55 + layer * 0.35 + rnd() * 0.3,
             speed: 3 + layer * 5 + rnd() * 3,
             alpha: 0.55 + rnd() * 0.4,
-            layer,
+            layer, rank: ((i * 11) % 30) / 30,
         });
     }
     clouds.sort((a, b) => a.layer - b.layer || a.y - b.y);
@@ -348,29 +389,44 @@ function densityFor(profile) {
 }
 
 // ---------------------------------------------------------------- public API
-function resize(w, h, dpr) {
-    W = Math.max(2, Math.round(w)); H = Math.max(2, Math.round(h)); DPR = dpr || 1;
+function resize(w, h) {
+    w = Math.max(2, Math.round(w)); h = Math.max(2, Math.round(h));
+    if (W === w && H === h) return;
+    W = w; H = h;
     HORIZON = Math.round(H * 0.64);
     K = Math.max(0.7, W / 1920);
     skyCv = makeCanvas(W, HORIZON); skyCtx = skyCv.getContext('2d');
     cloudCv = makeCanvas(W / 2, HORIZON / 2); cloudCtx = cloudCv.getContext('2d');
     sceneCv = null; sceneCtx = null;
     lastDensity = -1;
-    if (!cloudSprites.length) { buildCloudSprites(); buildFlake(); buildFogSprites(); buildStars(); buildClouds(); buildWaterAssets(); }
+    if (!flakeSprite) { buildMoonSprite(); buildSunSprite(); buildFlake(); buildFogSprites(); buildStars(); buildClouds(); buildWaterAssets(); }
     reflCv = null;
     buildHills();
 }
 
 function setConfig(c) {
+    const oldEdits = JSON.stringify(cfg.skyEdits || {});
     const old = cfg;
     cfg = { ...cfg, ...c };
+    if (oldEdits !== JSON.stringify(cfg.skyEdits || {})) { photoState.id = ''; photoState.key = ''; }
     if (typeof cfg.lat !== 'number' || isNaN(cfg.lat)) cfg.lat = 37.9838;
     if (typeof cfg.lon !== 'number' || isNaN(cfg.lon)) cfg.lon = 23.7275;
-    if (old.weatherSim !== cfg.weatherSim || old.windSim !== cfg.windSim) computeTargets();
+    cfg.rainGlassIntensity = Number.isFinite(+cfg.rainGlassIntensity) ? clamp(+cfg.rainGlassIntensity, 0, 2) : 1;
+    cfg.rainLandscapeIntensity = Number.isFinite(+cfg.rainLandscapeIntensity) ? clamp(+cfg.rainLandscapeIntensity, 0, 2) : 1;
+    // Weather observations belong to a location. Never briefly show the previous city's
+    // temperature when the user changes coordinates while the next request is pending.
+    if (old.lat !== cfg.lat || old.lon !== cfg.lon) data = null;
+    if (old.weatherSim !== cfg.weatherSim || old.windSim !== cfg.windSim || old.lat !== cfg.lat || old.lon !== cfg.lon) computeTargets();
     sunCache.key = '';
 }
 
-function setWeather(d) { data = d; computeTargets(); }
+function setWeather(d) {
+    // A network failure / empty cache must not erase the last good scene. The visual target
+    // remains steady; when a valid observation arrives, the normal easing blends to it.
+    if (!d || d.ok !== true) return;
+    data = d;
+    computeTargets();
+}
 
 // ---------------------------------------------------------------- drawing
 function approach(cur, tgt, dt, rate) { return cur + (tgt - cur) * Math.min(1, dt * rate); }
@@ -415,15 +471,65 @@ function drawStarsLayer(sky, vis) {
     }
 }
 
-function drawMoonLayer(t, sr, ss, vis) {
+// A textured moon: fbm surface, dark maria, craters, limb darkening (all procedural; no outside image, no licence to carry).
+function buildMoonSprite() {
+    const n = 352, c = makeCanvas(n, n), g = c.getContext('2d'), img = g.createImageData(n, n), px = img.data, t1 = noiseTable(4242), t2 = noiseTable(777);
+    const craters = []; const rnd = mulberry32(99);
+    for (let i = 0; i < 70; i++) { const a = rnd() * TAU, d = Math.sqrt(rnd()) * 0.92; craters.push([Math.cos(a) * d, Math.sin(a) * d, 0.02 + Math.pow(rnd(), 2.2) * 0.1]); }
+    for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) {
+        const nx = (x / n) * 2 - 1, ny = (y / n) * 2 - 1, rr = Math.sqrt(nx * nx + ny * ny);
+        if (rr > 1) continue;
+        let b = 0.8 + 0.2 * (fbm(t1, nx * 6 + 7, ny * 6 + 3, 5) - 0.5) * 2;
+        const maria = smooth((fbm(t2, nx * 2.3 + 2, ny * 2.3 + 8, 3) - 0.5) / 0.1 + 0.2);
+        const basin = Math.exp(-((nx + .36) ** 2 * 7.2 + (ny + .16) ** 2 * 9.5));
+        const ejecta = Math.exp(-Math.hypot(nx - .28, ny - .46) * 4) * Math.abs(Math.sin(Math.atan2(ny - .46, nx - .28) * 27));
+        b *= 1 - (0.32 * maria + .29 * basin) * smooth(1.09 - rr);
+        b += ejecta * .17 + (vnoise(t1, nx * 82, ny * 82) - .5) * .1;
+        for (const [cx, cy, cr] of craters) {
+            const dx = nx - cx, dy = ny - cy, d = Math.sqrt(dx * dx + dy * dy) / cr;
+            if (d < 1.25) { const rim = Math.exp(-Math.pow((d - 1) / 0.16, 2)), bowl = smooth(1 - d); b += 0.14 * rim * (dx + dy < 0 ? 1 : 0.35) - 0.12 * bowl * (maria < 0.5 ? 1 : 0.5); }
+        }
+        b *= 0.74 + 0.26 * Math.sqrt(Math.max(0, 1 - rr * rr));                                  // limb darkening
+        b = clamp(b, 0, 1.1);
+        const o = (y * n + x) * 4, edge = smooth((1 - rr) / 0.02);
+        px[o] = Math.min(255, 238 * b); px[o + 1] = Math.min(255, 233 * b); px[o + 2] = Math.min(255, 220 * b); px[o + 3] = 255 * edge;
+    }
+    g.putImageData(img, 0, 0);
+    moonSprite = c;
+}
+
+function buildSunSprite() {
+    const n = 192, c = makeCanvas(n, n), g = c.getContext('2d'), image = g.createImageData(n, n);
+    const noise = noiseTable(7041);
+    for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) {
+        const dx = x / n * 2 - 1, dy = y / n * 2 - 1, r = Math.hypot(dx, dy);
+        if (r >= 1) continue;
+        const granule = fbm(noise, dx * 39 + 5, dy * 39 + 8, 4);
+        const filament = Math.abs(2 * vnoise(noise, dx * 63, dy * 63) - 1);
+        const limb = Math.sqrt(1 - r * r), i = (y * n + x) * 4;
+        image.data[i] = 255;
+        image.data[i + 1] = 146 + 45 * granule + 41 * limb;
+        image.data[i + 2] = 66 + 55 * granule + 75 * limb;
+        image.data[i + 3] = 255 * smooth((1 - r) / .06) * (.34 + .5 * filament);
+    }
+    g.putImageData(image, 0, 0);
+    sunSprite = c;
+}
+
+function drawMoonLayer(t, sr, ss, vis, cityPhoto) {
     if (vis <= 0.02) return null;
     const g = skyCtx;
     const night = 1440 - (ss - sr);
     let v = ((t - ss) % 1440 + 1440) % 1440 / night;
     if (v > 1) return null;
     const e = Math.sin(Math.PI * clamp(v, 0, 1));
-    const x = W * (0.12 + 0.76 * v), y = HORIZON - e * HORIZON * 0.72 + 6;
-    const r = Math.max(16, Math.min(W, H) * 0.034);
+    const horizon = cityPhoto ? H * PHOTO_SKYLINE : HORIZON;
+    const lunar = cfg.timeSim === 'Auto' ? window.OpsisCelestialPath?.position(new Date(), cfg.lat, cfg.lon, true) : null;
+    const lunarX = lunar && lunar.azimuth >= 75 && lunar.azimuth <= 285 ? (lunar.azimuth-75)/210 : null;
+    const x = W * (lunarX === null ? 0.12+0.76*v : 0.08+0.84*lunarX);
+    const y = lunar ? horizon-Math.max(-.12,Math.min(1,lunar.altitude/70))*horizon*.72+6 : horizon-e*horizon*.72+6;
+    const r = Math.max(18, Math.min(W, H) * 0.042);
+    lightX = x / W;
     const alpha = vis * (1 - S.cloud * 0.9) * smooth((e + 0.06) / 0.14);
     if (alpha <= 0.02) return { x, y, r, alpha: 0 };
     // halo
@@ -446,24 +552,29 @@ function drawMoonLayer(t, sr, ss, vis) {
     for (let i = 0; i <= N; i++) { const th = -Math.PI / 2 + Math.PI * i / N; const px = r * Math.cos(th), py = r * Math.sin(th); i ? g.lineTo(px, py) : g.moveTo(px, py); }
     for (let i = N; i >= 0; i--) { const th = -Math.PI / 2 + Math.PI * i / N; g.lineTo(r * c * Math.cos(th), r * Math.sin(th)); }
     g.closePath();
-    const lg = g.createRadialGradient(-r * 0.25, -r * 0.25, r * 0.1, 0, 0, r);
-    lg.addColorStop(0, 'rgba(255,252,240,1)'); lg.addColorStop(1, 'rgba(214,220,232,1)');
-    g.fillStyle = lg; g.fill();
+    g.fillStyle = 'rgba(214,220,232,1)';
+    g.fill();
     g.clip();
-    g.fillStyle = 'rgba(120,130,150,0.28)';
-    for (const [cx, cy, cr] of [[-0.3, -0.2, 0.22], [0.25, 0.1, 0.3], [-0.05, 0.45, 0.18], [0.35, -0.4, 0.14]]) { g.beginPath(); g.arc(cx * r, cy * r, cr * r, 0, TAU); g.fill(); }
+    if (moonSprite) g.drawImage(moonSprite, -r, -r, 2 * r, 2 * r);
     g.restore();
     g.restore();
     return { x, y, r, alpha };
 }
 
-function drawSunLayer(sky, t, sr, ss) {
+function drawSunLayer(sky, t, sr, ss, cityPhoto) {
     const u = (t - sr) / Math.max(1, ss - sr);
     if (u < -0.12 || u > 1.12) return null;
     const e = Math.sin(Math.PI * clamp(u, -0.12, 1.12));
-    const x = W * (0.1 + 0.8 * clamp(u, -0.1, 1.1)), y = HORIZON - e * HORIZON * 0.78;
+    const horizon = cityPhoto ? H * PHOTO_SKYLINE : HORIZON;
+    const solar = cfg.timeSim === 'Auto' ? window.OpsisCelestialPath?.position(new Date(), cfg.lat, cfg.lon) : null;
+    // Azimuth follows the real latitude/date; the vertical coordinate follows true altitude.
+    // In extreme latitudes keep the classic horizon mapping to avoid projecting north-side arcs backwards.
+    const sunX = solar && solar.azimuth >= 75 && solar.azimuth <= 285 ? (solar.azimuth-75)/210 : null;
+    const x = W * (sunX === null ? 0.1+0.8*clamp(u,-0.1,1.1) : 0.08+0.84*sunX);
+    const y = solar ? horizon - Math.max(-.12, Math.min(1, solar.altitude / 70))*horizon*.78 : horizon - e*horizon*.78;
     const r = Math.max(18, Math.min(W, H) * 0.04);
     const vis = smooth((e + 0.1) / 0.16) * (1 - S.cloud * 0.82) * (1 - S.fog * 0.3);
+    if (e > 0.02) lightX = x / W;
     const g = skyCtx;
     // wide horizon glow follows the sun even behind clouds (dimmer)
     const warm = mix(hex('#ffffff'), hex('#ff9a5a'), clamp(1 - e * 2.2, 0, 1));
@@ -476,8 +587,31 @@ function drawSunLayer(sky, t, sr, ss) {
         const cg = g.createRadialGradient(x, y, r * 0.2, x, y, r * 3.2);
         cg.addColorStop(0, rgba(warm, 0.95 * vis)); cg.addColorStop(0.3, rgba(warm, 0.35 * vis)); cg.addColorStop(1, rgba(warm, 0));
         g.fillStyle = cg; g.beginPath(); g.arc(x, y, r * 3.2, 0, TAU); g.fill();
-        g.fillStyle = rgba(mix(warm, [255, 255, 255], 0.6), vis);
-        g.beginPath(); g.arc(x, y, r, 0, TAU); g.fill();
+        const dg = g.createRadialGradient(x, y, 0, x, y, r);
+        dg.addColorStop(0, rgba([255, 255, 250], vis)); dg.addColorStop(0.8, rgba(mix(warm, [255, 255, 255], 0.7), vis)); dg.addColorStop(1, rgba(mix(warm, [255, 236, 200], 0.5), vis * 0.85));
+        g.fillStyle = dg; g.beginPath(); g.arc(x, y, r, 0, TAU); g.fill();
+        if (sunSprite && cfg.realistic && tierLevel() > 0) {
+            g.save(); g.globalCompositeOperation = 'source-over'; g.globalAlpha = vis * .38;
+            g.translate(x, y); g.rotate(animTime * .012);
+            g.drawImage(sunSprite, -r, -r, 2 * r, 2 * r);
+            g.restore();
+        }
+        // lens bloom: a faint horizontal streak and a wide soft halo
+        const bl = g.createLinearGradient(x - r * 9, y, x + r * 9, y);
+        bl.addColorStop(0, rgba(warm, 0)); bl.addColorStop(0.5, rgba(warm, 0.22 * vis)); bl.addColorStop(1, rgba(warm, 0));
+        g.fillStyle = bl; g.fillRect(x - r * 9, y - r * 0.18, r * 18, r * 0.36);
+        // crepuscular rays through broken cloud: thin fans, slowly breathing
+        const rayA = 0.06 * vis * clamp(S.cloud * 1.6, 0, 1) * (1 - S.rain);
+        if (rayA > 0.004) {
+            const tt = performance.now() / 9000; g.save(); g.translate(x, y);
+            for (let i = 0; i < 14; i++) {
+                const ang = Math.PI * (0.08 + 0.84 * (i / 13)) + Math.sin(tt + i * 1.7) * 0.025, len = Math.max(W, HORIZON) * (0.5 + 0.25 * Math.sin(i * 2.3 + tt));
+                const rg = g.createLinearGradient(0, 0, Math.cos(ang) * len, Math.sin(ang) * len);
+                rg.addColorStop(0, rgba(warm, rayA * (0.6 + 0.4 * Math.sin(i * 3.1 + tt * 2)))); rg.addColorStop(1, rgba(warm, 0));
+                g.fillStyle = rg; g.beginPath(); g.moveTo(0, 0); g.lineTo(Math.cos(ang - 0.018) * len, Math.sin(ang - 0.018) * len); g.lineTo(Math.cos(ang + 0.018) * len, Math.sin(ang + 0.018) * len); g.closePath(); g.fill();
+            }
+            g.restore();
+        }
     }
     g.globalCompositeOperation = 'source-over';
     return { x, y, r, vis, e };
@@ -494,15 +628,19 @@ function cloudTint(sky) {
     return c;
 }
 
-function drawCloudsLayer(sky, dt) {
+function drawCloudsLayer(sky, dt, cityPhoto) {
     // rain/storm make the sky denser and lower: effective cover grows, clouds get bigger and sit lower
     const cover = clamp(S.cloud + S.rain * 0.35 + S.storm * 0.2, 0, 1);
-    if (cover < 0.04) return;
+    if (cover < .012 && !clouds.some(cloud => cloud.visible > .01)) return;
+    const sprites = cfg.realistic
+        ? (realisticCloudSprites ??= buildCloudSprites(true))
+        : (cloudSprites.length ? cloudSprites : (cloudSprites = buildCloudSprites()));
     const g = cloudCtx, cw = cloudCv.width, ch = cloudCv.height;
+    const cloudHeight = cityPhoto ? H * PHOTO_SKYLINE / 2 : ch;
     g.setTransform(1, 0, 0, 1, 0, 0);
     g.globalCompositeOperation = 'source-over';
     g.clearRect(0, 0, cw, ch);
-    const count = Math.min(clouds.length, Math.round(2 + 16 * cover + 8 * S.rain + 4 * S.storm));
+    const count = Math.min(clouds.length, Math.round(((cover > .04 ? 2 : 0) + 16 * cover + 8 * S.rain + 4 * S.storm) * [0.4, 0.75, 1][tierLevel()]));
     // clouds travel with the wind: ~3 px/s in calm air up to >100 px/s in a gale (per layer parallax: low clouds move faster)
     const base = (3 + S.wind * 1.5) * K;
     const dir = S.dir < 0 ? -1 : 1;
@@ -510,18 +648,37 @@ function drawCloudsLayer(sky, dt) {
     const grow = 1 + 0.3 * S.rain + 0.15 * S.storm;
     for (let i = 0; i < clouds.length; i++) {
         const c = clouds[i];
+        const sp = sprites[c.sprite];
+        const kindK = CLOUD_KINDS[c.sprite % CLOUD_KINDS.length] === 'cirrus' ? 1.5 : 1;
+        const w = 480 * c.scale * grow * (W / 1920) * 0.78 * kindK, h = 200 * c.scale * grow * (W / 1920) * 0.78 * kindK;
+        const margin = Math.max(.43, w / (2 * cw) + .12);
         c.x += (dir * base * (0.45 + 0.4 * c.layer) * (0.85 + (c.speed % 3) * 0.08) * dt) / W;
-        if (c.x > 1.3) c.x -= 1.6; else if (c.x < -0.3) c.x += 1.6;
-        if (i >= count) continue;
-        const sp = cloudSprites[c.sprite];
-        const w = sp.width * c.scale * grow * (W / 1920) * 0.5, h = sp.height * c.scale * grow * (W / 1920) * 0.5;
-        g.globalAlpha = clamp(c.alpha * (0.35 + cover * 0.75) * (1 - S.fog * 0.45) + S.rain * 0.12, 0, 1);
-        g.drawImage(sp, c.x * cw - w / 2, (c.y + lower) * ch - h / 2, w, h);
+        const span = 1 + 2 * margin;
+        if (c.x > 1 + margin) c.x -= span;
+        else if (c.x < -margin) c.x += span;
+        const target = smooth((count / clouds.length - c.rank) * 13);
+        c.visible = approach(c.visible ?? target, target, dt, 1.7);
+        const edge = smooth((c.x + margin) / .12) * smooth((1 + margin - c.x) / .12);
+        const alpha = c.visible * edge * clamp(c.alpha * (0.35 + cover * 0.75) * (1 - S.fog * 0.45) + S.rain * 0.12, 0, 1);
+        if (alpha < .005) continue;
+        const lightFromRight = smooth((lightX - c.x + .14) / .28);
+        g.save();
+        g.translate(c.x * cw, (c.y + lower) * cloudHeight);
+        if (lightFromRight < .995) {
+            g.globalAlpha = alpha * (1 - lightFromRight);
+            g.drawImage(sp, -w / 2, -h / 2, w, h);
+        }
+        if (lightFromRight > .005) {
+            g.globalAlpha = alpha * lightFromRight;
+            g.scale(-1, 1);
+            g.drawImage(sp, -w / 2, -h / 2, w, h);
+        }
+        g.restore();
     }
     g.globalAlpha = 1;
     g.globalCompositeOperation = 'source-atop';
     const tint = cloudTint(sky);
-    g.fillStyle = rgba(tint, 0.62 + 0.2 * clamp(S.storm + S.rain * 0.5, 0, 1));
+    g.fillStyle = rgba(tint, 0.08 + 0.5 * clamp(S.storm + S.rain * 0.55, 0, 1) + 0.2 * clamp(1 - sky.amb * 1.3, 0, 1));       // lighter tint than before: the baked self-shadowing stays visible
     g.fillRect(0, 0, cw, ch);
     g.globalCompositeOperation = 'source-over';
     skyCtx.globalAlpha = 1;
@@ -536,6 +693,46 @@ function drawCloudsLayer(sky, dt) {
     }
 }
 
+// ---- Milky Way: a soft band of unresolved stars with dust lanes, visible on clear moonless-ish nights; one pre-rendered texture, drawn with a slow drift ----
+let milkyCv = null;
+function buildMilkyWay() {
+    const w = 1024, h = 512, c = makeCanvas(w, h), g = c.getContext('2d'), img = g.createImageData(w, h), px = img.data, t1 = noiseTable(5150), t2 = noiseTable(8181);
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+        const u = x / w, v = y / h, band = (v - 0.5) + 0.12 * Math.sin(u * 5.2) + 0.05 * (fbm(t1, u * 3, 1.3, 3) - 0.5);
+        const prof = Math.exp(-Math.pow(band / 0.09, 2)), core = Math.exp(-Math.pow((u - 0.42) / 0.22, 2));
+        const cloud = fbm(t1, u * 9, v * 9, 5), dust = smooth((fbm(t2, u * 14, v * 22, 4) - 0.52) / 0.18);
+        let d = prof * (0.35 + 0.75 * cloud) * (1 - 0.8 * dust * prof) * (0.55 + 0.7 * core);
+        const sparkle = vnoise(t2, u * 220, v * 110) > 0.93 ? 0.6 : 0;
+        d = clamp(d + sparkle * prof * 0.5, 0, 1);
+        const o = (y * w + x) * 4, warm = core * 0.5;
+        px[o] = 190 + 50 * warm; px[o + 1] = 205 + 20 * warm; px[o + 2] = 235 - 30 * warm; px[o + 3] = 255 * d * 0.85;
+    }
+    g.putImageData(img, 0, 0); milkyCv = c;
+}
+function drawMilkyWay(sky) {
+    const vis = clamp(1 - sky.amb * 4, 0, 1) * (1 - S.cloud * 1.1) * (1 - S.fog) * (1 - S.rain) * (1 - 0.6 * (moonBright || 0));
+    if (vis < 0.03 || tierLevel() < 1) return;
+    if (!milkyCv) buildMilkyWay();
+    const g = skyCtx; g.save(); g.globalCompositeOperation = 'lighter'; g.globalAlpha = 0.4 * vis;
+    g.translate(W * 0.5, HORIZON * 0.45); g.rotate(-0.55 + Math.sin(animTime * 0.004) * 0.01);
+    const sw = Math.max(W, HORIZON) * 1.5; g.drawImage(milkyCv, -sw / 2, -sw * 0.25, sw, sw * 0.5);
+    g.restore();
+}
+let moonBright = 0;
+
+// ---- rainbow: when the sun shines through light rain, opposite the sun ----
+function drawRainbow(sky, sun) {
+    if (!sun || sun.e < 0.04 || sun.e > 0.6) return;
+    const f = smooth((S.rain - 0.04) / 0.1) * smooth((0.62 - S.rain) / 0.2) * (1 - S.storm) * clamp(sky.amb * 1.4, 0, 1) * (1 - S.cloud * 0.5) * (S.snow > 0.1 ? 0 : 1);
+    if (f < 0.03) return;
+    const g = skyCtx, R = Math.min(W, H) * 0.62, cx = W - sun.x, cy = HORIZON + R * (0.25 + sun.e * 0.7), lw = R * 0.014;
+    const bands = [[255, 60, 60], [255, 150, 40], [255, 230, 70], [80, 210, 100], [70, 150, 255], [90, 80, 220], [160, 80, 200]];
+    g.save(); g.globalCompositeOperation = 'lighter'; g.lineWidth = lw;
+    for (let i = 0; i < bands.length; i++) { g.strokeStyle = rgba(bands[i], 0.2 * f); g.beginPath(); g.arc(cx, cy, R + i * lw, Math.PI * 1.08, Math.PI * 1.92); g.stroke(); }
+    g.strokeStyle = rgba([255, 255, 255], 0.05 * f); g.lineWidth = lw * 8; g.beginPath(); g.arc(cx, cy, R + lw * 3, Math.PI * 1.08, Math.PI * 1.92); g.stroke();
+    g.restore();
+}
+
 function hazeColor(hor) { return mix(hor, [190, 196, 206], 0.4); }
 
 function drawHillsLayer(sky, graded) {
@@ -543,17 +740,316 @@ function drawHillsLayer(sky, graded) {
     const amb = clamp(sky.amb, 0, 1);
     const shade = scaleCol([22, 32, 46], 0.28 + 0.72 * amb);
     const haze = hazeColor(graded.hor);
+    const lowTier = tierLevel() < 1, richTier = tierLevel() >= 2;
     for (const h of hills) {
-        let col = mix(graded.hor, shade, 0.22 + 0.62 * h.depth * h.depth + 0.12 * h.depth);
-        col = mix(col, haze, clamp(S.fog * (0.9 - 0.35 * h.depth), 0, 0.9));
+        // atmospheric perspective: far ranges are pale and blue (air between), near ranges dark and saturated
+        const air = clamp(0.5 - h.depth * 0.5, 0, 1);
+        let col = mix(graded.hor, shade, 0.2 + 0.62 * Math.max(0, h.depth + 0.2) * Math.max(0, h.depth + 0.2) + 0.16 * h.depth);
+        col = mix(col, haze, clamp(air * 0.55 + S.fog * (0.9 - 0.35 * h.depth), 0, 0.9));
         col = mix(col, [212, 222, 238].map(v => v * (0.3 + 0.7 * amb)), clamp(S.snowCover * 0.75, 0, 0.8));
         if (flash > 0) col = mix(col, [200, 210, 235], clamp(flash * 0.5, 0, 0.6));
-        g.fillStyle = rgba(col, 1);
-        g.beginPath();
-        g.moveTo(0, HORIZON + 2);
         const n = h.pts.length - 1;
-        for (let i = 0; i <= n; i++) g.lineTo((i / n) * W, HORIZON - h.pts[i] * H);
-        g.lineTo(W, HORIZON + 2); g.closePath(); g.fill();
+        // slow parallax drift: the nearer the range, the more it moves (a few pixels, driven by time and wind)
+        const dx = Math.sin(animTime * 0.05 + h.seed) * (2 + h.depth * 5) * K + S.windX * 0.01 * h.depth;
+        g.save(); g.translate(dx, 0);
+        const key = W + 'x' + H + 'x' + HORIZON;
+        if (h.pathKey !== key) {                                          // the outline is rebuilt only when the size changes (no per-frame allocation)
+            h.path = new Path2D(); h.path.moveTo(-20, HORIZON + 2);
+            for (let i = 0; i <= n; i++) h.path.lineTo((i / n) * W, HORIZON - h.pts[i] * H);
+            h.path.lineTo(W + 20, HORIZON + 2); h.path.closePath(); h.pathKey = key;
+        }
+        const path = h.path;
+        // body: lighter at the ridge, deeper (and hazier) toward the foot
+        const top = HORIZON - h.amp * H, lg = g.createLinearGradient(0, top, 0, HORIZON);
+        lg.addColorStop(0, rgba(mix(col, [255, 245, 230], 0.1 * amb), 1)); lg.addColorStop(1, rgba(mix(col, haze, 0.35 + 0.3 * air), 1));
+        g.fillStyle = lg; g.fill(path);
+        if (!lowTier) {
+            g.save(); g.clip(path);
+            // rock / forest texture: dark gullies running down from the ridge
+            if (richTier) {
+            g.strokeStyle = rgba(mix(col, [8, 12, 18], 0.6), 0.16 + 0.1 * h.depth); g.lineWidth = Math.max(1, (0.6 + h.depth * 0.8) * K);
+            g.beginPath();
+            for (let i = 4; i < n - 4; i += 5 + (h.seed % 3)) {
+                const x = (i / n) * W, y = HORIZON - h.pts[i] * H, len = (h.pts[i] * H) * (0.35 + 0.25 * ((i * 7 + h.seed) % 5) / 5);
+                g.moveTo(x, y); g.lineTo(x + (((i * 13) % 7) - 3) * 1.6 * K, y + len);
+            }
+            g.stroke();
+            }
+            // snow caps on the tall peaks (and lower when it is snowing)
+            const limit = h.snow - S.snowCover * 0.5;
+            if (limit < 1.2) {
+                g.fillStyle = rgba(mix([236, 240, 250], col, 0.1), 0.9 * (0.35 + 0.65 * amb));
+                g.beginPath(); let open = false;
+                for (let i = 0; i <= n; i++) {
+                    const v = h.pts[i] / h.amp, x = (i / n) * W, y = HORIZON - h.pts[i] * H;
+                    if (v > limit) { if (!open) { g.moveTo(x, y + 3 * K); open = true; } g.lineTo(x, y); }
+                    else if (open) { g.lineTo(x, y + (4 + (v - limit) * -30) * K); g.closePath(); open = false; }
+                }
+                if (open) g.closePath();
+                g.fill();
+            }
+            g.restore();
+            // rim light along the ridge, on the side of the light
+            g.lineWidth = Math.max(1, 1.1 * K); g.strokeStyle = rgba(mix(col, [255, 240, 215], 0.7), 0.28 * amb * (1 - S.cloud * 0.6));
+            g.beginPath();
+            for (let i = 0; i <= n; i++) { const x = (i / n) * W, y = HORIZON - h.pts[i] * H; if (i) g.lineTo(x, y); else g.moveTo(x, y); }
+            g.stroke();
+        }
+        // trees on the near ranges: conifer silhouettes swaying with the wind
+        if (h.trees.length && !lowTier) {
+            const sway = (0.4 + S.wind * 0.05) * K, tc = mix(col, [10, 22, 16], 0.55);
+            g.fillStyle = rgba(tc, 0.95); g.beginPath();
+            for (const t of h.trees) {
+                if (t.broad || (!richTier && (t.idx & 1))) continue;
+                const x = (t.idx / n) * W, y = HORIZON - h.pts[t.idx] * H + 2, th = t.h * H, tw = th * t.w * 0.5, sw = Math.sin(animTime * (1.1 + S.wind * 0.04) + t.ph) * sway;
+                g.rect(x - th * .026, y - th * .77, th * .052, th * .78);
+                const branches = richTier ? 5 : 3;
+                for (let branch = 0; branch < branches; branch++) {
+                    const v = branch / branches, cy = y - th * v * .88;
+                    const branchWidth = tw * (.96 - v * .82);
+                    const ax = x + sw * v;
+                    g.moveTo(ax - branchWidth, cy);
+                    g.quadraticCurveTo(ax - branchWidth * .29, cy - th * .065, ax + sw * .17, cy - th * .29);
+                    g.quadraticCurveTo(ax + branchWidth * .23, cy - th * .065, ax + branchWidth * (.87 + .16 * Math.sin(t.ph + branch)), cy + th * .021);
+                    g.lineTo(ax, cy - th * .054);
+                    g.closePath();
+                }
+            }
+            g.fill();
+            // deciduous trees: a thin trunk and a round, swaying crown (bare and pale under snow)
+            const leaf = mix(mix(col, [40, 92, 48], 0.5 * (1 - S.snowCover)), [225, 232, 242], clamp(S.snowCover * 0.8, 0, 0.8));
+            g.fillStyle = rgba(mix(leaf, [8, 14, 10], 0.25), 0.95); g.beginPath();
+            for (const t of h.trees) {
+                if (!t.broad || (!richTier && (t.idx & 1))) continue;
+                const x = (t.idx / n) * W, y = HORIZON - h.pts[t.idx] * H + 2, th = t.h * H, sw = Math.sin(animTime * (0.9 + S.wind * 0.05) + t.ph) * sway * 1.4, r = th * 0.34;
+                g.rect(x - r * 0.12, y - th * 0.5, r * 0.24, th * 0.5);
+                g.moveTo(x + sw + r, y - th * 0.72); g.arc(x + sw, y - th * 0.72, r, 0, TAU);
+                g.moveTo(x + sw - r * 0.5 + r * 0.7, y - th * 0.95); g.arc(x + sw - r * 0.5, y - th * 0.95, r * 0.7, 0, TAU);
+            }
+            g.fill();
+        }
+        g.restore();
+    }
+    // snow settles: a white bank along the shore and a thin sheet of ice on the water close to it
+    if (S.snowCover > 0.04 && !onLand()) {
+        const sc = clamp(S.snowCover, 0, 1), tab = snowTab || (snowTab = noiseTable(606)), bw = 6 * K * (0.6 + sc);
+        g.fillStyle = rgba([232, 238, 248].map(v => v * (0.45 + 0.55 * amb)), 0.9 * sc);
+        g.beginPath(); g.moveTo(0, HORIZON + 4);
+        for (let x = 0; x <= W; x += 10) g.lineTo(x, HORIZON - bw * (0.4 + 1.4 * vnoise(tab, x * 0.02, 3.3)));
+        g.lineTo(W, HORIZON + 4); g.closePath(); g.fill();
+    }
+    drawLandmarkOnHorizon(sky, graded, shade, haze);
+}
+let snowTab = null;
+
+// The best-known landmark of the place where the computer is (the weather location, plan 2.1.5), as a distant silhouette in the colour of the hills: it follows the time of day, fog,
+// snow and lightning of the scene. Chosen once per location; off with the "landmarks" setting or when nothing known is within 250 km.
+let landmarkKey = '', landmarkPick = null, landmarkScene = { scene: 'sea' }, landmarkSide = -1, landmarkSideAt = 0;
+function landmarkSideNow() { const n = Date.now(); if (n - landmarkSideAt > 60000) { landmarkSideAt = n; landmarkSide = new Date().getHours() < 13 ? -1 : 1; } return landmarkSide; }
+
+// Chosen once per setting / location: the user's own choice (any landmark, independent of where the computer is), "Auto" = the nearest one to the weather location, "Off" = none.
+function resolveLandmark() {
+    const key = (cfg.landmarkId || 'Auto') + '|' + Boolean(cfg.realistic) + '|' + cfg.lat + ',' + cfg.lon + '|' + (cfg.landmarks === false);
+    if (key === landmarkKey) return landmarkPick;
+    landmarkKey = key; landmarkPick = null; landmarkScene = { scene: 'sea' };
+    const L = window.OpsisLandmarks;
+    if (cfg.landmarks !== false && L && cfg.landmarkId !== 'Off') {
+        landmarkPick = cfg.landmarkId && cfg.landmarkId !== 'Auto'
+            ? L.byId(cfg.landmarkId)
+            : L.pickLandmark(cfg.lat, cfg.lon);
+        if (landmarkPick) landmarkScene = L.sceneOf(landmarkPick.id);
+    }
+    return landmarkPick;
+}
+function onPhoto() {
+    if (!resolveLandmark() || landmarkScene.scene !== 'photo') return false;
+    startScenePhoto(landmarkPick.id);
+    return photoState.ready;
+}
+
+function activeCity() {
+    if (onPhoto()) return null;
+    return landmarkScene.city ?? null;
+}
+
+const onLand = () => {
+    const city = activeCity();
+    return city ? !['coast', 'lake'].includes(city.terrain) : landmarkScene.scene === 'land';
+};
+
+// ---- photographic landscape ----
+// The foreground is graded and masked in a cached canvas; the sky and its animation remain separate.
+const photoState = { img: null, lights: null, ready: false, lightsReady: false, id: '', landscape: false, canvas: null, skyMask: null, key: '' };
+function startScenePhoto(id) {
+    if (photoState.id === id) return;
+    const photo = window.OpsisLandmarks.photoScene(id);
+    if (!photo) return;
+    photoState.id = id;
+    photoState.landscape = Boolean(photo.landscape);
+    photoState.ready = photoState.lightsReady = false;
+    photoState.key = '';
+    photoState.lights = null;
+    photoState.skyMask = null;
+    const image = photoState.img = new Image();
+    image.onload = () => {
+        if (photoState.img !== image) return;
+        try { photoState.skyMask = window.OpsisSkyMask?.detect(image, photo.file, cfg.skyEdits?.[photo.file]); }
+        catch { /* Keep the photo opaque when pixels cannot be read. */ }
+        photoState.ready = true;
+    };
+    image.onerror = () => { if (photoState.img === image) photoState.ready = false; };
+    image.src = photo.file;
+    if (photo.lights) {
+        const lights = photoState.lights = new Image();
+        lights.onload = () => { if (photoState.lights === lights) photoState.lightsReady = true; };
+        lights.src = photo.lights;
+    }
+}
+
+function drawScenePhoto(c2, sky, graded) {
+    if (!photoState.ready) return;
+    const iw = photoState.img.naturalWidth, ih = photoState.img.naturalHeight;
+    if (!iw || !ih) return;
+    const atmosphere = window.OpsisWeatherAtmosphere;
+    const fittingHorizon = !photoState.skyMask || photoState.landscape ? H * .18 : H * .48;
+    const bounds = atmosphere?.photoBounds(W, H, fittingHorizon, iw, ih, cfg.photoFocusX ?? .5);
+    const w = bounds?.width ?? W, h = bounds?.height ?? Math.round(ih * Math.max(W / iw, .1));
+    const x = bounds?.x ?? 0, y = bounds?.y ?? H - h;
+    const amb = clamp(sky.amb, 0, 1), night = clamp(1 - amb / 0.35, 0, 1), fog = clamp(S.fog, 0, 1), glow = clamp(sky.glow || 0, 0, 1);
+    const look = cfg.realistic || photoState.landscape ? atmosphere?.photoGrade(amb, glow, S) : null;
+    const key = [w, h, H, Number(Boolean(look)), Math.round(amb * 14), Math.round(night * 8), Math.round(fog * 10),
+        Math.round(glow * 4), Math.round(S.snowCover * 4), look ? Math.round((S.rain + S.storm) * 8) : 0].join('/');
+    if (photoState.key !== key) {
+        const resolution = Math.min(1, 3072 / Math.max(w, h));
+        const cacheW = Math.max(1, Math.round(w * resolution)), cacheH = Math.max(1, Math.round(h * resolution));
+        const c = photoState.canvas || (photoState.canvas = makeCanvas(cacheW, cacheH)); if (c.width !== cacheW || c.height !== cacheH) { c.width = cacheW; c.height = cacheH; }
+        const o = c.getContext('2d'); o.clearRect(0, 0, cacheW, cacheH); o.imageSmoothingQuality = 'high';
+        if (look) o.filter = `brightness(${look.exposure}) saturate(${look.saturation}) contrast(${look.contrast})`;
+        o.drawImage(photoState.img, 0, 0, cacheW, cacheH);
+        o.filter = 'none';
+        const warm = mix([255, 236, 205], graded.hor, glow * 0.6), dusk = clamp(glow * (1 - amb) * 1.6, 0, 1);
+        const dm = mix([62, 74, 110], [255, 255, 255], Math.pow(amb, 0.8)), mul = [0, 1, 2].map(i => dm[i] * (1 - dusk * 0.6 + dusk * 0.6 * warm[i] / 255));
+        if (look) {
+            o.globalCompositeOperation = 'source-atop';
+            o.fillStyle = rgba([218, 150, 99], look.warmth * .22); o.fillRect(0, 0, cacheW, cacheH);
+            o.fillStyle = rgba([64, 82, 129], look.night * .25); o.fillRect(0, 0, cacheW, cacheH);
+        } else {
+            o.globalCompositeOperation = 'multiply'; o.fillStyle = rgba(mul, 1); o.fillRect(0, 0, cacheW, cacheH);
+            o.globalCompositeOperation = 'destination-in'; o.drawImage(photoState.img, 0, 0, cacheW, cacheH);
+        }
+        o.globalCompositeOperation = 'source-atop';
+        const haze = look?.haze ?? fog * .7;
+        if (haze > .02) { const hz = mix(graded.hor, [200, 205, 212], .4); o.fillStyle = rgba(hz, haze); o.fillRect(0, 0, cacheW, cacheH); }
+        if (S.snowCover > 0.05) { o.fillStyle = `rgba(232,238,250,${(0.16 * S.snowCover).toFixed(2)})`; o.fillRect(0, 0, cacheW, cacheH); }
+        if (photoState.skyMask) {
+            o.save();
+            o.beginPath();
+            o.rect(0, 0, cacheW, Math.max(0, (HORIZON - y) * cacheH / h));
+            o.clip();
+            o.globalCompositeOperation = 'destination-out';
+            o.drawImage(photoState.skyMask, 0, 0, cacheW, cacheH);
+            o.restore();
+        }
+        o.globalCompositeOperation = 'source-over'; photoState.key = key;
+    }
+    c2.drawImage(photoState.canvas, x, y, w, h);
+    if (cfg.skylinePreview && photoState.skyMask)
+        window.OpsisSkyMask?.outline(c2, photoState.skyMask, { x, y, width: w, height: h });
+    if (night > 0.05 && photoState.lightsReady) { c2.save(); c2.globalAlpha = Math.min(1, night * 0.95); c2.globalCompositeOperation = 'lighter'; c2.drawImage(photoState.lights, x, y, w, h); c2.restore(); }
+}
+
+// ---- birds: flocks of gulls / swifts crossing the sky on clear days, wings beating, each bird a little different ----
+let birds = [], birdWait = 4;
+function drawBirds(g, dt, sky, cityPhoto) {
+    const day = clamp(sky.amb * 1.5 - 0.15, 0, 1) * (1 - clamp(S.rain * 1.2, 0, 1)) * (1 - S.fog * 0.8) * (1 - S.snowCover * 0.6) * (1 - clamp(BFN / 9, 0, 1) * 0.6);
+    if (day < 0.1 && birds.length === 0) return;
+    birdWait -= dt;
+    const horizon = cityPhoto ? H * PHOTO_SKYLINE : HORIZON;
+    if (birdWait <= 0 && day > 0.35 && birds.length < 16) {
+        const n = 3 + Math.floor(Math.random() * 6), dir = Math.random() < 0.5 ? 1 : -1, y0 = horizon * (0.18 + Math.random() * 0.42), sp = W * (0.035 + Math.random() * 0.03);
+        for (let i = 0; i < n; i++) birds.push({ x: dir > 0 ? -30 - i * 26 : W + 30 + i * 26, y: clamp((y0 + (i % 2 ? 1 : -1) * i * 9 + (Math.random() - 0.5) * 14) / horizon, .1, .82), vx: dir * sp * (0.9 + Math.random() * 0.2), ph: Math.random() * 6, f: 5 + Math.random() * 3, s: (8 + Math.random() * 6) * Math.max(0.8, H / 1080) });
+        birdWait = 12 + Math.random() * 30;
+    }
+    if (birds.length === 0) return;
+    g.save();
+    const col = sky.amb < 0.35 ? '10,12,20' : '20,24,32';
+    for (let i = birds.length - 1; i >= 0; i--) {
+        const b = birds[i];
+        b.x += b.vx * dt;
+        b.ph += b.f * dt;
+        if (b.vx > 0 ? b.x > W + 80 : b.x < -80) {
+            birds.splice(i, 1);
+            continue;
+        }
+        if (b.x < -30 || b.x > W + 30) continue;
+        const y = b.y * horizon + Math.sin(b.ph * 0.35) * 3;
+        const glide = 0.5 + 0.5 * Math.sin(b.ph * 0.09 + b.f);                                     // flap / glide cycle: sometimes the wings hold
+        const flap = Math.sin(b.ph) * (0.35 + 0.65 * (glide > 0.35 ? 1 : glide / 0.35)) + (glide < 0.35 ? 0.25 : 0);
+        const a = 0.82 * day * clamp(1 - Math.abs(b.y - 0.4) / 0.9, 0.4, 1);
+        const sc = b.s * (0.7 + 0.7 * b.y), dir = b.vx < 0 ? -1 : 1;           // perspective: birds lower in the sky are nearer, so larger
+        g.save(); g.translate(b.x, y); g.scale(dir, 1); g.rotate(Math.sin(b.ph * 0.35) * 0.05);
+        g.fillStyle = `rgba(${col},${a.toFixed(3)})`;
+        for (const side of [-1, 1]) {                                                            // two wings: leading edge bows up, tip follows the flap, trailing edge scallops back
+            const tipX = side * sc * 1.25, tipY = -flap * sc * 0.95, midY = -flap * sc * 0.42 - sc * 0.12;
+            g.beginPath(); g.moveTo(side * sc * 0.08, -sc * 0.06);
+            g.quadraticCurveTo(side * sc * 0.55, midY - sc * 0.22, tipX, tipY);
+            g.quadraticCurveTo(side * sc * 1.02, tipY + sc * .094, side * sc * .88, tipY + sc * .10);
+            g.lineTo(side * sc * .93, tipY + sc * .18);
+            g.lineTo(side * sc * .82, tipY + sc * .17);
+            g.lineTo(side * sc * .85, tipY + sc * .235);
+            g.quadraticCurveTo(side * sc * 0.69, midY + sc * 0.16, side * sc * 0.42, sc * 0.1 - flap * sc * 0.1);
+            g.quadraticCurveTo(side * sc * 0.22, sc * 0.2, side * sc * 0.06, sc * 0.1); g.closePath(); g.fill();
+        }
+        g.beginPath(); g.ellipse(0, sc * 0.03, sc * 0.2, sc * 0.1, 0, 0, TAU); g.fill();            // body
+        g.beginPath(); g.ellipse(sc * 0.2, -sc * 0.02, sc * 0.07, sc * 0.06, 0, 0, TAU); g.fill();   // head
+        g.beginPath(); g.moveTo(-sc * 0.15, sc * 0.04); g.lineTo(-sc * 0.42, sc * 0.09); g.lineTo(-sc * 0.15, sc * 0.1); g.closePath(); g.fill();   // tail
+        g.restore();
+    }
+    g.restore();
+}
+
+// The landmark as a distant monument in the colour of the air between it and the viewer. On LAND it stands on a base of rock / grass that rises from the plain (the sprite's cut edge is hidden
+// behind the base); in the SEA its foot stands at the waterline.
+function drawLandmarkOnHorizon(sky, graded, shade, haze) {
+    if (!resolveLandmark()) return;
+    const amb = clamp(sky.amb, 0, 1);
+    const pal = {
+        amb, haze, fog: clamp(S.fog, 0, 1), snow: clamp(S.snowCover, 0, 1), night: clamp(1 - amb / 0.35, 0, 1),
+        sunSide: landmarkSideNow(),                                       // the sun rises on the left of the picture and sets on the right
+        warm: mix([255, 236, 205], graded.hor, clamp(sky.glow || 0, 0, 1) * 0.6),
+        glow: clamp(sky.glow || 0, 0, 1), maxW: W * 0.24,
+    };
+    if (flash > 0) pal.amb = clamp(pal.amb + flash * 0.5, 0, 1);
+    const maxH = Math.max(90, H * 0.34), L = window.OpsisLandmarks;
+    if (onPhoto()) return;
+    const city = activeCity();
+    if (city) { window.OpsisCityLandscape.draw(skyCtx, city, W, HORIZON, pal); return; }
+    const size = L.spriteSize(landmarkPick.id, maxH, pal.maxW); if (!size) return;
+    if (landmarkScene.scene !== 'land') { L.drawLandmark(skyCtx, landmarkPick.id, W * 0.72, HORIZON + 2, maxH, pal); return; }
+    L.drawLandmark(skyCtx, landmarkPick.id, W * 0.72, HORIZON - Math.round(size.h * 0.01), maxH, pal);
+}
+
+// Ground under a land monument instead of the sea: haze at the horizon fading to the dark plain, with the lights of the city at night. No reflections, no ripples.
+let cityDots = null;
+function drawLand(ctx2, sky, graded) {
+    const hz = HORIZON, wh = H - hz, amb = clamp(sky.amb, 0, 1), gc = activeCity()?.terrain === 'plain' ? 'grass' : landmarkScene.ground;
+    const base = gc === 'sand' ? [150, 128, 96] : gc === 'grass' ? [64, 82, 52] : [102, 92, 80];
+    const far = mix(graded.hor, scaleCol(base, 0.4 + 0.6 * amb), 0.55);
+    const near = scaleCol(base, 0.18 + 0.55 * amb);
+    const wg = ctx2.createLinearGradient(0, hz, 0, H);
+    wg.addColorStop(0, rgba(far, 1)); wg.addColorStop(0.35, rgba(mix(far, near, 0.6), 1)); wg.addColorStop(1, rgba(near, 1));
+    ctx2.fillStyle = wg; ctx2.fillRect(0, hz, W, wh);
+    // fields / terraces: a few soft horizontal bands that get wider towards the viewer
+    ctx2.fillStyle = rgba(scaleCol(base, 0.3 * (0.4 + 0.6 * amb)), 0.18);
+    for (let i = 1; i < 6; i++) { const y = hz + wh * (i * i / 36); ctx2.fillRect(0, y, W, Math.max(1, wh * 0.012 * i)); }
+    const night = clamp(1 - amb / 0.35, 0, 1);
+    if (night > 0.05) {
+        if (!cityDots || cityDots.w !== W || cityDots.h !== H) {
+            const pts = []; let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+            for (let i = 0; i < 420; i++) { const d = Math.pow(rnd(), 1.8); pts.push([rnd() * W, hz + 3 + d * wh * 0.9, 1 + d * 1.6, 0.35 + rnd() * 0.65]); }
+            cityDots = { w: W, h: H, pts };
+        }
+        for (const [x, y, r, a] of cityDots.pts) { ctx2.fillStyle = `rgba(255,${200 + (a * 40) | 0},${120 + (a * 60) | 0},${(a * night * 0.8).toFixed(3)})`; ctx2.fillRect(x, y, r, r); }
     }
 }
 
@@ -618,18 +1114,18 @@ function buildWaterAssets() {
     glints = Array.from({ length: 70 }, () => ({ u: rnd(), x: rnd(), len: 0.04 + rnd() * 0.12, sp: 0.4 + rnd() * 1.4, a: 0.35 + rnd() * 0.65 }));
 }
 
-// Ζητήθηκε ρητά "εφάρμοσε διάφορους κυματισμούς, αποχρώσεις και εφέ στις γραμμές" (βελτίωση
-// κυμάτων) — έρευνα σε αντίστοιχες canvas-based τεχνικές (layered sine waves, γεμισμένες -όχι
-// μόνο γραμμές- ώστε η μία λωρίδα να καλύπτει την επόμενη, gradient ανά λωρίδα, άθροισμα δύο
-// συχνοτήτων για πιο οργανικό σχήμα) έδειξε ότι η προηγούμενη υλοποίηση είχε ΜΟΝΟ texture
-// (glints/whitecaps) χωρίς καθόλου πραγματικό ΣΧΗΜΑ κύματος. Σε πραγματική ανοιχτή θάλασσα από
-// απόσταση τα μακρινά κύματα "συμπιέζονται" από την προοπτική σε ορατές, επαναλαμβανόμενες
-// φωτεινές/σκοτεινές λωρίδες κοντά στον ορίζοντα (το κοντινό νερό παραμένει σωστά texture-based
-// — αυτό καλύπτεται ήδη από τα glints/whitecaps πιο κάτω, δεν αγγίζεται).
+// Ξ–Ξ·Ο„Ξ®ΞΈΞ·ΞΊΞµ ΟΞ·Ο„Ξ¬ "ΞµΟ†Ξ¬ΟΞΌΞΏΟƒΞµ Ξ΄ΞΉΞ¬Ο†ΞΏΟΞΏΟ…Ο‚ ΞΊΟ…ΞΌΞ±Ο„ΞΉΟƒΞΌΞΏΟΟ‚, Ξ±Ο€ΞΏΟ‡ΟΟΟƒΞµΞΉΟ‚ ΞΊΞ±ΞΉ ΞµΟ†Ξ­ ΟƒΟ„ΞΉΟ‚ Ξ³ΟΞ±ΞΌΞΌΞ­Ο‚" (Ξ²ΞµΞ»Ο„Ξ―Ο‰ΟƒΞ·
+// ΞΊΟ…ΞΌΞ¬Ο„Ο‰Ξ½) β€” Ξ­ΟΞµΟ…Ξ½Ξ± ΟƒΞµ Ξ±Ξ½Ο„Ξ―ΟƒΟ„ΞΏΞΉΟ‡ΞµΟ‚ canvas-based Ο„ΞµΟ‡Ξ½ΞΉΞΊΞ­Ο‚ (layered sine waves, Ξ³ΞµΞΌΞΉΟƒΞΌΞ­Ξ½ΞµΟ‚ -ΟΟ‡ΞΉ
+// ΞΌΟΞ½ΞΏ Ξ³ΟΞ±ΞΌΞΌΞ­Ο‚- ΟΟƒΟ„Ξµ Ξ· ΞΌΞ―Ξ± Ξ»Ο‰ΟΞ―Ξ΄Ξ± Ξ½Ξ± ΞΊΞ±Ξ»ΟΟ€Ο„ΞµΞΉ Ο„Ξ·Ξ½ ΞµΟ€ΟΞΌΞµΞ½Ξ·, gradient Ξ±Ξ½Ξ¬ Ξ»Ο‰ΟΞ―Ξ΄Ξ±, Ξ¬ΞΈΟΞΏΞΉΟƒΞΌΞ± Ξ΄ΟΞΏ
+// ΟƒΟ…Ο‡Ξ½ΞΏΟ„Ξ®Ο„Ο‰Ξ½ Ξ³ΞΉΞ± Ο€ΞΉΞΏ ΞΏΟΞ³Ξ±Ξ½ΞΉΞΊΟ ΟƒΟ‡Ξ®ΞΌΞ±) Ξ­Ξ΄ΞµΞΉΞΎΞµ ΟΟ„ΞΉ Ξ· Ο€ΟΞΏΞ·Ξ³ΞΏΟΞΌΞµΞ½Ξ· Ο…Ξ»ΞΏΟ€ΞΏΞ―Ξ·ΟƒΞ· ΞµΞ―Ο‡Ξµ ΞΞΞΞ texture
+// (glints/whitecaps) Ο‡Ο‰ΟΞ―Ο‚ ΞΊΞ±ΞΈΟΞ»ΞΏΟ… Ο€ΟΞ±Ξ³ΞΌΞ±Ο„ΞΉΞΊΟ Ξ£Ξ§Ξ—ΞΞ‘ ΞΊΟΞΌΞ±Ο„ΞΏΟ‚. Ξ£Ξµ Ο€ΟΞ±Ξ³ΞΌΞ±Ο„ΞΉΞΊΞ® Ξ±Ξ½ΞΏΞΉΟ‡Ο„Ξ® ΞΈΞ¬Ξ»Ξ±ΟƒΟƒΞ± Ξ±Ο€Ο
+// Ξ±Ο€ΟΟƒΟ„Ξ±ΟƒΞ· Ο„Ξ± ΞΌΞ±ΞΊΟΞΉΞ½Ξ¬ ΞΊΟΞΌΞ±Ο„Ξ± "ΟƒΟ…ΞΌΟ€ΞΉΞ­Ξ¶ΞΏΞ½Ο„Ξ±ΞΉ" Ξ±Ο€Ο Ο„Ξ·Ξ½ Ο€ΟΞΏΞΏΟ€Ο„ΞΉΞΊΞ® ΟƒΞµ ΞΏΟΞ±Ο„Ξ­Ο‚, ΞµΟ€Ξ±Ξ½Ξ±Ξ»Ξ±ΞΌΞ²Ξ±Ξ½ΟΞΌΞµΞ½ΞµΟ‚
+// Ο†Ο‰Ο„ΞµΞΉΞ½Ξ­Ο‚/ΟƒΞΊΞΏΟ„ΞµΞΉΞ½Ξ­Ο‚ Ξ»Ο‰ΟΞ―Ξ΄ΞµΟ‚ ΞΊΞΏΞ½Ο„Ξ¬ ΟƒΟ„ΞΏΞ½ ΞΏΟΞ―Ξ¶ΞΏΞ½Ο„Ξ± (Ο„ΞΏ ΞΊΞΏΞ½Ο„ΞΉΞ½Ο Ξ½ΞµΟΟ Ο€Ξ±ΟΞ±ΞΌΞ­Ξ½ΞµΞΉ ΟƒΟ‰ΟƒΟ„Ξ¬ texture-based
+// β€” Ξ±Ο…Ο„Ο ΞΊΞ±Ξ»ΟΟ€Ο„ΞµΟ„Ξ±ΞΉ Ξ®Ξ΄Ξ· Ξ±Ο€Ο Ο„Ξ± glints/whitecaps Ο€ΞΉΞΏ ΞΊΞ¬Ο„Ο‰, Ξ΄ΞµΞ½ Ξ±Ξ³Ξ³Ξ―Ξ¶ΞµΟ„Ξ±ΞΉ).
 function drawHorizonSwell(ctx2, sky, graded) {
     if (S.snowCover > 0.5) return;
     const hz = HORIZON, wh = H - hz;
-    const bands = 3 + Math.round(clamp(BFN / 2.5, 0, 1) * 3);   // 3..6 λωρίδες ανάλογα τον άνεμο
+    const bands = 3 + Math.round(clamp(BFN / 2.5, 0, 1) * 3);   // 3..6 Ξ»Ο‰ΟΞ―Ξ΄ΞµΟ‚ Ξ±Ξ½Ξ¬Ξ»ΞΏΞ³Ξ± Ο„ΞΏΞ½ Ξ¬Ξ½ΞµΞΌΞΏ
     const bandH = Math.min(26, wh * 0.11) * K;
     const amp = (1.2 + BFN * 0.9) * K;
     const speed = 0.5 + BFN * 0.1;
@@ -638,7 +1134,7 @@ function drawHorizonSwell(ctx2, sky, graded) {
     ctx2.save();
     ctx2.beginPath(); ctx2.rect(0, hz, W, Math.min(wh, bandH * bands * 1.6)); ctx2.clip();
     for (let i = 0; i < bands; i++) {
-        const k = i / Math.max(1, bands - 1);     // 0 = πιο κοντά στον ορίζοντα, 1 = πιο κοντά στον θεατή
+        const k = i / Math.max(1, bands - 1);     // 0 = Ο€ΞΉΞΏ ΞΊΞΏΞ½Ο„Ξ¬ ΟƒΟ„ΞΏΞ½ ΞΏΟΞ―Ξ¶ΞΏΞ½Ο„Ξ±, 1 = Ο€ΞΉΞΏ ΞΊΞΏΞ½Ο„Ξ¬ ΟƒΟ„ΞΏΞ½ ΞΈΞµΞ±Ο„Ξ®
         const y0 = hz + i * bandH * (0.78 + k * 0.5);
         const ph = i * 1.7;
         const crestLine = [];
@@ -658,7 +1154,7 @@ function drawHorizonSwell(ctx2, sky, graded) {
         g.addColorStop(1, rgba(trough, 0));
         ctx2.fillStyle = g;
         ctx2.fill();
-        // αχνή φωτεινή "κορυφογραμμή" πάνω στην ίδια κυματιστή γραμμή — το κλασικό catch-light effect
+        // Ξ±Ο‡Ξ½Ξ® Ο†Ο‰Ο„ΞµΞΉΞ½Ξ® "ΞΊΞΏΟΟ…Ο†ΞΏΞ³ΟΞ±ΞΌΞΌΞ®" Ο€Ξ¬Ξ½Ο‰ ΟƒΟ„Ξ·Ξ½ Ξ―Ξ΄ΞΉΞ± ΞΊΟ…ΞΌΞ±Ο„ΞΉΟƒΟ„Ξ® Ξ³ΟΞ±ΞΌΞΌΞ® β€” Ο„ΞΏ ΞΊΞ»Ξ±ΟƒΞΉΞΊΟ catch-light effect
         ctx2.beginPath();
         crestLine.forEach((p, pi) => pi ? ctx2.lineTo(p[0], p[1]) : ctx2.moveTo(p[0], p[1]));
         ctx2.strokeStyle = rgba(crest, 0.4 * (1 - k * 0.3));
@@ -693,7 +1189,7 @@ function drawWater(ctx2, sky, graded) {
         reflCtx.save(); reflCtx.translate(0, rh); reflCtx.scale(1, -1);
         reflCtx.drawImage(skyCv, 0, hz - srcH, W, srcH, 0, 0, rw, rh);
         reflCtx.restore();
-        // 2) erase the mirrored sun/moon DISC (a perfect mirrored disc is what made the old reflection look cartoonish) — the
+        // 2) erase the mirrored sun/moon DISC (a perfect mirrored disc is what made the old reflection look cartoonish) β€” the
         //    glitter path below replaces it
         if (celest && celest.power > 0.02) {
             const cx = celest.x / 3, cy = ((hz - celest.y) / 1.25) / 3, rr = Math.max(8, celest.r * 3.4 / 3);
@@ -804,6 +1300,55 @@ function drawWater(ctx2, sky, graded) {
     ctx2.fillStyle = hg; ctx2.fillRect(0, hz - 6, W, wh * 0.14 + 6);
 }
 
+// Fresnel: a flat water surface reflects the sky strongly at grazing angles (near the horizon) and shows its depth when looked at steeply (near the viewer)
+function drawFresnel(ctx2, graded) {
+    if (S.snowCover > 0.6) return;
+    const a = 0.3 * (1 - S.fog * 0.5) * (1 - 0.4 * S.rain);
+    const fg = ctx2.createLinearGradient(0, HORIZON, 0, H);
+    fg.addColorStop(0, rgba(graded.hor, a)); fg.addColorStop(0.18, rgba(graded.hor, a * 0.45)); fg.addColorStop(0.6, rgba(graded.hor, a * 0.1)); fg.addColorStop(1, rgba(graded.hor, 0));
+    ctx2.fillStyle = fg; ctx2.fillRect(0, HORIZON, W, H - HORIZON);
+}
+
+function drawFish(g, sky) {
+    if (!cfg.realistic || tierLevel() < 1) return;
+    const visibility = smooth((sky.amb - .45) / .53) * smooth(1 - BFN / 5) * (1 - S.rain) * (1 - S.snowCover);
+    if (visibility < .05) return;
+    const span = H - HORIZON, count = tierLevel() === 2 ? 7 : 4;
+    g.save();
+    g.fillStyle = rgba([8, 25, 34], .55 * visibility);
+    for (let i = 0; i < count; i++) {
+        const travel = ((animTime * .041 + i * .025 + .16) % 1) * 1.15 - .075;
+        const depth = .60 + .036 * i + Math.sin(animTime * .59 + i * 1.5) * .026;
+        const x = travel * W, y = HORIZON + depth * span;
+        const size = (5 + i % 3 * 1.7) * K, tail = Math.sin(animTime * 6.2 - i * .6) * size * .26;
+        g.beginPath();
+        g.ellipse(x, y, size, size * .25, -.03, 0, TAU);
+        g.moveTo(x - size * .73, y);
+        g.lineTo(x - size * 1.59, y - size * .44 + tail);
+        g.lineTo(x - size * 1.43, y + tail);
+        g.lineTo(x - size * 1.63, y + size * .39 + tail);
+        g.closePath();
+        g.fill();
+    }
+    g.restore();
+}
+
+// Foam: short white crests that flash on the waves when the wind is up or it rains hard; a fixed set of crests (no per-frame allocation), more visible and bigger toward the viewer
+let foam = null;
+function drawFoam(ctx2, amb) {
+    const power = clamp((S.wind - 12) / 40 + S.rain * 0.35 + S.storm * 0.4, 0, 1);
+    if (power < 0.05 || S.snowCover > 0.5 || tierLevel() < 1) return;
+    if (!foam) { const r = mulberry32(31); foam = Array.from({ length: 90 }, () => ({ x: r(), z: Math.pow(r(), 1.6), w: 0.5 + r(), ph: r() * TAU, sp: 0.4 + r() * 1.2 })); }
+    const col = mix([150, 165, 190], [250, 252, 255], clamp(amb + 0.15, 0, 1));
+    const span = H - HORIZON;
+    for (const f of foam) {
+        const flash = Math.sin(animTime * f.sp + f.ph); if (flash < 0.35) continue;
+        const a = (flash - 0.35) / 0.65 * power * (0.2 + 0.5 * f.z);
+        const y = HORIZON + span * (0.04 + 0.9 * f.z), w = (8 + 48 * f.z) * f.w * K, x = ((f.x + animTime * 0.002 * S.dir * (0.5 + f.z)) % 1 + 1) % 1 * W;
+        ctx2.fillStyle = rgba(col, a); ctx2.beginPath(); ctx2.ellipse(x, y, w, Math.max(0.7, w * 0.05), 0, 0, TAU); ctx2.fill();
+    }
+}
+
 function drawRipples(ctx2, dt, amb) {
     if (S.snowCover > 0.6) { ripples.length = 0; return; }
     const col = mix([120, 140, 170], [225, 235, 250], clamp(amb + 0.15, 0, 1));
@@ -821,7 +1366,7 @@ function drawRipples(ctx2, dt, amb) {
 }
 
 function drawRain(ctx2, dt, amb, density) {
-    const intensity = S.rain;
+    const intensity = clamp(S.rain * cfg.rainLandscapeIntensity, 0, 2);
     if (intensity < 0.02) return;
     const col = mix([135, 152, 180], [215, 230, 250], clamp(amb + 0.1, 0, 1));
     const layers = [
@@ -833,8 +1378,7 @@ function drawRain(ctx2, dt, amb, density) {
     const wind = S.windX;
     for (const L of layers) {
         const n = Math.round(L.arr.length * Math.min(1, intensity * 1.15));
-        ctx2.strokeStyle = rgba(col, L.a * (0.55 + 0.45 * intensity));
-        ctx2.lineWidth = L.w * Math.sqrt(K);
+        const aL = L.a * (0.55 + 0.45 * intensity), wL = L.w * Math.sqrt(K);
         ctx2.beginPath();
         for (let i = 0; i < n; i++) {
             const d = L.arr[i];
@@ -854,7 +1398,15 @@ function drawRain(ctx2, dt, amb, density) {
             ctx2.moveTo(d.x, d.y);
             ctx2.lineTo(d.x - wind * K * (d.v / 1200) * k, d.y - d.v * K * k);
         }
-        ctx2.stroke();
+        // motion blur: the same streaks once wide and faint, once thin and sharp (one path, two strokes)
+        ctx2.strokeStyle = rgba(col, aL * 0.4); ctx2.lineWidth = wL * 3.2; ctx2.stroke();
+        ctx2.strokeStyle = rgba(col, aL); ctx2.lineWidth = wL; ctx2.stroke();
+    }
+    // wet surfaces: a soft specular sheen on the ground / water that grows with the rain
+    if (intensity > 0.2) {
+        const wg = ctx2.createLinearGradient(0, HORIZON, 0, H);
+        wg.addColorStop(0, rgba(col, 0.1 * intensity)); wg.addColorStop(0.5, rgba(col, 0.03 * intensity)); wg.addColorStop(1, rgba(col, 0));
+        ctx2.fillStyle = wg; ctx2.fillRect(0, HORIZON, W, H - HORIZON);
     }
     // splash droplets
     if (splashes.length) {
@@ -920,14 +1472,15 @@ function drawFog(ctx2, dt, graded, amb) {
 }
 
 // ---- rain on the "window glass"
-// ΔΙΟΡΘΩΣΗ "το εφέ των σταγόνων στην οθόνη δεν λειτουργεί" (2ο γύρο, μετά το reorder-fix
-// παραπάνω): οι σταγόνες ΟΝΤΩΣ ζωγραφίζονταν (επιβεβαιώθηκε live σε headless Chromium, πλάι-σε-
-// πλάι frame diff), αλλά με τόσο μικρή ακτίνα (1.6-6px) και τόσο χαμηλό alpha (0.05-0.22) που σε
-// πραγματική απόσταση θέασης desktop ήταν ουσιαστικά αόρατες — "δεν λειτουργεί" από την οπτική
-// γωνία του χρήστη, ακόμα κι αν τεχνικά ζωγραφιζόταν κάθε frame. Μεγαλύτερες σταγόνες + σαφώς
-// μεγαλύτερο alpha παντού, πιο κοντά στο πώς φαίνεται το αντίστοιχο εφέ του Lively Wallpaper.
+// Ξ”Ξ™ΞΞ΅ΞΞ©Ξ£Ξ— "Ο„ΞΏ ΞµΟ†Ξ­ Ο„Ο‰Ξ½ ΟƒΟ„Ξ±Ξ³ΟΞ½Ο‰Ξ½ ΟƒΟ„Ξ·Ξ½ ΞΏΞΈΟΞ½Ξ· Ξ΄ΞµΞ½ Ξ»ΞµΞΉΟ„ΞΏΟ…ΟΞ³ΞµΞ―" (2ΞΏ Ξ³ΟΟΞΏ, ΞΌΞµΟ„Ξ¬ Ο„ΞΏ reorder-fix
+// Ο€Ξ±ΟΞ±Ο€Ξ¬Ξ½Ο‰): ΞΏΞΉ ΟƒΟ„Ξ±Ξ³ΟΞ½ΞµΟ‚ ΞΞΞ¤Ξ©Ξ£ Ξ¶Ο‰Ξ³ΟΞ±Ο†Ξ―Ξ¶ΞΏΞ½Ο„Ξ±Ξ½ (ΞµΟ€ΞΉΞ²ΞµΞ²Ξ±ΞΉΟΞΈΞ·ΞΊΞµ live ΟƒΞµ headless Chromium, Ο€Ξ»Ξ¬ΞΉ-ΟƒΞµ-
+// Ο€Ξ»Ξ¬ΞΉ frame diff), Ξ±Ξ»Ξ»Ξ¬ ΞΌΞµ Ο„ΟΟƒΞΏ ΞΌΞΉΞΊΟΞ® Ξ±ΞΊΟ„Ξ―Ξ½Ξ± (1.6-6px) ΞΊΞ±ΞΉ Ο„ΟΟƒΞΏ Ο‡Ξ±ΞΌΞ·Ξ»Ο alpha (0.05-0.22) Ο€ΞΏΟ… ΟƒΞµ
+// Ο€ΟΞ±Ξ³ΞΌΞ±Ο„ΞΉΞΊΞ® Ξ±Ο€ΟΟƒΟ„Ξ±ΟƒΞ· ΞΈΞ­Ξ±ΟƒΞ·Ο‚ desktop Ξ®Ο„Ξ±Ξ½ ΞΏΟ…ΟƒΞΉΞ±ΟƒΟ„ΞΉΞΊΞ¬ Ξ±ΟΟΞ±Ο„ΞµΟ‚ β€” "Ξ΄ΞµΞ½ Ξ»ΞµΞΉΟ„ΞΏΟ…ΟΞ³ΞµΞ―" Ξ±Ο€Ο Ο„Ξ·Ξ½ ΞΏΟ€Ο„ΞΉΞΊΞ®
+// Ξ³Ο‰Ξ½Ξ―Ξ± Ο„ΞΏΟ… Ο‡ΟΞ®ΟƒΟ„Ξ·, Ξ±ΞΊΟΞΌΞ± ΞΊΞΉ Ξ±Ξ½ Ο„ΞµΟ‡Ξ½ΞΉΞΊΞ¬ Ξ¶Ο‰Ξ³ΟΞ±Ο†ΞΉΞ¶ΟΟ„Ξ±Ξ½ ΞΊΞ¬ΞΈΞµ frame. ΞΞµΞ³Ξ±Ξ»ΟΟ„ΞµΟΞµΟ‚ ΟƒΟ„Ξ±Ξ³ΟΞ½ΞµΟ‚ + ΟƒΞ±Ο†ΟΟ‚
+// ΞΌΞµΞ³Ξ±Ξ»ΟΟ„ΞµΟΞΏ alpha Ο€Ξ±Ξ½Ο„ΞΏΟ, Ο€ΞΉΞΏ ΞΊΞΏΞ½Ο„Ξ¬ ΟƒΟ„ΞΏ Ο€ΟΟ‚ Ο†Ξ±Ξ―Ξ½ΞµΟ„Ξ±ΞΉ Ο„ΞΏ Ξ±Ξ½Ο„Ξ―ΟƒΟ„ΞΏΞΉΟ‡ΞΏ ΞµΟ†Ξ­ Ο„ΞΏΟ… Lively Wallpaper.
 function updateGlass(dt) {
-    const want = cfg.glass && S.rain > 0.12 ? Math.round((34 + 150 * S.rain) * Math.min(1.4, W / 1920 + 0.2)) : 0;
+    const glassRain = clamp(S.rain * cfg.rainGlassIntensity, 0, 2);
+    const want = cfg.glass && glassRain > 0.12 ? Math.min(500, Math.round((34 + 150 * glassRain) * Math.min(1.4, W / 1920 + 0.2))) : 0;
     while (glass.length < want && Math.random() < 0.6) {
         glass.push({ x: Math.random() * W, y: Math.random() * H, r: (3 + Math.random() * 7) * K, vy: 0, trail: [], age: 0 });
     }
@@ -1017,26 +1570,33 @@ function draw(target, dt, profile) {
     if (shoot) { shoot.life += dt; if (shoot.life >= shoot.dur) shoot = null; }
 
     // ---- sky canvas
+    const photograph = onPhoto();
+    const cityPhoto = photograph && !photoState.landscape;
     const graded = drawSkyLayer(sky, t, sr, ss);
     drawStarsLayer(sky, 1 - S.cloud * 0.8 - S.fog * 0.5);
-    const moon = drawMoonLayer(t, sr, ss, 1);
-    const sun = drawSunLayer(sky, t, sr, ss);
+    drawMilkyWay(sky);
+    const moon = drawMoonLayer(t, sr, ss, 1, cityPhoto);
+    moonBright = moon && moon.alpha > 0.05 ? clamp(moon.alpha, 0, 1) * (1 - Math.abs(moonPhase() - 0.5) * 2 > 0.3 ? 1 : 0.4) : 0;
+    const sun = drawSunLayer(sky, t, sr, ss, cityPhoto);
+    drawRainbow(sky, sun);
     // the brighter visible body drives the light path on the water
     celest = null;
     if (sun && sun.vis > 0.05 && sun.e > 0.0) celest = { x: sun.x, y: sun.y, r: sun.r, power: clamp(sun.vis * (0.55 + 0.45 * sky.glow), 0, 1), col: mix([255, 255, 255], [255, 170, 110], clamp(1 - sun.e * 2.2, 0, 1)) };
     else if (moon && moon.alpha > 0.05) celest = { x: moon.x, y: moon.y, r: moon.r, power: clamp(moon.alpha * 0.9, 0, 1), col: [205, 220, 248] };
-    drawCloudsLayer(sky, dt);
+    drawCloudsLayer(sky, dt, cityPhoto);
+    if (cfg.realistic) window.OpsisWeatherAtmosphere?.drawSky(skyCtx, W, HORIZON, sky, graded, celest, S);
     if (flash > 0) { skyCtx.fillStyle = `rgba(200,215,255,${flash * 0.55})`; skyCtx.fillRect(0, 0, W, HORIZON); }
-    drawHillsLayer(sky, graded);
+    drawBolt(skyCtx);
+    if (!photograph) drawHillsLayer(sky, graded);
 
     // ---- composite
-    // ΔΙΟΡΘΩΣΗ "το εφέ των σταγόνων στην οθόνη δεν λειτουργεί": το updateGlass (που ΓΕΜΙΖΕΙ το
-    // glass[] array) καλούνταν ΜΕΤΑ τον υπολογισμό του useGlass — στο πρώτο frame που αρχίζει η
-    // βροχή, glass.length ήταν ακόμα 0 ΤΗ ΣΤΙΓΜΗ του ελέγχου, οπότε useGlass έβγαινε false και το
-    // drawGlass παραλειπόταν ΕΝΤΕΛΩΣ για εκείνο το frame (και κάθε φορά που το glass[] άδειαζε
-    // προσωρινά κοντά στο κατώφλι βροχής 0.12, το effect έσβηνε/αναβόσβηνε αντί να παραμένει
-    // σταθερό). Τώρα το updateGlass τρέχει ΠΡΩΤΑ, ώστε το useGlass να βλέπει πάντα την
-    // ενημερωμένη κατάσταση του ΙΔΙΟΥ frame.
+    // Ξ”Ξ™ΞΞ΅ΞΞ©Ξ£Ξ— "Ο„ΞΏ ΞµΟ†Ξ­ Ο„Ο‰Ξ½ ΟƒΟ„Ξ±Ξ³ΟΞ½Ο‰Ξ½ ΟƒΟ„Ξ·Ξ½ ΞΏΞΈΟΞ½Ξ· Ξ΄ΞµΞ½ Ξ»ΞµΞΉΟ„ΞΏΟ…ΟΞ³ΞµΞ―": Ο„ΞΏ updateGlass (Ο€ΞΏΟ… Ξ“Ξ•ΞΞ™Ξ–Ξ•Ξ™ Ο„ΞΏ
+    // glass[] array) ΞΊΞ±Ξ»ΞΏΟΞ½Ο„Ξ±Ξ½ ΞΞ•Ξ¤Ξ‘ Ο„ΞΏΞ½ Ο…Ο€ΞΏΞ»ΞΏΞ³ΞΉΟƒΞΌΟ Ο„ΞΏΟ… useGlass β€” ΟƒΟ„ΞΏ Ο€ΟΟΟ„ΞΏ frame Ο€ΞΏΟ… Ξ±ΟΟ‡Ξ―Ξ¶ΞµΞΉ Ξ·
+    // Ξ²ΟΞΏΟ‡Ξ®, glass.length Ξ®Ο„Ξ±Ξ½ Ξ±ΞΊΟΞΌΞ± 0 Ξ¤Ξ— Ξ£Ξ¤Ξ™Ξ“ΞΞ— Ο„ΞΏΟ… ΞµΞ»Ξ­Ξ³Ο‡ΞΏΟ…, ΞΏΟ€ΟΟ„Ξµ useGlass Ξ­Ξ²Ξ³Ξ±ΞΉΞ½Ξµ false ΞΊΞ±ΞΉ Ο„ΞΏ
+    // drawGlass Ο€Ξ±ΟΞ±Ξ»ΞµΞΉΟ€ΟΟ„Ξ±Ξ½ Ξ•ΞΞ¤Ξ•Ξ›Ξ©Ξ£ Ξ³ΞΉΞ± ΞµΞΊΞµΞ―Ξ½ΞΏ Ο„ΞΏ frame (ΞΊΞ±ΞΉ ΞΊΞ¬ΞΈΞµ Ο†ΞΏΟΞ¬ Ο€ΞΏΟ… Ο„ΞΏ glass[] Ξ¬Ξ΄ΞµΞΉΞ±Ξ¶Ξµ
+    // Ο€ΟΞΏΟƒΟ‰ΟΞΉΞ½Ξ¬ ΞΊΞΏΞ½Ο„Ξ¬ ΟƒΟ„ΞΏ ΞΊΞ±Ο„ΟΟ†Ξ»ΞΉ Ξ²ΟΞΏΟ‡Ξ®Ο‚ 0.12, Ο„ΞΏ effect Ξ­ΟƒΞ²Ξ·Ξ½Ξµ/Ξ±Ξ½Ξ±Ξ²ΟΟƒΞ²Ξ·Ξ½Ξµ Ξ±Ξ½Ο„Ξ― Ξ½Ξ± Ο€Ξ±ΟΞ±ΞΌΞ­Ξ½ΞµΞΉ
+    // ΟƒΟ„Ξ±ΞΈΞµΟΟ). Ξ¤ΟΟΞ± Ο„ΞΏ updateGlass Ο„ΟΞ­Ο‡ΞµΞΉ Ξ Ξ΅Ξ©Ξ¤Ξ‘, ΟΟƒΟ„Ξµ Ο„ΞΏ useGlass Ξ½Ξ± Ξ²Ξ»Ξ­Ο€ΞµΞΉ Ο€Ξ¬Ξ½Ο„Ξ± Ο„Ξ·Ξ½
+    // ΞµΞ½Ξ·ΞΌΞµΟΟ‰ΞΌΞ­Ξ½Ξ· ΞΊΞ±Ο„Ξ¬ΟƒΟ„Ξ±ΟƒΞ· Ο„ΞΏΟ… Ξ™Ξ”Ξ™ΞΞ¥ frame.
     updateGlass(dt);
     const useGlass = cfg.glass && glass.length > 0;
     let c2 = target;
@@ -1047,13 +1607,25 @@ function draw(target, dt, profile) {
     c2.setTransform(1, 0, 0, 1, 0, 0);
     c2.globalAlpha = 1; c2.globalCompositeOperation = 'source-over';
     c2.drawImage(skyCv, 0, 0);
-    drawWater(c2, sky, graded);
-    drawRipples(c2, dt, sky.amb);
+    drawBirds(c2, dt, sky, cityPhoto);
+    if (photograph) drawScenePhoto(c2, sky, graded);
+    else if (onLand()) {
+        drawLand(c2, sky, graded);
+        const city = activeCity();
+        if (city?.terrain === 'river') window.OpsisCityLandscape.drawRiver(c2, city, W, H, HORIZON, graded.hor);
+    }
+    else {
+        drawWater(c2, sky, graded);
+        drawFish(c2, sky);
+        drawFresnel(c2, graded);
+        if (activeCity()?.terrain !== 'lake') drawFoam(c2, sky.amb);
+        drawRipples(c2, dt, sky.amb);
+    }
+    if (cfg.realistic) window.OpsisWeatherAtmosphere?.drawDepth(c2, W, H, HORIZON, graded, S, photograph);
     drawFog(c2, dt, graded, sky.amb);
     drawRain(c2, dt, sky.amb, density);
     drawSnow(c2, dt, sky.amb);
     if (flash > 0) { c2.fillStyle = `rgba(210,222,255,${flash * 0.35})`; c2.fillRect(0, 0, W, H); }
-    drawBolt(c2);
     drawVignette(c2);
 
     if (useGlass) {
@@ -1065,15 +1637,25 @@ function draw(target, dt, profile) {
 
 window.WeatherWallpaper = {
     setConfig, setWeather, resize,
+    release() {
+        W = H = 0;
+        skyCv = skyCtx = cloudCv = cloudCtx = sceneCv = sceneCtx = reflCv = reflCtx = null;
+        Object.assign(photoState, { id: '', key: '', ready: false, lightsReady: false,
+            img: null, lights: null, skyMask: null, canvas: null });
+    },
     draw: (ctx2, dt, profile) => draw(ctx2, Math.min(dt, 0.1), profile),
     // info overlay helpers (clock / date / temperature drawn by index.html)
     info: () => {
         const m = localMinutes();
         const d = new Date(Date.now() + (offsetMinutes() + new Date().getTimezoneOffset()) * 60000);   // wall-clock date at the location
-        // Ζητήθηκε ρητά "εμφάνιση ανέμου μαζί με την ώρα/ημερομηνία/θερμοκρασία στην επιφάνεια
-        // εργασίας" — windKmh/beaufort εκτίθενται εδώ ώστε το index.html να τα δείξει στο ίδιο
-        // overlay (βλ. updateWeatherInfo). S.wind είναι ήδη σε km/h (βλ. computeTargets).
-        return { h: Math.floor(m / 60) % 24, m: Math.floor(m % 60), date: d, temp: data && data.ok ? data.temp : null, code: cfg.weatherSim && cfg.weatherSim !== 'Auto' ? ({ Clear: 0, PartlyCloudy: 2, Cloudy: 3, Drizzle: 51, Rain: 63, HeavyRain: 65, Thunderstorm: 95, Snow: 73, Fog: 45 })[cfg.weatherSim] : (data && data.ok ? data.code : null), windKmh: Math.round(S.wind), beaufort: BFN };
+        // Ξ–Ξ·Ο„Ξ®ΞΈΞ·ΞΊΞµ ΟΞ·Ο„Ξ¬ "ΞµΞΌΟ†Ξ¬Ξ½ΞΉΟƒΞ· Ξ±Ξ½Ξ­ΞΌΞΏΟ… ΞΌΞ±Ξ¶Ξ― ΞΌΞµ Ο„Ξ·Ξ½ ΟΟΞ±/Ξ·ΞΌΞµΟΞΏΞΌΞ·Ξ½Ξ―Ξ±/ΞΈΞµΟΞΌΞΏΞΊΟΞ±ΟƒΞ―Ξ± ΟƒΟ„Ξ·Ξ½ ΞµΟ€ΞΉΟ†Ξ¬Ξ½ΞµΞΉΞ±
+        // ΞµΟΞ³Ξ±ΟƒΞ―Ξ±Ο‚" β€” windKmh/beaufort ΞµΞΊΟ„Ξ―ΞΈΞµΞ½Ο„Ξ±ΞΉ ΞµΞ΄Ο ΟΟƒΟ„Ξµ Ο„ΞΏ index.html Ξ½Ξ± Ο„Ξ± Ξ΄ΞµΞ―ΞΎΞµΞΉ ΟƒΟ„ΞΏ Ξ―Ξ΄ΞΉΞΏ
+        // overlay (Ξ²Ξ». updateWeatherInfo). S.wind ΞµΞ―Ξ½Ξ±ΞΉ Ξ®Ξ΄Ξ· ΟƒΞµ km/h (Ξ²Ξ». computeTargets).
+        return { h: Math.floor(m / 60) % 24, m: Math.floor(m % 60), date: d, temp: data && data.ok ? data.temp : null, code: cfg.weatherSim && cfg.weatherSim !== 'Auto' ? ({ Clear: 0, PartlyCloudy: 2, Cloudy: 3, Drizzle: 51, Rain: 63, HeavyRain: 65, Thunderstorm: 95, Snow: 73, Fog: 45 })[cfg.weatherSim] : (data && data.ok ? data.code : null), windKmh: Math.round(S.wind), beaufort: BFN,
+            source: data?.ok ? data.source : null,
+            observedAt: data?.ok ? data.observedAt : null,
+            fetchedAt: data?.ok ? data.fetchedAt : null,
+            stale: !!data?.stale };
     },
     // test helpers (headless screenshots)
     _state: () => ({ S, TGT, bf: BFN, t: localMinutes(), sun: sunTimes(offsetMinutes()) }),
@@ -1081,3 +1663,4 @@ window.WeatherWallpaper = {
     _warm: (secs, ctx2, profile) => { for (let i = 0; i < secs * 30; i++) draw(ctx2, 1 / 30, profile); },
 };
 })();
+

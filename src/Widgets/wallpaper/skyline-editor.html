@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="el">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>OPSIS Skyline Brush</title>
+<style>
+*{box-sizing:border-box}html,body{margin:0;height:100%;background:#111827;color:#f2f5ff;font:14px 'Segoe UI',sans-serif}
+header{display:flex;align-items:center;gap:16px;padding:14px 18px;background:#202a3e;min-height:60px}
+button{border:1px solid #56718b;border-radius:8px;color:#fff;background:#2b4f70;padding:9px 16px;font:inherit;cursor:pointer}
+button:focus-visible{outline:3px solid #ffcf5a}button:hover{background:#3a6388}
+#workspace{height:calc(100% - 108px);position:relative;display:grid;place-items:center;padding:12px}
+canvas{max-width:100%;max-height:100%;cursor:crosshair;touch-action:none;outline:2px solid #5e728a}
+footer{padding:10px 18px;background:#202a3e;color:#ccd4e4}
+#state{margin-left:auto;color:#ffe29a}
+</style>
+</head>
+<body>
+<header><strong>OPSIS · Skyline Brush</strong><button id="reset">Επαναφορά / Reset</button><button id="save">Αποθήκευση / Save</button><span id="state">Φόρτωση εικόνας…</span></header>
+<div id="workspace"><canvas id="scene" width="512" height="288" aria-label="Draw the photo skyline with mouse or touch"></canvas></div>
+<footer>Αριστερό σύρσιμο: γραμμή ουρανού · Δεξί σύρσιμο: αφαίρεση ουρανού · Το πρωτότυπο δεν τροποποιείται.</footer>
+<script>
+(() => {
+ 'use strict';
+ const canvas=document.getElementById('scene'), ctx=canvas.getContext('2d');
+ const status=document.getElementById('state');
+ const img=new Image(); let rows=null, drawing=false,lastX=-1,lastY=0;
+ function redraw(){
+   ctx.clearRect(0,0,canvas.width,canvas.height);
+   if(!img.complete || !img.naturalWidth)return;
+   ctx.drawImage(img,0,0,canvas.width,canvas.height);
+   ctx.strokeStyle='#ffd75f';ctx.lineWidth=2;ctx.setLineDash([5,3]);ctx.beginPath();
+   let open=false;
+   for(let x=0;x<rows.length;x++){
+      if(rows[x]<=0){open=false;continue;}
+      if(!open){ctx.moveTo(x,rows[x]);open=true;}else ctx.lineTo(x,rows[x]);
+   }
+   ctx.stroke();ctx.setLineDash([]);
+ }
+ function paint(event){
+   if(!drawing || !rows)return;
+   const rect=canvas.getBoundingClientRect();
+   const x=Math.max(0,Math.min(511,Math.floor((event.clientX-rect.left)*512/rect.width)));
+   const y=event.buttons===2?0:Math.max(0,Math.min(canvas.height,Math.round((event.clientY-rect.top)*canvas.height/rect.height)));
+   const start=lastX<0?x:Math.min(x,lastX),end=lastX<0?x:Math.max(x,lastX);
+   for(let i=start;i<=end;i++){
+      const t=lastX<0 || lastX===x?1:Math.max(0,Math.min(1,(i-lastX)/(x-lastX)));
+      rows[i]=Math.round(lastX<0?y:lastY+(y-lastY)*t);
+   }
+   lastX=x;lastY=y;redraw();status.textContent='Μη αποθηκευμένο / Unsaved';
+ }
+ canvas.addEventListener('pointerdown',e=>{e.preventDefault();drawing=true;lastX=-1;canvas.setPointerCapture(e.pointerId);paint(e);});
+ canvas.addEventListener('pointermove',paint);
+ canvas.addEventListener('pointerup',()=>{drawing=false;lastX=-1;});
+ canvas.addEventListener('pointercancel',()=>{drawing=false;lastX=-1;});
+ canvas.addEventListener('contextmenu',e=>e.preventDefault());
+ document.getElementById('reset').addEventListener('click',()=>{if(!rows)return;rows.fill(Math.round(canvas.height*.4));redraw();status.textContent='Επαναφορά περιγράμματος';});
+ document.getElementById('save').addEventListener('click',()=>{if(rows && window.chrome?.webview)window.chrome.webview.postMessage({action:'save',width:512,height:canvas.height,rows});});
+ window.opsisEditorLoad=(input)=>{
+    const file=input?.file;
+    if(typeof file!=='string' || !/^scenes\/[a-zA-Z0-9/_-]+\.(webp|png|jpg|jpeg)$/i.test(file) || file.includes('..'))return;
+    img.onload=()=>{
+       canvas.width=512;canvas.height=Math.max(1,Math.min(512,Math.round(512*img.naturalHeight/img.naturalWidth)));
+       rows=Array.isArray(input.existing?.rows) && input.existing.width===512 && input.existing.height===canvas.height && input.existing.rows.length===512
+           ? input.existing.rows.slice() : Array(512).fill(Math.round(canvas.height*.4));
+       redraw();status.textContent=img.naturalWidth+' × '+img.naturalHeight;
+    };
+    img.onerror=()=>{status.textContent='Unable to load image';};
+    img.src=file;
+ };
+})();
+</script>
+</body>
+</html>

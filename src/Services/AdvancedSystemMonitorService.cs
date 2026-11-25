@@ -9,7 +9,8 @@ public sealed class AdvancedSystemMonitorService
 {
     private static readonly Lazy<AdvancedSystemMonitorService> Lazy = new(() => new());
     public static AdvancedSystemMonitorService Instance => Lazy.Value;
-    private long _lastDown, _lastUp;
+    // Stable NetworkInterface.Id (GUID), not display Name (which Windows can rename).
+    private readonly Dictionary<string, (long Down, long Up)> _adapterCounters = new(StringComparer.OrdinalIgnoreCase);
     private DateTime _lastNetwork = DateTime.UtcNow;
     private DateTime _lastSnapshot = DateTime.MinValue;
     private AdvancedMetrics _cached;
@@ -31,28 +32,42 @@ public sealed class AdvancedSystemMonitorService
 
     public AdvancedMetrics GetSnapshot()
     {
+        lock (_snapshotLock) return ReadSnapshot();
+    }
+
+    private readonly object _snapshotLock = new();
+    private AdvancedMetrics ReadSnapshot()
+    {
         var now = DateTime.UtcNow;
         if (_lastSnapshot != DateTime.MinValue && (now - _lastSnapshot).TotalMilliseconds < 750)
             return _cached;
 
         var basic = SystemMonitorService.Instance.GetSnapshot();
-        long down = 0, up = 0;
+        long deltaDown = 0, deltaUp = 0;
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var ni in NetworkInterface.GetAllNetworkInterfaces())
         {
-            if (ni.OperationalStatus != OperationalStatus.Up) continue;
+            if (ni.OperationalStatus != OperationalStatus.Up || string.IsNullOrWhiteSpace(ni.Id)) continue;
             try
             {
                 var stats = ni.GetIPv4Statistics();
-                down += stats.BytesReceived;
-                up += stats.BytesSent;
+                seen.Add(ni.Id);
+                if (_adapterCounters.TryGetValue(ni.Id, out var previous))
+                {
+                    // Counter reset, replaced dongle or a driver restart must not create a huge spike.
+                    if (stats.BytesReceived >= previous.Down) deltaDown += stats.BytesReceived - previous.Down;
+                    if (stats.BytesSent >= previous.Up) deltaUp += stats.BytesSent - previous.Up;
+                }
+                _adapterCounters[ni.Id] = (stats.BytesReceived, stats.BytesSent);
             }
             catch (NetworkInformationException) { }
         }
+        foreach (var missing in _adapterCounters.Keys.Where(id => !seen.Contains(id)).ToArray()) _adapterCounters.Remove(missing);
 
         var seconds = Math.Max(0.25, (now - _lastNetwork).TotalSeconds);
-        var downK = _lastDown == 0 ? 0 : Math.Max(0, down - _lastDown) / 1024d / seconds;
-        var upK = _lastUp == 0 ? 0 : Math.Max(0, up - _lastUp) / 1024d / seconds;
-        _lastDown = down; _lastUp = up; _lastNetwork = now;
+        var downK = deltaDown / 1024d / seconds;
+        var upK = deltaUp / 1024d / seconds;
+        _lastNetwork = now;
 
         _cached = new AdvancedMetrics(
             basic.CpuPercent, basic.AvailableMemoryMb, basic.TotalMemoryMb,

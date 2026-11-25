@@ -1,0 +1,8 @@
+Opsis - Desktop Customization
+
+Customise the Windows desktop with wallpapers, DeskContainers,
+DeskStrip, widgets, and Desk Music Visualizer.
+
+Setup checks for .NET 11 Desktop Runtime and Microsoft Edge WebView2
+Runtime. Use the dependencies page to install any that are missing.
+Updating keeps your Opsis - Desktop Customization settings.

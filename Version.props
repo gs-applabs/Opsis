@@ -1,0 +1,10 @@
+<Project>
+  <!-- Single authored application release identity. Inno Setup derives its
+       version from the published executable; Help and updates use AppVersion. -->
+  <PropertyGroup>
+    <OpsisAppVersion>2.8.0.2510</OpsisAppVersion>
+    <Version>$(OpsisAppVersion)</Version>
+    <FileVersion>$(OpsisAppVersion)</FileVersion>
+    <InformationalVersion>$(OpsisAppVersion)</InformationalVersion>
+  </PropertyGroup>
+</Project>

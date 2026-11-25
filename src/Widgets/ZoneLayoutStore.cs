@@ -57,6 +57,60 @@ namespace MotionDesk.Widgets
 
         private static Dictionary<string, ZoneLayoutData>? _cache;
 
+        /// <summary>Portable, monitor-agnostic export. Neither screen IDs nor machine paths travel.</summary>
+        public static string ExportLayoutJson(ZoneLayoutData layout)
+        {
+            if (!IsValidPortableLayout(layout)) throw new ArgumentException("Invalid zone layout", nameof(layout));
+            return JsonSerializer.Serialize(new { schemaVersion = 1, layout = new ZoneLayoutData
+            {
+                Template = layout.Template,
+                Zones = layout.Zones.Select(z => new ZoneRect { X = z.X, Y = z.Y, Width = z.Width, Height = z.Height }).ToList(),
+                Resolution = null // never bind a portable layout to its source monitor
+            } }, new JsonSerializerOptions { WriteIndented = true });
+        }
+
+        /// <summary>Only parses and previews a portable layout; nothing is applied or saved.</summary>
+        public static bool TryImportLayoutJson(string? json, out ZoneLayoutData layout, out string error)
+        {
+            layout = new ZoneLayoutData();
+            error = "";
+            if (string.IsNullOrWhiteSpace(json) || json.Length > 65536)
+            {
+                error = "Empty or oversized layout file (maximum 64 KiB)."; return false;
+            }
+            try
+            {
+                using var doc = JsonDocument.Parse(json, new JsonDocumentOptions { MaxDepth = 12 });
+                if (doc.RootElement.ValueKind != JsonValueKind.Object ||
+                    !doc.RootElement.TryGetProperty("schemaVersion", out var schema) || schema.GetInt32() != 1 ||
+                    !doc.RootElement.TryGetProperty("layout", out var data))
+                { error = "Unsupported layout schema."; return false; }
+                var candidate = data.Deserialize<ZoneLayoutData>();
+                if (!IsValidPortableLayout(candidate))
+                { error = "The layout contains invalid or out-of-bounds zones."; return false; }
+                candidate!.Resolution = null;
+                layout = candidate;
+                return true;
+            }
+            catch (Exception ex) when (ex is JsonException or InvalidOperationException or FormatException or OverflowException)
+            { error = "Invalid layout JSON: " + ex.Message; return false; }
+        }
+
+        private static bool IsValidPortableLayout(ZoneLayoutData? layout)
+        {
+            if (layout == null || layout.Zones == null || layout.Zones.Count > 48 ||
+                string.IsNullOrEmpty(layout.Template) || layout.Template.Length > 64 ||
+                layout.Zones.Count == 0 && layout.Template != "No layout") return false;
+            foreach (var z in layout.Zones)
+            {
+                if (z == null || !double.IsFinite(z.X) || !double.IsFinite(z.Y) ||
+                    !double.IsFinite(z.Width) || !double.IsFinite(z.Height) ||
+                    z.X < 0 || z.Y < 0 || z.Width <= 0 || z.Height <= 0 ||
+                    z.X + z.Width > 1.0000001 || z.Y + z.Height > 1.0000001) return false;
+            }
+            return true;
+        }
+
         private static Dictionary<string, ZoneLayoutData> Load()
         {
             if (_cache != null) return _cache;
@@ -82,6 +136,50 @@ namespace MotionDesk.Widgets
                 MotionDesk.Services.AtomicFile.WriteAllText(ConfigPath, JsonSerializer.Serialize(_cache ?? new Dictionary<string, ZoneLayoutData>(), new JsonSerializerOptions { WriteIndented = true }));
             }
             catch (IOException) { }
+        }
+
+        /// <summary>Find an exact shared vertical/horizontal boundary (does not resize diagonal or non-touching zones).</summary>
+        public static bool TryJoinAdjacent(ZoneRect a, ZoneRect b, out ZoneRect union)
+        {
+            union = new ZoneRect();
+            const double eps = 0.00001;
+            bool vertical = Math.Abs(a.Y - b.Y) < eps && Math.Abs(a.Height - b.Height) < eps &&
+                (Math.Abs(a.X + a.Width - b.X) < eps || Math.Abs(b.X + b.Width - a.X) < eps);
+            bool horizontal = Math.Abs(a.X - b.X) < eps && Math.Abs(a.Width - b.Width) < eps &&
+                (Math.Abs(a.Y + a.Height - b.Y) < eps || Math.Abs(b.Y + b.Height - a.Y) < eps);
+            if (!vertical && !horizontal) return false;
+            double x = Math.Min(a.X,b.X), y = Math.Min(a.Y,b.Y);
+            union = new ZoneRect { X = x, Y = y,
+                Width = Math.Max(a.X+a.Width,b.X+b.Width) - x,
+                Height = Math.Max(a.Y+a.Height,b.Y+b.Height) - y };
+            return true;
+        }
+
+        /// <summary>Move a shared border by a bounded percentage while preserving the outer edges.
+        /// Operates on an isolated clone; the caller explicitly applies it via SetLayout.</summary>
+        public static bool TryResizeSharedBorder(ZoneLayoutData source, int a, int b, double delta, out ZoneLayoutData updated)
+        {
+            updated = source;
+            if (a < 0 || b < 0 || a == b || a >= source.Zones.Count || b >= source.Zones.Count ||
+                !double.IsFinite(delta) || Math.Abs(delta) > 0.30) return false;
+            var zones = source.Zones.Select(z => new ZoneRect { X=z.X, Y=z.Y, Width=z.Width, Height=z.Height }).ToList();
+            var left = zones[a]; var right = zones[b];
+            if (!TryJoinAdjacent(left,right,out _)) return false;
+            const double eps = 0.00001, minSize = 0.07;
+            if (Math.Abs(left.Y-right.Y)<eps && Math.Abs(left.Height-right.Height)<eps)
+            {
+                if (left.X > right.X) (left,right) = (right,left);
+                if (left.Width + delta < minSize || right.Width - delta < minSize) return false;
+                left.Width += delta; right.X += delta; right.Width -= delta;
+            }
+            else
+            {
+                if (left.Y > right.Y) (left,right) = (right,left);
+                if (left.Height + delta < minSize || right.Height - delta < minSize) return false;
+                left.Height += delta; right.Y += delta; right.Height -= delta;
+            }
+            updated = new ZoneLayoutData { Template = "Custom", Zones = zones, Resolution = source.Resolution };
+            return IsValidPortableLayout(updated);
         }
 
         public static ZoneLayoutData GetLayout(string screenDeviceName)
@@ -199,6 +297,13 @@ namespace MotionDesk.Widgets
                             var (y, h) = CellRange(r, n2, gap);
                             zones.Add(new ZoneRect { X = x, Y = y, Width = w, Height = h });
                         }
+                    break;
+
+                case "Code & Docs":
+                    // Portrait-friendly dual-pane developer layout. Both zones share
+                    // exactly one rounded pixel boundary after ToAbsolute().
+                    zones.Add(new ZoneRect { X = 0, Y = 0, Width = 0.62, Height = 1.0 });
+                    zones.Add(new ZoneRect { X = 0.62, Y = 0, Width = 0.38, Height = 1.0 });
                     break;
 
                 case "Priority Grid":

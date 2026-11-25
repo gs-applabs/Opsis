@@ -63,7 +63,13 @@ namespace MotionDesk.Widgets
             {
                 int err = Marshal.GetLastWin32Error();
                 RotatingLogger.Write($"HotkeyManager: RegisterHotKey failed (already taken) for modifiers=0x{modifiers:X} vk=0x{vk:X} (Win32 error {err})");
-                lock (FailedCombos) FailedCombos.Add(Describe(modifiers, vk));
+                lock (FailedCombos)
+                {
+                    string label = Describe(modifiers, vk);
+                    FailedCombos.Add(label);
+                    if (!ConflictHistory.Contains(label, StringComparer.OrdinalIgnoreCase) && ConflictHistory.Count < 100)
+                        ConflictHistory.Add(label);
+                }
             }
             return ok;
         }
@@ -71,6 +77,29 @@ namespace MotionDesk.Widgets
         // 2.4.6.1: οι συντομεύσεις που ΔΕΝ καταχωρήθηκαν (πιασμένες από άλλη εφαρμογή/οδηγό) — το tray τις
         // δείχνει μία φορά με balloon ώστε ο χρήστης να ξέρει ότι δεν θα δουλέψουν.
         public static readonly System.Collections.Generic.List<string> FailedCombos = new();
+        private static readonly System.Collections.Generic.List<string> ConflictHistory = new();
+        private static int _probeId = 20000;
+
+        /// <summary>A snapshot of failed registrations, not cleared when the tray balloon is shown.</summary>
+        public static string[] GetConflictCatalog()
+        {
+            lock (FailedCombos) return ConflictHistory.ToArray();
+        }
+
+        /// <summary>Probe the exact combination without installing a hotkey handler or stealing a key.</summary>
+        public static (bool Available, int Win32Error) Probe(Keys key, bool ctrl, bool alt, bool shift)
+        {
+            uint modifiers = (ctrl ? MOD_CONTROL : 0u) | (alt ? MOD_ALT : 0u) | (shift ? MOD_SHIFT : 0u);
+            if (modifiers == 0 || key is Keys.None or Keys.ControlKey or Keys.Menu or Keys.ShiftKey)
+                return (false, 87);
+            // RegisterHotKey(NULL, ...) registers for only the calling UI thread; unregister
+            // immediately, regardless of the result. Nothing remains installed.
+            int id = System.Threading.Interlocked.Increment(ref _probeId);
+            bool ok = RegisterHotKey(IntPtr.Zero, id, modifiers, (uint)key);
+            int error = ok ? 0 : Marshal.GetLastWin32Error();
+            if (ok) UnregisterHotKey(IntPtr.Zero, id);
+            return (ok, error);
+        }
 
         public static string TakeFailureSummary()
         {

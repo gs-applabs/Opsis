@@ -52,7 +52,11 @@ namespace MotionDesk.Services
         }
 
         private Loaded[] Snap() { lock (_gate) return _plugins.ToArray(); }
-        private void AddLoaded(Loaded l) { lock (_gate) _plugins.Add(l); }
+        private void AddLoaded(Loaded l)
+        {
+            lock (_gate) _plugins.Add(l);
+            UiResourceAudit.Mark("plugin-loaded", Path.GetFileName(l.Folder));
+        }
         private void RemoveLoaded(Loaded l) { lock (_gate) _plugins.Remove(l); }
         private bool _started;
 
@@ -69,10 +73,26 @@ namespace MotionDesk.Services
         // στοιχεία πλοήγησης/tray όσο είναι απενεργοποιημένο.
         public bool IsPluginEnabled(string id) => !AppSettings.Load().DisabledPluginIds.Contains(id);
 
+        /// <summary>Revoke a SHA-bound approval and stop plugin callbacks. The DLL stays resident until restart.</summary>
+        public bool RevokePluginTrust(string id)
+        {
+            var found = Snap().FirstOrDefault(p => p.Plugin.Id == id);
+            if (found == null) return false;
+            SetPluginEnabled(id, false);
+            TrustStore.Revoke(Path.GetFileName(found.Folder));
+            return true;
+        }
+
+        public string PluginPermissions(string id)
+        {
+            var found = Snap().FirstOrDefault(p => p.Plugin.Id == id);
+            return found == null ? "Unknown" : PluginCapabilityManifest.Summary(found.Folder);
+        }
+
         public void SetPluginEnabled(string id, bool enabled)
         {
             var settings = AppSettings.Load();
-            if (enabled) settings.DisabledPluginIds.Remove(id);
+            if (enabled) { settings.DisabledPluginIds.Remove(id); PluginFailureQuarantine.Clear(id); }
             else if (!settings.DisabledPluginIds.Contains(id)) settings.DisabledPluginIds.Add(id);
             settings.Save();
 
@@ -84,7 +104,12 @@ namespace MotionDesk.Services
                     if (enabled && !p.Started) { PushLanguage(p.Plugin); PushTheme(p.Plugin); PushHardwareProfile(p.Plugin); p.Plugin.Start(); p.Started = true; }
                     else if (!enabled && p.Started) { p.Plugin.Stop(); p.Started = false; }
                 }
-                catch (Exception ex) { Log($"Plugin '{p.Plugin.Name}' failed to {(enabled ? "start" : "stop")} after toggle: {ex.Message}"); }
+                catch (Exception ex)
+                {
+                    Log($"Plugin '{p.Plugin.Name}' failed to {(enabled ? "start" : "stop")} after toggle: {ex.Message}");
+                    if (PluginFailureQuarantine.RecordFailure(p.Plugin.Id))
+                        Log($"Plugin '{p.Plugin.Name}' temporarily quarantined after repeated failures.");
+                }
             }
             Changed?.Invoke();
         }
@@ -152,12 +177,17 @@ namespace MotionDesk.Services
                     PushLanguage(p.Plugin);
                     PushTheme(p.Plugin);
                     PushHardwareProfile(p.Plugin);
-                    if (!disabled.Contains(p.Plugin.Id)) { p.Plugin.Start(); p.Started = true; }
+                    if (!disabled.Contains(p.Plugin.Id) && !PluginFailureQuarantine.IsQuarantined(p.Plugin.Id))
+                        { p.Plugin.Start(); p.Started = true; }
+                    else if (PluginFailureQuarantine.IsQuarantined(p.Plugin.Id))
+                        Log($"Plugin '{p.Plugin.Name}' is temporarily isolated; use the plugin toggle to re-enable it intentionally.");
                 }
                 catch (Exception ex)
                 {
                     Log($"Plugin '{p.Plugin.Name}' failed to start: {ex}");
-                    RemoveLoaded(p);
+                    if (PluginFailureQuarantine.RecordFailure(p.Plugin.Id))
+                        Log($"Plugin '{p.Plugin.Name}' quarantined after three failures.");
+                    // Keep metadata and per-plugin toggle available for user recovery.
                 }
             }
 
@@ -192,7 +222,16 @@ namespace MotionDesk.Services
                     var widget = provider.GetWidgets().FirstOrDefault(w => string.Equals(w.ReplacesBuiltIn, builtInId, StringComparison.OrdinalIgnoreCase));
                     if (widget != null) { Log($"Plugin '{p.Plugin.Name}': widget '{widget.Key}' replaces built-in '{builtInId}'"); return widget; }
                 }
-                catch (Exception ex) { Log($"Plugin '{p.Plugin.Name}' widgets failed: {ex.Message}"); }
+                catch (Exception ex)
+                {
+                    Log($"Plugin '{p.Plugin.Name}' widgets failed: {ex.Message}");
+                    if (PluginFailureQuarantine.RecordFailure(p.Plugin.Id))
+                    {
+                        try { p.Plugin.Stop(); } catch (Exception) { }
+                        p.Started = false;
+                        Log($"Plugin '{p.Plugin.Name}' quarantined after three failures; other plugins remain active.");
+                    }
+                }
             }
             return null;
         }
@@ -273,6 +312,22 @@ namespace MotionDesk.Services
         {
             try { plugin.SetLanguage(LocalizationManager.CurrentLanguage); }
             catch (Exception ex) { Log($"Plugin '{plugin.Name}' SetLanguage failed: {ex.Message}"); }
+            PushHostSettings(plugin);
+        }
+
+        /// <summary>Contract 1.0.0.0: the settings that belong to Opsis (language, theme, hardware tier, UI scale, "Opsis manages the updates of this plugin"), for a plugin that implements IPluginHostSettingsAware.</summary>
+        internal static PluginHostSettings BuildHostSettings(IOpsisNewsCrawlerPlugin plugin)
+        {
+            bool dark = true; try { dark = ThemeManager.Current.IsDark; } catch (Exception) { }
+            int scale = 100; try { scale = AppSettings.Load().UiScalePercent; } catch (Exception) { }
+            return new PluginHostSettings(LocalizationManager.CurrentLanguage, dark, HardwareProfileService.CurrentTier.ToString(), scale, plugin is IPluginUpdateSource);
+        }
+
+        private void PushHostSettings(IOpsisNewsCrawlerPlugin plugin)
+        {
+            if (plugin is not IPluginHostSettingsAware aware) return;
+            try { aware.SetHostSettings(BuildHostSettings(plugin)); }
+            catch (Exception ex) { Log($"Plugin '{plugin.Name}' SetHostSettings failed: {ex.Message}"); }
         }
 
         // Handoff Φάση 6 (ελάχιστο): προαιρετική ικανότητα — καλείται ΜΟΝΟ αν το plugin υλοποιεί το
@@ -280,7 +335,7 @@ namespace MotionDesk.Services
         // IOpsisNewsCrawlerPlugin contract, άρα κανένα υπάρχον plugin δεν σπάει).
         private void PushHardwareProfile(IOpsisNewsCrawlerPlugin plugin)
         {
-            if (plugin is not OpsisNewsCrawler.Plugin.Abstractions.IPluginProfileAware aware) return;
+            if (plugin is not OpsisNewsCrawler.Plugin.Abstractions.IPluginProfileAware aware) { PushHostSettings(plugin); return; }
             try { aware.SetHardwareProfile(HardwareProfileService.CurrentTier.ToString()); }
             catch (Exception ex) { Log($"Plugin '{plugin.Name}' SetHardwareProfile failed: {ex.Message}"); }
         }
@@ -337,7 +392,8 @@ namespace MotionDesk.Services
                 catch (Exception ex) { Log($"Plugin '{folder}' skipped: trust check failed: {ex.Message}"); return false; }
                 if (!TrustStore.IsApproved(name, hash))
                 {
-                    lock (_pending) { _pending.RemoveAll(p => string.Equals(p.Folder, folder, StringComparison.OrdinalIgnoreCase)); _pending.Add(new PluginTrustRequest(name, folder, hash)); }
+                    var (publisher, signature) = PluginPublisherInfo.Inspect(folder);
+                    lock (_pending) { _pending.RemoveAll(p => string.Equals(p.Folder, folder, StringComparison.OrdinalIgnoreCase)); _pending.Add(new PluginTrustRequest(name, folder, hash, publisher, signature, PluginCapabilityManifest.Summary(folder))); }
                     Log($"Plugin '{name}' in '{folder}' is waiting for approval (sha256 {hash}); it is not loaded until the user approves it.");
                     return false;
                 }
@@ -357,11 +413,22 @@ namespace MotionDesk.Services
                 if (!yes) { Log($"Plugin '{req.Name}' not approved by the user (sha256 {req.Sha256})."); continue; }
                 try
                 {
+                    string currentHash = PluginTrust.HashFolder(req.Folder);
+                    if (!string.Equals(currentHash, req.Sha256, StringComparison.OrdinalIgnoreCase))
+                    {
+                        lock (_pending)
+                        {
+                            _pending.RemoveAll(p => string.Equals(p.Folder, req.Folder, StringComparison.OrdinalIgnoreCase));
+                            _pending.Add(req with { Sha256 = currentHash });
+                        }
+                        Log($"Plugin '{req.Name}' changed before approval completed; it requires a new approval.");
+                        continue;
+                    }
                     TrustStore.Approve(req.Name, req.Sha256);
                     Log($"Plugin '{req.Name}' approved by the user (sha256 {req.Sha256}).");
-                    int before = Snap().Length;
+                    var before = Snap().ToHashSet();
                     (FolderLoader ?? LoadFolder)(req.Folder);
-                    foreach (var p in Snap().Skip(before).ToList()) Activate(p);
+                    foreach (var p in Snap().Where(p => !before.Contains(p))) Activate(p);
                     lock (_pending) _pending.RemoveAll(p => string.Equals(p.Folder, req.Folder, StringComparison.OrdinalIgnoreCase));
                     approved++;
                 }
@@ -377,41 +444,92 @@ namespace MotionDesk.Services
             {
                 p.Plugin.NavigationRequested += key => NavigationRequested?.Invoke(key);
                 PushLanguage(p.Plugin); PushTheme(p.Plugin); PushHardwareProfile(p.Plugin);
-                if (!AppSettings.Load().DisabledPluginIds.Contains(p.Plugin.Id)) { p.Plugin.Start(); p.Started = true; }
+                if (!AppSettings.Load().DisabledPluginIds.Contains(p.Plugin.Id) && !PluginFailureQuarantine.IsQuarantined(p.Plugin.Id))
+                    { p.Plugin.Start(); p.Started = true; }
             }
-            catch (Exception ex) { Log($"Plugin '{p.Plugin.Name}' failed to start: {ex}"); RemoveLoaded(p); }
+            catch (Exception ex)
+            {
+                Log($"Plugin '{p.Plugin.Name}' failed to start: {ex}");
+                if (PluginFailureQuarantine.RecordFailure(p.Plugin.Id))
+                    Log($"Plugin '{p.Plugin.Name}' quarantined after three failures.");
+            }
         }
 
-        private static IEnumerable<(string Folder, bool TrustedRoot)> EnumerateCandidateFolders()
+        internal static IEnumerable<(string Folder, bool TrustedRoot)> EnumerateCandidateFolders()
         {
             // The install directory is trusted only when it is itself protected (Program Files); a per-user install or a dev build is not.
             string installPlugins = Path.Combine(AppContext.BaseDirectory, "plugins");
             bool installTrusted = PluginTrust.IsUnderProtectedInstall(AppContext.BaseDirectory);
-            var roots = new List<(string Path, bool Trusted)>
+            var locations = new List<(string Path, bool Trusted, bool MayBePlugin)>
             {
-                (installPlugins, installTrusted),
-                (Path.Combine(AppPaths.AppDataFolder, "plugins"), false)
+                (installPlugins, installTrusted, false),
+                (Path.Combine(AppPaths.AppDataFolder, "plugins"), false, false),
+                (Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Opsis", "plugins"), false, false)
             };
             try
             {
                 using var key = Registry.CurrentUser.OpenSubKey(@"Software\Opsis\PluginPaths");
                 if (key != null)
                     foreach (var name in key.GetValueNames())
-                        if (key.GetValue(name) is string path && path.Length > 0) roots.Add((path, false));
+                        if (key.GetValue(name) is string path && path.Length > 0) locations.Add((path, false, true));
             }
             catch (Exception) { }
 
-            foreach (var (root, trusted) in roots.GroupBy(r => r.Path, StringComparer.OrdinalIgnoreCase).Select(g => g.First()))
+            var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var (location, trusted, direct) in locations)
             {
+                string root;
+                try
+                {
+                    if (!Path.IsPathFullyQualified(location) || location.StartsWith(@"\\", StringComparison.Ordinal)) continue;
+                    root = Path.TrimEndingDirectorySeparator(Path.GetFullPath(location));
+                }
+                catch (Exception ex) when (ex is ArgumentException or IOException or NotSupportedException) { continue; }
                 if (!Directory.Exists(root)) continue;
-                foreach (var dir in Directory.EnumerateDirectories(root)) yield return (dir, trusted);
+                string[] folders;
+                try
+                {
+                    folders = direct && Directory.EnumerateFiles(root, "*Plugin.dll").Any()
+                        ? [root] : Directory.GetDirectories(root);
+                }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { continue; }
+                foreach (var folder in folders)
+                    if (seen.Add(folder) && !IsReplacedByBuiltIn(folder))
+                        yield return (folder, trusted && PackagePaths.IsExistingUnlinkedPath(AppContext.BaseDirectory, folder));
             }
+        }
+
+        /// <summary>
+        /// Plugins whose features were moved INTO Opsis (2.6.0): Opsis Appearance is now the built-in "Windows appearance" page, so an installed
+        /// copy of the old plugin must not load (two engines would fight over the same Windows settings). Never asks for approval, never deletes anything.
+        /// </summary>
+        internal static readonly string[] ReplacedPluginDlls = { "OpsisAppearancePlugin.dll" };
+
+        internal static bool IsReplacedByBuiltIn(string folder)
+        {
+            try { return ReplacedPluginDlls.Any(d => File.Exists(Path.Combine(folder, d))); }
+            catch (Exception) { return false; }
         }
 
         internal void LoadFolder(string folder)
         {
+            if (IsReplacedByBuiltIn(folder)) { Log($"Plugin folder '{Path.GetFileName(folder)}' skipped: its features are built into Opsis 2.6.0"); return; }
             foreach (var dll in Directory.EnumerateFiles(folder, "*Plugin.dll"))
             {
+                if (!PackagePaths.IsExistingUnlinkedPath(folder, dll)) continue;
+                // #97: only known 1.0.0.0 plugin entrypoints are gated.
+                // Unknown third-party plugins retain the established ABI policy.
+                var fileName = Path.GetFileName(dll);
+                if (fileName.Equals("OpsisNewsCrawler.OpsisPlugin.dll", StringComparison.OrdinalIgnoreCase) ||
+                    fileName.Equals("Chronikologio.OpsisPlugin.dll", StringComparison.OrdinalIgnoreCase))
+                {
+                    var identity = AssemblyName.GetAssemblyName(dll);
+                    if (identity.Version != new Version(1, 0, 0, 0))
+                    {
+                        Log($"Plugin '{fileName}' skipped: ABI {identity.Version} (2.8.0.2510 requires 1.0.0.0). Update this plugin before enabling it.");
+                        continue;
+                    }
+                }
                 var context = new PluginLoadContext(dll);
                 var assembly = context.LoadFromAssemblyPath(dll);
                 foreach (var type in assembly.GetTypes())
@@ -428,6 +546,9 @@ namespace MotionDesk.Services
                     if (existing != null)
                     {
                         if (!IsNewerVersion(plugin.Version, existing.Plugin.Version)) continue;
+                        if (existing.Started)
+                            try { existing.Plugin.Stop(); }
+                            catch (Exception ex) { Log($"Plugin '{existing.Plugin.Name}' could not stop during replacement: {ex.Message}"); continue; }
                         RemoveLoaded(existing);
                     }
                     AddLoaded(new Loaded { Plugin = plugin, Folder = folder });
@@ -444,12 +565,13 @@ namespace MotionDesk.Services
         private sealed class PluginLoadContext : AssemblyLoadContext
         {
             private readonly AssemblyDependencyResolver _resolver;
-            private readonly string _resolverMainAssemblyPath;
+            private readonly string _pluginDirectory;
 
             public PluginLoadContext(string pluginPath) : base(Path.GetFileNameWithoutExtension(pluginPath), isCollectible: false)
             {
-                _resolverMainAssemblyPath = Path.GetFullPath(pluginPath);
-                _resolver = new AssemblyDependencyResolver(_resolverMainAssemblyPath);
+                string assemblyPath = Path.GetFullPath(pluginPath);
+                _pluginDirectory = Path.GetDirectoryName(assemblyPath)!;
+                _resolver = new AssemblyDependencyResolver(assemblyPath);
             }
 
             protected override Assembly? Load(AssemblyName name)
@@ -459,20 +581,26 @@ namespace MotionDesk.Services
                 // όταν το contract δεν βρίσκεται στο probing path της εφαρμογής.
                 var contractAssembly = typeof(IOpsisNewsCrawlerPlugin).Assembly;
                 if (string.Equals(name.Name, contractAssembly.GetName().Name, StringComparison.OrdinalIgnoreCase))
-                    return contractAssembly;
+                    return CompatibleHostAssembly(name, contractAssembly);
+
+                // Opsis.UI must be shared as well: a separate copy inside every plugin's
+                // AssemblyLoadContext creates independent OpsisTheme/GlassSettings statics.
+                // The host owns theme, language and accessibility state for all plugins.
+                var sharedUiAssembly = typeof(Opsis.UI.FlatButton).Assembly;
+                if (string.Equals(name.Name, sharedUiAssembly.GetName().Name, StringComparison.OrdinalIgnoreCase))
+                    return CompatibleHostAssembly(name, sharedUiAssembly);
 
                 // Πρώτα χρησιμοποιούμε το .deps.json μέσω του AssemblyDependencyResolver.
                 var path = _resolver.ResolveAssemblyToPath(name);
-                if (path != null && File.Exists(path))
+                if (path != null && File.Exists(path) && PackagePaths.IsExistingUnlinkedPath(_pluginDirectory, path))
                     return LoadFromAssemblyPath(path);
 
                 // Fallback: αρκετά plugin distributions περιλαμβάνουν τις εξαρτήσεις δίπλα
                 // στο *Plugin.dll, αλλά το .deps.json μπορεί να μην τις καταγράφει σωστά.
-                var pluginDirectory = Path.GetDirectoryName(_resolverMainAssemblyPath);
-                if (!string.IsNullOrEmpty(pluginDirectory))
+                if (!string.IsNullOrEmpty(name.Name))
                 {
-                    var candidate = Path.Combine(pluginDirectory, name.Name + ".dll");
-                    if (File.Exists(candidate))
+                    var candidate = Path.Combine(_pluginDirectory, name.Name + ".dll");
+                    if (File.Exists(candidate) && PackagePaths.IsExistingUnlinkedPath(_pluginDirectory, candidate))
                     {
                         // Έλεγχος ταυτότητας ώστε να μη φορτωθεί DLL άλλης έκδοσης με το ίδιο όνομα.
                         try
@@ -491,10 +619,19 @@ namespace MotionDesk.Services
                 return null;
             }
 
+            private static Assembly CompatibleHostAssembly(AssemblyName requested, Assembly host)
+            {
+                var available = host.GetName();
+                if (!AssemblyName.ReferenceMatchesDefinition(requested, available) ||
+                    (requested.Version != null && available.Version != null && requested.Version > available.Version))
+                    throw new FileLoadException($"Plugin requires {requested.FullName}; Opsis provides {available.FullName}. Update Opsis or the plugin.");
+                return host;
+            }
+
             protected override IntPtr LoadUnmanagedDll(string unmanagedDllName)
             {
                 var path = _resolver.ResolveUnmanagedDllToPath(unmanagedDllName);
-                return path != null ? LoadUnmanagedDllFromPath(path) : IntPtr.Zero;
+                return path != null && PackagePaths.IsExistingUnlinkedPath(_pluginDirectory, path) ? LoadUnmanagedDllFromPath(path) : IntPtr.Zero;
             }
         }
 

@@ -56,7 +56,7 @@ namespace MotionDesk.Services
                 {
                     if (_overrideCacheTick == 0 || Environment.TickCount64 - _overrideCacheTick > 2000)
                     {
-                        _overrideCache = AppSettings.Load().PerfFeatureTier;
+                        _overrideCache = AppSettings.Peek().PerfFeatureTier;
                         _overrideCacheTick = Math.Max(1, Environment.TickCount64);
                     }
                     map = _overrideCache;
@@ -130,7 +130,7 @@ namespace MotionDesk.Services
             return drop;
         }
 
-        public static bool Enabled => HardwareProfileService.GetOverride() == null && AppSettings.Load().PerfDynamic;
+        public static bool Enabled => HardwareProfileService.GetOverride() == null && AppSettings.Peek().PerfDynamic;
 
         /// <summary>Feeds one sample (called by the sampling timer, or by tests through <see cref="Step"/>).</summary>
         public static void Feed(LoadSample s, DateTime now)
@@ -157,6 +157,7 @@ namespace MotionDesk.Services
             {
                 try
                 {
+                    if (!Enabled) { Feed(default, DateTime.UtcNow); return; }
                     var m = SystemMonitorService.Instance.GetSnapshot();
                     double ram = m.TotalMemoryMb > 0 ? (m.TotalMemoryMb - m.AvailableMemoryMb) / m.TotalMemoryMb * 100.0 : 0;
                     var p = System.Windows.Forms.SystemInformation.PowerStatus;

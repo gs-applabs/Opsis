@@ -63,10 +63,18 @@ namespace MotionDesk.UI
 
         // v2.0.0: νέα ονομασμένα θέματα (ζητήθηκε ρητά "νέα θέματα στην εφαρμογή"). Κάθε ένα είναι
         // πλήρης παλέτα (όχι tint πάνω στο Dark) με δικό του accent· επιστρέφει null για άγνωστο όνομα.
-        public static readonly string[] NamedThemes = { "Midnight", "Forest", "Dawn", "Contrast" };
+        public static readonly string[] NamedThemes = { "Teal", "Midnight", "Forest", "Dawn", "Contrast" };
 
         public static UiPalette? Named(string name) => name switch
         {
+            // "Opsis teal": the teal / cyan look (#00BCD4 accent) on a deep blue-green background
+            "Teal" => new UiPalette
+            {
+                Background = Color.FromArgb(8, 28, 33), Sidebar = Color.FromArgb(10, 36, 43), Surface = Color.FromArgb(14, 48, 57),
+                SurfaceHover = Color.FromArgb(21, 66, 77), Border = Color.FromArgb(31, 86, 98),
+                TextPrimary = Color.FromArgb(228, 247, 249), TextSecondary = Color.FromArgb(166, 208, 215), TextMuted = Color.FromArgb(116, 156, 164),
+                AccentCyan = Color.FromArgb(0, 188, 212), AccentBlue = Color.FromArgb(0, 122, 138), IsDark = true
+            },
             "Midnight" => new UiPalette
             {
                 Background = Color.FromArgb(11, 16, 32), Sidebar = Color.FromArgb(15, 22, 42), Surface = Color.FromArgb(22, 31, 58),
@@ -118,8 +126,14 @@ namespace MotionDesk.UI
     // Το UiTheme διαβάζει τα χρώματα από εδώ, ώστε μία αλλαγή να επηρεάζει άμεσα κάθε σελίδα.
     public static class ThemeManager
     {
-        public static UiPalette Current { get; private set; } = ResolveInitial();
+        private static UiPalette _raw = ResolveInitial();
+
+        // the palette of the selected theme (the app's own "Glass" theme was removed on 2026-11-18)
+        public static UiPalette Current { get => _raw; private set => _raw = value; }
         public static event Action? Changed;
+        // hang hunting (OPSIS_TRACE): every subscriber is marked before it runs, so the last mark names the handler that did not return
+        private static void RaiseChangedTraced() { var h = Changed; if (h == null) return; foreach (Action d in h.GetInvocationList()) { MotionDesk.Services.HangTrace.Mark("ThemeManager.Changed -> " + d.Method.DeclaringType?.Name + "." + d.Method.Name); d(); } }
+        private static void RaiseRepaintedTraced() { var h = Repainted; if (h == null) return; foreach (Action d in h.GetInvocationList()) { MotionDesk.Services.HangTrace.Mark("ThemeManager.Repainted -> " + d.Method.DeclaringType?.Name + "." + d.Method.Name); d(); } }
 
         // Ξεχωριστό, ΦΤΗΝΟ event για ζωντανή προεπισκόπηση ενώ σέρνεις το slider σκουρότητας —
         // ΟΧΙ το ίδιο με το Changed. Το Changed προκαλεί πλήρη ανακατασκευή σελίδας/sidebar (ώστε
@@ -135,13 +149,13 @@ namespace MotionDesk.UI
         // ελέγχων· η πλήρης, ακριβής ανακατασκευή γίνεται ΜΙΑ φορά όταν αφήνει ο χρήστης το slider.
         public static event Action? Repainted;
 
-        public static void RaiseRepainted() => Repainted?.Invoke();
+        public static void RaiseRepainted() => RaiseRepaintedTraced();
 
         public static void PreviewDarkIntensity(double intensity)
         {
             if (!Current.IsDark) return;
             Current = UiPalette.Dark(Math.Clamp(intensity, 0, 1));
-            Repainted?.Invoke();
+            RaiseRepaintedTraced();
         }
 
         private static UiPalette ResolveInitial()
@@ -153,7 +167,7 @@ namespace MotionDesk.UI
         private static UiPalette Resolve(string mode)
         {
             var settings = AppSettings.Load();
-            var p = UiPalette.Named(mode) ?? mode switch
+            var p = UiPalette.Named(mode) ?? GearWinThemes.Resolve(mode) ?? mode switch
             {
                 "Light" => UiPalette.Light(),
                 "Dark" => UiPalette.Dark(settings.DarkIntensity),
@@ -170,7 +184,7 @@ namespace MotionDesk.UI
             return p;
         }
 
-        // Εμπνευσμένο από το Seelen UI (SeelenUI-inspired pass, ζητήθηκε ρητά): εκεί κάθε widget
+        // Κάθε widget
         // παίρνει έτοιμα --system-accent-color CSS variables από το πραγματικό accent color των
         // Windows. Εδώ δεν υπάρχει CSS, οπότε διαβάζουμε το ΙΔΙΟ χρώμα απευθείας με το επίσημο,
         // τεκμηριωμένο DwmGetColorizationColor (ίδια τιμή που χρησιμοποιεί η ίδια η γραμμή τίτλου
@@ -203,7 +217,7 @@ namespace MotionDesk.UI
             settings.ThemeMode = mode;
             settings.Save();
             Current = Resolve(mode);
-            Changed?.Invoke();
+            RaiseChangedTraced();
         }
 
         public static void SetFollowWindowsAccent(bool follow)
@@ -212,7 +226,7 @@ namespace MotionDesk.UI
             settings.FollowWindowsAccent = follow;
             settings.Save();
             Current = Resolve(settings.ThemeMode);
-            Changed?.Invoke();
+            RaiseChangedTraced();
         }
 
         // Ζωντανή ενημέρωση καθώς ο χρήστης σέρνει το slider "πόσο σκούρο" στις Ρυθμίσεις — δεν
@@ -226,14 +240,14 @@ namespace MotionDesk.UI
             if (Current.IsDark)
             {
                 Current = UiPalette.Dark(settings.DarkIntensity);
-                Changed?.Invoke();
+                RaiseChangedTraced();
             }
         }
 
         // Δημόσιο "χειροκίνητο" trigger του Changed — χρειάζεται όταν αλλάζει κάτι που ΔΕΝ αγγίζει
         // το ίδιο το ThemeManager.Current (π.χ. AppSettings.WidgetsThemeMode, το ανεξάρτητο θέμα
         // widgets/DeskContainers) αλλά πρέπει να ξαναζωγραφιστούν όλα τα ήδη ανοιχτά widgets.
-        public static void NotifyChanged() => Changed?.Invoke();
+        public static void NotifyChanged() => RaiseChangedTraced();
 
         // UI SynchronizationContext — ορίζεται από το MainWindow (UI thread). Το SystemEvents.
         // UserPreferenceChanged καλείται από ΔΙΚΟ ΤΟΥ thread· χωρίς marshalling, τα widgets
@@ -246,16 +260,23 @@ namespace MotionDesk.UI
             var ui = UiContext;
             if (ui != null && System.Threading.SynchronizationContext.Current != ui)
             {
-                ui.Post(_ => RefreshFromWindows(), null);
+                // the callback runs the refresh directly: it must NOT re-test the context, because a callback that is dispatched by another context
+                // (e.g. the one of the UI audit) would then post itself again for ever and starve the message loop
+                ui.Post(_ => RefreshNow(), null);
                 return;
             }
+            RefreshNow();
+        }
+
+        private static void RefreshNow()
+        {
             if (AppSettings.Load().ThemeMode == "Follow")
             {
                 var resolved = Resolve("Follow");
                 if (resolved.IsDark != Current.IsDark)
                 {
                     Current = resolved;
-                    Changed?.Invoke();
+                    RaiseChangedTraced();
                 }
             }
         }

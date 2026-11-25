@@ -13,6 +13,13 @@ namespace MotionDesk.Widgets
         private static Task<CoreWebView2Environment>? _environment;
         private static readonly object _envLock = new();
 
+        internal static IEnumerable<(int Pid, string Kind)> AuditProcesses()
+        {
+            if (_environment is not { IsCompletedSuccessfully: true }) return [];
+            try { return _environment.Result.GetProcessInfos().Select(p => (p.ProcessId, p.Kind.ToString())).ToArray(); }
+            catch (Exception) { return []; }
+        }
+
         public static Task<CoreWebView2Environment> CreateEnvironmentAsync()
         {
             lock (_envLock)
@@ -36,7 +43,7 @@ namespace MotionDesk.Widgets
         // νέο παράθυρο ή DevTools/μενού περιβάλλοντος πάνω στην επιφάνεια εργασίας.
         private static readonly Queue<DateTime> _failures = new();
 
-        public static void Harden(CoreWebView2 core)
+        public static void Harden(CoreWebView2 core, string document, Func<string, bool>? allowFrame = null)
         {
             var settings = core.Settings;
             settings.AreDevToolsEnabled = false;
@@ -44,11 +51,12 @@ namespace MotionDesk.Widgets
             settings.IsStatusBarEnabled = false;
             settings.IsZoomControlEnabled = false;
             settings.IsBuiltInErrorPageEnabled = false;
-            core.NavigationStarting += (_, e) =>
-            {
-                if (!e.Uri.StartsWith("file:", StringComparison.OrdinalIgnoreCase)) e.Cancel = true;
-            };
+            core.NavigationStarting += (_, e) => e.Cancel = !BrowserNavigationPolicy.IsBundledDocument(document, e.Uri);
+            core.FrameNavigationStarting += (_, e) => e.Cancel = allowFrame?.Invoke(e.Uri) != true;
             core.NewWindowRequested += (_, e) => e.Handled = true;
+            core.DownloadStarting += (_, e) => { e.Cancel = true; e.Handled = true; };
+            core.PermissionRequested += (_, e) => e.State = CoreWebView2PermissionState.Deny;
+            core.LaunchingExternalUriScheme += (_, e) => e.Cancel = true;
             // YouTube embeds refuse to play without a Referer (error 153); a file:// page sends none, so a neutral one is added for the embed host only.
             core.AddWebResourceRequestedFilter("https://www.youtube-nocookie.com/*", CoreWebView2WebResourceContext.All);
             core.AddWebResourceRequestedFilter("https://www.youtube.com/*", CoreWebView2WebResourceContext.All);
@@ -76,16 +84,36 @@ namespace MotionDesk.Widgets
             // (LocalApplicationData, όχι ApplicationData/AppPaths.AppDataFolder: cache δεδομένα του
             // WebView2 runtime, όχι ρυθμίσεις χρήστη — σωστά τοπικό/μη-roaming, ξαναδημιουργείται
             // αβλαβώς αν χαθεί, οπότε δεν χρειάζεται μετάβαση από το παλιό όνομα.)
-            string userDataFolder = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                "Opsis", "WebView2");
-            Directory.CreateDirectory(userDataFolder);
             // Λιγότερη μνήμη/CPU σε αδύναμα συστήματα: χωρίς background networking/sync/translate, χωρίς renderer
             // backgrounding (το wallpaper είναι πίσω από όλα, τα Windows θα το "κοιμίζανε").
-            var options = new CoreWebView2EnvironmentOptions(
-                "--disable-features=msSmartScreenProtection,Translate,msEdgeSync --disable-background-networking " +
-                "--disable-renderer-backgrounding --disable-backgrounding-occluded-windows --autoplay-policy=no-user-gesture-required");
-            return await CoreWebView2Environment.CreateAsync(null, userDataFolder, options).ConfigureAwait(true);
+            const string args = "--disable-features=Translate,msEdgeSync --disable-background-networking " +
+                "--disable-renderer-backgrounding --disable-backgrounding-occluded-windows --autoplay-policy=no-user-gesture-required";
+            string userDataFolder = UserDataFolder(browserArguments: args);
+            Directory.CreateDirectory(userDataFolder);
+            var options = new CoreWebView2EnvironmentOptions(args);
+            try { return await CoreWebView2Environment.CreateAsync(null, userDataFolder, options).ConfigureAwait(true); }
+            catch (Exception ex)
+            {
+                MotionDesk.Services.AttachLog.Write("WebView2 environment failed: " + ex.GetType().Name + ": " + ex.Message + " - retrying with a private profile");
+                string own = Path.Combine(userDataFolder, "private-" + Environment.ProcessId);
+                Directory.CreateDirectory(own);
+                return await CoreWebView2Environment.CreateAsync(null, own, options).ConfigureAwait(true);
+            }
+        }
+
+        /// <summary>
+        /// The WebView2 user-data folder: under LocalAppData\Opsis, or inside the isolated data folder when OPSIS_APPDATA is set (tests). The browser arguments are part of the environment:
+        /// WebView2 refuses a second environment on the SAME folder with DIFFERENT arguments while another process uses it (0x8007139F). Another Opsis edition running at the same time
+        /// (Opsis 2.4.6.2 / 2.6.0 next to another Opsis build) did exactly that to the wallpaper, so the folder is keyed by the arguments.
+        /// </summary>
+        internal static string UserDataFolder(string? isolatedAppData = null, string? localAppData = null, string browserArguments = "")
+        {
+            isolatedAppData ??= Environment.GetEnvironmentVariable("OPSIS_APPDATA");
+            string baseFolder = !string.IsNullOrWhiteSpace(isolatedAppData) ? Path.Combine(isolatedAppData, "WebView2")
+                : Path.Combine(localAppData ?? Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Opsis", "WebView2");
+            if (browserArguments.Length == 0) return baseFolder;
+            using var sha = System.Security.Cryptography.SHA256.Create();
+            return Path.Combine(baseFolder, "p" + Convert.ToHexString(sha.ComputeHash(System.Text.Encoding.UTF8.GetBytes(browserArguments)))[..8].ToLowerInvariant());
         }
     }
 }

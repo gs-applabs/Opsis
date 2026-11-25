@@ -36,7 +36,7 @@ namespace MotionDesk.Widgets
 
         private static Form CreateShell(string title, Size size)
         {
-            var form = new Form
+            var form = new MotionDesk.UI.AppDialog
             {
                 Text = title,
                 FormBorderStyle = FormBorderStyle.FixedSingle,

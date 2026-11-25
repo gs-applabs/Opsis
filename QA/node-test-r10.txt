@@ -1,0 +1,244 @@
+TAP version 13
+# Subtest: family catalogue includes each independent companion application exactly once
+ok 1 - family catalogue includes each independent companion application exactly once
+  ---
+  duration_ms: 1.773407
+  type: 'test'
+  ...
+# Subtest: Chronikologio installer and plugin contract are mapped correctly
+ok 2 - Chronikologio installer and plugin contract are mapped correctly
+  ---
+  duration_ms: 0.335512
+  type: 'test'
+  ...
+# Subtest: standalone Media Suite is treated as an external program, not a .NET plugin
+ok 3 - standalone Media Suite is treated as an external program, not a .NET plugin
+  ---
+  duration_ms: 0.493333
+  type: 'test'
+  ...
+# Subtest: plugin host shares both contract and Opsis.UI singleton assemblies
+ok 4 - plugin host shares both contract and Opsis.UI singleton assemblies
+  ---
+  duration_ms: 4.114636
+  type: 'test'
+  ...
+# Subtest: host compatibility diagnostic reports both plugin IDs and registered feeds
+ok 5 - host compatibility diagnostic reports both plugin IDs and registered feeds
+  ---
+  duration_ms: 2.06482
+  type: 'test'
+  ...
+# Subtest: version metadata is ready for 2.8.0.2500 staging and retains preview designation
+ok 6 - version metadata is ready for 2.8.0.2500 staging and retains preview designation
+  ---
+  duration_ms: 0.668126
+  type: 'test'
+  ...
+# Subtest: new DLL plugins use 1.0.0.0 while shared host ABI remains versioned independently
+ok 7 - new DLL plugins use 1.0.0.0 while shared host ABI remains versioned independently
+  ---
+  duration_ms: 0.411338
+  type: 'test'
+  ...
+# Subtest: runtime plugin diagnostics surface the full four-part DLL version
+ok 8 - runtime plugin diagnostics surface the full four-part DLL version
+  ---
+  duration_ms: 1.783906
+  type: 'test'
+  ...
+# Subtest: published plugin style is idempotent to avoid unnecessary SSD writes and watcher wakeups
+ok 9 - published plugin style is idempotent to avoid unnecessary SSD writes and watcher wakeups
+  ---
+  duration_ms: 0.591614
+  type: 'test'
+  ...
+# Subtest: Media Suite family card reflects the actual converter/player/photo capabilities
+ok 10 - Media Suite family card reflects the actual converter/player/photo capabilities
+  ---
+  duration_ms: 1.081017
+  type: 'test'
+  ...
+# Subtest: plugin ABI version gate covers both plugins and both host shared libraries
+ok 11 - plugin ABI version gate covers both plugins and both host shared libraries
+  ---
+  duration_ms: 1.985365
+  type: 'test'
+  ...
+# Subtest: Windows installer artifact is gated by full UI audit
+ok 12 - Windows installer artifact is gated by full UI audit
+  ---
+  duration_ms: 0.799622
+  type: 'test'
+  ...
+# Subtest: \#12 plugin permissions are declared, readable, and included in trust digest
+ok 13 - \#12 plugin permissions are declared, readable, and included in trust digest
+  ---
+  duration_ms: 9.049784
+  type: 'test'
+  ...
+# Subtest: \#13 widget system data is SHA bound and opt-in, revocable
+ok 14 - \#13 widget system data is SHA bound and opt-in, revocable
+  ---
+  duration_ms: 2.402995
+  type: 'test'
+  ...
+# Subtest: \#32 and \#33 panorama is opt-in and monitor pair plus bezel stay bounded
+ok 15 - \#32 and \#33 panorama is opt-in and monitor pair plus bezel stay bounded
+  ---
+  duration_ms: 4.60106
+  type: 'test'
+  ...
+# Subtest: \#44/\#45 joined zones need adjacent edges and a user-controlled boundary
+ok 16 - \#44/\#45 joined zones need adjacent edges and a user-controlled boundary
+  ---
+  duration_ms: 0.830151
+  type: 'test'
+  ...
+# Subtest: \#78 microphone input is explicit and output loopback remains default
+ok 17 - \#78 microphone input is explicit and output loopback remains default
+  ---
+  duration_ms: 0.688064
+  type: 'test'
+  ...
+# Subtest: \#92 installer dependencies do not download automatically in silent none
+ok 18 - \#92 installer dependencies do not download automatically in silent none
+  ---
+  duration_ms: 0.460494
+  type: 'test'
+  ...
+# Subtest: \#93 forced classic menu avoids native DLL and defines all 5 verbs
+ok 19 - \#93 forced classic menu avoids native DLL and defines all 5 verbs
+  ---
+  duration_ms: 0.594411
+  type: 'test'
+  ...
+# Subtest: \#99 upgrade side by side and uninstall are explicit Windows QA gates
+ok 20 - \#99 upgrade side by side and uninstall are explicit Windows QA gates
+  ---
+  duration_ms: 1.713638
+  type: 'test'
+  ...
+# Subtest: pausing cancels weather, audio, retry and frame callbacks; repeated resume is idempotent
+ok 21 - pausing cancels weather, audio, retry and frame callbacks; repeated resume is idempotent
+  ---
+  duration_ms: 6.166252
+  type: 'test'
+  ...
+# Subtest: late weather response cannot update a paused scene or create retries
+ok 22 - late weather response cannot update a paused scene or create retries
+  ---
+  duration_ms: 2.224016
+  type: 'test'
+  ...
+# Subtest: slow frames lower automatic scale while a fixed profile retains its resolution
+ok 23 - slow frames lower automatic scale while a fixed profile retains its resolution
+  ---
+  duration_ms: 32.524392
+  type: 'test'
+  ...
+# Subtest: settings bursts merge into one refresh and one trailing refresh while busy
+ok 24 - settings bursts merge into one refresh and one trailing refresh while busy
+  ---
+  duration_ms: 1.788288
+  type: 'test'
+  ...
+# Subtest: shows source and observed age in Greek and English
+ok 25 - shows source and observed age in Greek and English
+  ---
+  duration_ms: 1.844842
+  type: 'test'
+  ...
+# Subtest: marks aged or explicitly stale observations rather than hiding offline state
+ok 26 - marks aged or explicitly stale observations rather than hiding offline state
+  ---
+  duration_ms: 0.358834
+  type: 'test'
+  ...
+# Subtest: handles invalid and future timestamps and an empty cache
+ok 27 - handles invalid and future timestamps and an empty cache
+  ---
+  duration_ms: 0.193175
+  type: 'test'
+  ...
+# Subtest: offline or pending refresh retains the last valid observation and visual target
+ok 28 - offline or pending refresh retains the last valid observation and visual target
+  ---
+  duration_ms: 13.347703
+  type: 'test'
+  ...
+# Subtest: changing weather coordinates clears the previous city observation
+ok 29 - changing weather coordinates clears the previous city observation
+  ---
+  duration_ms: 3.754814
+  type: 'test'
+  ...
+# Subtest: stops at a mountain ridge and a narrow building even with sky-blue windows below
+ok 30 - stops at a mountain ridge and a narrow building even with sky-blue windows below
+  ---
+  duration_ms: 6.201194
+  type: 'test'
+  ...
+# Subtest: preserves the side of a photo where foliage reaches the top
+ok 31 - preserves the side of a photo where foliage reaches the top
+  ---
+  duration_ms: 2.087357
+  type: 'test'
+  ...
+# Subtest: rejects a ground-only photo and an unbroken sky-blue surface
+ok 32 - rejects a ground-only photo and an unbroken sky-blue surface
+  ---
+  duration_ms: 3.374097
+  type: 'test'
+  ...
+# Subtest: uses the bundled Athens profile without reading local photo pixels
+ok 33 - uses the bundled Athens profile without reading local photo pixels
+  ---
+  duration_ms: 43.406874
+  type: 'test'
+  ...
+# Subtest: follows a brightening sky to the terrain instead of stopping at a horizontal colour band
+ok 34 - follows a brightening sky to the terrain instead of stopping at a horizontal colour band
+  ---
+  duration_ms: 1.34968
+  type: 'test'
+  ...
+# Subtest: ships a valid sky profile or explicit fallback for every catalogue photo
+ok 35 - ships a valid sky profile or explicit fallback for every catalogue photo
+  ---
+  duration_ms: 16.755376
+  type: 'test'
+  ...
+# Subtest: fall back during context loss, then restore the same scene and photo
+ok 36 - fall back during context loss, then restore the same scene and photo
+  ---
+  duration_ms: 6.890214
+  type: 'test'
+  ...
+# Subtest: release a failed shader program and retry after a context restore
+ok 37 - release a failed shader program and retry after a context restore
+  ---
+  duration_ms: 2.436418
+  type: 'test'
+  ...
+# Subtest: Clock widget follows saved host refresh scaling and clamps excessive values
+ok 38 - Clock widget follows saved host refresh scaling and clamps excessive values
+  ---
+  duration_ms: 35.638455
+  type: 'test'
+  ...
+# Subtest: Day progress widget follows individual refresh percentage, with bounds
+ok 39 - Day progress widget follows individual refresh percentage, with bounds
+  ---
+  duration_ms: 6.205779
+  type: 'test'
+  ...
+1..39
+# tests 39
+# suites 0
+# pass 39
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 337.915392

@@ -5,14 +5,17 @@ namespace MotionDesk.UI
     // Colour tokens of the shared Opsis.UI controls: a live adapter on Opsis' own theme (UiTheme/ThemeManager), nothing is copied.
     internal sealed class OpsisUiTokens : Opsis.UI.IOpsisTheme
     {
+        /// <summary>The palette of the active window skin (Atlas / Inspector / Index / Split...), or null for the plain theme: the shared controls (check boxes, switches, buttons, combo boxes) draw from these tokens, so they must follow the skin like the chrome does (they stayed on the theme colours, e.g. cyan accents in a violet skin).</summary>
+        internal static WindowSkinColors? Skin;
+
         public bool IsDark => ThemeManager.Current.IsDark;
-        public Color Background => UiTheme.Background;
-        public Color Surface => UiTheme.Surface;
-        public Color Border => UiTheme.Border;
-        public Color Text => UiTheme.TextPrimary;
-        public Color TextMuted => UiTheme.TextSecondary;       // the former controls used TextSecondary for the chevron / disabled text
-        public Color Accent => UiTheme.AccentCyan;
-        public Color SurfaceHover => UiTheme.SurfaceHover;
+        public Color Background => Skin?.Background ?? UiTheme.Background;
+        public Color Surface => Skin?.Surface ?? UiTheme.Surface;
+        public Color Border => Skin?.Border ?? UiTheme.Border;
+        public Color Text => Skin?.Text ?? UiTheme.TextPrimary;
+        public Color TextMuted => Skin?.Secondary ?? UiTheme.TextSecondary;       // the former controls used TextSecondary for the chevron / disabled text
+        public Color Accent => Skin?.Accent ?? UiTheme.AccentCyan;
+        public Color SurfaceHover => Skin?.Hover ?? UiTheme.SurfaceHover;
 
         private static bool _installed;
 

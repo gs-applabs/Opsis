@@ -1,0 +1,107 @@
+name: Opsis - Desktop Customization Windows audit
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [release/2.8.0.2510]
+
+permissions:
+  contents: read
+
+jobs:
+  desktop:
+    runs-on: windows-2025
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '11.0.x'
+      - name: Build installer and matching source archive
+        id: installer
+        shell: pwsh
+        run: |
+          winget install --id JRSoftware.InnoSetup.7 --exact --silent --accept-package-agreements --accept-source-agreements
+          $compiler = @("${env:ProgramFiles}\Inno Setup 7\ISCC.exe", "${env:ProgramFiles(x86)}\Inno Setup 7\ISCC.exe", "$env:LOCALAPPDATA\Programs\Inno Setup 7\ISCC.exe") | Where-Object { Test-Path $_ } | Select-Object -First 1
+          if (!$compiler) { throw 'Inno Setup 7 compiler missing' }
+          ./installer/build.ps1 -Compiler $compiler
+          git archive --format=zip --output=Output/Opsis-Source.zip HEAD
+          if ($LASTEXITCODE -ne 0) { throw 'Source archive failed' }
+      - name: Run isolated self-tests and weather renderer regressions
+        id: selftests
+        shell: pwsh
+        run: |
+          $env:OPSIS_APPDATA = Join-Path $env:RUNNER_TEMP 'opsis-selftests'
+          # Opsis.exe is a GUI (WinExe) program: a plain call does not wait for it and leaves $LASTEXITCODE empty, so wait for it and read the real exit code
+          $selftest = Start-Process -FilePath (Resolve-Path .\publish\Opsis.exe).Path -ArgumentList '--run-selftest' -Wait -PassThru
+          if ($selftest.ExitCode -ne 0) { throw "Opsis self-test failed: $($selftest.ExitCode)" }
+          node --test
+          if ($LASTEXITCODE -ne 0) { throw "Wallpaper JavaScript tests failed: $LASTEXITCODE" }
+      - name: Record reproducible toolchain and installer SHA-256
+        id: manifest
+        shell: pwsh
+        run: |
+          $setup = Get-ChildItem Output -File -Filter 'OpsisSetup-*.exe' | Select-Object -First 1
+          if (!$setup) { throw 'Installer output missing' }
+          [ordered]@{
+            appVersion = (Get-Item .\publish\Opsis.exe).VersionInfo.FileVersion
+            dotnetSdk = (dotnet --version)
+            node = (node --version)
+            installerName = $setup.Name
+            installerSha256 = (Get-FileHash -LiteralPath $setup.FullName -Algorithm SHA256).Hash
+            generatedUtc = [DateTime]::UtcNow.ToString('o')
+          } | ConvertTo-Json | Out-File Output/build-manifest.json -Encoding utf8
+      - name: Audit the application and taskbar registry
+        id: audit
+        shell: pwsh
+        run: |
+          $env:OPSIS_APPDATA = Join-Path $env:RUNNER_TEMP 'opsis-studio-audit'
+          $env:OPSIS_E2E = '1'
+          $env:OPSIS_AUDIT_TASKBAR = '1'
+          $env:OPSIS_AUDIT_RESOURCE_CYCLES = '3'
+          $output = Join-Path $env:GITHUB_WORKSPACE 'audit-result'
+          New-Item -ItemType Directory -Force $output | Out-Null
+          $env:OPSIS_TRACE = Join-Path $output 'trace.txt'     # hang hunting: the last line shows where the UI thread stopped
+          $process = Start-Process .\publish\Opsis.exe -ArgumentList @('--ui-audit', ('"' + $output + '"')) -PassThru
+          if (-not $process.WaitForExit(480000)) {
+            Stop-Process -Id $process.Id -Force
+            throw 'Opsis audit timed out'
+          }
+          $report = Join-Path $output 'ui-audit.md'
+          if (Test-Path $report) { Get-Content $report | Out-File -Append $env:GITHUB_STEP_SUMMARY -Encoding utf8 }
+          if ($process.ExitCode -ne 0) { throw "Opsis audit failed with exit code $($process.ExitCode)" }
+      # Roadmap #98: record stage outcomes even when the build or tests FAIL.
+      # This diagnostic artifact is not a validated release or installer.
+      - name: Always record the exact stage and toolchain
+        if: always()
+        shell: pwsh
+        env:
+          OP_INSTALLER: ${{ steps.installer.outcome }}
+          OP_SELFTESTS: ${{ steps.selftests.outcome }}
+          OP_MANIFEST: ${{ steps.manifest.outcome }}
+          OP_AUDIT: ${{ steps.audit.outcome }}
+        run: |
+          New-Item -ItemType Directory -Force -Path Output | Out-Null
+          ./tools/write-build-report.ps1 -OutFile Output/build-report.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: Opsis-2.8.0.2500-build-diagnostics
+          path: Output/build-report.json
+          if-no-files-found: warn
+      # Do not publish a release-candidate installer as a successful artifact before
+      # the application's actual UI and resource audit has passed.
+      - uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: Opsis-Desktop-Customization-2.8.0.2500-UNRELEASED-validated-build
+          path: Output/
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: opsis-studio-windows-audit
+          path: audit-result
+          if-no-files-found: warn

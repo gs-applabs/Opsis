@@ -1,0 +1,839 @@
+[
+  {
+    "id": "island-agathonisi",
+    "name": "Αγαθονήσι - Μεγάλο Χωριό",
+    "nameEn": "Agathonisi",
+    "terrain": "coast",
+    "motif": "harbor",
+    "file": "scenes/islands/agathonisi.webp",
+    "manualOnly": true
+  },
+  {
+    "id": "island-agios-achilleios",
+    "name": "Άγιος Αχίλλειος - Άγιος Αχίλλειος (Μικρή Πρέσπα)",
+    "nameEn": "Agios Achilleios",
+    "terrain": "lake",
+    "motif": "harbor",
+    "file": "scenes/islands/agios-achilleios.webp",
+    "manualOnly": true
+  },
+  {
+    "id": "island-agios-efstratios",
+    "name": "Άγιος Ευστράτιος",
+    "nameEn": "Agios Efstratios",
+    "terrain": "coast",
+    "motif": "harbor",
+    "file": "scenes/islands/agios-efstratios.webp",
+    "manualOnly": true
+  },
+  {
+    "id": "island-agistri",
+    "name": "Αγκίστρι - Μεγαλοχώρι (Μύλος)",
+    "nameEn": "Agistri",
+    "terrain": "coast",
+    "motif": "harbor",
+    "file": "scenes/islands/agistri.webp",
+    "manualOnly": true
+  },
+  {
+    "id": "island-aegina",
+    "name": "Αίγινα",
+    "nameEn": "Aegina",
+    "terrain": "coast",
+    "motif": "harbor",
+    "file": "scenes/islands/aegina.webp",
+    "manualOnly": true
+  },
+  {
+    "id": "island-aitoliko",
+    "name": "Αιτωλικό",
+    "nameEn": "Aitoliko",
+    "terrain": "coast",
+    "motif": "harbor",
+    "file": "scenes/islands/aitoliko.webp",
+    "manualOnly": true
+  },
+  {
+    "id": "island-alonnisos",
+    "name": "Αλόννησος - Παλιά Αλόννησος (Χώρα)",
+    "nameEn": "Alonnisos",
+    "terrain": "coast",
+    "motif": "harbor",
+    "file": "scenes/islands/alonnisos.webp",
+    "manualOnly": true
+  },
+  {
+    "id": "island-ammouliani",
+    "name": "Αμμουλιανή",
+    "nameEn": "Ammouliani",
+    "terrain": "coast",
+    "motif": "harbor",
+    "file": "scenes/islands/ammouliani.webp",
+    "manualOnly": true
+  },
+  {
+    "id": "island-amorgos",
+    "name": "Αμοργός - Χώρα Αμοργού",
+    "nameEn": "Amorgos",
+    "terrain": "coast",
+    "motif": "harbor",
+    "file": "scenes/islands/amorgos.webp",
+    "manualOnly": true
+  },
+  {
+    "id": "island-anafi",
+    "name": "Ανάφη - Χώρα Ανάφης",
+    "nameEn": "Anafi",
+    "terrain": "coast",
+    "motif": "harbor",
+    "file": "scenes/islands/anafi.webp",
+    "manualOnly": true
+  },
+  {
+    "id": "island-andros",
+    "name": "Άνδρος - Χώρα Άνδρου",
+    "nameEn": "Andros",
+    "terrain": "coast",
+    "motif": "harbor",
+    "file": "scenes/islands/andros.webp",
+    "manualOnly": true
+  },
+  {
+    "id": "island-antikythera",
+    "name": "Αντικύθηρα - Ποταμός",
+    "nameEn": "Antikythera",
+    "terrain": "coast",
+    "motif": "harbor",
+    "file": "scenes/islands/antikythera.webp",
+    "manualOnly": true
+  },
+  {
+    "id": "island-antipaxos",
+    "name": "Αντίπαξος - Αντίπαξος (Αγριλιά)",
+    "nameEn": "Antipaxos",
+    "terrain": "coast",
+    "motif": "harbor",
+    "file": "scenes/islands/antipaxos.webp",
+    "manualOnly": true
+  },
+  {
+    "id": "island-antiparos",
+    "name": "Αντίπαρος - Χώρα Αντιπάρου",
+    "nameEn": "Antiparos",
+    "terrain": "coast",
+    "motif": "harbor",
+    "file": "scenes/islands/antiparos.webp",
+    "manualOnly": true
+  },
+  {
+    "id": "island-ano-koufonisi",
+    "name": "Άνω Κουφονήσι - Κουφονήσι",
+    "nameEn": "Ano Koufonisi",
+    "terrain": "coast",
+    "motif": "harbor",
+    "file": "scenes/islands/ano-koufonisi.webp",
+    "manualOnly": true
+  },
+  {
+    "id": "island-arkoi",
+    "name": "Αρκοί",
+    "nameEn": "Arkoi",
+    "terrain": "coast",
+    "motif": "harbor",
+    "file": "scenes/islands/arkoi.webp",
+    "manualOnly": true
+  },
+  {
+    "id": "island-astypalaia",
+    "name": "Αστυπάλαια - Χώρα Αστυπάλαιας",
+    "nameEn": "Astypalaia",
+    "terrain": "coast",
+    "motif": "harbor",
+    "file": "scenes/islands/astypalaia.webp",
+    "manualOnly": true
+  },
+  {
+    "id": "island-gavdos",
+    "name": "Γαύδος - Καστρί",
+    "nameEn": "Gavdos",
+    "terrain": "coast",
+    "motif": "harbor",
+    "file": "scenes/islands/gavdos.webp",
+    "manualOnly": true
+  },
+  {
+    "id": "island-donousa",
+    "name": "Δονούσα - Σταυρός",
+    "nameEn": "Donousa",
+    "terrain": "coast",
+    "motif": "harbor",
+    "file": "scenes/islands/donousa.webp",
+    "manualOnly": true
+  },
+  {
+    "id": "island-elafonisos",
+    "name": "Ελαφόνησος",
+    "nameEn": "Elafonisos",
+    "terrain": "coast",
+    "motif": "harbor",
+    "file": "scenes/islands/elafonisos.webp",
+    "manualOnly": true
+  },
+  {
+    "id": "island-ereikoussa",
+    "name": "Ερεικούσσα - Πόρτο",
+    "nameEn": "Ereikoussa",
+    "terrain": "coast",
+    "motif": "harbor",
+    "file": "scenes/islands/ereikoussa.webp",
+    "manualOnly": true
+  },
+  {
+    "id": "island-evia",
+    "name": "Εύβοια - Χαλκίδα",
+    "nameEn": "Evia",
+    "terrain": "coast",
+    "motif": "harbor",
+    "file": "scenes/islands/evia.webp",
+    "manualOnly": true
+  },
+  {
+    "id": "island-zakynthos",
+    "name": "Ζάκυνθος - Πόλη της Ζακύνθου",
+    "nameEn": "Zakynthos",
+    "terrain": "coast",
+    "motif": "harbor",
+    "file": "scenes/islands/zakynthos.webp",
+    "manualOnly": true
+  },
+  {
+    "id": "island-irakleia",
+    "name": "Ηρακλειά - Παναγιά (Χώρα)",
+    "nameEn": "Irakleia",
+    "terrain": "coast",
+    "motif": "harbor",
+    "file": "scenes/islands/irakleia.webp",
+    "manualOnly": true
+  },
+  {
+    "id": "island-thasos",
+    "name": "Θάσος - Λιμένας",
+    "nameEn": "Thasos",
+    "terrain": "coast",
+    "motif": "harbor",
+    "file": "scenes/islands/thasos.webp",
+    "manualOnly": true
+  },
+  {
+    "id": "island-thirasia",
+    "name": "Θηρασιά - Μανωλάς",
+    "nameEn": "Thirasia",
+    "terrain": "coast",
+    "motif": "harbor",
+    "file": "scenes/islands/thirasia.webp",
+    "manualOnly": true
+  },
+  {
+    "id": "island-thymaina",
+    "name": "Θύμαινα",
+    "nameEn": "Thymaina",
+    "terrain": "coast",
+    "motif": "harbor",
+    "file": "scenes/islands/thymaina.webp",
+    "manualOnly": true
+  },
+  {
+    "id": "island-ithaca",
+    "name": "Ιθάκη - Βαθύ",
+    "nameEn": "Ithaca",
+    "terrain": "coast",
+    "motif": "harbor",
+    "file": "scenes/islands/ithaca.webp",
+    "manualOnly": true
+  },
+  {
+    "id": "island-ikaria",
+    "name": "Ικαρία - Άγιος Κήρυκος",
+    "nameEn": "Ikaria",
+    "terrain": "coast",
+    "motif": "harbor",
+    "file": "scenes/islands/ikaria.webp",
+    "manualOnly": true
+  },
+  {
+    "id": "island-ios",
+    "name": "Ίος - Χώρα Ίου",
+    "nameEn": "Ios",
+    "terrain": "coast",
+    "motif": "harbor",
+    "file": "scenes/islands/ios.webp",
+    "manualOnly": true
+  },
+  {
+    "id": "island-kalamos",
+    "name": "Κάλαμος",
+    "nameEn": "Kalamos",
+    "terrain": "coast",
+    "motif": "harbor",
+    "file": "scenes/islands/kalamos.webp",
+    "manualOnly": true
+  },
+  {
+    "id": "island-kalymnos",
+    "name": "Κάλυμνος - Πόθια",
+    "nameEn": "Kalymnos",
+    "terrain": "coast",
+    "motif": "harbor",
+    "file": "scenes/islands/kalymnos.webp",
+    "manualOnly": true
+  },
+  {
+    "id": "island-karpathos",
+    "name": "Κάρπαθος - Πηγάδια",
+    "nameEn": "Karpathos",
+    "terrain": "coast",
+    "motif": "harbor",
+    "file": "scenes/islands/karpathos.webp",
+    "manualOnly": true
+  },
+  {
+    "id": "island-kasos",
+    "name": "Κάσος - Φρυ",
+    "nameEn": "Kasos",
+    "terrain": "coast",
+    "motif": "harbor",
+    "file": "scenes/islands/kasos.webp",
+    "manualOnly": true
+  },
+  {
+    "id": "island-kastellorizo",
+    "name": "Καστελλόριζο - Μεγίστη",
+    "nameEn": "Kastellorizo",
+    "terrain": "coast",
+    "motif": "harbor",
+    "file": "scenes/islands/kastellorizo.webp",
+    "manualOnly": true
+  },
+  {
+    "id": "island-kastos",
+    "name": "Καστός",
+    "nameEn": "Kastos",
+    "terrain": "coast",
+    "motif": "harbor",
+    "file": "scenes/islands/kastos.webp",
+    "manualOnly": true
+  },
+  {
+    "id": "island-kea",
+    "name": "Κέα - Ιουλίδα",
+    "nameEn": "Kea",
+    "terrain": "coast",
+    "motif": "harbor",
+    "file": "scenes/islands/kea.webp",
+    "manualOnly": true
+  },
+  {
+    "id": "island-corfu",
+    "name": "Κέρκυρα - Πόλη της Κέρκυρας",
+    "nameEn": "Corfu",
+    "terrain": "coast",
+    "motif": "harbor",
+    "file": "scenes/islands/corfu.webp",
+    "manualOnly": true
+  },
+  {
+    "id": "island-kefalonia",
+    "name": "Κεφαλονιά - Αργοστόλι",
+    "nameEn": "Kefalonia",
+    "terrain": "coast",
+    "motif": "harbor",
+    "file": "scenes/islands/kefalonia.webp",
+    "manualOnly": true
+  },
+  {
+    "id": "island-kimolos",
+    "name": "Κίμωλος - Χωριό Κιμώλου",
+    "nameEn": "Kimolos",
+    "terrain": "coast",
+    "motif": "harbor",
+    "file": "scenes/islands/kimolos.webp",
+    "manualOnly": true
+  },
+  {
+    "id": "island-koronisia",
+    "name": "Κορωνησία",
+    "nameEn": "Koronisia",
+    "terrain": "coast",
+    "motif": "harbor",
+    "file": "scenes/islands/koronisia.webp",
+    "manualOnly": true
+  },
+  {
+    "id": "island-crete",
+    "name": "Κρήτη - Ηράκλειο",
+    "nameEn": "Crete",
+    "terrain": "coast",
+    "motif": "harbor",
+    "file": "scenes/islands/crete.webp",
+    "manualOnly": true
+  },
+  {
+    "id": "island-kythera",
+    "name": "Κύθηρα - Χώρα Κυθήρων",
+    "nameEn": "Kythera",
+    "terrain": "coast",
+    "motif": "harbor",
+    "file": "scenes/islands/kythera.webp",
+    "manualOnly": true
+  },
+  {
+    "id": "island-kythnos",
+    "name": "Κύθνος - Χώρα Κύθνου (Μεσαριά)",
+    "nameEn": "Kythnos",
+    "terrain": "coast",
+    "motif": "harbor",
+    "file": "scenes/islands/kythnos.webp",
+    "manualOnly": true
+  },
+  {
+    "id": "island-kos",
+    "name": "Κως",
+    "nameEn": "Kos",
+    "terrain": "coast",
+    "motif": "harbor",
+    "file": "scenes/islands/kos.webp",
+    "manualOnly": true
+  },
+  {
+    "id": "island-leipsoi",
+    "name": "Λειψοί - Χώρα Λειψών",
+    "nameEn": "Leipsoi",
+    "terrain": "coast",
+    "motif": "harbor",
+    "file": "scenes/islands/leipsoi.webp",
+    "manualOnly": true
+  },
+  {
+    "id": "island-leros",
+    "name": "Λέρος - Αγία Μαρίνα",
+    "nameEn": "Leros",
+    "terrain": "coast",
+    "motif": "harbor",
+    "file": "scenes/islands/leros.webp",
+    "manualOnly": true
+  },
+  {
+    "id": "island-lesbos",
+    "name": "Λέσβος - Μυτιλήνη",
+    "nameEn": "Lesbos",
+    "terrain": "coast",
+    "motif": "harbor",
+    "file": "scenes/islands/lesbos.webp",
+    "manualOnly": true
+  },
+  {
+    "id": "island-lefkada",
+    "name": "Λευκάδα - Πόλη της Λευκάδας",
+    "nameEn": "Lefkada",
+    "terrain": "coast",
+    "motif": "harbor",
+    "file": "scenes/islands/lefkada.webp",
+    "manualOnly": true
+  },
+  {
+    "id": "island-limnos",
+    "name": "Λήμνος - Μύρινα",
+    "nameEn": "Limnos",
+    "terrain": "coast",
+    "motif": "harbor",
+    "file": "scenes/islands/limnos.webp",
+    "manualOnly": true
+  },
+  {
+    "id": "island-mathraki",
+    "name": "Μαθράκι - Πλάκες",
+    "nameEn": "Mathraki",
+    "terrain": "coast",
+    "motif": "harbor",
+    "file": "scenes/islands/mathraki.webp",
+    "manualOnly": true
+  },
+  {
+    "id": "island-marathi",
+    "name": "Μαράθι",
+    "nameEn": "Marathi",
+    "terrain": "coast",
+    "motif": "harbor",
+    "file": "scenes/islands/marathi.webp",
+    "manualOnly": true
+  },
+  {
+    "id": "island-meganisi",
+    "name": "Μεγανήσι - Κατωμέρι",
+    "nameEn": "Meganisi",
+    "terrain": "coast",
+    "motif": "harbor",
+    "file": "scenes/islands/meganisi.webp",
+    "manualOnly": true
+  },
+  {
+    "id": "island-milos",
+    "name": "Μήλος - Πλάκα",
+    "nameEn": "Milos",
+    "terrain": "coast",
+    "motif": "harbor",
+    "file": "scenes/islands/milos.webp",
+    "manualOnly": true
+  },
+  {
+    "id": "island-monemvasia",
+    "name": "Μονεμβασιά - Κάστρο Μονεμβασιάς",
+    "nameEn": "Monemvasia",
+    "terrain": "coast",
+    "motif": "harbor",
+    "file": "scenes/islands/monemvasia.webp",
+    "manualOnly": true
+  },
+  {
+    "id": "island-mykonos",
+    "name": "Μύκονος - Χώρα Μυκόνου",
+    "nameEn": "Mykonos",
+    "terrain": "coast",
+    "motif": "harbor",
+    "file": "scenes/islands/mykonos.webp",
+    "manualOnly": true
+  },
+  {
+    "id": "island-naxos",
+    "name": "Νάξος - Χώρα Νάξου",
+    "nameEn": "Naxos",
+    "terrain": "coast",
+    "motif": "harbor",
+    "file": "scenes/islands/naxos.webp",
+    "manualOnly": true
+  },
+  {
+    "id": "island-ioannina-island",
+    "name": "Νήσος Ιωαννίνων - Νησάκι Ιωαννίνων",
+    "nameEn": "Ioannina Island",
+    "terrain": "lake",
+    "motif": "harbor",
+    "file": "scenes/islands/ioannina-island.webp",
+    "manualOnly": true
+  },
+  {
+    "id": "island-nisyros",
+    "name": "Νίσυρος - Μανδράκι",
+    "nameEn": "Nisyros",
+    "terrain": "coast",
+    "motif": "harbor",
+    "file": "scenes/islands/nisyros.webp",
+    "manualOnly": true
+  },
+  {
+    "id": "island-othonoi",
+    "name": "Οθωνοί - Άμμος",
+    "nameEn": "Othonoi",
+    "terrain": "coast",
+    "motif": "harbor",
+    "file": "scenes/islands/othonoi.webp",
+    "manualOnly": true
+  },
+  {
+    "id": "island-oinousses",
+    "name": "Οινούσσες - Οινούσσες (Αιγνούσα)",
+    "nameEn": "Oinousses",
+    "terrain": "coast",
+    "motif": "harbor",
+    "file": "scenes/islands/oinousses.webp",
+    "manualOnly": true
+  },
+  {
+    "id": "island-palaio-trikeri",
+    "name": "Παλαιό Τρίκερι - Παλαιό Τρίκερι (Αγία Σοφία)",
+    "nameEn": "Palaio Trikeri",
+    "terrain": "coast",
+    "motif": "harbor",
+    "file": "scenes/islands/palaio-trikeri.webp",
+    "manualOnly": true
+  },
+  {
+    "id": "island-paxos",
+    "name": "Παξοί - Γάιος",
+    "nameEn": "Paxos",
+    "terrain": "coast",
+    "motif": "harbor",
+    "file": "scenes/islands/paxos.webp",
+    "manualOnly": true
+  },
+  {
+    "id": "island-paros",
+    "name": "Πάρος - Παροικιά",
+    "nameEn": "Paros",
+    "terrain": "coast",
+    "motif": "harbor",
+    "file": "scenes/islands/paros.webp",
+    "manualOnly": true
+  },
+  {
+    "id": "island-patmos",
+    "name": "Πάτμος - Χώρα Πάτμου",
+    "nameEn": "Patmos",
+    "terrain": "coast",
+    "motif": "harbor",
+    "file": "scenes/islands/patmos.webp",
+    "manualOnly": true
+  },
+  {
+    "id": "island-poros",
+    "name": "Πόρος",
+    "nameEn": "Poros",
+    "terrain": "coast",
+    "motif": "harbor",
+    "file": "scenes/islands/poros.webp",
+    "manualOnly": true
+  },
+  {
+    "id": "island-rhodes",
+    "name": "Ρόδος - Πόλη της Ρόδου",
+    "nameEn": "Rhodes",
+    "terrain": "coast",
+    "motif": "harbor",
+    "file": "scenes/islands/rhodes.webp",
+    "manualOnly": true
+  },
+  {
+    "id": "island-salamina",
+    "name": "Σαλαμίνα - Σαλαμίνα (Κούλουρη)",
+    "nameEn": "Salamina",
+    "terrain": "coast",
+    "motif": "harbor",
+    "file": "scenes/islands/salamina.webp",
+    "manualOnly": true
+  },
+  {
+    "id": "island-samothrace",
+    "name": "Σαμοθράκη - Χώρα Σαμοθράκης",
+    "nameEn": "Samothrace",
+    "terrain": "coast",
+    "motif": "harbor",
+    "file": "scenes/islands/samothrace.webp",
+    "manualOnly": true
+  },
+  {
+    "id": "island-samos",
+    "name": "Σάμος - Βαθύ (Πόλη της Σάμου)",
+    "nameEn": "Samos",
+    "terrain": "coast",
+    "motif": "harbor",
+    "file": "scenes/islands/samos.webp",
+    "manualOnly": true
+  },
+  {
+    "id": "island-santorini",
+    "name": "Σαντορίνη - Φηρά",
+    "nameEn": "Santorini",
+    "terrain": "coast",
+    "motif": "harbor",
+    "file": "scenes/islands/santorini.webp",
+    "manualOnly": true
+  },
+  {
+    "id": "island-serifos",
+    "name": "Σέριφος - Χώρα Σερίφου",
+    "nameEn": "Serifos",
+    "terrain": "coast",
+    "motif": "harbor",
+    "file": "scenes/islands/serifos.webp",
+    "manualOnly": true
+  },
+  {
+    "id": "island-sikinos",
+    "name": "Σίκινος - Χώρα Σικίνου (Κάστρο)",
+    "nameEn": "Sikinos",
+    "terrain": "coast",
+    "motif": "harbor",
+    "file": "scenes/islands/sikinos.webp",
+    "manualOnly": true
+  },
+  {
+    "id": "island-sifnos",
+    "name": "Σίφνος - Απολλωνία",
+    "nameEn": "Sifnos",
+    "terrain": "coast",
+    "motif": "harbor",
+    "file": "scenes/islands/sifnos.webp",
+    "manualOnly": true
+  },
+  {
+    "id": "island-skiathos",
+    "name": "Σκιάθος - Χώρα Σκιάθου",
+    "nameEn": "Skiathos",
+    "terrain": "coast",
+    "motif": "harbor",
+    "file": "scenes/islands/skiathos.webp",
+    "manualOnly": true
+  },
+  {
+    "id": "island-skopelos",
+    "name": "Σκόπελος - Χώρα Σκοπέλου",
+    "nameEn": "Skopelos",
+    "terrain": "coast",
+    "motif": "harbor",
+    "file": "scenes/islands/skopelos.webp",
+    "manualOnly": true
+  },
+  {
+    "id": "island-skyros",
+    "name": "Σκύρος - Χώρα Σκύρου",
+    "nameEn": "Skyros",
+    "terrain": "coast",
+    "motif": "harbor",
+    "file": "scenes/islands/skyros.webp",
+    "manualOnly": true
+  },
+  {
+    "id": "island-spetses",
+    "name": "Σπέτσες",
+    "nameEn": "Spetses",
+    "terrain": "coast",
+    "motif": "harbor",
+    "file": "scenes/islands/spetses.webp",
+    "manualOnly": true
+  },
+  {
+    "id": "island-symi",
+    "name": "Σύμη - Γιαλός και Χωριό Σύμης",
+    "nameEn": "Symi",
+    "terrain": "coast",
+    "motif": "harbor",
+    "file": "scenes/islands/symi.webp",
+    "manualOnly": true
+  },
+  {
+    "id": "island-syros",
+    "name": "Σύρος - Ερμούπολη",
+    "nameEn": "Syros",
+    "terrain": "coast",
+    "motif": "harbor",
+    "file": "scenes/islands/syros.webp",
+    "manualOnly": true
+  },
+  {
+    "id": "island-schoinousa",
+    "name": "Σχοινούσα - Παναγιά (Χώρα)",
+    "nameEn": "Schoinousa",
+    "terrain": "coast",
+    "motif": "harbor",
+    "file": "scenes/islands/schoinousa.webp",
+    "manualOnly": true
+  },
+  {
+    "id": "island-telendos",
+    "name": "Τέλενδος",
+    "nameEn": "Telendos",
+    "terrain": "coast",
+    "motif": "harbor",
+    "file": "scenes/islands/telendos.webp",
+    "manualOnly": true
+  },
+  {
+    "id": "island-tilos",
+    "name": "Τήλος - Μεγάλο Χωριό",
+    "nameEn": "Tilos",
+    "terrain": "coast",
+    "motif": "harbor",
+    "file": "scenes/islands/tilos.webp",
+    "manualOnly": true
+  },
+  {
+    "id": "island-tinos",
+    "name": "Τήνος - Χώρα Τήνου",
+    "nameEn": "Tinos",
+    "terrain": "coast",
+    "motif": "harbor",
+    "file": "scenes/islands/tinos.webp",
+    "manualOnly": true
+  },
+  {
+    "id": "island-tourlida",
+    "name": "Τουρλίδα - Τουρλίδα Μεσολογγίου",
+    "nameEn": "Tourlida",
+    "terrain": "coast",
+    "motif": "harbor",
+    "file": "scenes/islands/tourlida.webp",
+    "manualOnly": true
+  },
+  {
+    "id": "island-trizonia",
+    "name": "Τριζόνια",
+    "nameEn": "Trizonia",
+    "terrain": "coast",
+    "motif": "harbor",
+    "file": "scenes/islands/trizonia.webp",
+    "manualOnly": true
+  },
+  {
+    "id": "island-hydra",
+    "name": "Ύδρα - Χώρα Ύδρας",
+    "nameEn": "Hydra",
+    "terrain": "coast",
+    "motif": "harbor",
+    "file": "scenes/islands/hydra.webp",
+    "manualOnly": true
+  },
+  {
+    "id": "island-folegandros",
+    "name": "Φολέγανδρος - Χώρα Φολεγάνδρου",
+    "nameEn": "Folegandros",
+    "terrain": "coast",
+    "motif": "harbor",
+    "file": "scenes/islands/folegandros.webp",
+    "manualOnly": true
+  },
+  {
+    "id": "island-fournoi",
+    "name": "Φούρνοι - Φούρνοι Κορσεών",
+    "nameEn": "Fournoi",
+    "terrain": "coast",
+    "motif": "harbor",
+    "file": "scenes/islands/fournoi.webp",
+    "manualOnly": true
+  },
+  {
+    "id": "island-chalki",
+    "name": "Χάλκη - Νημποριός",
+    "nameEn": "Chalki",
+    "terrain": "coast",
+    "motif": "harbor",
+    "file": "scenes/islands/chalki.webp",
+    "manualOnly": true
+  },
+  {
+    "id": "island-chios",
+    "name": "Χίος - Πόλη της Χίου",
+    "nameEn": "Chios",
+    "terrain": "coast",
+    "motif": "harbor",
+    "file": "scenes/islands/chios.webp",
+    "manualOnly": true
+  },
+  {
+    "id": "island-psara",
+    "name": "Ψαρά",
+    "nameEn": "Psara",
+    "terrain": "coast",
+    "motif": "harbor",
+    "file": "scenes/islands/psara.webp",
+    "manualOnly": true
+  },
+  {
+    "id": "island-pserimos",
+    "name": "Ψέριμος",
+    "nameEn": "Pserimos",
+    "terrain": "coast",
+    "motif": "harbor",
+    "file": "scenes/islands/pserimos.webp",
+    "manualOnly": true
+  }
+]

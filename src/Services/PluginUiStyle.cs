@@ -5,7 +5,7 @@ using System.Text.Json;
 namespace MotionDesk.Services
 {
     /// <summary>
-    /// Which look the pages of the plugins and the standalone family apps use by default: Opsis' own, the Opsis Appearance one or the Opsis News Crawler one.
+    /// Which look the pages of the plugins and the standalone family apps use by default: Opsis' own or the Opsis News Crawler one.
     /// The choice is kept in the settings and published as %AppData%\Opsis\plugin-ui.json ({"style":"Opsis|Appearance|Crawler","version":n}), which the plugins and
     /// the standalone apps read (and watch) to follow it.
     /// </summary>
@@ -15,7 +15,8 @@ namespace MotionDesk.Services
 
         public static string Normalize(string? s) => Array.Find(Styles, x => x.Equals(s, StringComparison.OrdinalIgnoreCase)) ?? "Opsis";
 
-        public static string Current => Normalize(AppSettings.Load().PluginUiStyle);
+        /// <summary>Plan 2.1.1: the setting is gone from the UI; plugin pages always follow the Opsis theme.</summary>
+        public static string Current => "Opsis";
 
         public static string FilePath => Path.Combine(AppPaths.AppDataFolder, "plugin-ui.json");
 
@@ -29,6 +30,20 @@ namespace MotionDesk.Services
         {
             try
             {
+                // The plugin style is fixed to Opsis since plan 2.1.1. Do not rewrite an
+                // identical JSON at every start: it creates unnecessary SSD writes and
+                // wakes the FileSystemWatcher in other family apps.
+                if (File.Exists(FilePath))
+                {
+                    try
+                    {
+                        using var existing = JsonDocument.Parse(File.ReadAllText(FilePath));
+                        if (existing.RootElement.TryGetProperty("style", out var style) &&
+                            style.ValueKind == JsonValueKind.String && style.GetString() == Current)
+                            return;
+                    }
+                    catch (JsonException) { /* corrupted file: replace it below */ }
+                }
                 Directory.CreateDirectory(AppPaths.AppDataFolder);
                 AtomicFile.WriteAllText(FilePath, JsonSerializer.Serialize(new { style = Current, version = DateTime.UtcNow.Ticks }));
             }

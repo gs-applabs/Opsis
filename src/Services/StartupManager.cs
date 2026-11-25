@@ -7,17 +7,12 @@ namespace MotionDesk.Services
     public static class StartupManager
     {
         private const string AppName = "Opsis";
-        // Από τη μετονομασία "MotionDesk Studio" -> "Opsis" — καθαρίζεται αυτόματα ώστε να μην
-        // μείνει για πάντα μια νεκρή εγγραφή Run που δείχνει στο παλιό MotionDesk.exe.
-        private const string LegacyAppName = "MotionDeskStudio";
-
         public static void SetStartup(bool enable)
         {
             try
             {
                 using (RegistryKey? key = Registry.CurrentUser.OpenSubKey(@"SOFTWARE\Microsoft\Windows\CurrentVersion\Run", true))
                 {
-                    key?.DeleteValue(LegacyAppName, false);
                     if (enable)
                     {
                         string? exePath = Environment.ProcessPath;
@@ -46,7 +41,7 @@ namespace MotionDesk.Services
         {
             using (RegistryKey? key = Registry.CurrentUser.OpenSubKey(@"SOFTWARE\Microsoft\Windows\CurrentVersion\Run", false))
             {
-                return key?.GetValue(AppName) != null || key?.GetValue(LegacyAppName) != null;
+                return key?.GetValue(AppName) != null;
             }
         }
     }

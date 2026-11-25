@@ -24,7 +24,7 @@ namespace MotionDesk.UI
             switch (key)
             {
                 case "Dashboard": DrawHome(g, pen); break;
-                case string pluginKey when pluginKey.StartsWith("plugin:", StringComparison.Ordinal): DrawNews(g, pen); break; // σελίδες plugin
+                case string pluginKey when pluginKey.StartsWith("plugin:", StringComparison.Ordinal): DrawPluginPage(g, pen, brush, pluginKey, color); break; // pages added by plugins: a distinctive glyph per plugin (generic, nothing hard-coded per plugin)
                 case "Widgets": DrawGrid(g, pen); break;
                 case "DeskZones": DrawZones(g, pen); break;
                 case "Wallpaper": DrawImage(g, pen, brush); break;
@@ -35,7 +35,7 @@ namespace MotionDesk.UI
                 case "About": DrawInfo(g, pen, brush); break;
                 case "Clock": DrawClock(g, pen); break;
                 case "Network": DrawNetwork(g, pen, brush); break;
-                case "AudioVisualizer": case "AudioEnhancement": DrawAudio(g, pen); break;
+                case "AudioVisualizer": case "AudioEnhancement": case "DeskMusicVisualizer": DrawAudio(g, pen); break;
                 case "Weather": DrawWeather(g, pen, brush); break;
                 case "SystemMonitor": DrawPulse(g, pen); break;
                 case "Disk": DrawDisk(g, pen, brush); break;
@@ -45,12 +45,18 @@ namespace MotionDesk.UI
                 case "Add": DrawAdd(g, pen); break;
                 case "Delete": DrawDelete(g, pen); break;
                 case "Command": DrawCommand(g, pen); break;
+                case "Search":
+                    g.DrawEllipse(pen, 3.4f, 3.4f, 9.8f, 9.8f);
+                    g.DrawLine(pen, 11.8f, 11.8f, 16.8f, 16.8f);
+                    break;
                 case "Work": DrawBriefcase(g, pen); break;
                 case "Gaming": DrawGameController(g, pen); break;
                 case "Focus": DrawTarget(g, pen); break;
                 case "Container": DrawContainer(g, pen); break;
                 case "Rename": DrawRename(g, pen); break;
-                case "Personalization": DrawPalette(g, pen, brush); break;
+                case "Personalization": case "Theme": DrawPalette(g, pen, brush); break;
+                case "DeskContainers": DrawContainer(g, pen); break;
+                case "DeskStrip": DrawGrid(g, pen); break;
                 case "Media": DrawMedia(g, pen, brush); break;
                 case "Notifications": DrawNotifications(g, pen); break;
                 case "Calendar": DrawCalendar(g, pen); break;
@@ -72,6 +78,23 @@ namespace MotionDesk.UI
         }
 
         // Εικονίδιο "εφημερίδα/ticker" για τις σελίδες plugin (π.χ. News Crawler).
+        /// <summary>Plugin pages: a well-known theme (news / media / audio / appearance) gets its own glyph; any other (future) plugin gets a rounded tile with ITS OWN letter, so no two plugins look the same.</summary>
+        private static void DrawPluginPage(Graphics g, Pen pen, Brush brush, string key, Color color)
+        {
+            var (kind, letter) = PluginIconChooser.Choose(key);
+            switch (kind)
+            {
+                case PluginIconKind.News: DrawNews(g, pen); return;
+                case PluginIconKind.Media: DrawMedia(g, pen, (SolidBrush)brush); return;
+                case PluginIconKind.Audio: DrawAudio(g, pen); return;
+                case PluginIconKind.Palette: DrawPalette(g, pen, (SolidBrush)brush); return;
+            }
+            DrawRounded(g, pen, 2.5f, 2.5f, 15, 15, 4);
+            using var f = new Font("Segoe UI Semibold", 9.5f, FontStyle.Bold, GraphicsUnit.Pixel);
+            using var sf = new StringFormat { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center };
+            g.DrawString(letter.ToString(), f, brush, new RectangleF(2.5f, 2.5f, 15, 15), sf);
+        }
+
         private static void DrawNews(Graphics g, Pen pen)
         {
             DrawRounded(g, pen, 2.5f, 4f, 15, 12, 2);

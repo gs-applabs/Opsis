@@ -36,7 +36,14 @@ and the process exits together with Opsis. Data of earlier builds is migrated au
 
 ## Other components (each under its own licence)
 
-- LibreHardwareMonitorLib (github.com/LibreHardwareMonitor/LibreHardwareMonitor) - Mozilla Public License 2.0; reads GPU sensors for the System Monitor widget.
+- The 93 Greek-island Weather backgrounds in `scenes/islands` were supplied with the project as PNG files and encoded as WebP at their original dimensions.
+
+- The GearWin, Kombos and Opsis News Crawler icons in `suite/icons` are from the [GearWin family assets](https://github.com/gs-applabs/GearWin/tree/master/wpf/OptimizerWpf/Assets/suite) (MIT, Copyright © 2026 gs-applabs). The Opsis Media Suite icon is from [Opsis Media Suite](https://github.com/gs-applabs/OpsisMediaSuite) (MIT, see OPSIS-MEDIA-SUITE-MIT.txt).
+
+- LibreHardwareMonitorLib 0.9.5 (github.com/LibreHardwareMonitor/LibreHardwareMonitor/tree/v0.9.5) - Mozilla Public License 2.0. Reads GPU sensors for the System Monitor widget.
+- DiskInfoToolkit 1.1.1, RAMSPDToolkit-NDD 1.4.2, BlackSharp.Core 1.0.7 (github.com/Blacktempel) - Mozilla Public License 2.0. Their NuGet package metadata identifies the corresponding source repositories and versions.
+- HidSharp 2.6.4 - Apache License 2.0. See lib/HidSharp-LICENSE.txt.
+- System.IO.Ports and System.Management 10.0.1 - MIT, .NET Foundation and contributors.
 - NAudio / NAudio.Wasapi (github.com/naudio/NAudio) - MIT; WASAPI loopback capture and FFT.
 - Microsoft.Web.WebView2 (Microsoft Edge WebView2 SDK) - used to render web and video wallpapers.
 - .NET / Windows Forms runtime - MIT, (c) .NET Foundation and contributors.
@@ -47,3 +54,11 @@ and the process exits together with Opsis. Data of earlier builds is migrated au
 ## Disclaimer
 
 The software is provided "as is" (see LICENSE). It injects a window behind the desktop icons and customises system icons and cursors: use it at your own risk.
+
+## Landmark photos (weather wallpaper)
+Cut-outs of Wikimedia Commons photographs, each checked on its own (public domain, CC0 or CC BY only): Parthenon east side by Jebulon (CC0), plus the Greek landmark photographs listed in the manifest (Patras, Rio-Antirrio, Nafplio); changes: sky removed, cropped, scaled, converted to WebP. Full manifest: docs/LANDMARK-IMAGES.md and docs/LANDMARK-IMAGES.json.
+
+Additional landmark photos: Lighthouse of Patras (public domain), Rio-Antirrio Bridge (public domain, see docs/LANDMARK-IMAGES.md), Bourtzi Nafplio (CC0).
+
+Aerial scene of the Acropolis and Athens: The Acropolis of Athens from Mount Lycabettus on March 14, 2020, by George E. Koronaios (CC0), cropped, widened and faded (see docs/LANDMARK-IMAGES.md).
+

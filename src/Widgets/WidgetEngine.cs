@@ -65,7 +65,7 @@ namespace MotionDesk.Widgets
 
         public void StartDrag()
         {
-            if (!_window.IsLocked) _window.BeginNativeDrag();
+            if (_window.CanMove) _window.BeginNativeDrag();
         }
 
         public bool ToggleLock()
@@ -228,13 +228,16 @@ namespace MotionDesk.Widgets
         private int _timerBaseMs;
         private PerfFeature _timerFeature = PerfFeature.Widgets;
         private bool _perfHooked;
+        public int RefreshPercent { get; private set; } = 100;
+        private int EffectiveMonitorInterval() => Math.Clamp(
+            (int)(PerformanceProfile.Interval(_timerFeature, _timerBaseMs) * RefreshPercent / 100.0), 250, 3600000);
 
         // The refresh timer of a widget follows the performance profile: slower on weaker tiers and while the machine is under pressure (dynamic scaling).
         private System.Windows.Forms.Timer MonitorTimer(int baseMs, PerfFeature feature = PerfFeature.Widgets)
         {
             _timerBaseMs = baseMs; _timerFeature = feature;
             if (!_perfHooked) { _perfHooked = true; PerformanceGovernor.EffectiveChanged += OnPerfChanged; }
-            return new System.Windows.Forms.Timer { Interval = PerformanceProfile.Interval(feature, baseMs) };
+            return new System.Windows.Forms.Timer { Interval = EffectiveMonitorInterval() };
         }
 
         private void OnPerfChanged(HardwareTier _)
@@ -242,12 +245,13 @@ namespace MotionDesk.Widgets
             try
             {
                 if (IsDisposed || !IsHandleCreated) return;
-                BeginInvoke(new Action(() => { if (_nativeMonitorTimer != null && _timerBaseMs > 0) _nativeMonitorTimer.Interval = PerformanceProfile.Interval(_timerFeature, _timerBaseMs); }));
+                BeginInvoke(new Action(() => { if (_nativeMonitorTimer != null && _timerBaseMs > 0) _nativeMonitorTimer.Interval = EffectiveMonitorInterval(); }));
             }
             catch (Exception) { }
         }
         public string WidgetId { get; }
         public bool IsLocked { get; set; } = false;
+        internal bool CanMove => !IsLocked || WidgetHostEngine.Instance.TemporarilyUnlocked;
         public string Variant { get; set; } = "Digital";
         public bool Clock24Hour { get; set; } = true;
         public bool ClockShowSeconds { get; set; } = true;
@@ -273,6 +277,8 @@ namespace MotionDesk.Widgets
         // DeskContainerWindow.cs. Δεν χρησιμοποιούμε πια Form.Opacity (ξεθωριάζει μαζί και το
         // κείμενο/εικονίδια)· το MotionDesk.UI.GlassBlur θολώνει μόνο ό,τι είναι πίσω από το widget.
         private double _backgroundOpacity = 1.0;
+        private int? _customTintArgb;
+        private int? _customRadius;
 
         public WidgetWindow(string widgetId, int defaultX, int defaultY, int width, int height)
         {
@@ -298,15 +304,20 @@ namespace MotionDesk.Widgets
                 if (e.Data?.GetData(DataFormats.FileDrop) is not string[] files) return;
                 foreach (var f in files)
                 {
-                    // Same rule as dock/application wallpaper/palette: no scripts (.ps1/.vbs/.hta/.js...), UNC/URL or missing paths.
-                    if (SafeLaunch.Reject(f) is { } why) { AttachLog.Write("widget drop refused: " + why + " (" + f + ")"); continue; }
+                    // the same rule as the dock / application wallpaper / palette: no scripts (.ps1 / .vbs / .hta / .js ...), UNC / URL or missing files
+                    if (MotionDesk.Services.SafeLaunch.Reject(f) is { } why) { MotionDesk.Services.AttachLog.Write("widget drop refused: " + why + " (" + f + ")"); continue; }
                     try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(f) { UseShellExecute = true }); }
                     catch { }
                 }
             };
 
+            AppActivity.FullscreenChanged += ActivityChanged;
+            VisibleChanged += (_, _) => UpdateNativeTimers();
+            LocationChanged += (_, _) => UpdateNativeTimers();
             LoadWidgetState(defaultX, defaultY);
-            if (string.Equals(widgetId, "sysmon", StringComparison.OrdinalIgnoreCase))
+            if (widgetId.StartsWith("sdk-", StringComparison.Ordinal))
+                _ = InitializeSdkWidgetAsync();
+            else if (string.Equals(widgetId, "sysmon", StringComparison.OrdinalIgnoreCase))
                 InitializeNativeSystemMonitor();
             else if (string.Equals(widgetId, "clock", StringComparison.OrdinalIgnoreCase))
                 InitializeNativeClock();
@@ -332,10 +343,27 @@ namespace MotionDesk.Widgets
                 _ = InitializeWebViewAsync();
         }
 
+        private System.Windows.Forms.Timer? _weatherAnimation;
+        private AudioSpectrumService? _audioSpectrum;
+        private void ActivityChanged(bool _) => UpdateNativeTimers();
+        private void UpdateNativeTimers()
+        {
+            if (IsDisposed || Disposing) return;
+            bool active = Visible && !AppActivity.IsPausedFor(Screen.FromControl(this), includeDesktopCoverage: false);
+            _audioSpectrum?.SetActive(active);
+            if (_nativeMonitorTimer != null) _nativeMonitorTimer.Enabled = active;
+            if (_weatherAnimation != null) _weatherAnimation.Enabled = active;
+        }
+
         protected override void Dispose(bool disposing)
         {
             if (disposing)
             {
+                AppActivity.FullscreenChanged -= ActivityChanged;
+                _audioSpectrum?.Dispose();
+                _audioSpectrum = null;
+                _weatherAnimation?.Dispose();
+                _weatherAnimation = null;
                 if (_perfHooked) { PerformanceGovernor.EffectiveChanged -= OnPerfChanged; _perfHooked = false; }
                 _nativeMonitorTimer?.Stop();
                 _nativeMonitorTimer?.Dispose();
@@ -381,7 +409,7 @@ namespace MotionDesk.Widgets
 
         protected override void WndProc(ref Message m)
         {
-            if (m.Msg == WM_MOVING && !IsLocked)
+            if (m.Msg == WM_MOVING && CanMove)
             {
                 RECT rect = Marshal.PtrToStructure<RECT>(m.LParam);
                 WidgetSnapEngine.ApplySnap(this, ref rect, WidgetHostEngine.Instance.GetActiveWidgets());
@@ -409,6 +437,8 @@ namespace MotionDesk.Widgets
                     Variant = Variant, Latitude = Latitude, Longitude = Longitude, LocationName = LocationName,
                     Clock24Hour = Clock24Hour, ClockShowSeconds = ClockShowSeconds, AudioStyle = AudioStyle,
                     Opacity = _backgroundOpacity, NetworkStyle = NetworkStyle,
+                    CustomTintArgb = _customTintArgb, CustomRadius = _customRadius,
+                    RefreshPercent = RefreshPercent,
                     AnalogTheme = AnalogTheme, DigitalFontFamily = DigitalFontFamily, DigitalColorArgb = DigitalColorArgb
                 };
                 MotionDesk.Services.AtomicFile.WriteAllText(configPath, JsonSerializer.Serialize(state));
@@ -429,6 +459,7 @@ namespace MotionDesk.Widgets
                         if (state.Width > 120 && state.Height > 80) Size = new Size(Math.Clamp(state.Width, 160, 1200), Math.Clamp(state.Height, 100, 900));
                         Location = ClampToAvailableScreen(new Point(state.X, state.Y));
                         IsLocked = state.IsLocked;
+                        RefreshPercent = state.RefreshPercent is >= 25 and <= 400 ? state.RefreshPercent : 100;
                         Variant = string.IsNullOrWhiteSpace(state.Variant) ? "Digital" : state.Variant;
                         Latitude = state.Latitude;
                         Longitude = state.Longitude;
@@ -438,6 +469,8 @@ namespace MotionDesk.Widgets
                         AudioStyle = string.IsNullOrWhiteSpace(state.AudioStyle) ? "WMP" : state.AudioStyle;
                         NetworkStyle = string.IsNullOrWhiteSpace(state.NetworkStyle) ? "Sparkline" : state.NetworkStyle;
                         _backgroundOpacity = state.Opacity is > 0.2 and <= 1.0 ? state.Opacity : 1.0;
+                        _customTintArgb = state.CustomTintArgb;
+                        _customRadius = state.CustomRadius is int radius ? Math.Clamp(radius, 0, 36) : null;
                         AnalogTheme = string.IsNullOrWhiteSpace(state.AnalogTheme) ? "Classic" : state.AnalogTheme;
                         DigitalFontFamily = string.IsNullOrWhiteSpace(state.DigitalFontFamily) ? "Segoe UI" : state.DigitalFontFamily;
                         DigitalColorArgb = state.DigitalColorArgb;
@@ -462,6 +495,29 @@ namespace MotionDesk.Widgets
         private string GetConfigFilePath() =>
             Path.Combine(AppPaths.AppDataFolder, "widgets", $"{WidgetId}_config.json");
 
+        private async Task InitializeSdkWidgetAsync()
+        {
+            var package = WidgetCatalog.Find(WidgetId);
+            var panel = CreateNativePanel(package?.Manifest.Name ?? WidgetId, out var values);
+            if (package == null) { values.Text = MainWindow.StudioText("Widget package unavailable.", "Το πακέτο widget δεν είναι διαθέσιμο."); return; }
+            values.Visible = false;
+            try
+            {
+                _webView = new WebView2 { Dock = DockStyle.Fill, DefaultBackgroundColor = Color.Transparent };
+                panel.Controls.Add(_webView);
+                _webView.BringToFront();
+                await WidgetSdkView.InitializeAsync(_webView, package, () => RefreshPercent);
+            }
+            catch (Exception ex)
+            {
+                if (IsDisposed) return;
+                _webView?.Dispose();
+                values.Visible = true;
+                values.Text = MainWindow.StudioText("Could not open the widget.", "Το widget δεν άνοιξε.");
+                RotatingLogger.Write($"Widget {WidgetId}: {ex.Message}");
+            }
+        }
+
         private async System.Threading.Tasks.Task InitializeWebViewAsync()
         {
             try
@@ -471,10 +527,10 @@ namespace MotionDesk.Widgets
                 Controls.Add(_webView);
                 await _webView.EnsureCoreWebView2Async(await WebView2Support.CreateEnvironmentAsync());
                 if (IsDisposed || _webView.CoreWebView2 == null) return;
-                WebView2Support.Harden(_webView.CoreWebView2);
-                _webView.CoreWebView2.AddHostObjectToScript("motionDesk", new WidgetBridge(this));
                 string htmlPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "widgets", WidgetId, "index.html");
-                if (File.Exists(htmlPath)) _webView.CoreWebView2.Navigate(htmlPath);
+                WebView2Support.Harden(_webView.CoreWebView2, htmlPath);
+                _webView.CoreWebView2.AddHostObjectToScript("motionDesk", new WidgetBridge(this));
+                if (File.Exists(htmlPath)) _webView.CoreWebView2.Navigate(new Uri(htmlPath).AbsoluteUri);
             }
             catch (Exception ex)
             {
@@ -488,6 +544,17 @@ namespace MotionDesk.Widgets
             // ΟΧΙ "using": το ContextMenuStrip.Show() δεν μπλοκάρει, οπότε ένα "using" εδώ θα το
             // Dispose-άρει αμέσως μετά το Show() -> flash-and-vanish πριν προλάβει κλικ ο χρήστης.
             var menu = new ContextMenuStrip();
+            menu.Items.Add(LocalizationManager.T("DCM.WidgetSettings"), null, (_, _) => TrayApplicationContext.OpenPage?.Invoke("Widgets"));
+            if (WidgetId.StartsWith("sdk-", StringComparison.OrdinalIgnoreCase) && WidgetCatalog.Find(WidgetId) is { } sdk)
+            {
+                menu.Items.Add(MainWindow.StudioText("Revoke system-data consent", "Ανάκληση πρόσβασης σε δεδομένα συστήματος"), null, (_, _) =>
+                {
+                    WidgetConsentStore.Revoke(sdk.Manifest.Id);
+                    MessageBox.Show(this, MainWindow.StudioText("Consent revoked. Reload this widget to discard in-flight data.",
+                        "Η συναίνεση ανακλήθηκε. Φόρτωσε ξανά το widget για διαγραφή προσωρινών δεδομένων."), "Opsis");
+                });
+            }
+            menu.Items.Add(new ToolStripSeparator());
 
             if (string.Equals(WidgetId, "clock", StringComparison.OrdinalIgnoreCase))
             {
@@ -590,6 +657,25 @@ namespace MotionDesk.Widgets
             // Ρύθμιση διαφάνειας — ζητήθηκε ρητά "στα widgets & containers προσθεσε ρυθμιση για
             // opacity οπως στην εφαρμογη", ίδιο σύνολο ποσοστών με το ήδη υπάρχον μενού των
             // DeskContainers για συνέπεια.
+            if (Screen.AllScreens.Length > 1)
+            {
+                var monitors = new ToolStripMenuItem(LocalizationManager.CurrentLanguage == "el" ? "Μετακίνηση σε οθόνη" : "Move to monitor");
+                var current = Screen.FromControl(this);
+                foreach (var screen in Screen.AllScreens)
+                {
+                    var item = new ToolStripMenuItem(screen.DeviceName) { Checked = current.DeviceName == screen.DeviceName };
+                    item.Click += (_, _) =>
+                    {
+                        var area = screen.WorkingArea;
+                        Location = new Point(Math.Clamp(area.Left + Left - current.WorkingArea.Left, area.Left, Math.Max(area.Left, area.Right - Width)),
+                            Math.Clamp(area.Top + Top - current.WorkingArea.Top, area.Top, Math.Max(area.Top, area.Bottom - Height)));
+                        SaveWidgetState();
+                    };
+                    monitors.DropDownItems.Add(item);
+                }
+                menu.Items.Add(monitors);
+            }
+
             var opacityMenu = new ToolStripMenuItem(LocalizationManager.T("WidgetMenu.Opacity"));
             foreach (int pct in new[] { 100, 85, 70, 55, 40, 25 })
             {
@@ -598,6 +684,55 @@ namespace MotionDesk.Widgets
                 opacityMenu.DropDownItems.Add(opacityItem);
             }
             menu.Items.Add(opacityMenu);
+
+            if ((_nativeMonitorTimer != null && _timerBaseMs > 0) || WidgetId.StartsWith("sdk-", StringComparison.OrdinalIgnoreCase))
+            {
+                var refreshMenu = new ToolStripMenuItem(MainWindow.StudioText("Update frequency", "Συχνότητα ενημέρωσης"));
+                foreach (int percent in new[] { 25, 50, 100, 200, 400 })
+                {
+                    var item = new ToolStripMenuItem($"{percent}%") { Checked = RefreshPercent == percent };
+                    item.Click += (_, _) =>
+                    {
+                        RefreshPercent = percent;
+                        if (_nativeMonitorTimer != null && _timerBaseMs > 0)
+                            _nativeMonitorTimer.Interval = EffectiveMonitorInterval();
+                        if (WidgetId.StartsWith("sdk-", StringComparison.OrdinalIgnoreCase))
+                            WidgetSdkView.NotifyRefresh(_webView, RefreshPercent);
+                        SaveWidgetState();
+                    };
+                    refreshMenu.DropDownItems.Add(item);
+                }
+                menu.Items.Add(refreshMenu);
+            }
+
+            if (_themedPanel != null)
+            {
+                var style = new ToolStripMenuItem(MainWindow.StudioText("Widget appearance", "Εμφάνιση widget"));
+                style.DropDownItems.Add(MainWindow.StudioText("Choose tint…", "Επιλογή απόχρωσης…"), null, (_, _) =>
+                {
+                    using var picker = new ColorDialog { FullOpen = true, Color = _customTintArgb is int tint ? Color.FromArgb(tint) : UiTheme.AccentCyan };
+                    if (picker.ShowDialog(this) != DialogResult.OK) return;
+                    _customTintArgb = picker.Color.ToArgb();
+                    _themeHandler?.Invoke();
+                    SaveWidgetState();
+                });
+                var corners = new ToolStripMenuItem(MainWindow.StudioText("Corners", "Γωνίες"));
+                foreach (var radius in new[] { 0, 12, 24, 36 })
+                {
+                    var size = new ToolStripMenuItem($"{radius} px") { Checked = _customRadius == radius };
+                    size.Click += (_, _) => { _customRadius = radius; ApplyRoundedShell(); SaveWidgetState(); };
+                    corners.DropDownItems.Add(size);
+                }
+                style.DropDownItems.Add(corners);
+                style.DropDownItems.Add(MainWindow.StudioText("Use global appearance", "Χρήση γενικής εμφάνισης"), null, (_, _) =>
+                {
+                    _customTintArgb = null;
+                    _customRadius = null;
+                    _themeHandler?.Invoke();
+                    SaveWidgetState();
+                });
+                menu.Items.Add(style);
+            }
 
             var lockItem = new ToolStripMenuItem(IsLocked ? LocalizationManager.T("WidgetMenu.Unlock") : LocalizationManager.T("WidgetMenu.Lock"));
             lockItem.Click += (_, _) => { IsLocked = !IsLocked; SaveWidgetState(); };
@@ -648,7 +783,7 @@ namespace MotionDesk.Widgets
 
         private void PromptWeatherLocation()
         {
-            using var dlg = new Form
+            using var dlg = new MotionDesk.UI.AppDialog
             {
                 Text = LocalizationManager.T("Weather.SetLocationTitle"),
                 FormBorderStyle = FormBorderStyle.FixedDialog,
@@ -689,11 +824,10 @@ namespace MotionDesk.Widgets
             // ΡΙΖΙΚΗ ΑΙΤΙΑ του "Πλήρης διαφάνεια" που δεν δούλευε: εδώ το TransparencyKey μηδενιζόταν
             // πάντα (default) ακυρώνοντας το Color.Black του constructor, οπότε κανένα μαύρο pixel
             // δεν γινόταν ποτέ διαφανές. Τώρα διατηρείται μόνο στη λειτουργία Πλήρης διαφάνεια.
-            bool fullyTransparent = UiTheme.IsFullyTransparent;
-            BackColor = fullyTransparent ? Color.Black : UiTheme.Background;
-            TransparencyKey = UiTheme.IsColorKey ? Color.Black : default;
+            BackColor = WidgetSurface();
+            TransparencyKey = UsesTransparentWidgetPixels ? Color.Black : default;
 
-            var panel = new Panel { Dock = DockStyle.Fill, BackColor = UiTheme.SurfaceGlass, Padding = new Padding(14) };
+            var panel = new Panel { Dock = DockStyle.Fill, BackColor = WidgetSurface(), Padding = new Padding(14) };
             _themedPanel = panel;
             var titleBar = new Panel { Dock = DockStyle.Top, Height = 30, BackColor = Color.Transparent };
 
@@ -714,7 +848,7 @@ namespace MotionDesk.Widgets
             _titleLabelRef = titleLabel;
             titleLabel.MouseDown += (_, e) =>
             {
-                if (e.Button == MouseButtons.Left && !IsLocked) BeginNativeDrag();
+                if (e.Button == MouseButtons.Left && CanMove) BeginNativeDrag();
                 else if (e.Button == MouseButtons.Right) ShowWidgetMenu(titleLabel);
             };
 
@@ -723,7 +857,7 @@ namespace MotionDesk.Widgets
             titleBar.Controls.Add(closeLabel);
             titleBar.Controls.Add(menuLabel);
 
-            panel.MouseDown += (_, e) => { if (e.Button == MouseButtons.Left && !IsLocked) BeginNativeDrag(); };
+            panel.MouseDown += (_, e) => { if (e.Button == MouseButtons.Left && CanMove) BeginNativeDrag(); };
             values = new GlassLabel { Dock = DockStyle.Top, Height = 52, TextAlign = ContentAlignment.MiddleLeft, Font = new Font("Segoe UI", 10.5f), ForeColor = UiTheme.TextPrimary, BackColor = Color.Transparent };
             var valuesRef = values;
             panel.Controls.Add(values); panel.Controls.Add(titleBar);
@@ -745,16 +879,16 @@ namespace MotionDesk.Widgets
                 Anchor = AnchorStyles.Bottom | AnchorStyles.Right,
                 Location = new Point(Width - 16, Height - 16)
             };
-            resizeGrip.MouseDown += (_, e) => { if (e.Button == MouseButtons.Left && !IsLocked) BeginNativeResize(); };
+            resizeGrip.MouseDown += (_, e) => { if (e.Button == MouseButtons.Left && CanMove) BeginNativeResize(); };
             Controls.Add(resizeGrip);
             resizeGrip.BringToFront();
 
             _themeHandler = () =>
             {
                 if (IsDisposed) return;
-                panel.BackColor = UiTheme.SurfaceGlass;
-                BackColor = UiTheme.IsFullyTransparent ? Color.Black : UiTheme.Background;
-                TransparencyKey = UiTheme.IsColorKey ? Color.Black : default;
+                panel.BackColor = WidgetSurface();
+                BackColor = WidgetSurface();
+                TransparencyKey = UsesTransparentWidgetPixels ? Color.Black : default;
                 closeLabel.ForeColor = UiTheme.TextSecondary;
                 lockLabel.ForeColor = UiTheme.TextSecondary;
                 menuLabel.ForeColor = UiTheme.TextSecondary;
@@ -772,27 +906,49 @@ namespace MotionDesk.Widgets
             return panel;
         }
 
+        private GlassPaneBinder? _glassPane;
+        private Color SurfaceTint => _customTintArgb is int tint ? Color.FromArgb(tint) : UiTheme.TintColor;
+        private int TintAlpha => _customTintArgb != null ? Math.Max(70, UiTheme.TintAlpha) : UiTheme.TintAlpha;
+        private bool WantsSurfaceGlass => UiTheme.IsFullyTransparent && GlassService.Enabled &&
+            DesktopMaterials.Get(DesktopSurface.Widgets).Mode != "Solid";
+        private bool UsesTransparentWidgetPixels => UiTheme.IsFullyTransparent && (TintAlpha == 0 || WantsSurfaceGlass);
+
+        private void EnsureGlassPane()
+        {
+            if (_glassPane != null || IsDisposed) return;
+            _glassPane = new GlassPaneBinder(this, 12, () => WantsSurfaceGlass, DesktopSurface.Widgets, () => _customRadius,
+                style => TintAlpha == 0 ? style : style with
+                { Tint = SurfaceTint, TintAlpha = (float)(TintAlpha / 255.0 * _backgroundOpacity) });
+        }
+
+        internal static Color SurfaceFor(Control control) =>
+            control.FindForm() is WidgetWindow widget ? widget.WidgetSurface() : UiTheme.SurfaceGlass;
+
+        private Color WidgetSurface()
+        {
+            if (UsesTransparentWidgetPixels) return Color.Black;
+            Color surface = UiTheme.Surface;
+            int a = TintAlpha;
+            if (a == 0) return surface;
+            var color = SurfaceTint;
+            return Color.FromArgb((surface.R * (255 - a) + color.R * a) / 255,
+                (surface.G * (255 - a) + color.G * a) / 255, (surface.B * (255 - a) + color.B * a) / 255);
+        }
+
         private void ApplyRoundedShell()
         {
-            if (Width > 0 && Height > 0) UiTheme.ApplyRoundedRegion(this, 12);
+            EnsureGlassPane();
+            int radius = _customRadius ?? (DesktopMaterials.Get(DesktopSurface.Widgets) is { UsesCustom: true } material ? material.Radius : 12);
+            if (Width > 0 && Height > 0) UiTheme.ApplyRoundedRegion(this, radius);
             ApplyGlassBlur();
             GlassBlur.DisableNativeBorderAccent(Handle);
         }
 
-        // Το Form.TransparencyKey (color-key σε Color.Black) αποδείχτηκε αναξιόπιστο εδώ - ακόμα
-        // και με το blur-behind εντελώς απενεργοποιημένο, το περιεχόμενο έμενε συμπαγές μαύρο αντί
-        // για πραγματική τρύπα διαφάνειας. Το ήδη αποδεδειγμένα σωστό DWM blur-behind (ίδιο με το
-        // DeskStrip) παραμένει ενεργό και στην "Πλήρης διαφάνεια", απλά σε πολύ χαμηλή ένταση, ώστε
-        // να μην υπάρχει συμπαγές μαύρο/λευκό πλαίσιο αλλά ένα πολύ ελαφρύ, σχεδόν άχρωμο θόλωμα.
         private void ApplyGlassBlur()
         {
-            if (UiTheme.IsFullyTransparent)
-            {
-                // colour-key = pure see-through; with a tint the widget is a translucent coloured surface like the DeskContainers
-                if (UiTheme.IsColorKey) GlassBlur.Disable(Handle); else GlassBlur.ApplyTint(Handle, UiTheme.TintColor, (int)Math.Round(UiTheme.TintAlpha * _backgroundOpacity));
-                return;
-            }
-            GlassBlur.Apply(Handle, UiTheme.AccentCyan, _backgroundOpacity);
+            _glassPane?.Sync();
+            if (UiTheme.IsFullyTransparent) GlassBlur.Disable(Handle);
+            else GlassBlur.Apply(Handle, SurfaceTint, _backgroundOpacity);
         }
 
         private void InitializeNativeClock()
@@ -879,8 +1035,8 @@ namespace MotionDesk.Widgets
             ApplyVariant();
             Update();
             _nativeMonitorTimer = MonitorTimer(1000);
-            _nativeMonitorTimer.Tick += (_, _) => { if (!AppActivity.IsFullscreenAppActive) Update(); };
-            _nativeMonitorTimer.Start();
+            _nativeMonitorTimer.Tick += (_, _) => { Update(); };
+            UpdateNativeTimers();
         }
 
         private void InitializeNativeNetwork()
@@ -912,8 +1068,8 @@ namespace MotionDesk.Widgets
             }
             Update();
             _nativeMonitorTimer = MonitorTimer(1000);
-            _nativeMonitorTimer.Tick += (_, _) => { if (!AppActivity.IsFullscreenAppActive) Update(); };
-            _nativeMonitorTimer.Start();
+            _nativeMonitorTimer.Tick += (_, _) => { Update(); };
+            UpdateNativeTimers();
         }
 
         private void InitializeNativeAudio()
@@ -923,7 +1079,7 @@ namespace MotionDesk.Widgets
             values.Height = 24;
             values.Font = new Font("Segoe UI", 9);
 
-            var spectrum = new AudioSpectrumService(20);
+            var spectrum = _audioSpectrum = new AudioSpectrumService(20);
             spectrum.ApplyPreset(AppSettings.Load().AudioEnhancementPreset);
             var equalizer = new EqualizerControl { Dock = DockStyle.Fill, Style = AudioStyle };
             panel.Controls.Add(equalizer);
@@ -939,12 +1095,12 @@ namespace MotionDesk.Widgets
             }
             Update();
             _nativeMonitorTimer = new System.Windows.Forms.Timer { Interval = 40 };
-            _nativeMonitorTimer.Tick += (_, _) => { if (!AppActivity.IsFullscreenAppActive) Update(); };
-            _nativeMonitorTimer.Start();
-            FormClosed += (_, _) => spectrum.Dispose();
+            _nativeMonitorTimer.Tick += (_, _) => { Update(); };
+            UpdateNativeTimers();
+
         }
 
-        // Νέο widget "Quick Settings" — SeelenUI-inspired (το δικό τους αντίστοιχο popup συνδυάζει
+        // Νέο widget "Quick Settings" — χειριστήρια συστήματος (συνδυάζει
         // ήχο/φωτεινότητα/δίκτυο σε ένα πάνελ). Ήχος μέσω NAudio (ήδη εξάρτηση), φωτεινότητα μέσω
         // WMI (μόνο αν η οθόνη το υποστηρίζει — συνήθως laptop panel, κρύβεται αλλιώς), σχέδιο
         // ενέργειας μέσω powercfg. Καμία λειτουργία δεν χρειάζεται elevation.
@@ -970,16 +1126,25 @@ namespace MotionDesk.Widgets
             volumeRow.Controls.Add(volumeLabel);
             stack.Controls.Add(volumeRow, 0, 0);
 
+            bool updatingVolume = false;
             void RefreshVolumeUi()
             {
                 bool muted = SystemControlService.GetMute();
                 muteBtn.Text = muted ? "🔇" : "🔊";
                 int pct = (int)Math.Round(SystemControlService.GetVolume() * 100);
-                volumeSlider.Value = pct;
+                updatingVolume = true;
+                try { volumeSlider.Value = pct; }
+                finally { updatingVolume = false; }
                 volumeLabel.Text = muted ? LocalizationManager.T("WidgetText.Muted") : $"{pct}%";
             }
             muteBtn.Click += (_, _) => { SystemControlService.SetMute(!SystemControlService.GetMute()); RefreshVolumeUi(); };
-            volumeSlider.ValueChanged += (_, _) => { SystemControlService.SetVolume(volumeSlider.Value / 100f); if (volumeSlider.Value > 0 && SystemControlService.GetMute()) SystemControlService.SetMute(false); RefreshVolumeUi(); };
+            volumeSlider.ValueChanged += (_, _) =>
+            {
+                if (updatingVolume) return;
+                SystemControlService.SetVolume(volumeSlider.Value / 100f);
+                if (volumeSlider.Value > 0 && SystemControlService.GetMute()) SystemControlService.SetMute(false);
+                RefreshVolumeUi();
+            };
 
             // ---- Φωτεινότητα: μόνο αν υποστηρίζεται από την οθόνη ----
             bool brightnessSupported = SystemControlService.IsBrightnessSupported();
@@ -1001,10 +1166,17 @@ namespace MotionDesk.Widgets
             // ---- Σχέδιο ενέργειας: ένα κουμπί ανά διαθέσιμο σχέδιο, το ενεργό τονισμένο ----
             var powerPanel = new FlowLayoutPanel { AutoSize = true, WrapContents = true, Dock = DockStyle.Top, Margin = new Padding(0, 6, 0, 0) };
             stack.Controls.Add(powerPanel, 0, 2);
+            (Guid Guid, string Name, bool IsActive)[] displayedPlans = [];
             void RefreshPowerPlans()
             {
-                powerPanel.Controls.Clear();
-                foreach (var plan in SystemControlService.GetPowerPlans())
+                var plans = SystemControlService.GetPowerPlans();
+                var state = plans.Select(plan => (plan.Guid, plan.Name, plan.IsActive)).ToArray();
+                if (displayedPlans.SequenceEqual(state)) return;
+                displayedPlans = state;
+
+                foreach (Control old in powerPanel.Controls.Cast<Control>().ToArray())
+                    old.Dispose();
+                foreach (var plan in plans)
                 {
                     var btn = new GlassLabel
                     {
@@ -1022,8 +1194,8 @@ namespace MotionDesk.Widgets
             RefreshVolumeUi();
             RefreshPowerPlans();
             _nativeMonitorTimer = MonitorTimer(2000);
-            _nativeMonitorTimer.Tick += (_, _) => { if (!AppActivity.IsFullscreenAppActive) { RefreshVolumeUi(); RefreshPowerPlans(); } };
-            _nativeMonitorTimer.Start();
+            _nativeMonitorTimer.Tick += (_, _) => { RefreshVolumeUi(); RefreshPowerPlans(); };
+            UpdateNativeTimers();
         }
 
         // Νέο widget: χρήση/χωρητικότητα δίσκων συστήματος — ζητήθηκε ρητά.
@@ -1107,12 +1279,15 @@ namespace MotionDesk.Widgets
             Rescan();
             _nativeMonitorTimer = new System.Windows.Forms.Timer { Interval = 15000 };
             _nativeMonitorTimer.Tick += (_, _) => Rescan();
-            _nativeMonitorTimer.Start();
+            UpdateNativeTimers();
         }
 
         private void InitializeNativeWeather()
         {
-            var panel = CreateNativePanel(LocationName != null ? string.Format(LocalizationManager.T("WidgetText.WeatherTitleFormat"), LocationName) : LocalizationManager.T("WidgetText.WeatherDefaultTitle"), out var values);
+            // ONE weather place for the whole app: the same one as the animated wallpaper (Wallpaper > Information); a place set on this widget before is adopted once.
+            AdoptWidgetPlaceOnce();
+            string SharedName() => WallpaperSettings.Load() is { } w && !string.IsNullOrWhiteSpace(w.WeatherCity) ? string.Format(LocalizationManager.T("WidgetText.WeatherTitleFormat"), w.WeatherCity) : LocalizationManager.T("WidgetText.WeatherDefaultTitle");
+            var panel = CreateNativePanel(SharedName(), out var values);
             values.TextAlign = ContentAlignment.MiddleCenter;
             values.Font = new Font("Segoe UI", 9.5f);
             values.Height = 44;
@@ -1122,28 +1297,29 @@ namespace MotionDesk.Widgets
             panel.Controls.Add(icon);
             icon.BringToFront();
 
-            var animTimer = new System.Windows.Forms.Timer { Interval = 60 };
-            animTimer.Tick += (_, _) => { if (!AppActivity.IsFullscreenAppActive) icon.AdvancePhase(); };
-            animTimer.Start();
-            FormClosed += (_, _) => animTimer.Dispose();
+            _weatherAnimation = new System.Windows.Forms.Timer { Interval = 60 };
+            _weatherAnimation.Tick += (_, _) => icon.AdvancePhase();
+            UpdateNativeTimers();
 
             async void Update()
             {
                 bool ok = true;
                 try
                 {
-                    double lat = Latitude ?? 37.9838;
-                    double lon = Longitude ?? 23.7275;
-                    // GetNormalizedWeatherAsync δοκιμάζει πρώτα Open-Meteo και, αν αποτύχει, πέφτει
-                    // αυτόματα σε δεύτερο δωρεάν πάροχο (wttr.in, χωρίς API key) αντί να δείχνει
-                    // μόνιμα "Weather unavailable" όταν ο πρώτος πάροχος έχει πρόβλημα.
-                    var result = await WeatherService.GetNormalizedWeatherAsync(lat, lon);
-                    if (result != null)
+                    var shared = WallpaperSettings.Load();
+                    double lat = shared.WeatherLat, lon = shared.WeatherLon;
+                    if (_titleLabelRef != null) _titleLabelRef.Text = SharedName();
+                    // the same providers, fallback and 10-minute cache as the wallpaper (NWS / Open-Meteo / MET Norway)
+                    using var doc = System.Text.Json.JsonDocument.Parse(await WeatherService.GetWallpaperWeatherJsonAsync(lat, lon));
+                    var r = doc.RootElement;
+                    if (r.TryGetProperty("ok", out var okEl) && okEl.GetBoolean())
                     {
-                        icon.Condition = result.Condition;
-                        int beaufort = WeatherService.ToBeaufort(result.WindKmh);
-                        string humidityText = result.HumidityPercent.HasValue ? $"{result.HumidityPercent:0}%" : "—";
-                        values.Text = string.Format(LocalizationManager.T("WidgetText.WeatherLineFormat"), result.TemperatureC, result.WindKmh, beaufort, humidityText);
+                        icon.Condition = WeatherService.ClassifyWeatherCode(r.GetProperty("code").GetInt32());
+                        double wind = r.GetProperty("wind").GetDouble();
+                        int beaufort = WeatherService.ToBeaufort(wind);
+                        double hum = r.TryGetProperty("humidity", out var hEl) ? hEl.GetDouble() : -1;
+                        string humidityText = hum >= 0 ? $"{hum:0}%" : "—";
+                        values.Text = string.Format(LocalizationManager.T("WidgetText.WeatherLineFormat"), r.GetProperty("temp").GetDouble(), wind, beaufort, humidityText);
                     }
                     else { values.Text = LocalizationManager.T("WidgetText.WeatherUnavailable"); ok = false; }
                 }
@@ -1156,19 +1332,30 @@ namespace MotionDesk.Widgets
             {
                 var result = await WeatherService.GeocodeAsync(cityName);
                 if (result.HasValue)
-                {
-                    Latitude = result.Value.Lat;
-                    Longitude = result.Value.Lon;
-                    LocationName = result.Value.Name;
-                    SaveWidgetState();
-                    if (_titleLabelRef != null) _titleLabelRef.Text = string.Format(LocalizationManager.T("WidgetText.WeatherTitleFormat"), LocationName);
-                    Update();
-                }
+                    WallpaperHostEngine.Instance.SetWeatherLocation(result.Value.Name, result.Value.Lat, result.Value.Lon, "Open-Meteo (CC BY 4.0)", result.Value.Name);   // the shared place: wallpaper and widget follow it
             });
+            // the place changed anywhere (wallpaper settings, this widget): refresh now
+            Action onPlace = () => { if (!IsDisposed) BeginInvoke(new Action(Update)); };
+            WallpaperHostEngine.WeatherLocationChanged += onPlace;
+            FormClosed += (_, _) => WallpaperHostEngine.WeatherLocationChanged -= onPlace;
             Update();
             _nativeMonitorTimer = new System.Windows.Forms.Timer { Interval = 900000 };
-            _nativeMonitorTimer.Tick += (_, _) => { if (!AppActivity.IsFullscreenAppActive) Update(); };
-            _nativeMonitorTimer.Start();
+            _nativeMonitorTimer.Tick += (_, _) => { Update(); };
+            UpdateNativeTimers();
+        }
+
+        // A place typed on this widget before 2.6.0 becomes the shared place once, when no shared place has been chosen yet.
+        private void AdoptWidgetPlaceOnce()
+        {
+            try
+            {
+                if (LocationName == null || Latitude == null || Longitude == null) return;
+                var w = WallpaperSettings.Load();
+                if (string.IsNullOrWhiteSpace(w.WeatherCity)) WallpaperHostEngine.Instance.SetWeatherLocation(LocationName, Latitude.Value, Longitude.Value, "Open-Meteo (CC BY 4.0)", LocationName);
+                LocationName = null; Latitude = null; Longitude = null;   // no second copy of the place
+                SaveWidgetState();
+            }
+            catch (Exception) { }
         }
 
         private void InitializeNativeSystemMonitor()
@@ -1183,7 +1370,7 @@ namespace MotionDesk.Widgets
             // σχεδιάζει μπάρα-μετρητή δίπλα σε κάθε γραμμή (CPU/RAM/Δίκτυο/GPU), bold/έγχρωμο
             // κείμενο τιμών.
             values.Visible = false;
-            bool gpuReady = false;
+            var gpuMonitor = GpuMonitorService.Instance;
             var rows = new SystemMonitorRowsControl { Dock = DockStyle.Fill, GpuIndex = Math.Max(0, AppSettings.Load().SystemMonitorGpuIndex) };
             // ‹ › on the GPU tile switch between the graphics adapters (dedicated + integrated); the choice is remembered
             rows.GpuStep += step =>
@@ -1191,24 +1378,10 @@ namespace MotionDesk.Widgets
                 if (rows.GpuCount < 2) return;
                 rows.GpuIndex = ((rows.GpuIndex + step) % rows.GpuCount + rows.GpuCount) % rows.GpuCount;
                 try { var a = AppSettings.Load(); a.SystemMonitorGpuIndex = rows.GpuIndex; a.Save(); } catch { }
-                if (gpuReady) { var s = GpuMonitorService.Instance.GetSnapshot(rows.GpuIndex); rows.SetGpu(s.Available ? s.LoadPercent : null, s.Available ? (s.TemperatureC.HasValue ? $"{s.TemperatureC:0}°C" : "—") : LocalizationManager.T("WidgetText.GpuNA"), s.Available ? s.Name : null); }
+                if (gpuMonitor.HasSample) { var s = gpuMonitor.GetSnapshot(rows.GpuIndex); rows.SetGpu(s.Available ? s.LoadPercent : null, s.Available ? (s.TemperatureC.HasValue ? $"{s.TemperatureC:0}°C" : "—") : LocalizationManager.T("WidgetText.GpuNA"), s.Available ? s.Name : null, s.Available ? s.TemperatureC : null); }
             };
             panel.Controls.Add(rows);
             rows.BringToFront();
-
-            // ΔΙΟΡΘΩΣΗ σοβαρού bug (ζητήθηκε ρητά): η ΠΡΩΤΗ πρόσβαση στο GpuMonitorService.Instance
-            // ενεργοποιεί το LibreHardwareMonitorLib's Computer.Open() — πραγματική σάρωση hardware
-            // (NVAPI/ADL/Intel), αργή διεργασία που μπορεί να πάρει πάνω από ένα δευτερόλεπτο. Πριν
-            // αυτή τη διόρθωση γινόταν συγχρονισμένα μέσα στο πρώτο Update() στο UI thread —
-            // πάγωνε στιγμιαία ΟΛΗ την εφαρμογή (και το γιατί "επηρέαζε τα Windows" γενικότερα: ένα
-            // μπλοκαρισμένο UI thread σταματά να αντλεί το message pump). Γίνεται τώρα "ζέσταμα"
-            // σε background thread πριν καν χρειαστεί· μέχρι να ολοκληρωθεί, η γραμμή GPU απλά
-            // δείχνει "μη διαθέσιμο" για ένα-δύο tick του timer αντί να μπλοκάρει οτιδήποτε.
-            _ = System.Threading.Tasks.Task.Run(() =>
-            {
-                GpuMonitorService.Instance.GetSnapshot();
-                gpuReady = true;
-            });
 
             void Update()
             {
@@ -1218,23 +1391,23 @@ namespace MotionDesk.Widgets
                 rows.SetCpu(m.CpuPercent);
                 rows.SetRam(ramUsedPct, string.Format(LocalizationManager.T("WidgetText.RamFreeFormat"), m.AvailableMemoryMb.ToString("0"), m.TotalMemoryMb.ToString("0"), ramUsedPct.ToString("0")));
                 rows.SetNetwork(net.NetworkDownKbps, net.NetworkUpKbps);
-                if (gpuReady)
+                var gpu = gpuMonitor.GetSnapshot(rows.GpuIndex);
+                if (gpuMonitor.HasSample)
                 {
-                    var gpu = GpuMonitorService.Instance.GetSnapshot(rows.GpuIndex);
                     rows.GpuCount = gpu.Count;
                     rows.SetGpu(gpu.Available ? gpu.LoadPercent : null,
                         gpu.Available ? $"{(gpu.TemperatureC.HasValue ? $"{gpu.TemperatureC:0}°C" : "—")}" : LocalizationManager.T("WidgetText.GpuNA"),
-                        gpu.Available ? gpu.Name : null);
+                        gpu.Available ? gpu.Name : null, gpu.Available ? gpu.TemperatureC : null);
                 }
                 else rows.SetGpu(null, LocalizationManager.T("WidgetText.GpuLoading"));
             }
             Update();
             _nativeMonitorTimer = MonitorTimer(2000, PerfFeature.SystemMonitor);
-            _nativeMonitorTimer.Tick += (_, _) => { if (!AppActivity.IsFullscreenAppActive) Update(); };
-            _nativeMonitorTimer.Start();
+            _nativeMonitorTimer.Tick += (_, _) => { Update(); };
+            UpdateNativeTimers();
         }
 
-        // Νέο widget (SeelenUI-inspired richer widget set, ζητήθηκε ρητά): μήνας-σε-πλέγμα χωρίς
+        // Νέο widget (ημερολόγιο): μήνας-σε-πλέγμα χωρίς
         // εξάρτηση σε εξωτερική πηγή ραντεβού - η επίσημη Windows Appointments API απαιτεί
         // δήλωση "appointments" capability σε packaged (MSIX) εφαρμογή, που το Opsis δεν είναι·
         // ίδιο μοτίβο με πολλά desktop calendar widgets (π.χ. Rainmeter): δείχνει μήνα/ημέρες/
@@ -1358,8 +1531,15 @@ namespace MotionDesk.Widgets
             await RefreshAsync();
             if (IsDisposed) return;
             _nativeMonitorTimer = MonitorTimer(1500);
-            _nativeMonitorTimer.Tick += async (_, _) => { if (!AppActivity.IsFullscreenAppActive) await RefreshAsync(); };
-            _nativeMonitorTimer.Start();
+            bool refreshPending = false;
+            _nativeMonitorTimer.Tick += async (_, _) =>
+            {
+                if (refreshPending) return;
+                refreshPending = true;
+                try { await RefreshAsync(); }
+                finally { refreshPending = false; }
+            };
+            UpdateNativeTimers();
         }
 
         // Νέο widget: πρόσφατες ειδοποιήσεις Windows μέσω UserNotificationListener - ζητάει μία
@@ -1451,8 +1631,15 @@ namespace MotionDesk.Widgets
             await RefreshAsync();
             if (IsDisposed) return;
             _nativeMonitorTimer = MonitorTimer(5000);
-            _nativeMonitorTimer.Tick += async (_, _) => { if (!AppActivity.IsFullscreenAppActive) await RefreshAsync(); };
-            _nativeMonitorTimer.Start();
+            bool refreshPending = false;
+            _nativeMonitorTimer.Tick += async (_, _) =>
+            {
+                if (refreshPending) return;
+                refreshPending = true;
+                try { await RefreshAsync(); }
+                finally { refreshPending = false; }
+            };
+            UpdateNativeTimers();
         }
 
         // Νέο widget: ζευγμένες συσκευές Bluetooth + κατάσταση σύνδεσης (μόνο ανάγνωση - ζευγάρωμα/
@@ -1517,8 +1704,15 @@ namespace MotionDesk.Widgets
             await RefreshAsync();
             if (IsDisposed) return;
             _nativeMonitorTimer = MonitorTimer(8000);
-            _nativeMonitorTimer.Tick += async (_, _) => { if (!AppActivity.IsFullscreenAppActive) await RefreshAsync(); };
-            _nativeMonitorTimer.Start();
+            bool refreshPending = false;
+            _nativeMonitorTimer.Tick += async (_, _) =>
+            {
+                if (refreshPending) return;
+                refreshPending = true;
+                try { await RefreshAsync(); }
+                finally { refreshPending = false; }
+            };
+            UpdateNativeTimers();
         }
 
         // Ίδιο μοτίβο με το MainWindow.DisposeChildren (άλλη κλάση/αρχείο, όχι προσβάσιμο από εδώ) -
@@ -1555,7 +1749,7 @@ namespace MotionDesk.Widgets
         {
             var g = e.Graphics;
             g.SmoothingMode = SmoothingMode.AntiAlias;
-            using (var bg = new SolidBrush(UiTheme.SurfaceGlass)) g.FillRectangle(bg, ClientRectangle);
+            using (var bg = new SolidBrush(WidgetWindow.SurfaceFor(this))) g.FillRectangle(bg, ClientRectangle);
 
             int size = FaceSize(Width, Height, ReserveBottom);
             if (size < 20) { size = Math.Min(Width, Height) - 12; if (size < 20) return; }     // too small for the reserved strip: use the whole area
@@ -1644,7 +1838,7 @@ namespace MotionDesk.Widgets
         {
             var g = e.Graphics;
             g.SmoothingMode = SmoothingMode.AntiAlias;
-            using (var bg = new SolidBrush(UiTheme.SurfaceGlass)) g.FillRectangle(bg, ClientRectangle);
+            using (var bg = new SolidBrush(WidgetWindow.SurfaceFor(this))) g.FillRectangle(bg, ClientRectangle);
             if (_down.Count < 2) return;
             g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.AntiAliasGridFit;
 
@@ -1706,7 +1900,7 @@ namespace MotionDesk.Widgets
         {
             var g = e.Graphics;
             g.SmoothingMode = SmoothingMode.None;
-            using (var bg = new SolidBrush(UiTheme.SurfaceGlass)) g.FillRectangle(bg, ClientRectangle);
+            using (var bg = new SolidBrush(WidgetWindow.SurfaceFor(this))) g.FillRectangle(bg, ClientRectangle);
             if (Width < 20 || Height < 20) return;
 
             float rowHeight = Height / 2f;
@@ -1792,7 +1986,7 @@ namespace MotionDesk.Widgets
 
             var g = e.Graphics;
             g.SmoothingMode = SmoothingMode.None;
-            using (var bg = new SolidBrush(UiTheme.SurfaceGlass)) g.FillRectangle(bg, ClientRectangle);
+            using (var bg = new SolidBrush(WidgetWindow.SurfaceFor(this))) g.FillRectangle(bg, ClientRectangle);
             if (_display.Length == 0) return;
 
             const int segments = 12;
@@ -1897,7 +2091,7 @@ namespace MotionDesk.Widgets
         {
             var g = e.Graphics;
             g.SmoothingMode = SmoothingMode.AntiAlias;
-            using (var bg = new SolidBrush(UiTheme.SurfaceGlass)) g.FillRectangle(bg, ClientRectangle);
+            using (var bg = new SolidBrush(WidgetWindow.SurfaceFor(this))) g.FillRectangle(bg, ClientRectangle);
 
             float cx = Width / 2f, cy = Height / 2f - 4;
             // Μεγαλύτερο κινούμενο εικονίδιο καιρού — ζητήθηκε ρητά (ήταν πολύ μικρό σε σχέση με
@@ -1957,13 +2151,12 @@ namespace MotionDesk.Widgets
 
         private void DrawSnow(Graphics g, float cx, float cy, float scale)
         {
-            using var flakeBrush = new SolidBrush(Color.White);
             for (int i = 0; i < _drops.Length; i++)
             {
                 float t = ((_phase * 0.015f + i * 0.41f) % 1f);
                 float x = cx + (_drops[i].X - 0.5f) * 60 * scale + (float)Math.Sin(_phase * 0.05 + i) * 4 * scale;
                 float y = cy + 8 * scale + t * 36 * scale;
-                g.FillEllipse(flakeBrush, x, y, 3.5f * scale, 3.5f * scale);
+                g.FillEllipse(FlakeBrush, x, y, 3.5f * scale, 3.5f * scale);
             }
         }
 
@@ -1980,9 +2173,12 @@ namespace MotionDesk.Widgets
                 new PointF(cx + 2 * scale, cy + 18 * scale),
                 new PointF(cx + 10 * scale, cy + 2 * scale),
             };
-            using var boltBrush = new SolidBrush(Color.FromArgb(230, 255, 221, 87));
-            g.FillPolygon(boltBrush, pts);
+            g.FillPolygon(BoltBrush, pts);
         }
+
+        // Theme-independent brushes are created once for the process instead of on every animation frame (plan 9.2).
+        private static readonly SolidBrush FlakeBrush = new(Color.White);
+        private static readonly SolidBrush BoltBrush = new(Color.FromArgb(230, 255, 221, 87));
     }
 
     // Κυκλικό ("donut") ring ανά δίσκο, με τις πληροφορίες στο κέντρο — αντικατέστησε τη
@@ -2009,7 +2205,7 @@ namespace MotionDesk.Widgets
         {
             var g = e.Graphics;
             g.SmoothingMode = SmoothingMode.AntiAlias;
-            using (var bg = new SolidBrush(UiTheme.SurfaceGlass)) g.FillRectangle(bg, ClientRectangle);
+            using (var bg = new SolidBrush(WidgetWindow.SurfaceFor(this))) g.FillRectangle(bg, ClientRectangle);
 
             float size = Math.Min(Width, Height) - 20;
             if (size < 30) return;
@@ -2082,7 +2278,7 @@ namespace MotionDesk.Widgets
         }
     }
 
-    // System Monitor — σύγχρονο "dashboard tiles" στυλ (SeelenUI / Windows 11 Widgets): ένα στρογγυλεμένο tile ανά μέτρηση
+    // System Monitor — σύγχρονο "dashboard tiles" στυλ (Windows 11 Widgets): ένα στρογγυλεμένο tile ανά μέτρηση
     // (CPU/RAM/Δίκτυο/GPU) με σταθερό χρώμα-ταυτότητα, μικρή ετικέτα, μεγάλη τιμή, υπο-κείμενο και sparkline-ιστορικό
     // (area με gradient) στο πίσω μέρος. Κόκκινο ΜΟΝΟ πάνω από 90% ως προειδοποίηση. Προσαρμόζεται στο μέγεθος:
     // σε μικρό ύψος ή στενό πλάτος κρύβονται οι δευτερεύουσες λεπτομέρειες αντί να κόβονται.
@@ -2100,6 +2296,8 @@ namespace MotionDesk.Widgets
         private string _ramSub = "", _gpuSub = "";
         private double? _gpuPct;
         private readonly Series _cpuH = new(), _ramH = new(), _netH = new(), _gpuH = new();
+        private readonly Queue<double> _temperatureC = new();
+        private string _temperatureTrend = "";
 
         public SystemMonitorRowsControl()
         {
@@ -2120,7 +2318,21 @@ namespace MotionDesk.Widgets
         public int GpuIndex { get; set; }
         public int GpuCount { get; set; }
         public event Action<int>? GpuStep;
-        public void SetGpu(double? pct, string sub, string? name = null) { _gpuPct = pct; _gpuSub = sub; _gpuName = name; _gpuH.Push((pct ?? 0) / 100.0); Invalidate(); }
+        public void SetGpu(double? pct, string sub, string? name = null, double? temperatureC = null)
+        {
+            _gpuPct = pct; _gpuSub = sub; _gpuName = name;
+            _gpuH.Push((pct ?? 0) / 100.0);
+            if (temperatureC is >= -30 and <= 150)
+            {
+                _temperatureC.Enqueue(temperatureC.Value);
+                while (_temperatureC.Count > HistoryLength) _temperatureC.Dequeue();
+                double delta = temperatureC.Value - _temperatureC.Peek();
+                _temperatureTrend = _temperatureC.Count < 2 ? "" :
+                    delta >= 1 ? " ↑" : delta <= -1 ? " ↓" : " →";
+            }
+            else { _temperatureC.Clear(); _temperatureTrend = ""; }
+            Invalidate();
+        }
 
         protected override void OnMouseDown(MouseEventArgs e)
         {
@@ -2147,7 +2359,7 @@ namespace MotionDesk.Widgets
             var g = e.Graphics;
             g.SmoothingMode = SmoothingMode.AntiAlias;
             g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
-            using (var bg = new SolidBrush(UiTheme.SurfaceGlass)) g.FillRectangle(bg, ClientRectangle);
+            using (var bg = new SolidBrush(WidgetWindow.SurfaceFor(this))) g.FillRectangle(bg, ClientRectangle);
             if (Width < 60 || Height < 60) return;
 
             const float pad = 6f, gap = 6f;
@@ -2181,6 +2393,29 @@ namespace MotionDesk.Widgets
                     g.DrawString("▶", af, ab, _gpuNextRect, sf);
                 }
                 else if (i == 3) { _gpuPrevRect = _gpuNextRect = RectangleF.Empty; }
+                if (i == 3 && _temperatureC.Count > 1 && r.Width >= 94 && r.Height >= 42)
+                    DrawTemperatureLine(g, r);
+            }
+        }
+
+        // Render temperature independently of GPU-load history; finite 60-sample buffer.
+        private void DrawTemperatureLine(Graphics g, RectangleF tile)
+        {
+            var samples = _temperatureC.ToArray();
+            double lo = samples.Min(), hi = samples.Max();
+            double span = Math.Max(2, hi - lo);
+            float width = Math.Max(12, tile.Width - 36), height = Math.Min(13f, tile.Height * .18f);
+            var points = samples.Select((t, i) => new PointF(
+                tile.X + 16 + i * width / (samples.Length - 1),
+                tile.Bottom - 3 - height * (float)((t - lo) / span))).ToArray();
+            using var pen = new Pen(Color.FromArgb(245, 247, 171, 79), 1.8f);
+            g.DrawLines(pen, points);
+            if (tile.Height >= 68)
+            {
+                using var font = new Font("Segoe UI", 7f);
+                TextRenderer.DrawText(g, $"{samples[^1]:0}°C{_temperatureTrend}", font,
+                    Rectangle.Round(new RectangleF(tile.Right - 75, tile.Y + 1, 70, 16)), Color.FromArgb(245, 247, 171, 79),
+                    TextFormatFlags.Right | TextFormatFlags.EndEllipsis);
             }
         }
 
@@ -2273,7 +2508,7 @@ namespace MotionDesk.Widgets
         {
             var g = e.Graphics;
             g.SmoothingMode = SmoothingMode.AntiAlias;
-            using (var bg = new SolidBrush(UiTheme.SurfaceGlass)) g.FillRectangle(bg, ClientRectangle);
+            using (var bg = new SolidBrush(WidgetWindow.SurfaceFor(this))) g.FillRectangle(bg, ClientRectangle);
             if (Width < 60 || Height < 60) return;
 
             var culture = CultureInfo.CurrentCulture;
@@ -2325,6 +2560,7 @@ namespace MotionDesk.Widgets
         public int Width { get; set; }
         public int Height { get; set; }
         public bool IsLocked { get; set; }
+        public int RefreshPercent { get; set; } = 100;
 
         // Clock: "Digital" | "Analog".
         public string Variant { get; set; } = "Digital";
@@ -2342,6 +2578,8 @@ namespace MotionDesk.Widgets
 
         // Διαφάνεια widget (0.25-1.0), όπως ήδη έχουν τα DeskContainers — ζητήθηκε ρητά.
         public double Opacity { get; set; } = 1.0;
+        public int? CustomTintArgb { get; set; }
+        public int? CustomRadius { get; set; }
 
         // Weather: αποθηκευμένη τοποθεσία χρήστη — Αθήνα παραμένει το default όταν είναι κενό.
         public double? Latitude { get; set; }
@@ -2357,6 +2595,13 @@ namespace MotionDesk.Widgets
         public int Width { get; set; }
         public int Height { get; set; }
         public bool IsLocked { get; set; }
+        // Portable monitor anchors for mixed-DPI displays and docking station restores.
+        public string? MonitorId { get; set; }
+        public string? MonitorDevice { get; set; }
+        public double? RelativeX { get; set; }
+        public double? RelativeY { get; set; }
+        public int MonitorWidth { get; set; }
+        public int MonitorHeight { get; set; }
     }
 
     public class WidgetHostEngine
@@ -2365,11 +2610,32 @@ namespace MotionDesk.Widgets
         public static WidgetHostEngine Instance => _instance ??= new WidgetHostEngine();
 
         private readonly List<WidgetWindow> _activeWidgets = new();
+        private DateTime _temporaryUnlockUntilUtc;
+        public bool TemporarilyUnlocked => DateTime.UtcNow < _temporaryUnlockUntilUtc;
+        public TimeSpan RemainingTemporaryUnlock => _temporaryUnlockUntilUtc > DateTime.UtcNow
+            ? _temporaryUnlockUntilUtc - DateTime.UtcNow : TimeSpan.Zero;
+
+        /// <summary>Temporarily ignores the drag lock, retaining every widget's persisted IsLocked bit.</summary>
+        public void UnlockTemporarily(TimeSpan duration)
+        {
+            if (duration <= TimeSpan.Zero) { _temporaryUnlockUntilUtc = DateTime.MinValue; return; }
+            _temporaryUnlockUntilUtc = DateTime.UtcNow + TimeSpan.FromSeconds(Math.Clamp(duration.TotalSeconds, 5, 600));
+        }
+
         public IReadOnlyCollection<WidgetWindow> GetActiveWidgets() => _activeWidgets;
 
         public IReadOnlyList<WidgetSnapshot> GetSnapshots() => _activeWidgets
             .Where(w => !w.IsDisposed)
-            .Select(w => new WidgetSnapshot { WidgetId = w.WidgetId, X = w.Location.X, Y = w.Location.Y, Width = w.Width, Height = w.Height, IsLocked = w.IsLocked })
+            .Select(w => {
+                var screen = Screen.FromControl(w);
+                var monitor = MonitorTopologyService.ForDevice(screen.DeviceName);
+                var area = screen.WorkingArea;
+                return new WidgetSnapshot { WidgetId = w.WidgetId, X = w.Left, Y = w.Top, Width = w.Width, Height = w.Height,
+                    IsLocked = w.IsLocked, MonitorId = monitor?.Id, MonitorDevice = screen.DeviceName,
+                    MonitorWidth = screen.Bounds.Width, MonitorHeight = screen.Bounds.Height,
+                    RelativeX = area.Width > 0 ? (w.Left - area.Left) / (double)area.Width : null,
+                    RelativeY = area.Height > 0 ? (w.Top - area.Top) / (double)area.Height : null };
+            })
             .ToArray();
 
         public void RestoreSnapshots(IEnumerable<WidgetSnapshot> snapshots)
@@ -2377,7 +2643,15 @@ namespace MotionDesk.Widgets
             CloseAll();
             foreach (var snapshot in snapshots.Where(s => !string.IsNullOrWhiteSpace(s.WidgetId)))
             {
-                var widget = SpawnWidget(snapshot.WidgetId, snapshot.X, snapshot.Y, Math.Max(160, snapshot.Width), Math.Max(100, snapshot.Height));
+                var match = MonitorTopologyService.Match(snapshot.MonitorId, snapshot.MonitorDevice, snapshot.MonitorWidth, snapshot.MonitorHeight);
+                var area = match?.WorkingArea ?? Screen.PrimaryScreen?.WorkingArea ?? SystemInformation.VirtualScreen;
+                var width = Math.Max(160, snapshot.Width); var height = Math.Max(100, snapshot.Height);
+                var x = snapshot.RelativeX is double rx && double.IsFinite(rx) ? area.Left + (int)Math.Round(Math.Clamp(rx,0,1)*area.Width) : snapshot.X;
+                var y = snapshot.RelativeY is double ry && double.IsFinite(ry) ? area.Top + (int)Math.Round(Math.Clamp(ry,0,1)*area.Height) : snapshot.Y;
+                x = Math.Clamp(x,area.Left,Math.Max(area.Left,area.Right-width));
+                y = Math.Clamp(y,area.Top,Math.Max(area.Top,area.Bottom-height));
+                var widget = SpawnWidget(snapshot.WidgetId, x, y, width, height);
+                widget.Location = new Point(x,y);
                 widget.IsLocked = snapshot.IsLocked;
                 widget.SaveWidgetState();
             }

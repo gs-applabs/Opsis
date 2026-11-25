@@ -27,7 +27,7 @@ namespace MotionDesk.Widgets
 
         // Called by the page once its first frame is on screen (see index.html signalReady): the window is only REVEALED then, so the
         // user never sees a black rectangle while WebView2 is still starting up (the flicker at startup / when the overlay-only mode starts).
-        public Action? ContentReady { get; set; }
+        internal Action? ContentReady { get; set; }
         public void NotifyReady() => ContentReady?.Invoke();
 
         public float GetAudioPeak()
@@ -36,18 +36,27 @@ namespace MotionDesk.Widgets
             return _audio.GetPeak();
         }
 
+        [ComVisible(false)]
         public void Dispose() { _audio?.Dispose(); _spectrum?.Dispose(); }
 
         // ---- API for local web wallpapers (pushed to the page by the window, see WallpaperWindow.SetApiPump) ----
         private AudioSpectrumService? _spectrum;
         private bool _apiActive;
-        public Action<bool>? ApiChanged { get; set; }
+        internal void PauseSpectrum() { _spectrum?.Dispose(); _spectrum = null; }
+        internal Action<bool>? ApiChanged { get; set; }
         public bool ApiActive { get => _apiActive; private set { if (_apiActive == value) return; _apiActive = value; ApiChanged?.Invoke(value); } }
         public bool WantsAudio { get; private set; }
         public bool WantsGpu { get; private set; }
         public bool WantsPointer { get; private set; }
-        public Action? SubscriptionChanged { get; set; }
-        public void SetSubscription(bool audio, bool gpu, bool pointer = false) { WantsAudio = audio; WantsGpu = gpu; bool p = WantsPointer != pointer; WantsPointer = pointer; if (p) SubscriptionChanged?.Invoke(); }
+        internal Action? SubscriptionChanged { get; set; }
+        public void SetSubscription(bool audio, bool gpu, bool pointer = false)
+        {
+            bool timersChanged = WantsAudio != audio || WantsPointer != pointer;
+            WantsAudio = audio;
+            WantsGpu = gpu;
+            WantsPointer = pointer;
+            if (timersChanged) SubscriptionChanged?.Invoke();
+        }
 
         public string GetPagePropertiesJson()
         {
@@ -57,9 +66,9 @@ namespace MotionDesk.Widgets
             return index == null || m == null ? "{}" : WallpaperManifest.ValuesJson(s, index, m);
         }
 
-        private DateTime _disksAt = DateTime.MinValue;
-        private object? _disks;
-        private object DisksSnapshot()
+        private static DateTime _disksAt = DateTime.MinValue;
+        private static object? _disks;
+        private static object DisksSnapshot()
         {
             if (_disks != null && (DateTime.UtcNow - _disksAt).TotalSeconds < 15) return _disks;
             var list = new List<object>();
@@ -81,6 +90,22 @@ namespace MotionDesk.Widgets
 
         internal string BuildSystemJson() => BuildSystemJson(WantsGpu);
         internal string BuildSystemJson(bool wantGpu)
+        {
+            lock (SnapshotLock)
+            {
+                var now = Environment.TickCount64;
+                var cached = SystemJsonCache[wantGpu ? 1 : 0];
+                if (cached.Json != null && now - cached.At < 500) return cached.Json;
+                string json = ReadSystemJson(wantGpu);
+                SystemJsonCache[wantGpu ? 1 : 0] = (now, json);
+                return json;
+            }
+        }
+
+        private static readonly object SnapshotLock = new();
+        private static readonly (long At, string? Json)[] SystemJsonCache = new (long, string?)[2];
+
+        private static string ReadSystemJson(bool wantGpu)
         {
             var m = MotionDesk.Services.AdvancedSystemMonitorService.Instance.GetSnapshot();
             var power = System.Windows.Forms.SystemInformation.PowerStatus;
@@ -127,6 +152,55 @@ namespace MotionDesk.Widgets
         }
 
         // Επιστρέφει JSON με mode, palette name/χρώματα και τις ρυθμίσεις animation (ταχύτητα/glow/πάχος γραμμής).
+        private static Dictionary<string, object> VerifiedSkylineEdits(WallpaperSettings settings)
+        {
+            var result = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
+            foreach (var pair in (settings.WeatherSkylineEdits ?? new()).Take(32))
+            {
+                var edit = pair.Value;
+                if (edit == null || edit.Width != 512 || edit.Height is < 1 or > 512 || edit.Rows?.Count != 512) continue;
+                if (edit.Rows.Any(row => row < 0 || row > edit.Height)) continue;
+                var relative = pair.Key.Replace('\\', '/');
+                if (!relative.StartsWith("scenes/", StringComparison.Ordinal) || relative.Contains("..", StringComparison.Ordinal)) continue;
+                var full = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "widgets", "wallpaper", relative.Replace('/', Path.DirectorySeparatorChar)));
+                try
+                {
+                    if (!File.Exists(full) || new FileInfo(full).Length > 40L * 1024 * 1024) continue;
+                    using var input = File.OpenRead(full);
+                    var sha = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(input));
+                    if (sha.Equals(edit.Sha256, StringComparison.OrdinalIgnoreCase))
+                        result[relative] = new { width = edit.Width, height = edit.Height, rows = edit.Rows };
+                }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
+            }
+            return result;
+        }
+
+        // The image spans two side-by-side monitors only. Each WebView renders
+        // its own crop of one continuous virtual image, accounting for bezel gap.
+        internal static object? PanoramaInfo(WallpaperSettings cfg, string? monitorName)
+        {
+            if (string.IsNullOrWhiteSpace(cfg.PanoramaFirstMonitor) ||
+                string.IsNullOrWhiteSpace(cfg.PanoramaSecondMonitor) ||
+                string.Equals(cfg.PanoramaFirstMonitor, cfg.PanoramaSecondMonitor, StringComparison.OrdinalIgnoreCase)) return null;
+            var first = Screen.AllScreens.FirstOrDefault(s => s.DeviceName == cfg.PanoramaFirstMonitor);
+            var second = Screen.AllScreens.FirstOrDefault(s => s.DeviceName == cfg.PanoramaSecondMonitor);
+            if (first == null || second == null || monitorName == null ||
+                !new[] { first.DeviceName, second.DeviceName }.Contains(monitorName, StringComparer.OrdinalIgnoreCase)) return null;
+            // Only horizontally adjacent screens with no overlap or large gaps.
+            var left = first.Bounds.Left < second.Bounds.Left ? first : second;
+            var right = left == first ? second : first;
+            if (Math.Abs(left.Bounds.Right - right.Bounds.Left) > 40) return null;
+            int bezel = Math.Clamp(cfg.PanoramaBezelGapPx, 0, 400);
+            int top = Math.Min(first.Bounds.Top, second.Bounds.Top);
+            int bottom = Math.Max(first.Bounds.Bottom, second.Bounds.Bottom);
+            int totalWidth = Math.Max(1, left.Bounds.Width + right.Bounds.Width + bezel);
+            var current = string.Equals(monitorName, left.DeviceName, StringComparison.OrdinalIgnoreCase) ? left : right;
+            int x = current == left ? 0 : left.Bounds.Width + bezel;
+            return new { width = totalWidth, height = Math.Max(1, bottom - top),
+                offsetX = x, offsetY = current.Bounds.Top - top, bezelPx = bezel };
+        }
+
         public string GetWaveConfigJson()
         {
             var settings = WallpaperSettings.Load();
@@ -135,7 +209,7 @@ namespace MotionDesk.Widgets
             // "overlay-only": the animated wallpaper is off but the info overlay is on -> the window shows the normal Windows wallpaper
             string effectiveMode = WallpaperHostEngine.Instance.EffectiveMode(settings);
             string pageUri = effectiveMode == "Page" ? MediaSource.PageUri(settings.PageSource) : "";
-            ApiActive = pageUri.StartsWith("file:", StringComparison.OrdinalIgnoreCase);
+            ApiActive = BrowserNavigationPolicy.IsLocalFile(pageUri);
             long everyMs = settings.RotateEveryMinutes * 60_000L;
             long firstMs = everyMs;
             if (everyMs > 0 && settings.LastRotateUtc is { } last) firstMs = Math.Max(15_000, everyMs - (long)(DateTime.UtcNow - last).TotalMilliseconds);
@@ -146,7 +220,8 @@ namespace MotionDesk.Widgets
                 desk = effectiveMode == "Desktop" ? DeskInfo() : null,
                 infoFont = string.IsNullOrWhiteSpace(settings.InfoFont) ? "Segoe UI Light" : settings.InfoFont,
                 waveStyle = settings.WaveStyle,
-                perf = WallpaperHostEngine.PerfObject(),
+                athensPhase = settings.AthensPhase,
+                perf = WallpaperHostEngine.PerfObject(_screenDeviceName),
                 pageUri,
                 elements = settings.Elements.Where(e => e.Enabled).Select(e => new { id = e.Id, scale = Math.Clamp(e.Scale, 40, 250) }),
                 elSide = settings.ElementsSide is "Right" or "Center" ? settings.ElementsSide : "Left",
@@ -155,10 +230,12 @@ namespace MotionDesk.Widgets
                 elVAlign = settings.ElementsVAlign is "Top" or "Bottom" ? settings.ElementsVAlign : "Center",
                 elAccent = settings.ElementsAccent,
                 elCard = settings.ElementsCard,
+                elAuto = settings.ElementsAutoColor,
                 pageLocal = ApiActive,
                 rotateFirstMs = firstMs,
                 imageUri = effectiveMode == "Image" ? MediaSource.ImageUri(settings.ImagePath) : "",
                 imageFit = settings.ImageFit,
+                panorama = PanoramaInfo(settings, _screenDeviceName),
                 background = palette.Background,
                 wave = palette.WaveColor,
                 peak = palette.PeakColor,
@@ -177,11 +254,26 @@ namespace MotionDesk.Widgets
                 weatherSim = settings.WeatherSimulation,
                 timeSim = settings.TimeSimulation,
                 weatherGlass = settings.WeatherGlass,
+                rainLandscapeIntensity = Math.Clamp(settings.RainLandscapeIntensity, 0, 200) / 100.0,
+                rainGlassIntensity = Math.Clamp(settings.RainGlassIntensity, 0, 200) / 100.0,
+                weatherPhotoFocusX = Math.Clamp(settings.WeatherPhotoFocusX, 0, 100) / 100.0,
+                weatherSkylinePreview = settings.WeatherSkylinePreview,
+                weatherSkyEdits = VerifiedSkylineEdits(settings),
+                weatherLandmarks = settings.WeatherLandmarks,
+                weatherLandmarkId = settings.WeatherLandmarkId,
+                cityScenes = WallpaperSettings.IsWeatherMode(effectiveMode) ? LandmarkCatalog.Scenes.Select(city => new
+                {
+                    id = city.Id, name = city.Name, nameEn = city.NameEn, lat = city.Lat, lon = city.Lon,
+                    terrain = city.Terrain, motif = city.Motif, file = city.File, lights = city.Lights, manualOnly = city.ManualOnly
+                }) : null,
                 weatherLat = settings.WeatherLat,
                 weatherLon = settings.WeatherLon,
                 rotateMinutes = settings.RotateEveryMinutes,
                 windSim = settings.WindSimulation,
-                weatherInfo = settings.WeatherShowInfo && (effectiveMode == "Weather" || settings.InfoOnAllModes),
+                weatherInfo = settings.WeatherShowInfo && (WallpaperSettings.IsWeatherMode(effectiveMode) || settings.InfoOnAllModes)
+                    && !(AppSettings.Peek().PresentationMonitorIds?.Any(id =>
+                        id.Equals(_screenDeviceName, StringComparison.OrdinalIgnoreCase) ||
+                        id.Equals(MonitorTopologyService.ForDevice(_screenDeviceName)?.Id, StringComparison.OrdinalIgnoreCase)) ?? false),
                 infoX = Math.Clamp(settings.WeatherInfoX, 0, 100),
                 infoY = Math.Clamp(settings.WeatherInfoY, 0, 100),
                 infoScale = Math.Clamp(settings.WeatherInfoScale, 40, 250),
@@ -340,8 +432,18 @@ namespace MotionDesk.Widgets
 
         public static readonly (string Id, int X, int Y)[] Catalog =
         {
-            ("analog", 14, 22), ("cpu", 14, 52), ("ram", 14, 72), ("gpu", 14, 90), ("network", 86, 22), ("disks", 86, 50), ("battery", 86, 72), ("audio", 50, 88),
+            ("analog", 14, 22), ("cpu", 14, 52), ("ram", 14, 72), ("gpu", 14, 90), ("network", 86, 22), ("disks", 86, 50), ("battery", 86, 72),
         };
+    }
+
+    // Editor records normalized skyline rows for one exact image asset.  The file SHA-256
+    // is checked by the host before forwarding the edit to WebView2.
+    public sealed class WallpaperSkylineEdit
+    {
+        public string Sha256 { get; set; } = string.Empty;
+        public int Width { get; set; } = 512;
+        public int Height { get; set; }
+        public List<int> Rows { get; set; } = new();
     }
 
     public sealed class WallpaperSettings
@@ -355,19 +457,36 @@ namespace MotionDesk.Widgets
             Elements = merged;
         }
 
+        public const string AthensMode = "Ancient Athens";
+        public string AthensPhase { get; set; } = "Auto";
+
+        public static bool IsWeatherMode(string? mode) => NormalizeMode(mode) == "Weather";
+
+        public static string NormalizeMode(string? mode) => mode switch
+        {
+            "Weather 2" => "Weather",
+            "Application" => "Desktop",
+            "Waves" or "Particles" or "Weather" or AthensMode or "Video" or "Image" or "Page" or "Desktop" => mode,
+            _ when StudioWallpaperCatalog.Find(mode) != null => mode!,
+            _ => "Waves"
+        };
+
         public string Mode { get; set; } = "Waves"; // "Waves" | "Video" | "Particles" | "Weather" | "Desktop" (the normal Windows wallpaper, so the info overlay works over it)
         // "Page" mode: a website (https://…), a YouTube link or a local .html file / folder with index.html. "Image" mode: a GIF / PNG / JPG file.
         public string PageSource { get; set; } = string.Empty;
-        public string AppWallpaperPath { get; set; } = string.Empty;   // "Application" mode: a program whose window is shown as the wallpaper
-        public string AppWallpaperArgs { get; set; } = string.Empty;
         public string ImagePath { get; set; } = string.Empty;
         public string ImageFit { get; set; } = "Cover";   // Cover | Contain
+        // #32/#33: explicit pair only; other displays stay independent.
+        public string PanoramaFirstMonitor { get; set; } = string.Empty;
+        public string PanoramaSecondMonitor { get; set; } = string.Empty;
+        public int PanoramaBezelGapPx { get; set; } = 0; // extra image pixels hidden between the two screens (0..400)
         // Wallpaper elements: the widget pieces (clock, CPU, memory, ...) the user shows on top of ANY wallpaper mode, see wallpaper/elements.js.
         public List<WallpaperElement> Elements { get; set; } = new();
         public string ElementsAccent { get; set; } = "#00d2ff";
         public string ElementsClockTheme { get; set; } = "Classic";   // Classic | Minimal | Neon | Mono | Retro (same names as the desktop clock widget)
         public string ElementsBarColor { get; set; } = "";            // "" = same as the accent colour
         public bool ElementsCard { get; set; } = true;          // frosted card behind every element
+        public bool ElementsAutoColor { get; set; } = true;     // without a card: the text turns dark / light with the colour of the wallpaper behind it
         public string ElementsSide { get; set; } = "Left";      // Left | Right: the elements are stacked in a column on that edge of the screen
         public string ElementsVAlign { get; set; } = "Center";  // Top | Center | Bottom
         public Dictionary<string, string> PageProperties { get; set; } = new();   // "<page>|<key>" -> value, see WallpaperManifest
@@ -404,6 +523,13 @@ namespace MotionDesk.Widgets
         // "Auto" = live wind. Otherwise Calm|LightBreeze|FreshBreeze|Strong|Gale (Beaufort 1/3/5/7/9) — drives waves and cloud speed
         public string WindSimulation { get; set; } = "Auto";
         public bool WeatherGlass { get; set; } = true;   // raindrops on a window pane while it rains
+        public int RainLandscapeIntensity { get; set; } = 100; // 0..200 percent, independent of actual weather data
+        public int RainGlassIntensity { get; set; } = 100;     // 0..200 percent; 0 disables window droplets
+        public int WeatherPhotoFocusX { get; set; } = 50;     // 0..100, subject placement in portrait photo crop
+        public bool WeatherSkylinePreview { get; set; } = false;
+        public Dictionary<string, WallpaperSkylineEdit> WeatherSkylineEdits { get; set; } = new(StringComparer.OrdinalIgnoreCase); // temporary visualisation while adjusting a photo
+        public string WeatherLandmarkId { get; set; } = "Auto";   // Auto (nearest to the weather location) | Off | a landmark id, independent of the location
+        public bool WeatherLandmarks { get; set; } = true;   // the best-known landmark of the weather location on the horizon (landmarks.js)
 
         // Clock / date / temperature overlay of the Weather mode. Position is the CENTRE of the block, in % of the screen
         // (default: horizontally centred, in the upper third so it sits in the sky and not on the horizon/desktop icons).
@@ -467,6 +593,8 @@ namespace MotionDesk.Widgets
                     var loaded = JsonSerializer.Deserialize<WallpaperSettings>(MotionDesk.Services.AtomicFile.ReadAllText(ConfigPath));
                     if (loaded != null)
                     {
+                        loaded.Mode = NormalizeMode(loaded.Mode);
+                        foreach (var rule in loaded.Schedule) rule.Mode = NormalizeMode(rule.Mode);
                         loaded.MigrateLegacyVideoPath();
                         return loaded;
                     }
@@ -499,7 +627,7 @@ namespace MotionDesk.Widgets
             }
         }
 
-        private List<string> PlayableVideos() => VideoPaths.Where(p => File.Exists(p) && !DisabledVideoPaths.Contains(p)).ToList();
+        internal List<string> PlayableVideos() => VideoPaths.Where(p => File.Exists(p) && !DisabledVideoPaths.Contains(p)).ToList();
 
         public string? CurrentPlaylistFile()
         {
@@ -534,6 +662,16 @@ namespace MotionDesk.Widgets
             var playable = PlayableVideos();
             var idx = current == null ? -1 : playable.FindIndex(p => string.Equals(p, current, StringComparison.OrdinalIgnoreCase));
             CurrentVideoIndex = idx >= 0 ? idx : 0;
+        }
+
+        /// <summary>2.6.0: one step BACK in the playlist (the "Previous" button). Keeps the shuffle history consistent and resets the repeat counter.</summary>
+        public void PreviousInPlaylist()
+        {
+            var playable = PlayableVideos();
+            if (playable.Count == 0) { CurrentVideoIndex = 0; return; }
+            RepeatsDone = 0;
+            ShuffleHistory.Clear();
+            CurrentVideoIndex = ((CurrentVideoIndex - 1) % playable.Count + playable.Count) % playable.Count;
         }
 
         public void AdvancePlaylist()
@@ -639,7 +777,6 @@ namespace MotionDesk.Widgets
             if (_webView != null) _webView.Visible = true;
             Show();
             KeepBehindIcons();
-            SyncApplication();
             Revealed?.Invoke();
         }
 
@@ -834,17 +971,7 @@ namespace MotionDesk.Widgets
             }
         }
 
-        public Task RefreshAsync() { SyncApplication(); return RefreshWebViewAsync(); }
-
-        // "Application" mode lives in the wallpaper window of the PRIMARY screen only.
-        private void SyncApplication()
-        {
-            if (IsDisposed || !TargetScreen.Primary) return;
-            var s = WallpaperSettings.Load();
-            bool want = WallpaperHostEngine.Instance.EffectiveMode(s) == "Application" && WallpaperHostEngine.Instance.IsEnabled;
-            if (want) ApplicationWallpaper.Sync(this, s.AppWallpaperPath, s.AppWallpaperArgs, _paused);
-            else ApplicationWallpaper.Stop();
-        }
+        public Task RefreshAsync() => RefreshWebViewAsync();
 
         // Ακριβές "στιγμιότυπο" του ΠΡΑΓΜΑΤΙΚΑ αποδομένου wallpaper (waves/video + το overlay
         // ρολογιού κ.λπ.) για χρήση ως εικόνα οθόνης κλειδώματος — όχι ξαναζωγραφισμένο αντίγραφο,
@@ -886,26 +1013,43 @@ namespace MotionDesk.Widgets
         private bool _paused;
         private System.Windows.Forms.Timer? _apiTimer;
         private int _apiTick;
+        private bool _apiBusy;
+        private void UpdateApiTimers()
+        {
+            SetApiPump(!_paused && Visible && _bridge?.ApiActive == true);
+            UpdatePointerTimer();
+        }
+
+        protected override void OnVisibleChanged(EventArgs e)
+        {
+            base.OnVisibleChanged(e);
+            UpdateApiTimers();
+        }
+
         private void SetApiPump(bool on)
         {
             if (IsDisposed) return;
+            if (!on || _bridge?.WantsAudio != true) _bridge?.PauseSpectrum();
             if (!on) { _apiTimer?.Stop(); return; }
             if (_apiTimer == null)
             {
                 _apiTimer = new System.Windows.Forms.Timer { Interval = 100 };
-                _apiTimer.Tick += (_, _) =>
+                _apiTimer.Tick += async (_, _) =>
                 {
                     var core = _webView?.CoreWebView2;
-                    if (core == null || _bridge == null || _paused || !Visible) return;
+                    if (core == null || _bridge == null || _paused || !Visible || _apiBusy) return;
+                    _apiBusy = true;
                     _apiTick++;
                     try
                     {
-                        if (_bridge.WantsAudio) _ = core.ExecuteScriptAsync("window.opsisPush&&window.opsisPush({opsis:true,type:'audio',bands:" + _bridge.BuildAudioJson() + "})");
-                        if (_apiTick % 10 == 0) _ = core.ExecuteScriptAsync("window.opsisPush&&window.opsisPush({opsis:true,type:'system',data:" + _bridge.BuildSystemJson() + "})");
+                        if (_bridge.WantsAudio) await core.ExecuteScriptAsync("window.opsisPush&&window.opsisPush({opsis:true,type:'audio',bands:" + _bridge.BuildAudioJson() + "})");
+                        if (!_paused && Visible && _bridge?.ApiActive == true && (!_bridge.WantsAudio || _apiTick % 10 == 0)) await core.ExecuteScriptAsync("window.opsisPush&&window.opsisPush({opsis:true,type:'system',data:" + _bridge.BuildSystemJson() + "})");
                     }
                     catch (Exception) { }
+                    finally { _apiBusy = false; }
                 };
             }
+            _apiTimer.Interval = _bridge?.WantsAudio == true ? 100 : 1000;
             _apiTimer.Start();
         }
 
@@ -915,7 +1059,7 @@ namespace MotionDesk.Widgets
         private int _lastPx = -1, _lastPy = -1, _lastBtn = -1;
         private void UpdatePointerTimer()
         {
-            bool on = _bridge is { WantsPointer: true, ApiActive: true };
+            bool on = !_paused && Visible && _bridge is { WantsPointer: true, ApiActive: true };
             if (!on) { _pointerTimer?.Stop(); return; }
             _pointerTimer ??= new System.Windows.Forms.Timer { Interval = 33 };
             _pointerTimer.Tick -= PointerTick; _pointerTimer.Tick += PointerTick;
@@ -948,6 +1092,8 @@ namespace MotionDesk.Widgets
         [DllImport("user32.dll")] private static extern short GetAsyncKeyState(int vk);
         [DllImport("user32.dll", CharSet = CharSet.Unicode)] private static extern int GetClassName(IntPtr h, System.Text.StringBuilder s, int n);
 
+        internal Microsoft.Web.WebView2.Core.CoreWebView2? MusicRenderer => _webView?.CoreWebView2;
+
         public async Task RunScriptAsync(string js)
         {
             if (_webView?.CoreWebView2 == null) return;
@@ -960,12 +1106,29 @@ namespace MotionDesk.Widgets
             try { await _webView.CoreWebView2.ExecuteScriptAsync("window.opsisSendProps&&window.opsisSendProps()"); } catch (Exception) { }
         }
 
+        internal async Task<object> AuditFramesAsync()
+        {
+            var core = _webView?.CoreWebView2;
+            JsonElement? frames = null;
+            if (core != null && !_paused && Visible)
+            {
+                try
+                {
+                    var json = await core.ExecuteScriptAsync("window.opsisFrameStats?.()").WaitAsync(TimeSpan.FromSeconds(1));
+                    frames = JsonSerializer.Deserialize<JsonElement>(json);
+                }
+                catch (Exception) { }
+            }
+            return new { monitor = TargetScreen.DeviceName, paused = _paused, frames };
+        }
+
         public int BrowserProcessId { get { try { return (int)(_webView?.CoreWebView2?.BrowserProcessId ?? 0); } catch (Exception) { return 0; } } }
 
         public async Task SetPausedAsync(bool paused)
         {
+            if (_paused != paused) UiResourceAudit.Mark(paused ? "wallpaper-paused" : "wallpaper-resumed", TargetScreen.DeviceName);
             _paused = paused;
-            if (TargetScreen.Primary) ApplicationWallpaper.SetPaused(paused);
+            UpdateApiTimers();
             // θυμόμαστε την κατάσταση ώστε να εφαρμοστεί και μετά από (re)navigation
             if (_webView?.CoreWebView2 == null) return;
             var core = _webView.CoreWebView2;
@@ -977,7 +1140,7 @@ namespace MotionDesk.Widgets
                 // Σε κρυμμένο παράθυρο (wallpaper απενεργοποιημένο) το TrySuspend παγώνει πλήρως τη
                 // διεργασία rendering (0% CPU/GPU, λιγότερη RAM). Απαιτεί IsVisible=false — αν το
                 // παράθυρο είναι ακόμα ορατό (π.χ. fullscreen pause) απλώς επιστρέφει false, χωρίς βλάβη.
-                if (paused && !Visible) await core.TrySuspendAsync();
+                if (_paused && paused && !Visible) await core.TrySuspendAsync();
             }
             catch (Exception ex) { System.Diagnostics.Debug.WriteLine(ex); }
         }
@@ -996,20 +1159,21 @@ namespace MotionDesk.Widgets
                 Controls.Add(_webView);
                 await _webView.EnsureCoreWebView2Async(await WebView2Support.CreateEnvironmentAsync());
                 if (IsDisposed || _webView.CoreWebView2 == null) return;
-                WebView2Support.Harden(_webView.CoreWebView2);
+                string htmlPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "widgets", "wallpaper", "index.html");
+                WebView2Support.Harden(_webView.CoreWebView2, htmlPath,
+                    address => BrowserNavigationPolicy.IsWallpaperFrame(address, _bridge?.ApiActive == true));
                 _bridge = new WallpaperBridge(TargetScreen.DeviceName)
                 {
                     ContentReady = () => { if (!IsDisposed && IsHandleCreated) BeginInvoke(new Action(MarkContentReady)); }
                 };
-                _bridge.ApiChanged = on => { if (!IsDisposed && IsHandleCreated) BeginInvoke(new Action(() => { SetApiPump(on); UpdatePointerTimer(); })); };
-                _bridge.SubscriptionChanged = () => { if (!IsDisposed && IsHandleCreated) BeginInvoke(new Action(UpdatePointerTimer)); };
+                _bridge.ApiChanged = on => { if (!IsDisposed && IsHandleCreated) BeginInvoke(new Action(UpdateApiTimers)); };
+                _bridge.SubscriptionChanged = () => { if (!IsDisposed && IsHandleCreated) BeginInvoke(new Action(UpdateApiTimers)); };
                 _webView.CoreWebView2.AddHostObjectToScript("wallpaper", _bridge);
-                string htmlPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "widgets", "wallpaper", "index.html");
                 // Μετά από κάθε φόρτωση σελίδας ξαναεφαρμόζουμε την κατάσταση παύσης — αλλιώς ένα
                 // νέο/ανανεωμένο παράθυρο (π.χ. rebuild λόγω αλλαγής οθονών ενώ τρέχει fullscreen
                 // παιχνίδι) θα έπαιζε κανονικά πίσω από το παιχνίδι.
                 _webView.CoreWebView2.NavigationCompleted += (_, _) => { if (_paused) _ = SetPausedAsync(true); };
-                if (File.Exists(htmlPath)) _webView.CoreWebView2.Navigate(htmlPath);
+                if (File.Exists(htmlPath)) _webView.CoreWebView2.Navigate(new Uri(htmlPath).AbsoluteUri);
                 else MotionDesk.Services.AttachLog.Write($"[{TargetScreen.DeviceName}] wallpaper page MISSING: {htmlPath}");
             }
             catch (Exception ex)
@@ -1069,8 +1233,9 @@ namespace MotionDesk.Widgets
         // "Overlay-only": the animated wallpaper is OFF but the clock/date/temperature overlay is ON -> the windows run in "Desktop" mode
         // (the normal Windows wallpaper + the overlay). IsEnabled stays false: the user still sees the wallpaper as switched off.
         private bool _overlayOnly;
+        private bool _musicSceneRequested;
         private bool Active => _enabled || _overlayOnly;
-        public string EffectiveMode(WallpaperSettings settings) => !_enabled && _overlayOnly ? "Desktop" : settings.Mode;
+        public string EffectiveMode(WallpaperSettings settings) => !_enabled && _overlayOnly ? "Desktop" : WallpaperSettings.NormalizeMode(settings.Mode);
         private System.Windows.Forms.Timer? _fullscreenCheckTimer;
         private System.Windows.Forms.Timer? _lockScreenSyncTimer;
 
@@ -1087,7 +1252,7 @@ namespace MotionDesk.Widgets
                 try
                 {
                     bool want = false;
-                    if (Active && MotionDesk.Services.AppSettings.Load().AutoMuteWhenOtherAudio && WallpaperSettings.Load().AudioEnabled)
+                    if (Active && !UserPaused && _windows.Any(w => !w.IsDisposed && w.Visible && !AppActivity.IsPausedFor(w.TargetScreen)) && MotionDesk.Services.AppSettings.Peek().AutoMuteWhenOtherAudio && WallpaperSettings.Load().AudioEnabled)
                         want = (_otherAudio ??= new MotionDesk.Services.OtherAudioDetector()).IsOtherAppPlaying();
                     if (want == AutoMuted) return;
                     AutoMuted = want;
@@ -1122,7 +1287,7 @@ namespace MotionDesk.Widgets
                 if (!Active) return;
                 ApplyHeavyPause();
                 // per monitor: a fullscreen app on one screen does not pause the wallpaper of the others (lock/RDP/battery saver pause all)
-                foreach (var w in _windows) _ = w.SetPausedAsync(AppActivity.IsPausedFor(w.TargetScreen));
+                foreach (var w in _windows) _ = w.SetPausedAsync(AppActivity.IsPausedFor(w.TargetScreen) || UserPaused);
             };
 
             // Debounce: το DisplaySettingsChanged στέλνεται σε ριπές (πολλά events για μία αλλαγή
@@ -1255,7 +1420,7 @@ namespace MotionDesk.Widgets
                     if (!w.IsAttached) continue;
                     if (!w.Visible) w.Show();
                     w.EnsureBehindIcons();      // BringToFront() here put the wallpaper window ABOVE the desktop icons (they "disappeared")
-                    _ = w.SetPausedAsync(AppActivity.IsPausedFor(w.TargetScreen));
+                    _ = w.SetPausedAsync(AppActivity.IsPausedFor(w.TargetScreen) || UserPaused);
                 }
             }
             EnsureFullscreenWatcher();
@@ -1266,17 +1431,27 @@ namespace MotionDesk.Widgets
         }
 
         // Starts / stops the "overlay-only" state (see _overlayOnly). Called at startup, after Disable(), and whenever the overlay settings change.
+        internal Microsoft.Web.WebView2.Core.CoreWebView2? GetMusicRenderer(string deviceName) =>
+            _windows.FirstOrDefault(w => !w.IsDisposed && w.Visible && w.TargetScreen.DeviceName == deviceName)?.MusicRenderer;
+
+        internal void SetMusicSceneRequested(bool requested)
+        {
+            if (_musicSceneRequested == requested) return;
+            _musicSceneRequested = requested;
+            if (!_enabled) UpdateOverlayOnly();
+        }
+
         public void UpdateOverlayOnly()
         {
             var s = WallpaperSettings.Load();
-            bool want = !_enabled && s.WeatherShowInfo && s.InfoOnAllModes;
+            bool want = !_enabled && (_musicSceneRequested || (s.WeatherShowInfo && s.InfoOnAllModes));
             if (want == _overlayOnly) { if (want) _ = RefreshAllAsync(); return; }
             _overlayOnly = want;
             if (want)
             {
                 foreach (var w in _windows) w.AllowReveal = true;
                 if (_windows.Count == 0) RebuildWindows();
-                else foreach (var w in _windows) { if (w.IsAttached) { if (!w.Visible) w.Show(); w.EnsureBehindIcons(); _ = w.SetPausedAsync(AppActivity.IsPausedFor(w.TargetScreen)); } }
+                else foreach (var w in _windows) { if (w.IsAttached) { if (!w.Visible) w.Show(); w.EnsureBehindIcons(); _ = w.SetPausedAsync(AppActivity.IsPausedFor(w.TargetScreen) || UserPaused); } }
                 EnsureFullscreenWatcher();
                 _ = RefreshAllAsync();
             }
@@ -1289,7 +1464,6 @@ namespace MotionDesk.Widgets
         public void Disable()
         {
             _enabled = false;
-            ApplicationWallpaper.Stop();
             ProcessFreezer.Thaw();
             // ΔΙΟΡΘΩΣΗ "το disable θέλει 2-3 φορές": (1) τα παλιά παράθυρα ενός rebuild που ΑΚΟΜΑ περίμεναν τον αντικαταστάτη τους δεν
             // κρύβονταν ποτέ από εδώ, (2) ένα παράθυρο με attach σε εξέλιξη εμφανιζόταν ΜΟΝΟ ΤΟΥ όταν τελείωνε το attach, αφού είχε γίνει Disable.
@@ -1299,6 +1473,7 @@ namespace MotionDesk.Widgets
             // video/τρέχει canvas σε χαμηλότερο ρυθμό, καταναλώνοντας CPU/GPU για κάτι αόρατο.
             foreach (var w in _windows) { w.HideAndCancelReveal(); _ = w.SetPausedAsync(true); }
             _fullscreenCheckTimer?.Stop();
+            _overlayOnly = false;
             UpdateOverlayOnly();   // the overlay keeps running over the normal Windows wallpaper when it is switched on
             StateChanged?.Invoke();
         }
@@ -1351,17 +1526,36 @@ namespace MotionDesk.Widgets
         public void RefreshAll() => _ = RefreshAllAsync();
         public void RefreshElements() { foreach (var w in _windows) _ = w.RunScriptAsync("window.opsisApplyElements&&window.opsisApplyElements()"); }
         /// <summary>The performance profile of the wallpaper as the page needs it (fps cap, render scale, layers, glow).</summary>
-        internal static object PerfObject()
+        internal Task<object[]> AuditFramesAsync() =>
+            Task.WhenAll(_windows.Where(w => !w.IsDisposed).Select(w => w.AuditFramesAsync()));
+
+        internal static object PerfObject(string? monitorId = null)
         {
             var p = MotionDesk.Services.PerformanceProfile.ForFeature(MotionDesk.Services.PerfFeature.Wallpaper);
-            return new { tier = p.Tier.ToString(), fps = p.WallpaperFps, renderScale = p.RenderScale, layers = p.WaveLayers, glowBlur = p.GlowBlur, glow = p.GlowBlur > 0, shading = p.Shading, targetFps = p.WallpaperFps };
+            // Every monitor gets its own render budget; the JavaScript adaptive
+            // governor lives in that monitor's dedicated WebView2 page.
+            int maxPixels = p.Tier switch
+            {
+                MotionDesk.Services.HardwareTier.Low => 1280 * 720,
+                MotionDesk.Services.HardwareTier.High => 3840 * 2160,
+                _ => 1920 * 1080
+            };
+            bool reduced = MotionDesk.Services.AppSettings.Peek().Glass?.ReducedEffects == true ||
+                !System.Windows.Forms.SystemInformation.UIEffectsEnabled || System.Windows.Forms.SystemInformation.HighContrast;
+            return new { adaptive = PerformanceGovernor.Enabled && !reduced && PerformanceProfile.FeatureOverride(PerfFeature.Wallpaper) == null,
+                monitorId = monitorId ?? "unknown", pixelBudget = maxPixels, tier = p.Tier.ToString(),
+                fps = p.WallpaperFps, renderScale = p.RenderScale, layers = p.WaveLayers, glowBlur = p.GlowBlur,
+                glow = p.GlowBlur > 0, shading = p.Shading, targetFps = p.WallpaperFps, reducedMotion = reduced };
         }
 
         /// <summary>Dynamic scaling: pushes the new profile to the running pages without reloading them.</summary>
         public void PushPerf()
         {
-            string json = JsonSerializer.Serialize(PerfObject());
-            foreach (var w in _windows) _ = w.RunScriptAsync("window.opsisSetPerf&&window.opsisSetPerf(" + json + ")");
+            foreach (var w in _windows.Where(w => !w.IsDisposed))
+            {
+                string json = JsonSerializer.Serialize(PerfObject(w.TargetScreen.DeviceName));
+                _ = w.RunScriptAsync("window.opsisSetPerf&&window.opsisSetPerf(" + json + ")");
+            }
         }
         public void PushProperties() { foreach (var w in _windows) _ = w.PushPropertiesAsync(); }
         public Task RefreshAllAsync() => Task.WhenAll(_windows.Select(w => w.RefreshAsync()));
@@ -1396,9 +1590,18 @@ namespace MotionDesk.Widgets
         public void SetMode(string mode)
         {
             var settings = WallpaperSettings.Load();
-            settings.Mode = mode;
+            settings.Mode = WallpaperSettings.NormalizeMode(mode);
+            UiResourceAudit.Mark("wallpaper-mode", settings.Mode);
             settings.Save();
             Enable();
+            _ = RefreshAllAsync();
+        }
+
+        public void SetAthensPhase(string phase)
+        {
+            var settings = WallpaperSettings.Load();
+            settings.AthensPhase = phase;
+            settings.Save();
             _ = RefreshAllAsync();
         }
 
@@ -1522,7 +1725,7 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Count);
             try
             {
                 var settings = WallpaperSettings.Load();
-                if (!settings.ScheduleEnabled) { _lastScheduleRule = -2; return; }
+                if (!settings.ScheduleEnabled || VirtualWorkspaces.OverridesSchedule) { _lastScheduleRule = -2; return; }
                 var now = DateTime.Now; int minutes = now.Hour * 60 + now.Minute;
                 int idx = settings.Schedule.FindIndex(r => r.Enabled && r.Contains(minutes));
                 if (idx == _lastScheduleRule) return;
@@ -1538,12 +1741,17 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Count);
         }
 
         // ---- "Weather" mode settings (each change refreshes the running wallpaper)
-        public void SetWeatherLocation(string city, double lat, double lon, string source = "", string detail = "")
+        /// <summary>Raised after the ONE shared weather place changed (the weather widget follows it).</summary>
+        public static event Action? WeatherLocationChanged;
+
+        public void SetWeatherLocation(string city, double lat, double lon, string source = "", string detail = "", bool followLocation = false)
         {
             var settings = WallpaperSettings.Load();
             settings.WeatherCity = city; settings.WeatherLat = lat; settings.WeatherLon = lon;
             settings.WeatherPlaceSource = source; settings.WeatherPlaceDetail = detail;
+            if (followLocation) { settings.WeatherLandmarkId = LandmarkCatalog.Auto; settings.WeatherLandmarks = true; }
             settings.Save();
+            try { WeatherLocationChanged?.Invoke(); } catch (Exception) { }
             _ = RefreshAllAsync();
         }
 
@@ -1608,10 +1816,65 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Count);
             _ = RefreshAllAsync();
         }
 
+        public void SetRainIntensity(bool glass, int percent)
+        {
+            var settings = WallpaperSettings.Load();
+            percent = Math.Clamp(percent, 0, 200);
+            if (glass)
+            {
+                if (settings.RainGlassIntensity == percent) return;
+                settings.RainGlassIntensity = percent;
+            }
+            else
+            {
+                if (settings.RainLandscapeIntensity == percent) return;
+                settings.RainLandscapeIntensity = percent;
+            }
+            settings.Save();
+            _ = RefreshAllAsync();
+        }
+
+        public void SetWeatherSkylinePreview(bool enabled)
+        {
+            var settings = WallpaperSettings.Load();
+            if (settings.WeatherSkylinePreview == enabled) return;
+            settings.WeatherSkylinePreview = enabled;
+            settings.Save();
+            _ = RefreshAllAsync();
+        }
+
+        public void SetWeatherPhotoFocus(int percentage)
+        {
+            var settings = WallpaperSettings.Load();
+            percentage = Math.Clamp(percentage, 0, 100);
+            if (settings.WeatherPhotoFocusX == percentage) return;
+            settings.WeatherPhotoFocusX = percentage;
+            settings.Save();
+            _ = RefreshAllAsync();
+        }
+
         public void SetWeatherGlass(bool enabled)
         {
             var settings = WallpaperSettings.Load();
             settings.WeatherGlass = enabled;
+            settings.Save();
+            _ = RefreshAllAsync();
+        }
+
+        /// <summary>The user's own choice of the landmark on the horizon: "Auto" (by location), "Off" or the id of any landmark, wherever the computer is.</summary>
+        public void SetWeatherLandmark(string id)
+        {
+            if (!LandmarkCatalog.IsValid(id)) id = LandmarkCatalog.Auto;
+            var settings = WallpaperSettings.Load();
+            settings.WeatherLandmarkId = id; settings.WeatherLandmarks = id != LandmarkCatalog.Off;
+            settings.Save();
+            _ = RefreshAllAsync();
+        }
+
+        public void SetWeatherLandmarks(bool enabled)
+        {
+            var settings = WallpaperSettings.Load();
+            settings.WeatherLandmarks = enabled;
             settings.Save();
             _ = RefreshAllAsync();
         }
@@ -1647,6 +1910,16 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Count);
             RefreshAllDebounced();
         }
 
+        /// <summary>Drag and drop order of the video library (plan 2.1.9). The current video stays the current one; playback is not restarted.</summary>
+        public void MoveVideo(int from, int insertBefore)
+        {
+            var settings = WallpaperSettings.Load();
+            var current = settings.CurrentPlaylistFile();
+            if (!PlaylistOrder.Move(settings.VideoPaths, from, insertBefore)) return;
+            settings.KeepCurrentVideo(current);
+            settings.Save();
+        }
+
         public void RemoveVideo(string path)
         {
             var settings = WallpaperSettings.Load();
@@ -1669,6 +1942,60 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Count);
             settings.ShuffleHistory.Clear();
             settings.Save();
             _ = RefreshAllAsync();
+        }
+
+        /// <summary>2.6.0: the user pressed Pause in the video library (separate from the automatic pauses of AppActivity: fullscreen, lock, battery ...).</summary>
+        public static bool UserPaused { get; private set; }
+
+        public void TogglePause()
+        {
+            UserPaused = !UserPaused;
+            foreach (var w in _windows) _ = w.SetPausedAsync(AppActivity.IsPausedFor(w.TargetScreen) || UserPaused);
+            StateChanged?.Invoke();
+        }
+
+        public void PlayOrPauseWallpaper()
+        {
+            if (IsEnabled) TogglePause();
+            else { UserPaused = false; Enable(); }
+        }
+
+        public void StopWallpaper()
+        {
+            UserPaused = false;
+            if (IsEnabled) Disable();
+        }
+
+        internal static IReadOnlyList<string> AnimatedModes { get; } =
+            [.. StudioWallpaperCatalog.Scenes.Select(scene => scene.Mode), "Weather", WallpaperSettings.AthensMode, "Waves", "Particles"];
+
+        public void StepWallpaper(bool forward)
+        {
+            var settings = WallpaperSettings.Load();
+            if (settings.Mode == "Video" && settings.PlayableVideos().Count > 0)
+            {
+                if (!IsEnabled) PlayOrPauseWallpaper();
+                StepVideo(forward);
+                return;
+            }
+
+            int current = -1;
+            for (int i = 0; i < AnimatedModes.Count; i++)
+                if (AnimatedModes[i] == settings.Mode) { current = i; break; }
+            int next = current < 0 ? (forward ? 0 : AnimatedModes.Count - 1)
+                : (current + (forward ? 1 : -1) + AnimatedModes.Count) % AnimatedModes.Count;
+            SetMode(AnimatedModes[next]);
+        }
+
+        /// <summary>Next / previous video now: the shared playlist moves one step and every screen asks for the new current video (the serial makes AdvanceVideo serve it without advancing again).</summary>
+        public void StepVideo(bool forward)
+        {
+            var s = WallpaperSettings.Load();
+            if (forward) s.AdvancePlaylist(); else s.PreviousInPlaylist();
+            s.AdvanceSerial++;
+            s.LastRotateUtc = DateTime.UtcNow;
+            s.Save();
+            foreach (var w in _windows) _ = w.RunScriptAsync("if (typeof advanceVideo === 'function') advanceVideo();");
         }
 
         public void ClearVideo()

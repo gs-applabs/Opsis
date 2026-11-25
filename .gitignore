@@ -1,10 +1,14 @@
-bin/
-obj/
+# Review workspace outputs. No product files are removed from the R10 snapshot.
+**/bin/
+**/obj/
+publish/
+Output/
+qa-results/
+_compat/
 .vs/
+.vscode/
+node_modules/
 *.user
 *.suo
-Output/
-.claude/
-
-
-MotionDeskStudio_COMPLETE_ALL_FEATURES.zip
+*.userosscache
+*.sln.docstates

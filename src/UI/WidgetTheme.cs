@@ -72,13 +72,14 @@ namespace MotionDesk.UI
         // widget, άρα ήταν άσκοπο ρίσκο οπτικής ασυνέπειας χωρίς κανένα πραγματικό όφελος. Οι 4
         // κανονικές λειτουργίες θέματος μένουν ΑΚΡΙΒΩΣ όπως πριν (αδιαφανές Surface) - μόνο η ρητή
         // "Πλήρης διαφάνεια" αλλάζει συμπεριφορά.
-        public static bool IsFullyTransparent => AppSettings.Load().WidgetsThemeMode == "Transparent";
+        public static bool IsFullyTransparent => AppSettings.Peek().WidgetsThemeMode == "Transparent";
         // Colour-key (pure see-through) only without a tint; with a tint the widget is a translucent coloured surface (same look as the DeskContainers).
-        public static bool IsColorKey => IsFullyTransparent && AppSettings.Load().WidgetsTintPercent <= 0;
-        public static Color TintColor => NamedColor(AppSettings.Load().WidgetsTintColor);
-        public static int TintAlpha => (int)Math.Round(255 * Math.Clamp(AppSettings.Load().WidgetsTintPercent, 0, 100) / 100.0);
+        public static bool IsColorKey => IsFullyTransparent && AppSettings.Peek().WidgetsTintPercent <= 0;
+        public static Color TintColor => AppSettings.Peek().WidgetsTintColor == "Material"
+            ? DesktopMaterials.Get(DesktopSurface.Widgets).Color : NamedColor(AppSettings.Peek().WidgetsTintColor);
+        public static int TintAlpha => (int)Math.Round(255 * Math.Clamp(AppSettings.Peek().WidgetsTintPercent, 0, 100) / 100.0);
 
-        public static readonly string[] ColorNames = { "Black", "Gray", "White", "Beige", "Green", "Purple", "Fuchsia", "Yellow", "Orange", "Red", "Blue", "Bismark", "Teal" };
+        public static readonly string[] ColorNames = { "Material", "Black", "Gray", "White", "Beige", "Green", "Purple", "Fuchsia", "Yellow", "Orange", "Red", "Blue", "Bismark", "Teal" };
         public static Color NamedColor(string name) => name switch
         {
             "Red" => Color.FromArgb(0x9E, 0x05, 0x2E), "Green" => Color.FromArgb(0x06, 0x49, 0x1A), "Teal" => Color.FromArgb(0x00, 0x80, 0x80),

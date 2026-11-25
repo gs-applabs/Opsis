@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -10,14 +10,635 @@ using MotionDesk.Widgets;
 
 namespace MotionDesk.Services
 {
-    // `Opsis.exe --diag` : headless διαγνωστικό για "το wallpaper / ο καιρός δεν φαίνεται". Γράφει αναφορά στο
-    // %AppData%\Opsis\diagnostics.txt και την τυπώνει στην κονσόλα. Δεν αγγίζει ρυθμίσεις.
-    //   - έκδοση Windows, WebView2 Runtime, οθόνες, hardware tier
-    //   - δομή Progman/WorkerW/SHELLDLL_DefView (το σημείο που άλλαξε στα Windows 11 24H2/25H2+)
-    //   - ΠΡΑΓΜΑΤΙΚΟ τεστ attach: ένα magenta παράθυρο μπαίνει πίσω από τα εικονίδια και διαβάζεται pixel της οθόνης
-    //   - τεστ παρόχων καιρού (Open-Meteo, wttr.in)
+    // `Opsis.exe --diag` : headless Ξ΄ΞΉΞ±Ξ³Ξ½Ο‰ΟƒΟ„ΞΉΞΊΟ Ξ³ΞΉΞ± "Ο„ΞΏ wallpaper / ΞΏ ΞΊΞ±ΞΉΟΟΟ‚ Ξ΄ΞµΞ½ Ο†Ξ±Ξ―Ξ½ΞµΟ„Ξ±ΞΉ". Ξ“ΟΞ¬Ο†ΞµΞΉ Ξ±Ξ½Ξ±Ο†ΞΏΟΞ¬ ΟƒΟ„ΞΏ
+    // %AppData%\Opsis\diagnostics.txt ΞΊΞ±ΞΉ Ο„Ξ·Ξ½ Ο„Ο…Ο€ΟΞ½ΞµΞΉ ΟƒΟ„Ξ·Ξ½ ΞΊΞΏΞ½ΟƒΟΞ»Ξ±. Ξ”ΞµΞ½ Ξ±Ξ³Ξ³Ξ―Ξ¶ΞµΞΉ ΟΟ…ΞΈΞΌΞ―ΟƒΞµΞΉΟ‚.
+    //   - Ξ­ΞΊΞ΄ΞΏΟƒΞ· Windows, WebView2 Runtime, ΞΏΞΈΟΞ½ΞµΟ‚, hardware tier
+    //   - Ξ΄ΞΏΞΌΞ® Progman/WorkerW/SHELLDLL_DefView (Ο„ΞΏ ΟƒΞ·ΞΌΞµΞ―ΞΏ Ο€ΞΏΟ… Ξ¬Ξ»Ξ»Ξ±ΞΎΞµ ΟƒΟ„Ξ± Windows 11 24H2/25H2+)
+    //   - Ξ Ξ΅Ξ‘Ξ“ΞΞ‘Ξ¤Ξ™ΞΞ Ο„ΞµΟƒΟ„ attach: Ξ­Ξ½Ξ± magenta Ο€Ξ±ΟΞ¬ΞΈΟ…ΟΞΏ ΞΌΟ€Ξ±Ξ―Ξ½ΞµΞΉ Ο€Ξ―ΟƒΟ‰ Ξ±Ο€Ο Ο„Ξ± ΞµΞΉΞΊΞΏΞ½Ξ―Ξ΄ΞΉΞ± ΞΊΞ±ΞΉ Ξ΄ΞΉΞ±Ξ²Ξ¬Ξ¶ΞµΟ„Ξ±ΞΉ pixel Ο„Ξ·Ο‚ ΞΏΞΈΟΞ½Ξ·Ο‚
+    //   - Ο„ΞµΟƒΟ„ Ο€Ξ±ΟΟΟ‡Ο‰Ξ½ ΞΊΞ±ΞΉΟΞΏΟ (Open-Meteo, wttr.in)
     public static class DesktopDiagnostics
     {
+        /// <summary>
+        /// GPU glass on the DeskStrip over a SYNTHETIC live background (a moving GDI+ picture in my own window, so nothing from the desktop of the user is captured or shown):
+        /// enables UseGpuGlass in the (isolated) settings, shows the strip at the left edge over the stand-in, checks that the glass pane exists and saves a screenshot.
+        /// </summary>
+        public static int TestDeskStripGlass(string folder)
+        {
+            Directory.CreateDirectory(folder);
+            var report = new System.Collections.Generic.List<string>();
+            void Pump(int ms) { var end = DateTime.UtcNow.AddMilliseconds(ms); while (DateTime.UtcNow < end) { Application.DoEvents(); System.Threading.Thread.Sleep(10); } }
+            var settings = AppSettings.Load(); settings.UseGpuGlass = true; settings.Save();
+            var t0 = Stopwatch.StartNew();
+            using var stage = new StageForm { FormBorderStyle = FormBorderStyle.None, StartPosition = FormStartPosition.Manual, Bounds = new Rectangle(0, 0, 1100, 800), TopMost = true, ShowInTaskbar = false, BackColor = Color.FromArgb(5, 7, 13) };
+            stage.Paint += (_, e) =>
+            {
+                var g = e.Graphics; g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias; var t = t0.Elapsed.TotalSeconds;
+                for (int layer = 0; layer < 3; layer++)
+                {
+                    var pts = new System.Collections.Generic.List<PointF>();
+                    for (int x = 0; x <= stage.Width; x += 8) pts.Add(new PointF(x, (float)(stage.Height * (0.45 + layer * 0.13) - 40 * Math.Sin(x * 0.004 + t * (0.8 + layer * 0.3) + layer))));
+                    var poly = new System.Collections.Generic.List<PointF>(pts) { new PointF(stage.Width, stage.Height), new PointF(0, stage.Height) };
+                    using var fill = new SolidBrush(Color.FromArgb(70, 30 + layer * 25, 80 + layer * 30, 160 + layer * 25)); g.FillPolygon(fill, poly.ToArray());
+                    using var pen = new Pen(Color.FromArgb(230, 0, 230, 255), 2.2f); g.DrawLines(pen, pts.ToArray());
+                }
+            };
+            var anim = new System.Windows.Forms.Timer { Interval = 33 }; anim.Tick += (_, _) => stage.Invalidate(); anim.Start();
+            stage.Show(); Pump(800);
+            try
+            {
+                var engine = DeskStripHostEngine.Instance;
+                string sys = Environment.GetFolderPath(Environment.SpecialFolder.System);
+                engine.UpdateSettings(s => { s.Paths = new System.Collections.Generic.List<string> { Path.Combine(sys, "notepad.exe"), Path.Combine(sys, "mspaint.exe"), Path.Combine(sys, "calc.exe") }; s.Position = DockPosition.Left; s.IconSize = 48; s.ShowRunning = false; s.Magnify = true; });
+                engine.Enable();
+                Pump(4000);
+                var m = GlassService.Manager;
+                report.Add("GlassService.Manager ready: " + (m != null));
+                var win = Application.OpenForms.OfType<DeskStripWindow>().FirstOrDefault();
+                report.Add("DeskStripWindow present: " + (win != null) + (win != null ? $" bounds={win.Bounds}" : ""));
+                if (m != null && win != null)
+                {
+                    var st = m.Stats;
+                    report.Add($"glass stats after 4 s live: panes={st.Panes} captures={st.Captures} renders={st.Renders} errors='{st.LastError}'");
+                    GlassService.Hold = true;
+                    m.SetConditions(new Opsis.Glass.GlassConditions { Frozen = true });
+                    Pump(300);
+                    m.SetVisibleToCaptureTools(true); Pump(500);
+                    var r = Rectangle.Intersect(new Rectangle(0, 0, 1100, 800), Rectangle.Inflate(win.Bounds, 180, 180));
+                    using var bmp = new Bitmap(r.Width, r.Height);
+                    using (var g = Graphics.FromImage(bmp)) g.CopyFromScreen(r.Location, Point.Empty, r.Size);
+                    bmp.Save(Path.Combine(folder, "deskstrip-gpu-glass.png"), System.Drawing.Imaging.ImageFormat.Png);
+                    m.SetVisibleToCaptureTools(false); GlassService.Hold = false;
+                    report.Add("screenshot deskstrip-gpu-glass.png saved (stand-in background only)");
+                }
+                engine.Disable(); Pump(500);
+                report.Add("after Disable: panes=" + (GlassService.Manager?.Stats.Panes.ToString() ?? "n/a"));
+            }
+            catch (Exception ex) { report.Add("EXCEPTION: " + ex); }
+            finally { anim.Stop(); GlassService.Shutdown(); }
+            File.WriteAllLines(Path.Combine(folder, "deskstrip-glass.txt"), report);
+            return report.Any(l => l.StartsWith("EXCEPTION")) ? 1 : 0;
+        }
+
+        /// <summary>
+        /// GPU glass behind a see-through WIDGET (Transparent mode, no tint = colour key) over a synthetic moving background in my own window (nothing from the desktop of the user is captured).
+        /// Settings are changed in the (isolated) data folder only. Saves a screenshot with and without the pane and a report.
+        /// </summary>
+        public static int TestWidgetGlass(string folder)
+        {
+            Directory.CreateDirectory(folder);
+            var report = new System.Collections.Generic.List<string>();
+            void Pump(int ms) { var end = DateTime.UtcNow.AddMilliseconds(ms); while (DateTime.UtcNow < end) { Application.DoEvents(); System.Threading.Thread.Sleep(10); } }
+            var settings = AppSettings.Load(); settings.UseGpuGlass = true; settings.WidgetsThemeMode = "Transparent"; settings.WidgetsTintPercent = 0; settings.Save();
+            var t0 = Stopwatch.StartNew();
+            using var stage = new StageForm { FormBorderStyle = FormBorderStyle.None, StartPosition = FormStartPosition.Manual, Bounds = new Rectangle(0, 0, 900, 600), TopMost = true, ShowInTaskbar = false, BackColor = Color.FromArgb(5, 7, 13) };
+            stage.Paint += (_, e) =>
+            {
+                var g = e.Graphics; g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias; var t = t0.Elapsed.TotalSeconds;
+                for (int layer = 0; layer < 3; layer++)
+                {
+                    var pts = new System.Collections.Generic.List<PointF>();
+                    for (int x = 0; x <= stage.Width; x += 8) pts.Add(new PointF(x, (float)(stage.Height * (0.45 + layer * 0.13) - 40 * Math.Sin(x * 0.004 + t * (0.8 + layer * 0.3) + layer))));
+                    var poly = new System.Collections.Generic.List<PointF>(pts) { new PointF(stage.Width, stage.Height), new PointF(0, stage.Height) };
+                    using var fill = new SolidBrush(Color.FromArgb(70, 30 + layer * 25, 80 + layer * 30, 160 + layer * 25)); g.FillPolygon(fill, poly.ToArray());
+                    using var pen = new Pen(Color.FromArgb(230, 0, 230, 255), 2.2f); g.DrawLines(pen, pts.ToArray());
+                }
+            };
+            var anim = new System.Windows.Forms.Timer { Interval = 33 }; anim.Tick += (_, _) => stage.Invalidate(); anim.Start();
+            stage.Show(); Pump(800);
+            try
+            {
+                var w = WidgetHostEngine.Instance.SpawnWidget("Clock", 260, 250, 300, 200);
+                w.TopMost = true; w.BringToFront();
+                Pump(4000);
+                var m = GlassService.Manager;
+                report.Add("GlassService.Manager ready: " + (m != null));
+                report.Add($"widget bounds={w.Bounds} visible={w.Visible} transparencyKey={w.TransparencyKey}");
+                if (m != null)
+                {
+                    var st = m.Stats;
+                    report.Add($"glass stats after 4 s live: panes={st.Panes} captures={st.Captures} renders={st.Renders} errors='{st.LastError}'");
+                    GlassService.Hold = true;
+                    m.SetConditions(new Opsis.Glass.GlassConditions { Frozen = true });
+                    Pump(300);
+                    m.SetVisibleToCaptureTools(true); Pump(500);
+                    var r = Rectangle.Intersect(new Rectangle(0, 0, 900, 600), Rectangle.Inflate(w.Bounds, 120, 120));
+                    using var bmp = new Bitmap(r.Width, r.Height);
+                    using (var g = Graphics.FromImage(bmp)) g.CopyFromScreen(r.Location, Point.Empty, r.Size);
+                    bmp.Save(Path.Combine(folder, "widget-gpu-glass.png"), System.Drawing.Imaging.ImageFormat.Png);
+                    m.SetVisibleToCaptureTools(false); GlassService.Hold = false;
+                    report.Add("screenshot widget-gpu-glass.png saved (stand-in background only)");
+                }
+                w.Close(); Pump(500);
+                report.Add("after close: panes=" + (GlassService.Manager?.Stats.Panes.ToString() ?? "n/a"));
+            }
+            catch (Exception ex) { report.Add("EXCEPTION: " + ex); }
+            finally { anim.Stop(); GlassService.Shutdown(); }
+            File.WriteAllLines(Path.Combine(folder, "widget-glass.txt"), report);
+            return report.Any(l => l.StartsWith("EXCEPTION")) ? 1 : 0;
+        }
+
+        /// <summary>
+        /// A real CONTAINER window (layered host + glass pane, own title-bar colour / height / font) over a synthetic moving background in my own window. Saves screenshots (glass on,
+        /// scrolled, rolled up) and checks that the title bar really has its own colour. Nothing from the desktop of the user is captured.
+        /// </summary>
+        public static int TestContainerWindow(string folder)
+        {
+            Directory.CreateDirectory(folder);
+            var report = new System.Collections.Generic.List<string>();
+            void Pump(int ms) { var end = DateTime.UtcNow.AddMilliseconds(ms); while (DateTime.UtcNow < end) { Application.DoEvents(); System.Threading.Thread.Sleep(10); } }
+            var settings = AppSettings.Load(); settings.UseGpuGlass = true; settings.Save();
+            var t0 = Stopwatch.StartNew();
+            using var stage = new StageForm { FormBorderStyle = FormBorderStyle.None, StartPosition = FormStartPosition.Manual, Bounds = new Rectangle(0, 0, 1000, 700), TopMost = true, ShowInTaskbar = false, BackColor = Color.FromArgb(5, 7, 13) };
+            stage.Paint += (_, e) =>
+            {
+                var g = e.Graphics; g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias; var t = t0.Elapsed.TotalSeconds;
+                for (int layer = 0; layer < 3; layer++)
+                {
+                    var pts = new System.Collections.Generic.List<PointF>();
+                    for (int x = 0; x <= stage.Width; x += 8) pts.Add(new PointF(x, (float)(stage.Height * (0.45 + layer * 0.13) - 40 * Math.Sin(x * 0.004 + t * (0.8 + layer * 0.3) + layer))));
+                    var poly = new System.Collections.Generic.List<PointF>(pts) { new PointF(stage.Width, stage.Height), new PointF(0, stage.Height) };
+                    using var fill = new SolidBrush(Color.FromArgb(70, 30 + layer * 25, 80 + layer * 30, 160 + layer * 25)); g.FillPolygon(fill, poly.ToArray());
+                    using var pen = new Pen(Color.FromArgb(230, 0, 230, 255), 2.2f); g.DrawLines(pen, pts.ToArray());
+                }
+            };
+            var anim = new System.Windows.Forms.Timer { Interval = 33 }; anim.Tick += (_, _) => stage.Invalidate(); anim.Start();
+            stage.Show(); Pump(800);
+            stage.TopMost = false; stage.TopMost = true; stage.BringToFront(); Pump(300);     // make sure my stand-in really covers the area (so nothing of the desktop is captured)
+            MotionDesk.Containers.ContainerWindow? win = null;
+            try
+            {
+                string sys = Environment.GetFolderPath(Environment.SpecialFolder.System), win32 = Environment.GetFolderPath(Environment.SpecialFolder.Windows);
+                var model = new Opsis.Containers.Container { Title = "Tools", Locked = false };
+                model.TitleBar = new Opsis.Containers.TitleBarStyle { Color = "#C2561A", Opacity = 92, Height = 44, FontSize = 13, Bold = true };
+                foreach (var f in new[] { "notepad.exe", "mspaint.exe", "calc.exe", "charmap.exe", "cmd.exe", "mstsc.exe", "taskmgr.exe", "regedit.exe", "control.exe", "msinfo32.exe", "dxdiag.exe", "magnify.exe", "osk.exe", "perfmon.exe" })
+                {
+                    var p = System.IO.File.Exists(Path.Combine(sys, f)) ? Path.Combine(sys, f) : Path.Combine(win32, f);
+                    model.Items.Add(new Opsis.Containers.ContainerItem { Path = p, DisplayName = Path.GetFileNameWithoutExtension(f) });
+                }
+                win = new MotionDesk.Containers.ContainerWindow(model) { Bounds = new Rectangle(300, 200, 420, 330), TopMost = true };
+                win.Show(); Pump(3500);
+                report.Add($"container window: bounds={win.Bounds} glassOn={win.GlassOn} items={model.Items.Count}");
+                var mgr = GlassService.Manager;
+                if (mgr != null) report.Add($"glass: panes={mgr.Stats.Panes} captures={mgr.Stats.Captures} renders={mgr.Stats.Renders} errors='{mgr.Stats.LastError}'");
+
+                // the title bar has its OWN colour: render to a bitmap and compare the title bar pixel with a frame pixel
+                using (var bmp = new Bitmap(win.Width, win.Height, System.Drawing.Imaging.PixelFormat.Format32bppPArgb))
+                {
+                    using (var g = Graphics.FromImage(bmp)) win.RenderTo(g);
+                    var bar = bmp.GetPixel(win.Width / 4, 8); var body = bmp.GetPixel(2, win.Height - 40);
+                    report.Add($"title bar pixel={bar} (expected orange, alpha~{92 * 255 / 100}); frame pixel={body}; own colour: {(bar.R > 150 && bar.B < 90 && bar.A > 200)}");
+                }
+
+                void Shot(string name)
+                {
+                    GlassService.Hold = true; mgr?.SetConditions(new Opsis.Glass.GlassConditions { Frozen = true }); Pump(300);
+                    mgr?.SetVisibleToCaptureTools(true); Pump(500);
+                    var r = Rectangle.Intersect(new Rectangle(0, 0, 1000, 700), Rectangle.Inflate(win!.Bounds, 60, 60));
+                    using var bmp = new Bitmap(r.Width, r.Height);
+                    using (var g = Graphics.FromImage(bmp)) g.CopyFromScreen(r.Location, Point.Empty, r.Size);
+                    // privacy guard: the corner of the shot must be the colour of my stand-in (5,7,13); anything else means something from the real desktop is in the picture -> do not save it
+                    var corner = bmp.GetPixel(2, 2);
+                    if (Math.Abs(corner.R - 5) + Math.Abs(corner.G - 7) + Math.Abs(corner.B - 13) > 12) report.Add("screenshot " + name + " NOT saved: the stand-in does not cover the area (corner=" + corner + ")");
+                    else { bmp.Save(Path.Combine(folder, name + ".png"), System.Drawing.Imaging.ImageFormat.Png); report.Add("screenshot " + name + ".png"); }
+                    mgr?.SetVisibleToCaptureTools(false); GlassService.Hold = false; GlassService.Refresh(); Pump(200);
+                }
+                Shot("container-glass");
+                win.ScrollBy(260); Pump(400); Shot("container-scrolled");
+                win.ToggleRollUp(); Pump(600); report.Add($"rolled up: height={win.Height} (title bar 44)"); Shot("container-rolled");
+                win.ToggleRollUp(); Pump(400); report.Add($"unrolled: height={win.Height}");
+                // phase 3: drop adds references (no duplicates), reorder moves, the files themselves are never touched
+                int before = model.Items.Count; var fired = 0; win.Changed += _ => fired++;
+                var extra = Path.Combine(win32, "winhlp32.exe"); var dupe = model.Items[0].Path;
+                int added = win.AcceptDrop(new[] { extra, dupe, "" }, new Point(60, 120));
+                report.Add($"drop: added={added} (expected 1 or 0 if file missing, duplicate skipped) items {before}->{model.Items.Count} changedEvents={fired}; fileUntouched={File.Exists(dupe)}");
+                var firstBefore = model.Items[0].Path; win.MoveItem(0, new Point(300, 300));
+                // phase 7/8: keyboard, accessibility tree, high contrast
+                win.HandleKey(Keys.Right); win.HandleKey(Keys.Right); win.HandleKey(Keys.Down);
+                report.Add($"keyboard: selected={win.Selected} after Right,Right,Down (expected >= 2)");
+                var acc = win.AccessibilityObject;
+                report.Add($"accessibility: name='{acc.Name}' role={acc.Role} children={acc.GetChildCount()} (items={model.Items.Count}) child0='{acc.GetChild(0)?.Name}' action='{acc.GetChild(0)?.DefaultAction}'");
+                using (var hcBmp = new Bitmap(win.Width, win.Height, System.Drawing.Imaging.PixelFormat.Format32bppPArgb))
+                {
+                    using (var g = Graphics.FromImage(hcBmp)) win.RenderTo(g, true);
+                    var px = hcBmp.GetPixel(win.Width / 4, 8); var hl = SystemColors.Highlight;
+                    report.Add($"high contrast: title bar pixel={px} equals system Highlight={px.R == hl.R && px.G == hl.G && px.B == hl.B && px.A == 255}");
+                }
+                // tabs: enabling tabs moves the icons into the first tab, a new tab is empty, removing a tab moves its icons to the neighbour; nothing is lost
+                int allBefore = win.Items.Count;
+                win.AddTab("Second"); bool tabsOk = model.Tabs.Count == 2 && win.Items.Count == 0 && model.Tabs[0].Items.Count == allBefore;
+                win.SelectTab(0); tabsOk &= win.Items.Count == allBefore;
+                win.RemoveTab(1); tabsOk &= model.Tabs.Count == 1 && win.Items.Count == allBefore;
+                win.RemoveTab(0); tabsOk &= !model.TabsEnabled && model.Items.Count == allBefore;
+                report.Add($"tabs: add / switch / remove keep every icon: {tabsOk} (items {allBefore})");
+                // portal: a live listing of a folder (never stored in the data); note: text only
+                var portalModel = new Opsis.Containers.Container { Title = "Portal", Kind = Opsis.Containers.ContainerKind.Portal, Source = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "System32", "drivers", "etc") };
+                using (var pw = new MotionDesk.Containers.ContainerWindow(portalModel) { Bounds = new Rectangle(760, 200, 300, 220) })
+                {
+                    pw.Show(); Pump(600); pw.RefreshPortal();
+                    report.Add($"portal: lists the folder live: {pw.Items.Count} entries, stored items in the data: {portalModel.Items.Count}, drop refused: {pw.AcceptDrop(new[] { Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "notepad.exe") }, new Point(50, 80)) == 0}");
+                }
+                var noteModel = new Opsis.Containers.Container { Title = "Note", Kind = Opsis.Containers.ContainerKind.Note, Source = "hello" };
+                using (var nw = new MotionDesk.Containers.ContainerWindow(noteModel) { Bounds = new Rectangle(1080, 200, 240, 160) }) { nw.Show(); Pump(300); report.Add($"note: shows its text, no icons: {nw.Items.Count == 0}"); }
+                var swIcons = Stopwatch.StartNew(); win.WaitIcons(5000);
+                report.Add($"icons: background extraction finished in {swIcons.ElapsedMilliseconds} ms (UI thread kept pumping)");
+                int cnt = model.Items.Count; win.RemoveItem(0);
+                report.Add($"remove: reference removed {cnt}->{model.Items.Count}; file on disk still there={File.Exists(dupe)}");
+                report.Add($"reorder: first item changed={(model.Items[0].Path != firstBefore)} count={model.Items.Count}");
+            }
+            catch (Exception ex) { report.Add("EXCEPTION: " + ex); }
+            finally { win?.Close(); anim.Stop(); GlassService.Shutdown(); }
+            File.WriteAllLines(Path.Combine(folder, "container-window.txt"), report);
+            return report.Any(l => l.StartsWith("EXCEPTION")) ? 1 : 0;
+        }
+
+        /// <summary>Phase 5/9: the host keeps real container windows in step with the stored data driven only through the named pipe. No screenshots, nothing captured.</summary>
+        public static int TestContainerHost(string folder)
+        {
+            Directory.CreateDirectory(folder);
+            var report = new System.Collections.Generic.List<string>();
+            void Pump(int ms) { var end = DateTime.UtcNow.AddMilliseconds(ms); while (DateTime.UtcNow < end) { Application.DoEvents(); System.Threading.Thread.Sleep(10); } }
+            var file = Path.Combine(folder, "containers-host-test.json"); if (File.Exists(file)) File.Delete(file);
+            var pipe = "opsis-containers-test-" + Environment.ProcessId;
+            try
+            {
+                using var host = new MotionDesk.Containers.ContainerHost(new Opsis.Containers.ContainersStore(file), pipe);
+                var r = Opsis.Containers.PipeClient.Send(pipe, "create", new System.Text.Json.Nodes.JsonObject { ["title"] = "Host test", ["x"] = 200, ["y"] = 200, ["width"] = 300, ["height"] = 220 });
+                var id = r["data"]?["id"]?.ToString() ?? ""; Pump(600);
+                report.Add($"create via pipe -> windows={host.Windows.Count} (expected 1)");
+                Opsis.Containers.PipeClient.Send(pipe, "set-title-style", new System.Text.Json.Nodes.JsonObject { ["id"] = id, ["color"] = "#336699", ["height"] = 40 }); Pump(300);
+                Opsis.Containers.PipeClient.Send(pipe, "hide", new System.Text.Json.Nodes.JsonObject { ["id"] = id }); Pump(600);
+                report.Add($"hide via pipe -> windows={host.Windows.Count} (expected 0)");
+                Opsis.Containers.PipeClient.Send(pipe, "show", new System.Text.Json.Nodes.JsonObject { ["id"] = id }); Pump(600);
+                report.Add($"show via pipe -> windows={host.Windows.Count} (expected 1)");
+                var w = host.Windows.First();
+                // live settings: every change shows in the OPEN window (same object, no recreation)
+                void Live(string what, bool ok) => report.Add((ok ? "live ok: " : "FAIL live: ") + what);
+                Opsis.Containers.PipeClient.Send(pipe, "set-title-style", new System.Text.Json.Nodes.JsonObject { ["id"] = id, ["color"] = "#aa3300", ["height"] = 52, ["opacity"] = 40, ["fontSize"] = 14 }); Pump(400);
+                Live("title colour/height/opacity/font via pipe", ReferenceEquals(host.Windows.First(), w) && w.Model.TitleBar.Color == "#aa3300" && w.Model.TitleBar.Height == 52 && w.Model.TitleBar.Opacity == 40 && (int)w.Model.TitleBar.FontSize == 14);
+                host.Apply(id, k => { k.Appearance.IconSize = 72; k.Locked = true; return true; });
+                Live("icon size + lock via host.Apply", w.Model.Appearance.IconSize == 72 && w.Model.Locked);
+                MotionDesk.Containers.ContainerSettingsForm.Open(host, id);
+                Pump(150);
+                var settingsForm = Application.OpenForms.OfType<MotionDesk.Containers.ContainerSettingsForm>().Single();
+                IEnumerable<Control> Descendants(Control root) => root.Controls.Cast<Control>()
+                    .SelectMany(child => new[] { child }.Concat(Descendants(child)));
+                var titleInput = Descendants(settingsForm).OfType<TextBox>()
+                    .Single(text => text.AccessibleName == LocalizationManager.T("DCM.ContainerTitle"));
+                var saveTitle = Descendants(settingsForm).OfType<Button>()
+                    .Single(button => button.Text == LocalizationManager.T("DCM.ApplyContainerTitle"));
+                Live("save-title button fits in the settings tab", saveTitle.Visible &&
+                    saveTitle.FindForm()!.RectangleToScreen(saveTitle.FindForm()!.ClientRectangle)
+                        .Contains(saveTitle.RectangleToScreen(saveTitle.ClientRectangle)));
+                titleInput.Text = "  Renamed from settings  ";
+                saveTitle.PerformClick();
+                Live("settings update the window and the saved title", ReferenceEquals(host.Windows.Single(), w) &&
+                    w.Model.Title == "Renamed from settings" &&
+                    new Opsis.Containers.ContainersStore(file).Load().Containers.Single().Title == w.Model.Title &&
+                    settingsForm.Text.EndsWith(w.Model.Title));
+                host.Apply(id, k => { k.TitleBar.Height = 28; k.Locked = false; return true; });
+                var moved = new Rectangle(w.Left + 50, w.Top + 40, w.Width, w.Height);
+                w.AcceptDrop(new[] { Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "notepad.exe") }, new Point(60, 80));
+                Pump(900);   // debounced save
+                var doc = new Opsis.Containers.ContainersStore(file).Load();
+                report.Add($"window change saved: items={doc.Containers[0].Items.Count} (expected 1), titleColor={doc.Containers[0].TitleBar.Color} (expected #aa3300)");
+                var ta = Opsis.Containers.PipeClient.Send(pipe, "toggle-all"); Pump(500);
+                report.Add($"toggle-all -> resp={ta.ToJsonString()} windows={host.Windows.Count} (expected true, 0)");
+                ta = Opsis.Containers.PipeClient.Send(pipe, "toggle-all"); Pump(500);
+                report.Add($"toggle-all again -> resp={ta.ToJsonString()} windows={host.Windows.Count} (expected false, 1)");
+                bool deleted = host.Delete(id);
+                Live("deleting the container closes its window and settings", deleted && host.Windows.Count == 0 &&
+                    settingsForm.IsDisposed && new Opsis.Containers.ContainersStore(file).Load().Containers.Count == 0);
+            }
+            catch (Exception ex) { report.Add("EXCEPTION: " + ex); }
+            finally { GlassService.Shutdown(); }
+            File.WriteAllLines(Path.Combine(folder, "container-host.txt"), report);
+            return report.Any(l => l.StartsWith("EXCEPTION") || l.StartsWith("FAIL")) ? 1 : 0;
+        }
+
+        /// <summary>
+        /// REAL drag and drop: the mouse is driven with real input events (cursor moves + button down/up), a stand-in "Explorer" window starts a genuine OLE drag with a file, and the
+        /// containers receive it through their OLE drop target (no direct method calls). Checks drop in, reorder inside, and drag from one container to another. Only a temp file made here
+        /// is dragged; stray copies of it are removed from the desktop folder afterwards.
+        /// </summary>
+        public static int TestContainerDragDrop(string folder)
+        {
+            Directory.CreateDirectory(folder);
+            var report = new System.Collections.Generic.List<string>();
+            void Pump(int ms) { var end = DateTime.UtcNow.AddMilliseconds(ms); while (DateTime.UtcNow < end) { Application.DoEvents(); System.Threading.Thread.Sleep(10); } }
+            var file = Path.Combine(folder, "dnd-test.json"); if (File.Exists(file)) File.Delete(file);
+            var f1 = Path.Combine(folder, "opsis-dnd-a-" + Environment.ProcessId + ".txt"); var f2 = Path.Combine(folder, "opsis-dnd-b-" + Environment.ProcessId + ".txt");
+            File.WriteAllText(f1, "a"); File.WriteAllText(f2, "b");
+            var oldPos = Cursor.Position; string[] deskCleanup = Array.Empty<string>();
+            try
+            {
+                using var host = new MotionDesk.Containers.ContainerHost(new Opsis.Containers.ContainersStore(file), null);
+                var wa = Screen.PrimaryScreen!.WorkingArea;
+                host.Service.Handle("create", new System.Text.Json.Nodes.JsonObject { ["title"] = "DnD one", ["x"] = wa.Left + 120, ["y"] = wa.Top + 120, ["width"] = 420, ["height"] = 300 });
+                host.Service.Handle("create", new System.Text.Json.Nodes.JsonObject { ["title"] = "DnD two", ["x"] = wa.Left + 120, ["y"] = wa.Top + 470, ["width"] = 420, ["height"] = 260 }); host.Sync(); Pump(700);
+                MotionDesk.Containers.ContainerHost.KeepOnTopForTests = true; host.ReseatZOrder();
+                var ws = host.Windows.OrderBy(x => x.Top).ToList(); var one = ws[0]; var two = ws[1];
+                report.Add($"windows={ws.Count} (expected 2)");
+                using var src = new Form { FormBorderStyle = FormBorderStyle.None, StartPosition = FormStartPosition.Manual, TopMost = true, ShowInTaskbar = false, BackColor = Color.SteelBlue, Bounds = new Rectangle(wa.Left + 620, wa.Top + 130, 120, 120) };
+                string? dragFile = null; bool started = false;
+                src.MouseDown += (_, e) => report.Add("  (stand-in got mouse down)");
+                src.MouseMove += (_, e) => { if (e.Button == MouseButtons.Left && !started && dragFile != null) { started = true; var d = new DataObject(); d.SetData(DataFormats.FileDrop, new[] { dragFile }); var eff = src.DoDragDrop(d, DragDropEffects.Copy | DragDropEffects.Move | DragDropEffects.Link); report.Add("  (stand-in drag finished, effect=" + eff + ")"); } };
+                src.Show(); Pump(300);
+
+                void RealDrag(Point from, Point to)
+                {
+                    bool done = false;
+                    var th = new System.Threading.Thread(() =>
+                    {
+                        SetCursorPos(from.X, from.Y); System.Threading.Thread.Sleep(250);
+                        mouse_event(0x2, 0, 0, 0, UIntPtr.Zero); System.Threading.Thread.Sleep(120);
+                        SetCursorPos(from.X + 12, from.Y + 12); System.Threading.Thread.Sleep(120);
+                        for (int i = 1; i <= 20; i++) { SetCursorPos(from.X + 12 + (to.X - from.X - 12) * i / 20, from.Y + 12 + (to.Y - from.Y - 12) * i / 20); System.Threading.Thread.Sleep(30); }
+                        System.Threading.Thread.Sleep(250); mouse_event(0x4, 0, 0, 0, UIntPtr.Zero); System.Threading.Thread.Sleep(250); done = true;
+                    }) { IsBackground = true };
+                    th.Start(); var end = DateTime.UtcNow.AddSeconds(15); while (!done && DateTime.UtcNow < end) { Application.DoEvents(); System.Threading.Thread.Sleep(5); }
+                    Pump(500);
+                }
+                void DragUntil(Func<Point> from, Func<Point> to, Func<bool> ok) { for (int attempt = 0; attempt < 3 && !ok(); attempt++) RealDrag(from(), to()); }
+                var srcMid = new Point(src.Left + 60, src.Top + 60);
+
+                dragFile = f1; DragUntil(() => srcMid, () => one.PointToScreen(new Point(80, 90)), () => { started = false; return one.Items.Count >= 1; });
+                report.Add((one.Items.Count == 1 ? "ok" : "FAIL") + $": real drag from a stand-in Explorer window into container 1 -> items={one.Items.Count} (expected 1)");
+                dragFile = f2; DragUntil(() => srcMid, () => one.PointToScreen(new Point(300, 150)), () => { started = false; return one.Items.Count >= 2; });
+                report.Add((one.Items.Count == 2 ? "ok" : "FAIL") + $": second file -> items={one.Items.Count} (expected 2)");
+
+                // reorder inside: press on item 0 and release in the empty space after the last item
+                var first = one.Items.Count > 0 ? one.Items[0].Path : "";
+                DragUntil(() => one.ItemScreenCenter(0), () => one.PointToScreen(new Point(one.Width - 40, 90)), () => one.Items.Count == 2 && one.Items[1].Path == first);
+                report.Add((one.Items.Count == 2 && one.Items[1].Path == first ? "ok" : "FAIL") + $": real drag inside the container reorders -> last={Path.GetFileName(one.Items.LastOrDefault()?.Path)} (expected {Path.GetFileName(first)})");
+
+                // from container 1 to container 2: MOVE by default (the reference leaves container 1)
+                DragUntil(() => one.ItemScreenCenter(0), () => two.PointToScreen(new Point(100, 100)), () => two.Items.Count == 1);
+                report.Add((two.Items.Count == 1 && one.Items.Count == 1 ? "ok" : "FAIL") + $": real drag container 1 -> container 2 is a MOVE -> two={two.Items.Count} (expected 1), one={one.Items.Count} (expected 1)");
+                // and back: 2 -> 1
+                DragUntil(() => two.ItemScreenCenter(0), () => one.PointToScreen(new Point(300, 200)), () => two.Items.Count == 0 && one.Items.Count == 2);
+                report.Add((two.Items.Count == 0 && one.Items.Count == 2 ? "ok" : "FAIL") + $": real drag container 2 -> container 1 -> two={two.Items.Count} (expected 0), one={one.Items.Count} (expected 2)");
+
+                // single / double click launch with real mouse clicks
+                MotionDesk.Containers.ContainerWindow.SuppressLaunch = true; var launched = new System.Collections.Generic.List<string>(); one.ItemLaunched += launched.Add;
+                void Click(Point at, int times) { SetCursorPos(at.X, at.Y); Pump(200); for (int i = 0; i < times; i++) { mouse_event(0x2, 0, 0, 0, UIntPtr.Zero); mouse_event(0x4, 0, 0, 0, UIntPtr.Zero); Pump(60); } Pump(400); }
+                Click(one.ItemScreenCenter(0), 1);
+                report.Add((launched.Count == 0 ? "ok" : "FAIL") + $": one click does not launch by default (launches={launched.Count}, expected 0)");
+                for (int attempt = 0; attempt < 3 && launched.Count < 1; attempt++) Click(one.ItemScreenCenter(0), 2);
+                report.Add((launched.Count == 1 ? "ok" : "FAIL") + $": double click launches (launches={launched.Count}, expected 1)");
+                host.Apply(one.Model.Id, k => { k.Appearance.OpenOnSingleClick = true; return true; }); launched.Clear();
+                for (int attempt = 0; attempt < 3 && launched.Count < 1; attempt++) Click(one.ItemScreenCenter(1), 1);
+                report.Add((launched.Count == 1 ? "ok" : "FAIL") + $": with the setting on, ONE real click launches (launches={launched.Count}, expected 1)");
+                MotionDesk.Containers.ContainerWindow.SuppressLaunch = false;
+
+                // Automatic collapse starts immediately from an expanded container and survives settings refreshes.
+                SetCursorPos(wa.Right - 5, wa.Bottom - 5);
+                host.Apply(two.Model.Id, k => { k.Appearance.HoverRollUp = true; k.Appearance.HoverDelayMs = 100; return true; });
+                Pump(350);
+                var rolled = two.IsCollapsed; var rolledH = two.Height;
+                GetWindowRect(two.Handle, out var rolledRect);
+                bool nativeTitleOnly = rolledRect.B - rolledRect.T == rolledH
+                    && rolledH <= (int)Math.Ceiling(two.Model.TitleBar.Height * two.DeviceDpi / 96d) + 3;
+                report.Add((nativeTitleOnly ? "ok" : "FAIL") + $": the native window is title-bar height ({rolledRect.B - rolledRect.T}px)");
+                for (int attempt = 0; attempt < 3 && two.IsCollapsed; attempt++)
+                {
+                    SetCursorPos(wa.Right - 5, wa.Bottom - 5); Pump(250);
+                    SetCursorPos(two.Left + 60, two.Top + 10); Pump(900);
+                }
+                report.Add((rolled && !two.IsCollapsed && two.Height > rolledH ? "ok" : "FAIL") + $": pointer expands the auto-hidden container (height {rolledH}->{two.Height})");
+                SetCursorPos(wa.Right - 5, wa.Bottom - 5); Pump(650);
+                report.Add((two.IsCollapsed ? "ok" : "FAIL") + ": pointer leaving collapses the container again");
+                host.Apply(two.Model.Id, k => { k.Appearance.HoverRollUp = false; k.RolledUp = false; return true; });
+                Pump(300);
+                report.Add((!two.IsCollapsed && two.Height > rolledH ? "ok" : "FAIL") + ": disabling auto-hide restores the expanded height");
+
+                // REAL desktop as the source: a temp file and a temp folder are created ON the desktop, their real icons are dragged with the real mouse into a container
+                one.Bounds = new Rectangle(wa.Right - 460, wa.Top + 60, 420, 300); two.Bounds = new Rectangle(wa.Right - 460, wa.Top + 400, 420, 300); Pump(400);   // away from the icon grid
+                var desk = Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory);
+                var deskFile = Path.Combine(desk, "opsis-dnd-desk-" + Environment.ProcessId + ".txt"); var deskDir = Path.Combine(desk, "opsis-dnd-folder-" + Environment.ProcessId);
+                File.WriteAllText(deskFile, "x"); Directory.CreateDirectory(deskDir); deskCleanup = new[] { deskFile, deskDir };
+                Pump(2500);
+                // the icons are only reachable when no window covers them: show the desktop (like Win+D) for the test and bring everything back afterwards
+                dynamic? shell = null; try { shell = Activator.CreateInstance(Type.GetTypeFromProgID("Shell.Application")!); shell!.MinimizeAll(); Pump(1500); } catch (Exception) { shell = null; }
+                MotionDesk.Containers.ContainerWindow.DragLog.Clear();
+                foreach (var path in deskCleanup)
+                {
+                    var name = Path.GetFileName(path); var before = two.Items.Count;
+                    var at = MotionDesk.Widgets.DesktopIconVisibilityEngine.DesktopIconCenter(path);
+                    if (at == null) { report.Add("SKIP: the desktop icon of " + name + " was not found (desktop view not reachable)"); continue; }
+                    var under = MotionDesk.Widgets.DesktopIconVisibilityEngine.IsDesktopListAt(at.Value); report.Add("  desktop list under the icon: " + under);
+                    if (one.Bounds.Contains(at.Value) || two.Bounds.Contains(at.Value) || src.Bounds.Contains(at.Value)) { report.Add("SKIP: the desktop icon of " + name + " lies under a test window"); continue; }
+                    report.Add("  icon " + name + " at " + at.Value + "; container two " + two.Bounds);
+                    DragUntil(() => at.Value, () => two.PointToScreen(new Point(100, 100)), () => two.Items.Any(i => i.Path.Equals(path, StringComparison.OrdinalIgnoreCase)));
+                    report.Add("  selected desktop icons after the drag: " + string.Join(" | ", MotionDesk.Widgets.DesktopIconVisibilityEngine.SelectedDesktopPaths().Select(Path.GetFileName)) + "; pos now " + (MotionDesk.Widgets.DesktopIconVisibilityEngine.DesktopIconCenter(path)?.ToString() ?? "hidden/none") + "; selected one is at " + string.Join(" ", MotionDesk.Widgets.DesktopIconVisibilityEngine.SelectedDesktopPaths().Select(q => MotionDesk.Widgets.DesktopIconVisibilityEngine.DesktopIconCenter(q)?.ToString())) + "; cursor " + Cursor.Position);
+                    report.Add((two.Items.Any(i => i.Path.Equals(path, StringComparison.OrdinalIgnoreCase)) ? "ok" : "FAIL") + $": REAL desktop icon ({(Directory.Exists(path) ? "folder" : "file")}) dragged into a container -> items {before}->{two.Items.Count}");
+                }
+                foreach (var l in MotionDesk.Containers.ContainerWindow.DragLog) report.Add("  drag log: " + l);
+                try { shell?.UndoMinimizeALL(); } catch (Exception) { }
+                MotionDesk.Widgets.DesktopIconVisibilityEngine.RestoreOriginals(); Pump(300);
+            }
+            catch (Exception ex) { report.Add("EXCEPTION: " + ex); }
+            finally
+            {
+                SetCursorPos(oldPos.X, oldPos.Y);
+                try { var desk = Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory); foreach (var n in new[] { Path.GetFileName(f1), Path.GetFileName(f2), Path.GetFileNameWithoutExtension(f1) + ".lnk", Path.GetFileNameWithoutExtension(f2) + ".lnk", Path.GetFileNameWithoutExtension(f1) + " - Shortcut.lnk", Path.GetFileNameWithoutExtension(f2) + " - Shortcut.lnk" }) { var p = Path.Combine(desk, n); if (File.Exists(p)) { File.Delete(p); report.Add("cleaned a stray drop from the desktop: " + n); } } } catch (Exception) { }
+                try { MotionDesk.Widgets.DesktopIconVisibilityEngine.RestoreOriginals(); } catch (Exception) { }
+                foreach (var d in deskCleanup) try { if (Directory.Exists(d)) Directory.Delete(d, true); else if (File.Exists(d)) File.Delete(d); } catch (Exception) { }
+                MotionDesk.Containers.ContainerHost.KeepOnTopForTests = false; GlassService.Shutdown();
+            }
+            File.WriteAllLines(Path.Combine(folder, "container-dnd.txt"), report);
+            return report.Any(l => l.StartsWith("EXCEPTION") || l.StartsWith("FAIL")) ? 1 : 0;
+        }
+
+        /// <summary>
+        /// Z-order of the container windows against a normal window and the desktop, checked in the real z-order chain: container ABOVE the desktop (Progman/WorkerW), BELOW a normal
+        /// window of mine, and still above the desktop after the normal window comes to the front. No screenshot, nothing of the desktop is captured; the windows are not clicked.
+        /// </summary>
+        public static int TestContainerZOrder(string folder)
+        {
+            Directory.CreateDirectory(folder);
+            var report = new System.Collections.Generic.List<string>();
+            void Pump(int ms) { var end = DateTime.UtcNow.AddMilliseconds(ms); while (DateTime.UtcNow < end) { Application.DoEvents(); System.Threading.Thread.Sleep(10); } }
+            var file = Path.Combine(folder, "zorder-test.json"); if (File.Exists(file)) File.Delete(file);
+            bool ok = true;
+            try
+            {
+                using var host = new MotionDesk.Containers.ContainerHost(new Opsis.Containers.ContainersStore(file));
+                host.Service.Handle("create", new System.Text.Json.Nodes.JsonObject { ["title"] = "Z", ["x"] = 300, ["y"] = 300, ["width"] = 300, ["height"] = 200 });
+                host.Sync(); Pump(500);
+                var win = host.Windows.First();
+                using var normal = new Form { FormBorderStyle = FormBorderStyle.FixedToolWindow, Text = "zorder-normal-window", ShowInTaskbar = false, StartPosition = FormStartPosition.Manual, Bounds = new Rectangle(320, 320, 200, 120) };
+                normal.Show(); normal.Activate(); Pump(400);
+                int Idx(IntPtr h) => MotionDesk.Containers.DesktopZOrder.Chain().IndexOf(h);
+                var desk = MotionDesk.Containers.DesktopZOrder.DesktopWindows();
+                int deskTop = desk.Select(Idx).Where(i => i >= 0).DefaultIfEmpty(-1).Min();
+                int c = Idx(win.Handle), n = Idx(normal.Handle);
+                report.Add($"chain index: normal window={n} container={c} highest desktop window={deskTop} (smaller = higher)");
+                bool a = c > n && n >= 0; report.Add("container is BELOW the normal window: " + a);
+                bool b = deskTop >= 0 && c < deskTop; report.Add("container is ABOVE the desktop: " + b);
+                // push the container to the bottom, as another topmost change might, and let the host put it back
+                win.SendToBack(); Pump(1500);
+                c = Idx(win.Handle); deskTop = desk.Select(Idx).Where(i => i >= 0).DefaultIfEmpty(-1).Min();
+                bool d = deskTop >= 0 && c >= 0 && c < deskTop; report.Add($"after SendToBack the host re-seated it above the desktop: {d} (container={c}, desktop={deskTop})");
+                ok = a && b && d;
+            }
+            catch (Exception ex) { report.Add("EXCEPTION: " + ex); ok = false; }
+            finally { GlassService.Shutdown(); }
+            File.WriteAllLines(Path.Combine(folder, "container-zorder.txt"), report);
+            return ok ? 0 : 1;
+        }
+
+        /// <summary>
+        /// Shell events on a container: "show desktop" (what Win+D does) and a RESTART OF EXPLORER. After each the container must still be visible, and above the desktop in the real z-order
+        /// chain once the host has re-seated it. Only runs on a CI runner (GITHUB_ACTIONS) or with OPSIS_E2E_SHELL=1, because it minimises every window and kills explorer.exe.
+        /// </summary>
+        public static int TestContainerShellEvents(string folder)
+        {
+            Directory.CreateDirectory(folder);
+            var report = new System.Collections.Generic.List<string>();
+            if (Environment.GetEnvironmentVariable("GITHUB_ACTIONS") != "true" && Environment.GetEnvironmentVariable("OPSIS_E2E_SHELL") != "1") { report.Add("SKIPPED: not a CI runner (set OPSIS_E2E_SHELL=1 to run here)"); File.WriteAllLines(Path.Combine(folder, "container-shell.txt"), report); return 0; }
+            void Pump(int ms) { var end = DateTime.UtcNow.AddMilliseconds(ms); while (DateTime.UtcNow < end) { Application.DoEvents(); System.Threading.Thread.Sleep(10); } }
+            var file = Path.Combine(folder, "shell-test.json"); if (File.Exists(file)) File.Delete(file);
+            bool ok = true;
+            try
+            {
+                using var host = new MotionDesk.Containers.ContainerHost(new Opsis.Containers.ContainersStore(file));
+                host.Service.Handle("create", new System.Text.Json.Nodes.JsonObject { ["title"] = "Shell", ["x"] = 300, ["y"] = 300, ["width"] = 300, ["height"] = 200 });
+                host.Sync(); Pump(800);
+                var win = host.Windows.First();
+                bool Above()
+                {
+                    var chain = MotionDesk.Containers.DesktopZOrder.Chain(); var c = chain.IndexOf(win.Handle);
+                    var top = MotionDesk.Containers.DesktopZOrder.DesktopWindows().Select(h => chain.IndexOf(h)).Where(i => i >= 0).DefaultIfEmpty(-1).Min();
+                    return win.Visible && c >= 0 && top >= 0 && c < top;
+                }
+                report.Add("start: visible and above the desktop = " + Above()); ok &= Above();
+                // Win+D: show the desktop
+                dynamic shell = Activator.CreateInstance(Type.GetTypeFromProgID("Shell.Application")!)!;
+                shell.ToggleDesktop(); Pump(2500);
+                bool afterD = Above(); report.Add("after Win+D (show desktop): visible and above the desktop = " + afterD); ok &= afterD;
+                shell.ToggleDesktop(); Pump(1500);
+                // Explorer restart
+                foreach (var p in Process.GetProcessesByName("explorer")) { try { p.Kill(); } catch (Exception) { } }
+                Pump(1500);
+                var until = DateTime.UtcNow.AddSeconds(40);
+                while (DateTime.UtcNow < until && Process.GetProcessesByName("explorer").Length == 0) Pump(500);
+                if (Process.GetProcessesByName("explorer").Length == 0) { try { Process.Start("explorer.exe"); } catch (Exception) { } Pump(3000); report.Add("explorer did not come back by itself: started it"); }
+                Pump(6000);                                                                      // the host re-seats every second
+                bool afterE = Above(); report.Add("after the Explorer restart: visible and above the desktop = " + afterE); ok &= afterE;
+            }
+            catch (Exception ex) { report.Add("EXCEPTION: " + ex); ok = false; }
+            finally { GlassService.Shutdown(); }
+            File.WriteAllLines(Path.Combine(folder, "container-shell.txt"), report);
+            return ok ? 0 : 1;
+        }
+
+        /// <summary>
+        /// Cost of N glass containers over a moving stand-in (my own window): CPU of this process, private memory, handles, GDI/USER objects, capture/render counts, for the budgets of
+        /// the design doc (section 6). Idle containers (nothing moving behind them) are measured as well. Nothing from the desktop is captured or saved.
+        /// </summary>
+        public static int TestContainerBudget(string folder, int count)
+        {
+            Directory.CreateDirectory(folder);
+            var report = new System.Collections.Generic.List<string>();
+            void Pump(int ms) { var end = DateTime.UtcNow.AddMilliseconds(ms); while (DateTime.UtcNow < end) { Application.DoEvents(); System.Threading.Thread.Sleep(10); } }
+            var settings = AppSettings.Load(); settings.UseGpuGlass = true; settings.Save();
+            var proc = Process.GetCurrentProcess();
+            [System.Runtime.InteropServices.DllImport("user32.dll")] static extern uint GetGuiResources(IntPtr h, uint flag);
+            (double cpu, long priv, int handles, uint gdi, uint user) Snap(TimeSpan cpuBefore, DateTime t0)
+            {
+                proc.Refresh();
+                var cpu = (proc.TotalProcessorTime - cpuBefore).TotalMilliseconds / Math.Max(1, (DateTime.UtcNow - t0).TotalMilliseconds) / Environment.ProcessorCount * 100;
+                return (cpu, proc.PrivateMemorySize64, proc.HandleCount, GetGuiResources(proc.Handle, 0), GetGuiResources(proc.Handle, 1));
+            }
+            var t = System.Diagnostics.Stopwatch.StartNew(); bool moving = true;
+            using var stage = new StageForm { FormBorderStyle = FormBorderStyle.None, StartPosition = FormStartPosition.Manual, Bounds = new Rectangle(0, 0, 1000, 700), TopMost = true, ShowInTaskbar = false, BackColor = Color.FromArgb(5, 7, 13) };
+            stage.Paint += (_, e) =>
+            {
+                if (!moving) return;
+                var g = e.Graphics; g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias; var tt = t.Elapsed.TotalSeconds;
+                using var pen = new Pen(Color.FromArgb(230, 0, 230, 255), 2.2f); var pts = new System.Collections.Generic.List<PointF>();
+                for (int x = 0; x <= stage.Width; x += 8) pts.Add(new PointF(x, (float)(350 - 40 * Math.Sin(x * 0.004 + tt))));
+                g.DrawLines(pen, pts.ToArray());
+            };
+            var anim = new System.Windows.Forms.Timer { Interval = 33 }; anim.Tick += (_, _) => { if (moving) stage.Invalidate(); }; anim.Start();
+            stage.Show(); Pump(600);
+            var windows = new System.Collections.Generic.List<MotionDesk.Containers.ContainerWindow>();
+            try
+            {
+                var baseline = Snap(proc.TotalProcessorTime, DateTime.UtcNow);
+                report.Add($"before containers: priv={baseline.priv / 1048576} MB handles={baseline.handles} GDI={baseline.gdi} USER={baseline.user}");
+                for (int i = 0; i < count; i++)
+                {
+                    var model = new Opsis.Containers.Container { Title = "C" + i };
+                    for (int k = 0; k < 24; k++) model.Items.Add(new Opsis.Containers.ContainerItem { Path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System), k % 2 == 0 ? "notepad.exe" : "calc.exe"), DisplayName = "item" + k });
+                    var w = new MotionDesk.Containers.ContainerWindow(model) { Bounds = new Rectangle(40 + i * 300, 100, 280, 300), TopMost = true };
+                    w.Show(); windows.Add(w);
+                }
+                Pump(2500);
+                var t0 = DateTime.UtcNow; var c0 = proc.TotalProcessorTime; Pump(8000);
+                var live = Snap(c0, t0); var mgr = GlassService.Manager;
+                report.Add($"{count} glass containers, background MOVING 8 s: cpu={live.cpu:0.0}% of all cores, priv={live.priv / 1048576} MB, handles={live.handles}, GDI={live.gdi}, USER={live.user}" + (mgr != null ? $", panes={mgr.Stats.Panes}, captures={mgr.Stats.Captures}, renders={mgr.Stats.Renders}" : ""));
+                moving = false; anim.Stop(); Pump(2500);
+                var t1 = DateTime.UtcNow; var c1 = proc.TotalProcessorTime; Pump(8000);
+                var idle = Snap(c1, t1);
+                report.Add($"{count} glass containers, background STATIC 8 s: cpu={idle.cpu:0.0}% of all cores, priv={idle.priv / 1048576} MB, handles={idle.handles}, GDI={idle.gdi}, USER={idle.user}");
+                report.Add($"growth over the run: priv +{(idle.priv - baseline.priv) / 1048576} MB, GDI +{(int)idle.gdi - (int)baseline.gdi}, USER +{(int)idle.user - (int)baseline.user}, handles +{idle.handles - baseline.handles}");
+            }
+            catch (Exception ex) { report.Add("EXCEPTION: " + ex); }
+            finally { foreach (var w in windows) w.Close(); anim.Stop(); GlassService.Shutdown(); }
+            File.WriteAllLines(Path.Combine(folder, "container-budget.txt"), report);
+            return report.Any(l => l.StartsWith("EXCEPTION")) ? 1 : 0;
+        }
+
+        /// <summary>Test helper: loads a local HTML page in WebView2 (same engine as the wallpaper), waits until its title becomes "done", saves a PNG of the page. Used to look at the landscapes without the desktop.</summary>
+        public static int ShotHtml(string url, string png)
+        {
+            int result = 1;
+            using var form = new Form { FormBorderStyle = FormBorderStyle.None, StartPosition = FormStartPosition.Manual, Location = new Point(-3000, 0), Size = new Size(1280, 720), ShowInTaskbar = false };
+            var web = new Microsoft.Web.WebView2.WinForms.WebView2 { Dock = DockStyle.Fill };
+            form.Controls.Add(web);
+            form.Shown += async (_, _) =>
+            {
+                try
+                {
+                    var env = await Microsoft.Web.WebView2.Core.CoreWebView2Environment.CreateAsync(null, Path.Combine(Path.GetTempPath(), "opsis-shot-webview"));
+                    await web.EnsureCoreWebView2Async(env);
+                    web.Source = new Uri(url);
+                    for (int i = 0; i < 300 && web.CoreWebView2.DocumentTitle != "done"; i++) await System.Threading.Tasks.Task.Delay(50);
+                    await System.Threading.Tasks.Task.Delay(300);
+                    using var fs = File.Create(png);
+                    await web.CoreWebView2.CapturePreviewAsync(Microsoft.Web.WebView2.Core.CoreWebView2CapturePreviewImageFormat.Png, fs);
+                    result = web.CoreWebView2.DocumentTitle == "done" ? 0 : 3;
+                }
+                catch (Exception ex) { File.WriteAllText(png + ".err.txt", ex.ToString()); result = 2; }
+                finally { form.Close(); }
+            };
+            Application.Run(form);
+            return result;
+        }
+        private sealed class StageForm : Form
+        {
+            public StageForm() { SetStyle(ControlStyles.OptimizedDoubleBuffer | ControlStyles.AllPaintingInWmPaint | ControlStyles.UserPaint, true); }
+            protected override bool ShowWithoutActivation => true;
+        }
+
+        /// <summary>Read-only: which monitors have a fully covered desktop now, and the answer of AppActivity.IsPausedFor after it has polled twice.</summary>
+        public static int TestCovered(string outFile)
+        {
+            var lines = new List<string>();
+            var screens = System.Windows.Forms.Screen.AllScreens;
+            var now = DesktopCoverage.Compute();
+            lines.Add("covered right now (DesktopCoverage.Compute): " + (now.Count == 0 ? "(none)" : string.Join(", ", now)));
+            AppActivity.Start();
+            var end = DateTime.UtcNow.AddSeconds(3.5);
+            while (DateTime.UtcNow < end) { System.Windows.Forms.Application.DoEvents(); System.Threading.Thread.Sleep(50); }
+            foreach (var s in screens)
+                lines.Add($"AppActivity.IsPausedFor({s.DeviceName}) = {AppActivity.IsPausedFor(s)}   (primary={s.Primary}, covered={now.Contains(s.DeviceName)})");
+            lines.Add("AppActivity.Describe: " + AppActivity.Describe());
+            System.IO.File.WriteAllLines(outFile, lines);
+            return 0;
+        }
+
         private static bool _showDesktop;
         [DllImport("user32.dll")] private static extern IntPtr FindWindow(string? cls, string? title);
         [DllImport("user32.dll")] private static extern IntPtr FindWindowEx(IntPtr p, IntPtr a, string? c, string? t);
@@ -133,8 +754,8 @@ namespace MotionDesk.Services
             return report.Contains("RESULT=FAIL") || wv == null ? 1 : 0;
         }
 
-        // Magenta παράθυρο -> attach όπως το wallpaper -> διάβασε pixel οθόνης. Αν είναι magenta, το attach δουλεύει και
-        // το παράθυρο είναι ΟΡΑΤΟ πίσω από τα εικονίδια. Αλλιώς: attach "πέτυχε" αλλά δεν εμφανίζεται (το σύμπτωμα).
+        // Magenta Ο€Ξ±ΟΞ¬ΞΈΟ…ΟΞΏ -> attach ΟΟ€Ο‰Ο‚ Ο„ΞΏ wallpaper -> Ξ΄ΞΉΞ¬Ξ²Ξ±ΟƒΞµ pixel ΞΏΞΈΟΞ½Ξ·Ο‚. Ξ‘Ξ½ ΞµΞ―Ξ½Ξ±ΞΉ magenta, Ο„ΞΏ attach Ξ΄ΞΏΟ…Ξ»ΞµΟΞµΞΉ ΞΊΞ±ΞΉ
+        // Ο„ΞΏ Ο€Ξ±ΟΞ¬ΞΈΟ…ΟΞΏ ΞµΞ―Ξ½Ξ±ΞΉ ΞΞ΅Ξ‘Ξ¤Ξ Ο€Ξ―ΟƒΟ‰ Ξ±Ο€Ο Ο„Ξ± ΞµΞΉΞΊΞΏΞ½Ξ―Ξ΄ΞΉΞ±. Ξ‘Ξ»Ξ»ΞΉΟΟ‚: attach "Ο€Ξ­Ο„Ο…Ο‡Ξµ" Ξ±Ξ»Ξ»Ξ¬ Ξ΄ΞµΞ½ ΞµΞΌΟ†Ξ±Ξ½Ξ―Ξ¶ΞµΟ„Ξ±ΞΉ (Ο„ΞΏ ΟƒΟΞΌΟ€Ο„Ο‰ΞΌΞ±).
         private static string AttachProbe()
         {
             var screen = Screen.PrimaryScreen ?? Screen.AllScreens[0];
@@ -208,7 +829,7 @@ namespace MotionDesk.Services
                             int x = screen.Bounds.X + screen.Bounds.Width * gx / 14, y = screen.Bounds.Y + screen.Bounds.Height * gy / 9;
                             IntPtr root = GetAncestor(WindowFromPoint(new POINT { X = x, Y = y }), 2);
                             string rc = Cls(root);
-                            if (rc != "Progman" && rc != "WorkerW") continue;   // πάνω από το σημείο υπάρχει άλλο παράθυρο/taskbar
+                            if (rc != "Progman" && rc != "WorkerW") continue;   // Ο€Ξ¬Ξ½Ο‰ Ξ±Ο€Ο Ο„ΞΏ ΟƒΞ·ΞΌΞµΞ―ΞΏ Ο…Ο€Ξ¬ΟΟ‡ΞµΞΉ Ξ¬Ξ»Ξ»ΞΏ Ο€Ξ±ΟΞ¬ΞΈΟ…ΟΞΏ/taskbar
                             uncovered++;
                             using var bmp = new Bitmap(1, 1);
                             using (var g = Graphics.FromImage(bmp)) g.CopyFromScreen(x, y, 0, 0, new Size(1, 1));
@@ -250,14 +871,14 @@ namespace MotionDesk.Services
             return list;
         }
 
-        // Ενεργοποιεί το ΠΡΑΓΜΑΤΙΚΟ wallpaper του Opsis (WallpaperWindow + WebView2 + Waves) και συγκρίνει pixels της
-        // επιφάνειας εργασίας πριν/μετά. (Με OPSIS_APPDATA απομονωμένο, δεν αγγίζει τις ρυθμίσεις του χρήστη.)
+        // Ξ•Ξ½ΞµΟΞ³ΞΏΟ€ΞΏΞΉΞµΞ― Ο„ΞΏ Ξ Ξ΅Ξ‘Ξ“ΞΞ‘Ξ¤Ξ™ΞΞ wallpaper Ο„ΞΏΟ… Opsis (WallpaperWindow + WebView2 + Waves) ΞΊΞ±ΞΉ ΟƒΟ…Ξ³ΞΊΟΞ―Ξ½ΞµΞΉ pixels Ο„Ξ·Ο‚
+        // ΞµΟ€ΞΉΟ†Ξ¬Ξ½ΞµΞΉΞ±Ο‚ ΞµΟΞ³Ξ±ΟƒΞ―Ξ±Ο‚ Ο€ΟΞΉΞ½/ΞΌΞµΟ„Ξ¬. (ΞΞµ OPSIS_APPDATA Ξ±Ο€ΞΏΞΌΞΏΞ½Ο‰ΞΌΞ­Ξ½ΞΏ, Ξ΄ΞµΞ½ Ξ±Ξ³Ξ³Ξ―Ξ¶ΞµΞΉ Ο„ΞΉΟ‚ ΟΟ…ΞΈΞΌΞ―ΟƒΞµΞΉΟ‚ Ο„ΞΏΟ… Ο‡ΟΞ®ΟƒΟ„Ξ·.)
         private static string RealWallpaperProbe()
         {
             var o = new StringBuilder();
             dynamic? shell = null;
             void Pump(int ms) { var end = DateTime.UtcNow.AddMilliseconds(ms); while (DateTime.UtcNow < end) { Application.DoEvents(); System.Threading.Thread.Sleep(15); } }
-            Pump(2500);   // άφησε τα Windows να ολοκληρώσουν το προηγούμενο restore του ToggleDesktop
+            Pump(2500);   // Ξ¬Ο†Ξ·ΟƒΞµ Ο„Ξ± Windows Ξ½Ξ± ΞΏΞ»ΞΏΞΊΞ»Ξ·ΟΟΟƒΞΏΟ…Ξ½ Ο„ΞΏ Ο€ΟΞΏΞ·Ξ³ΞΏΟΞΌΞµΞ½ΞΏ restore Ο„ΞΏΟ… ToggleDesktop
             if (_showDesktop) { try { shell = Activator.CreateInstance(Type.GetTypeFromProgID("Shell.Application")!); shell!.ToggleDesktop(); } catch (Exception) { shell = null; } }
             try
             {
@@ -304,7 +925,7 @@ namespace MotionDesk.Services
             finally { if (shell != null) { try { shell.ToggleDesktop(); } catch (Exception) { } } }
         }
 
-        /// <summary>`Opsis.exe --render-sysmon <folder>`: αποδίδει το System Monitor widget σε PNG με δεδομένα δοκιμής (οπτικός έλεγχος).</summary>
+        /// <summary>`Opsis.exe --render-sysmon <folder>`: Ξ±Ο€ΞΏΞ΄Ξ―Ξ΄ΞµΞΉ Ο„ΞΏ System Monitor widget ΟƒΞµ PNG ΞΌΞµ Ξ΄ΞµΞ΄ΞΏΞΌΞ­Ξ½Ξ± Ξ΄ΞΏΞΊΞΉΞΌΞ®Ο‚ (ΞΏΟ€Ο„ΞΉΞΊΟΟ‚ Ξ­Ξ»ΞµΞ³Ο‡ΞΏΟ‚).</summary>
         public static int RenderSysmon(string folder)
         {
             Directory.CreateDirectory(folder);
@@ -317,7 +938,7 @@ namespace MotionDesk.Services
                 {
                     cpu = Math.Clamp(cpu + rnd.Next(-12, 13), 3, 96); ram = Math.Clamp(ram + rnd.Next(-3, 4), 30, 80);
                     net = Math.Clamp(net + rnd.Next(-150, 160), 0, 2500); gpu = Math.Clamp(gpu + rnd.Next(-10, 11), 0, 70);
-                    c.SetCpu(cpu); c.SetRam(ram, $"{(100 - ram) * 160 / 100:0} / 16384 MB free"); c.SetNetwork(net, net / 5); c.SetGpu(gpu, "54°C");
+                    c.SetCpu(cpu); c.SetRam(ram, $"{(100 - ram) * 160 / 100:0} / 16384 MB free"); c.SetNetwork(net, net / 5); c.SetGpu(gpu, "54Β°C");
                 }
                 using var bmp = new Bitmap(w, h);
                 c.DrawToBitmap(bmp, new Rectangle(0, 0, w, h));
@@ -337,7 +958,7 @@ namespace MotionDesk.Services
         [StructLayout(LayoutKind.Sequential)] private struct WCAD { public int Attr; public IntPtr Data; public int Size; }
         [DllImport("user32.dll")] private static extern int SetWindowCompositionAttribute(IntPtr h, ref WCAD d);
 
-        /// <summary>`--test-transparency <folder>`: 3 τεχνικές "διάφανου" widget πάνω στο ΠΡΑΓΜΑΤΙΚΟ desktop + screenshot.</summary>
+        /// <summary>`--test-transparency <folder>`: 3 Ο„ΞµΟ‡Ξ½ΞΉΞΊΞ­Ο‚ "Ξ΄ΞΉΞ¬Ο†Ξ±Ξ½ΞΏΟ…" widget Ο€Ξ¬Ξ½Ο‰ ΟƒΟ„ΞΏ Ξ Ξ΅Ξ‘Ξ“ΞΞ‘Ξ¤Ξ™ΞΞ desktop + screenshot.</summary>
         public static int TestTransparency(string folder)
         {
             Directory.CreateDirectory(folder);
@@ -348,7 +969,7 @@ namespace MotionDesk.Services
                 var f = new Form { FormBorderStyle = FormBorderStyle.None, StartPosition = FormStartPosition.Manual, ShowInTaskbar = false,
                     Bounds = new Rectangle(sc.Bounds.X + x, sc.Bounds.Y + 420, 380, 220), BackColor = back, TopMost = true };
                 if (key != null) f.TransparencyKey = key.Value;
-                var lbl = new Label { Text = "22.1°C", AutoSize = false, Dock = DockStyle.Top, Height = 90, Font = new Font("Segoe UI Semibold", 38), ForeColor = Color.White, BackColor = Color.Transparent, TextAlign = ContentAlignment.MiddleCenter };
+                var lbl = new Label { Text = "22.1Β°C", AutoSize = false, Dock = DockStyle.Top, Height = 90, Font = new Font("Segoe UI Semibold", 38), ForeColor = Color.White, BackColor = Color.Transparent, TextAlign = ContentAlignment.MiddleCenter };
                 var sub = new Label { Text = name, AutoSize = false, Dock = DockStyle.Top, Height = 40, Font = new Font("Segoe UI", 14), ForeColor = Color.FromArgb(220, 255, 255, 255), BackColor = Color.Transparent, TextAlign = ContentAlignment.MiddleCenter };
                 f.Controls.Add(sub); f.Controls.Add(lbl);
                 f.Paint += (_, e) => { e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias; using var br = new SolidBrush(Color.FromArgb(0, 200, 230)); e.Graphics.FillEllipse(br, 20, 150, 340, 14); };
@@ -379,7 +1000,7 @@ namespace MotionDesk.Services
             return 0;
         }
 
-        /// <summary>`--test-widgets <folder> [mode]`: ανοίγει τα πραγματικά native widgets με το δοσμένο WidgetsThemeMode (π.χ. Transparent) πάνω στο desktop + screenshot.</summary>
+        /// <summary>`--test-widgets <folder> [mode]`: Ξ±Ξ½ΞΏΞ―Ξ³ΞµΞΉ Ο„Ξ± Ο€ΟΞ±Ξ³ΞΌΞ±Ο„ΞΉΞΊΞ¬ native widgets ΞΌΞµ Ο„ΞΏ Ξ΄ΞΏΟƒΞΌΞ­Ξ½ΞΏ WidgetsThemeMode (Ο€.Ο‡. Transparent) Ο€Ξ¬Ξ½Ο‰ ΟƒΟ„ΞΏ desktop + screenshot.</summary>
         public static int TestWidgets(string folder, string mode)
         {
             Directory.CreateDirectory(folder);
@@ -431,7 +1052,11 @@ namespace MotionDesk.Services
             }
             w.Close();
             File.WriteAllText(Path.Combine(folder, "plugin-widget.txt"),
-                $"plugins={PluginHost.Instance.Plugins.Count} replaced={(replacement != null)} widget={replacement?.Key}");
+                $"plugins={PluginHost.Instance.Plugins.Count} replaced={(replacement != null)} widget={replacement?.Key} " +
+                $"ids={string.Join(",", PluginHost.Instance.Plugins.Select(p => p.Id))} " +
+                $"versions={string.Join(",", PluginHost.Instance.Plugins.Select(p => p.Id + "@" + p.Version))} " +
+                $"pluginDlls={string.Join(",", PluginHost.Instance.Plugins.Select(p => p.Id + "@" + (p.GetType().Assembly.GetName().Version?.ToString(4) ?? "unknown")))} " +
+                $"feeds={string.Join(",", OpsisNewsCrawler.Plugin.Abstractions.PluginFeeds.All().Select(f => f.Key))}");
             PluginHost.Instance.StopAll();
             return replacement != null ? 0 : 1;
         }
@@ -439,7 +1064,7 @@ namespace MotionDesk.Services
         [DllImport("user32.dll")] private static extern bool SetCursorPos(int x, int y);
         [DllImport("user32.dll")] private static extern bool GetCursorPos(out POINT p);
 
-        /// <summary>`--test-deskstrip <folder> [position]`: ανοίγει το νέο dock με πραγματικές εφαρμογές και βγάζει screenshots (κανονικό, hover+preview).</summary>
+        /// <summary>`--test-deskstrip <folder> [position]`: Ξ±Ξ½ΞΏΞ―Ξ³ΞµΞΉ Ο„ΞΏ Ξ½Ξ­ΞΏ dock ΞΌΞµ Ο€ΟΞ±Ξ³ΞΌΞ±Ο„ΞΉΞΊΞ­Ο‚ ΞµΟ†Ξ±ΟΞΌΞΏΞ³Ξ­Ο‚ ΞΊΞ±ΞΉ Ξ²Ξ³Ξ¬Ξ¶ΞµΞΉ screenshots (ΞΊΞ±Ξ½ΞΏΞ½ΞΉΞΊΟ, hover+preview).</summary>
         public static int TestDeskStrip(string folder, string position)
         {
             Directory.CreateDirectory(folder);
@@ -468,7 +1093,7 @@ namespace MotionDesk.Services
                     bmp.Save(Path.Combine(folder, name + ".png"), System.Drawing.Imaging.ImageFormat.Png);
                 }
                 Shot("dock_" + position + "_idle");
-                // hover πάνω από το 2ο εικονίδιο (καρφιτσωμένο, μη τρέχον) και μετά πάνω από το 1ο (τρέχον: preview)
+                // hover Ο€Ξ¬Ξ½Ο‰ Ξ±Ο€Ο Ο„ΞΏ 2ΞΏ ΞµΞΉΞΊΞΏΞ½Ξ―Ξ΄ΞΉΞΏ (ΞΊΞ±ΟΟ†ΞΉΟ„ΟƒΟ‰ΞΌΞ­Ξ½ΞΏ, ΞΌΞ· Ο„ΟΞ­Ο‡ΞΏΞ½) ΞΊΞ±ΞΉ ΞΌΞµΟ„Ξ¬ Ο€Ξ¬Ξ½Ο‰ Ξ±Ο€Ο Ο„ΞΏ 1ΞΏ (Ο„ΟΞ­Ο‡ΞΏΞ½: preview)
                 var b = win.Bounds;
                 bool vert = position is "Left" or "Right";
                 Point At(double frac) => vert ? new Point(b.Left + b.Width / 2, b.Top + (int)(b.Height * frac)) : new Point(b.Left + (int)(b.Width * frac), b.Top + b.Height / 2 + 4);
@@ -488,8 +1113,8 @@ namespace MotionDesk.Services
             return 0;
         }
 
-        // Καλεί ΑΠΕΥΘΕΙΑΣ το OnMouseMove του dock (χωρίς να πειράξει τον πραγματικό δείκτη του χρήστη· τα Windows θα έστελναν
-        // αμέσως WM_MOUSELEAVE αν στέλναμε μηνύματα ενώ ο δείκτης δεν είναι πάνω από το παράθυρο).
+        // ΞΞ±Ξ»ΞµΞ― Ξ‘Ξ Ξ•Ξ¥ΞΞ•Ξ™Ξ‘Ξ£ Ο„ΞΏ OnMouseMove Ο„ΞΏΟ… dock (Ο‡Ο‰ΟΞ―Ο‚ Ξ½Ξ± Ο€ΞµΞΉΟΞ¬ΞΎΞµΞΉ Ο„ΞΏΞ½ Ο€ΟΞ±Ξ³ΞΌΞ±Ο„ΞΉΞΊΟ Ξ΄ΞµΞ―ΞΊΟ„Ξ· Ο„ΞΏΟ… Ο‡ΟΞ®ΟƒΟ„Ξ·Β· Ο„Ξ± Windows ΞΈΞ± Ξ­ΟƒΟ„ΞµΞ»Ξ½Ξ±Ξ½
+        // Ξ±ΞΌΞ­ΟƒΟ‰Ο‚ WM_MOUSELEAVE Ξ±Ξ½ ΟƒΟ„Ξ­Ξ»Ξ½Ξ±ΞΌΞµ ΞΌΞ·Ξ½ΟΞΌΞ±Ο„Ξ± ΞµΞ½Ο ΞΏ Ξ΄ΞµΞ―ΞΊΟ„Ξ·Ο‚ Ξ΄ΞµΞ½ ΞµΞ―Ξ½Ξ±ΞΉ Ο€Ξ¬Ξ½Ο‰ Ξ±Ο€Ο Ο„ΞΏ Ο€Ξ±ΟΞ¬ΞΈΟ…ΟΞΏ).
         private static void MoveMouse(Form dock, bool vertical, double frac)
         {
             int x = vertical ? dock.Width / 2 : (int)(dock.Width * frac), y = vertical ? (int)(dock.Height * frac) : dock.Height / 2 + 4;
@@ -497,7 +1122,7 @@ namespace MotionDesk.Services
                 .Invoke(dock, new object[] { new MouseEventArgs(MouseButtons.None, 0, x, y, 0) });
         }
 
-        /// <summary>`--test-containers <folder>`: Folder Portal (ζωντανή ενημέρωση, πλοήγηση, αντιγραφή), κανονικό container, επιλογή, screenshot.</summary>
+        /// <summary>`--test-containers <folder>`: Folder Portal (Ξ¶Ο‰Ξ½Ο„Ξ±Ξ½Ξ® ΞµΞ½Ξ·ΞΌΞ­ΟΟ‰ΟƒΞ·, Ο€Ξ»ΞΏΞ®Ξ³Ξ·ΟƒΞ·, Ξ±Ξ½Ο„ΞΉΞ³ΟΞ±Ο†Ξ®), ΞΊΞ±Ξ½ΞΏΞ½ΞΉΞΊΟ container, ΞµΟ€ΞΉΞ»ΞΏΞ³Ξ®, screenshot.</summary>
         // `Opsis.exe --test-wallpaper-icons <log>`: runs the real wallpaper engine through the sequences that used to hide the desktop icons
         // (clock/date overlay on and off, mode changes, Enable twice, Disable) and checks after every step that SHELLDLL_DefView (the icons)
         // is still ABOVE every wallpaper window of this process. Use with OPSIS_APPDATA pointing to a temp folder.
@@ -566,7 +1191,7 @@ namespace MotionDesk.Services
         [DllImport("user32.dll")] private static extern uint GetWindowThreadProcessId(IntPtr h, out uint pid);
         [DllImport("user32.dll")] private static extern void mouse_event(uint flags, uint dx, uint dy, uint data, UIntPtr extra);
 
-        /// <summary>`--test-iconhide`: διπλό κλικ σε κενό σημείο της επιφάνειας εργασίας (πραγματικά κλικ), με και χωρίς wallpaper, και έλεγχος αν κρύβονται/ξαναφαίνονται τα εικονίδια.</summary>
+        /// <summary>`--test-iconhide`: Ξ΄ΞΉΟ€Ξ»Ο ΞΊΞ»ΞΉΞΊ ΟƒΞµ ΞΊΞµΞ½Ο ΟƒΞ·ΞΌΞµΞ―ΞΏ Ο„Ξ·Ο‚ ΞµΟ€ΞΉΟ†Ξ¬Ξ½ΞµΞΉΞ±Ο‚ ΞµΟΞ³Ξ±ΟƒΞ―Ξ±Ο‚ (Ο€ΟΞ±Ξ³ΞΌΞ±Ο„ΞΉΞΊΞ¬ ΞΊΞ»ΞΉΞΊ), ΞΌΞµ ΞΊΞ±ΞΉ Ο‡Ο‰ΟΞ―Ο‚ wallpaper, ΞΊΞ±ΞΉ Ξ­Ξ»ΞµΞ³Ο‡ΞΏΟ‚ Ξ±Ξ½ ΞΊΟΟΞ²ΞΏΞ½Ο„Ξ±ΞΉ/ΞΎΞ±Ξ½Ξ±Ο†Ξ±Ξ―Ξ½ΞΏΞ½Ο„Ξ±ΞΉ Ο„Ξ± ΞµΞΉΞΊΞΏΞ½Ξ―Ξ΄ΞΉΞ±.</summary>
         public static int TestIconHide(string mode)
         {
             dynamic? shell = null;
@@ -665,3 +1290,4 @@ namespace MotionDesk.Services
         }
     }
 }
+

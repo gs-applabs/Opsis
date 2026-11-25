@@ -1,4 +1,4 @@
-// Wallpaper elements: the pieces of the Opsis widgets (clock, CPU, memory, GPU, network, disks, battery, audio spectrum) drawn directly on the
+// Wallpaper elements: the pieces of the Opsis widgets (clock, CPU, memory, GPU, network, disks, battery; the old audio-spectrum element was removed in 2.6.0, the music overlay replaces it) drawn directly on the
 // wallpaper, on top of any wallpaper mode. The user chooses which ones are shown and where (Wallpaper page -> "Wallpaper elements").
 // Loaded by index.html; uses its globals: cfg, isPaused, bridge().
 (function () {
@@ -12,13 +12,13 @@
     #elements{position:fixed;top:0;bottom:0;display:flex;flex-direction:column;flex-wrap:wrap;gap:14px;padding:3vh 2vw;box-sizing:border-box;pointer-events:none;z-index:5;overflow:hidden}
     #elements.left{left:0;align-items:flex-start;align-content:flex-start}
     #elements.right{right:0;align-items:flex-end;align-content:flex-start;flex-wrap:wrap-reverse}
-    .el{position:relative;zoom:var(--s,1);flex:none;color:#fff;font-family:"Segoe UI",system-ui,sans-serif;
-        padding:14px 18px;border-radius:16px;width:190px;box-sizing:border-box;--a:#00d2ff;text-shadow:0 1px 6px rgba(0,0,0,.55)}
+    .el{position:relative;zoom:var(--s,1);flex:none;color:var(--fg,#fff);transition:color .6s ease;font-family:"Segoe UI",system-ui,sans-serif;
+        padding:14px 18px;border-radius:16px;width:190px;box-sizing:border-box;--a:#00d2ff;text-shadow:var(--sh,0 1px 6px rgba(0,0,0,.55))}
     .elCard .el, .el.card{background:rgba(10,14,24,.42);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border:1px solid rgba(255,255,255,.12);box-shadow:0 8px 28px rgba(0,0,0,.25)}
     .elT{font-size:12px;letter-spacing:.14em;text-transform:uppercase;opacity:.75;margin-bottom:6px}
     .elBig{font-size:30px;font-weight:300;font-variant-numeric:tabular-nums;line-height:1.1}
     .elSub{font-size:12px;opacity:.7;margin-top:4px}
-    .elBar{height:6px;border-radius:4px;background:rgba(255,255,255,.16);overflow:hidden;margin-top:8px}
+    .elBar{height:6px;border-radius:4px;background:var(--bar,rgba(255,255,255,.16));overflow:hidden;margin-top:8px}
     .elBar>i{display:block;height:100%;width:0;background:var(--a);transition:width .8s ease}
     .elRow{display:flex;justify-content:space-between;gap:16px;font-size:13px;margin-top:6px;font-variant-numeric:tabular-nums}
     .elBar>i{background:var(--b,var(--a))}
@@ -91,41 +91,79 @@
             html: '<div class="elT">Battery</div><div class="elBig" data-k="v">–</div><div class="elBar"><i data-k="b"></i></div>',
             upd(e, d) { if (d.batteryPercent < 0) { setText(e, 'v', 'AC'); setBar(e, 'b', 100); return; } setText(e, 'v', d.batteryPercent + ' %' + (d.charging ? ' ⚡' : '')); setBar(e, 'b', d.batteryPercent); }
         },
-        audio: {
-            needsAudio: true,
-            html: '<div class="elT">Audio</div><canvas class="elCv" data-k="cv" width="260" height="90" style="width:100%;height:auto"></canvas>',
-            draw(e, bands) { const cv = $q(e, 'cv'), c = cv.getContext('2d'); c.clearRect(0, 0, cv.width, cv.height);
-                const n = bands.length || 24, bw = cv.width / n; c.fillStyle = getComputedStyle(e).getPropertyValue('--a') || '#00d2ff';
-                for (let i = 0; i < n; i++) { const v = Math.min(1, (bands[i] || 0) * 1.2), h = Math.max(2, v * cv.height); c.globalAlpha = .4 + .6 * v; c.fillRect(i * bw + 1.5, cv.height - h, bw - 3, h); } c.globalAlpha = 1; }
-        },
     };
 
     let active = new Map();      // id -> element
-    let timer = null, audioTimer = null, clockTimer = null;
+    let timer = null, clockTimer = null;
     const needs = k => [...active.keys()].some(id => defs[id] && defs[id][k]);
 
-    function clearTimers() { clearInterval(timer); clearInterval(audioTimer); clearInterval(clockTimer); timer = audioTimer = clockTimer = null; }
+    function clearTimers() { clearInterval(timer); clearInterval(clockTimer); clearInterval(autoTimer); timer = clockTimer = autoTimer = null; }
 
+    // ---- colour that follows the background (only when the elements have no frosted card): light text on a dark backdrop, dark text on a light one ----
+    // The backdrop behind every element is sampled from the wallpaper canvas (or the playing video) into a 10x10 canvas every 1.5 s - a few pixels, no per-frame work.
+    // Hysteresis (0.46 / 0.58) stops the text from flickering between the two. Video that the browser marks as cross-origin cannot be read: the text then keeps its colour.
+    let autoTimer = null, sampleCv = null, sampleCtx = null, readBlocked = false;
+    function backdropSource() {
+        const w = document.getElementById('waves');
+        if (w && w.width > 0 && getComputedStyle(w).display !== 'none') return { el: w, w: w.width, h: w.height };
+        for (const id of ['videoA', 'videoB']) {
+            const v = document.getElementById(id);
+            if (v && v.readyState >= 2 && v.videoWidth > 0 && getComputedStyle(v).display !== 'none' && parseFloat(getComputedStyle(v).opacity) > 0.5) return { el: v, w: v.videoWidth, h: v.videoHeight };
+        }
+        return null;
+    }
+    function setTextTone(e, dark) {
+        if (dark) { e.style.setProperty('--fg', '#0c1118'); e.style.setProperty('--sh', '0 1px 5px rgba(255,255,255,.4)'); e.style.setProperty('--bar', 'rgba(0,0,0,.2)'); }
+        else { e.style.removeProperty('--fg'); e.style.removeProperty('--sh'); e.style.removeProperty('--bar'); }
+        e._darkText = dark;
+    }
+    function autoContrast() {
+        if (isPaused || readBlocked || active.size === 0) return;
+        const src = backdropSource(); if (!src) return;
+        if (!sampleCv) { sampleCv = document.createElement('canvas'); sampleCv.width = sampleCv.height = 10; sampleCtx = sampleCv.getContext('2d', { willReadFrequently: true }); }
+        const vw = Math.max(1, window.innerWidth), vh = Math.max(1, window.innerHeight);
+        for (const [, e] of active) {
+            const r = e.getBoundingClientRect(); if (r.width < 4 || r.height < 4) continue;
+            try {
+                sampleCtx.drawImage(src.el, r.left / vw * src.w, r.top / vh * src.h, r.width / vw * src.w, r.height / vh * src.h, 0, 0, 10, 10);
+                const d = sampleCtx.getImageData(0, 0, 10, 10).data; let sum = 0;
+                for (let i = 0; i < d.length; i += 4) sum += (0.2126 * d[i] + 0.7152 * d[i + 1] + 0.0722 * d[i + 2]) / 255;
+                const lum = sum / 100, wasDark = !!e._darkText;
+                const dark = wasDark ? lum > 0.46 : lum > 0.58;
+                if (dark !== wasDark) setTextTone(e, dark);
+            } catch (x) { readBlocked = true; return; }               // tainted source: leave the colours alone
+        }
+    }
+    function setAutoContrast(on) {
+        readBlocked = false;
+        if (on) { autoContrast(); autoTimer = setInterval(autoContrast, 1500); }
+        else for (const [, e] of active) setTextTone(e, false);
+    }
+
+    let systemPollPending = false, elementsRevision = 0;
     async function pollSystem() {
-        if (isPaused) return;
+        if (isPaused || systemPollPending) return;
         const b = bridge(); if (!b) return;
+        const revision = elementsRevision;
+        systemPollPending = true;
         try {
             const d = JSON.parse(await b.GetSystemJson(needs('needsGpu')));
+            if (revision !== elementsRevision || isPaused) return;
             for (const [id, e] of active) if (defs[id].upd) defs[id].upd(e, d);
         } catch (x) { /* keep the last values */ }
-    }
-    async function pollAudio() {
-        if (isPaused) return;
-        const b = bridge(); if (!b) return;
-        try { const bands = JSON.parse(await b.GetAudioBandsJson()); for (const [id, e] of active) if (defs[id].draw) defs[id].draw(e, bands); } catch (x) { /* ignore */ }
+        finally { systemPollPending = false; }
     }
     function tickClocks() { if (isPaused) return; for (const [id, e] of active) if (defs[id].tick) defs[id].tick(e); }
 
     // Called after every settings refresh: builds exactly the elements the user enabled, where and as big as they asked.
-    window.opsisApplyElements = async function () {
-        const b = bridge(); if (!b) return;
-        let c = cfg;
-        try { c = JSON.parse(await b.GetWaveConfigJson()); } catch (x) { /* use the last one */ }
+    window.opsisApplyElements = async function (config) {
+        const revision = ++elementsRevision;
+        let c = config;
+        if (!c) {
+            const b = bridge(); if (!b) return;
+            try { c = JSON.parse(await b.GetWaveConfigJson()); } catch (x) { c = cfg; }
+        }
+        if (revision !== elementsRevision) return;
         const list = (c.elements || []).filter(x => defs[x.id]);
         const want = new Map(list.map(x => [x.id, x]));
         for (const [id, e] of [...active]) if (!want.has(id)) { e.remove(); active.delete(id); }
@@ -143,10 +181,10 @@
             e.classList.toggle('card', !!c.elCard);
         }
         clearTimers();
-        if (active.size === 0) return;
+        if (active.size === 0 || isPaused) return;
         if ([...active.keys()].some(id => defs[id].upd)) { pollSystem(); timer = setInterval(pollSystem, 1000); }
-        if (needs('needsAudio')) audioTimer = setInterval(pollAudio, 80);
         if ([...active.keys()].some(id => defs[id].tick)) { tickClocks(); clockTimer = setInterval(tickClocks, 1000); }
+        setAutoContrast(!c.elCard && c.elAuto !== false);
     };
     window.opsisPauseElements = function (paused) { if (paused) clearTimers(); else window.opsisApplyElements(); };
 })();

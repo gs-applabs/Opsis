@@ -23,18 +23,30 @@ public static class AppActivity
     private static bool _fullscreen, _locked, _remote, _batterySaver, _screensaver, _highLoad, _awake;
     private static int _loadHits;
     private static string? _fullscreenDevice;
+    // 2.6.0: monitors whose desktop is fully covered by an opaque window (see DesktopCoverage): the wallpaper there is invisible, so it is paused (no quality loss).
+    private static HashSet<string> _covered = new(StringComparer.OrdinalIgnoreCase);
+    private static string _coveredKey = "";
+    private static HashSet<string> _previousCovered = new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>True όταν υπάρχει οποιοσδήποτε λόγος παύσης (fullscreen, lock, RDP, battery saver).</summary>
     public static bool IsFullscreenAppActive { get; private set; }
+
+    /// <summary>2.6.0: the individual reasons, for the glass layer (it suspends on lock / remote / fullscreen and lowers its rate on battery saver).</summary>
+    public readonly record struct ActivitySnapshot(bool Locked, bool Remote, bool Fullscreen, bool BatterySaver);
+    public static ActivitySnapshot Snapshot => new(_locked, _remote, _fullscreen, _batterySaver);
     public static event Action<bool>? FullscreenChanged;
 
     public static string Describe() =>
         $"fullscreen={_fullscreen}({_fullscreenDevice ?? "-"}) locked={_locked} remote={_remote} batterySaver={_batterySaver} screensaver={_screensaver} highLoad={_highLoad}";
 
     /// <summary>Αν το rendering μιας συγκεκριμένης οθόνης πρέπει να είναι σταματημένο. Fullscreen σε άλλη οθόνη ΔΕΝ παύει αυτή.</summary>
-    public static bool IsPausedFor(Screen? screen)
+    public static bool IsFullscreenOn(Screen screen) => _fullscreen &&
+        (_fullscreenDevice == null || string.Equals(_fullscreenDevice, screen.DeviceName, StringComparison.OrdinalIgnoreCase));
+
+    public static bool IsPausedFor(Screen? screen, bool includeDesktopCoverage = true)
     {
         if (_locked || _remote || _batterySaver || _screensaver || _highLoad) return true;
+        if (includeDesktopCoverage && screen != null && _covered.Contains(screen.DeviceName)) return true;
         if (!_fullscreen) return false;
         return _fullscreenDevice == null || screen == null || string.Equals(_fullscreenDevice, screen.DeviceName, StringComparison.OrdinalIgnoreCase);
     }
@@ -64,12 +76,12 @@ public static class AppActivity
     {
         try
         {
-            var settings = AppSettings.Load();
+            var settings = AppSettings.Peek();
             bool fsNow = IsForegroundWindowFullscreen(out string? device);
             _fullscreenHits = fsNow ? _fullscreenHits + 1 : 0;
             // είσοδος μετά από 2 συνεχόμενα δείγματα, έξοδος αμέσως (ή αν άλλαξε οθόνη το ίδιο fullscreen)
             bool fullscreen = _fullscreenHits >= 2 || (_fullscreen && fsNow);
-            if (fullscreen) _fullscreenDevice = device;
+            _fullscreenDevice = fullscreen ? device : null;
 
             // Τα φθηνά-αλλά-όχι-δωρεάν checks (RDP, power) κάθε 5 δευτερόλεπτα.
             if (_slowTick++ % 5 == 0)
@@ -80,11 +92,26 @@ public static class AppActivity
                 UpdateLoad(settings);
             }
             if (!settings.PauseOnLock) _locked = false;
+            UpdateCovered(settings);
             _fullscreen = fullscreen;
             Publish();
             UpdateKeepAwake(settings);
         }
         catch (Exception ex) { RotatingLogger.Write("AppActivity: " + ex.Message); }
+    }
+
+    private static string _lastCoveredKey = "";
+
+    // 2.6.0: needs two equal samples (2 s) to START pausing a covered monitor and one sample to resume (the desktop shows again at once).
+    private static void UpdateCovered(AppSettings settings)
+    {
+        var now = settings.PauseWhenDesktopCovered && !(_locked || _remote || _screensaver || _batterySaver || _highLoad)
+            ? DesktopCoverage.Compute() : new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        _covered.IntersectWith(now);
+        foreach (var device in now)
+            if (_previousCovered.Contains(device)) _covered.Add(device);
+        _previousCovered = now;
+        _coveredKey = string.Join("|", _covered.OrderBy(x => x));
     }
 
     private static bool _lastPublished;
@@ -97,7 +124,9 @@ public static class AppActivity
         bool changed = now != _lastPublished || _fullscreenDevice != _lastDevice
                        || _locked != _lastLocked || _remote != _lastRemote || _batterySaver != _lastSaver
                        || _screensaver != _lastScreensaver || _highLoad != _lastLoad;
-        if (!changed) return;
+        var coveredChanged = _coveredKey != _lastCoveredKey;
+        if (!changed && !coveredChanged) return;
+        _lastCoveredKey = _coveredKey;
         _lastPublished = now; _lastDevice = _fullscreenDevice;
         _lastLocked = _locked; _lastRemote = _remote; _lastSaver = _batterySaver; _lastScreensaver = _screensaver; _lastLoad = _highLoad;
         IsFullscreenAppActive = now;
