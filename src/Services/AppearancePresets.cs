@@ -24,6 +24,14 @@ public static class AppearancePresets
         public int TaskbarWidgets { get; set; } = 1;
         public int TaskbarTaskView { get; set; } = 1;
         public int TaskbarSearch { get; set; } = 1;
+        // Optional additive fields preserve older portable presets.
+        public int? ExplorerStatusBar { get; set; }
+        public int? ExplorerSyncNotifications { get; set; }
+        public int? ExplorerPreviewHandlers { get; set; }
+        public int? TaskbarCombine { get; set; }
+        public int? SecondaryTaskbarCombine { get; set; }
+        public OpsisTaskbarDesigner.Profile? OpsisTaskbar { get; set; }
+        public string? OpsisStartButtonStyle { get; set; }
         public bool HotCornersEnabled { get; set; }
         public string TopLeft { get; set; } = "None";
         public string TopRight { get; set; } = "None";
@@ -71,6 +79,13 @@ public static class AppearancePresets
             TaskbarWidgets = TaskbarViewProfiles.IsWindows11 ? TaskbarViewProfiles.ReadOption("TaskbarDa") : 1,
             TaskbarTaskView = TaskbarViewProfiles.IsWindows11 ? TaskbarViewProfiles.ReadOption("ShowTaskViewButton") : 1,
             TaskbarSearch = TaskbarViewProfiles.IsWindows11 ? TaskbarViewProfiles.ReadOption("SearchboxTaskbarMode") : 1,
+            ExplorerStatusBar = ExplorerViewProfiles.ReadOption("ShowStatusBar"),
+            ExplorerSyncNotifications = ExplorerViewProfiles.ReadOption("ShowSyncProviderNotifications"),
+            ExplorerPreviewHandlers = ExplorerViewProfiles.ReadOption("ShowPreviewHandlers"),
+            TaskbarCombine = TaskbarViewProfiles.IsWindows11 ? TaskbarViewProfiles.ReadOption("TaskbarGlomLevel") : null,
+            SecondaryTaskbarCombine = TaskbarViewProfiles.IsWindows11 ? TaskbarViewProfiles.ReadOption("MMTaskbarGlomLevel") : null,
+            OpsisTaskbar = OpsisTaskbarDesigner.Read(),
+            OpsisStartButtonStyle = StartStudioPreferences.Read().StartButtonStyle,
             HotCornersEnabled = s.HotCornersEnabled,
             TopLeft = s.HotCornerTopLeft, TopRight = s.HotCornerTopRight,
             BottomLeft = s.HotCornerBottomLeft, BottomRight = s.HotCornerBottomRight,
@@ -157,12 +172,23 @@ public static class AppearancePresets
         lines.Add("Hot Corners: " + (s.HotCornersEnabled ? "on" : "off") + " → " + (p.HotCornersEnabled ? "on" : "off"));
         lines.Add("Dwell: " + s.HotCornerDwellMilliseconds + "ms → " + p.DwellMs + "ms");
         lines.Add("Corner mappings: " + p.TopLeft + ", " + p.TopRight + ", " + p.BottomLeft + ", " + p.BottomRight);
+        if (p.ExplorerStatusBar is int status) Show("Explorer status bar", ExplorerViewProfiles.ReadOption("ShowStatusBar"), status);
+        if (p.ExplorerSyncNotifications is int sync) Show("Explorer sync notifications", ExplorerViewProfiles.ReadOption("ShowSyncProviderNotifications"), sync);
+        if (p.ExplorerPreviewHandlers is int handlers) Show("Explorer preview handlers", ExplorerViewProfiles.ReadOption("ShowPreviewHandlers"), handlers);
+        if (TaskbarViewProfiles.IsWindows11)
+        {
+            if (p.TaskbarCombine is int combine) Show("Taskbar grouping", TaskbarViewProfiles.ReadOption("TaskbarGlomLevel"), combine);
+            if (p.SecondaryTaskbarCombine is int secondary) Show("Secondary grouping", TaskbarViewProfiles.ReadOption("MMTaskbarGlomLevel"), secondary);
+        }
+        if (p.OpsisTaskbar != null) lines.Add("Opsis bar: " + p.OpsisTaskbar.Edge + " / " + p.OpsisTaskbar.Style + " / floating=" + p.OpsisTaskbar.Floating + " / segmented=" + p.OpsisTaskbar.Segmented + " / dynamic=" + p.OpsisTaskbar.DynamicSize);
+        if (p.OpsisStartButtonStyle != null) lines.Add("Opsis Start button: " + p.OpsisStartButtonStyle);
         lines.Add("Preview only — no system settings have changed.");
         return string.Join(Environment.NewLine, lines);
     }
 
     public static void Apply(string name)
     {
+        if (SafeModeService.IsSafeMode || WindowsUpdateGuard.RequiresReview) throw new InvalidOperationException("Windows compatibility review required.");
         var target = Read(name);
         var before = Capture("Rollback");
         // Validate the entire preset before touching any Windows or Opsis settings.
@@ -188,6 +214,13 @@ public static class AppearancePresets
         (!TaskbarViewProfiles.IsWindows11 ||
             (a.TaskbarAlignment == b.TaskbarAlignment && a.TaskbarWidgets == b.TaskbarWidgets &&
              a.TaskbarTaskView == b.TaskbarTaskView && a.TaskbarSearch == b.TaskbarSearch)) &&
+        (b.ExplorerStatusBar == null || a.ExplorerStatusBar == b.ExplorerStatusBar) &&
+        (b.ExplorerSyncNotifications == null || a.ExplorerSyncNotifications == b.ExplorerSyncNotifications) &&
+        (b.ExplorerPreviewHandlers == null || a.ExplorerPreviewHandlers == b.ExplorerPreviewHandlers) &&
+        (!TaskbarViewProfiles.IsWindows11 || ((b.TaskbarCombine == null || a.TaskbarCombine == b.TaskbarCombine) &&
+        (b.SecondaryTaskbarCombine == null || a.SecondaryTaskbarCombine == b.SecondaryTaskbarCombine))) &&
+        (b.OpsisTaskbar == null || OpsisTaskbarDesigner.Equivalent(a.OpsisTaskbar, b.OpsisTaskbar)) &&
+        (b.OpsisStartButtonStyle == null || a.OpsisStartButtonStyle == b.OpsisStartButtonStyle) &&
         a.HotCornersEnabled == b.HotCornersEnabled && a.TopLeft == b.TopLeft &&
         a.TopRight == b.TopRight && a.BottomLeft == b.BottomLeft &&
         a.BottomRight == b.BottomRight && a.DwellMs == b.DwellMs &&
@@ -215,6 +248,19 @@ public static class AppearancePresets
             if (TaskbarViewProfiles.ReadOption("SearchboxTaskbarMode") != p.TaskbarSearch)
                 TaskbarViewProfiles.ApplyOption("SearchboxTaskbarMode", p.TaskbarSearch);
         }
+        if (p.ExplorerStatusBar is int status) ExplorerViewProfiles.ApplyOption("ShowStatusBar", status);
+        if (p.ExplorerSyncNotifications is int sync) ExplorerViewProfiles.ApplyOption("ShowSyncProviderNotifications", sync);
+        if (p.ExplorerPreviewHandlers is int handlers) ExplorerViewProfiles.ApplyOption("ShowPreviewHandlers", handlers);
+        if (TaskbarViewProfiles.IsWindows11)
+        {
+            if (p.TaskbarCombine is int combine) TaskbarViewProfiles.ApplyOption("TaskbarGlomLevel", combine);
+            if (p.SecondaryTaskbarCombine is int secondary) TaskbarViewProfiles.ApplyOption("MMTaskbarGlomLevel", secondary);
+        }
+        if (p.OpsisTaskbar != null)
+            OpsisTaskbarDesigner.Save(p.OpsisTaskbar);
+        if (p.OpsisStartButtonStyle != null)
+            StartStudioPreferences.SetStartButton(p.OpsisStartButtonStyle);
+        MotionDesk.Widgets.ReplacementTaskbar.RefreshSettings();
         var s = AppSettings.Load();
         bool changed = s.HotCornersEnabled != p.HotCornersEnabled ||
             s.HotCornerTopLeft != p.TopLeft || s.HotCornerTopRight != p.TopRight ||
@@ -236,6 +282,12 @@ public static class AppearancePresets
     {
         if (p.Schema != 1 || string.IsNullOrWhiteSpace(p.Name)) throw new InvalidDataException("Unsupported preset version.");
         SafeName(p.Name);
+        if (p.ExplorerStatusBar is < 0 or > 1 || p.ExplorerSyncNotifications is < 0 or > 1 ||
+            p.ExplorerPreviewHandlers is < 0 or > 1 || p.TaskbarCombine is < 0 or > 2 ||
+            p.SecondaryTaskbarCombine is < 0 or > 2)
+            throw new InvalidDataException("Invalid extended native shell preference.");
+        if (p.OpsisTaskbar != null) OpsisTaskbarDesigner.Validate(p.OpsisTaskbar);
+        if (p.OpsisStartButtonStyle != null && !MotionDesk.UI.OpsisStartButtonArt.IsValid(p.OpsisStartButtonStyle)) throw new InvalidDataException("Invalid Start button style.");
         if (p.HideFileExt is not (0 or 1) || p.Hidden is not (1 or 2) ||
             p.CompactMode is not (0 or 1) || p.ExplorerLaunchTo is not (1 or 2) ||
             p.TaskbarAlignment is not (0 or 1) || p.TaskbarWidgets is not (0 or 1) ||

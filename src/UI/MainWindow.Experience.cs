@@ -338,9 +338,9 @@ public sealed partial class MainWindow
                 {
                     var info = OpsisRainmeterSkinImporter.PreviewFile(chooser.FileName);
                     var message = StudioText(
-                        "Only one built-in String/Time meter is supported. Script, plugin and dynamic expressions are rejected.",
-                        "Υποστηρίζεται μία εγγενής ετικέτα String/Time. Scripts, plugins και δυναμικές εκφράσεις απορρίπτονται.") +
-                        Environment.NewLine + info.Name + " · " + info.Binding + " · " + info.AccentHex +
+                        "Up to eight built-in String meters (static text, time, CPU, RAM) are imported as stacked rows. Scripts, plugins and dynamic expressions are rejected.",
+                        "Υποστηρίζονται έως οκτώ ετικέτες String (κείμενο, ώρα, CPU, RAM) σε διαδοχικές γραμμές. Scripts, plugins και δυναμικές εκφράσεις απορρίπτονται.") +
+                        Environment.NewLine + info.Name + " · " + (info.Rows?.Length ?? 1) + " meter(s) · " + info.Binding + " · " + info.AccentHex +
                         Environment.NewLine + StudioText("Import this safe, data-only widget?",
                             "Να εισαχθεί ως ασφαλές widget δεδομένων;");
                     if (MessageBox.Show(this, message, "Opsis / Rainmeter", MessageBoxButtons.YesNo,

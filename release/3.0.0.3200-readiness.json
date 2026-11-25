@@ -4,7 +4,7 @@
   "targetVersion": "3.0.0.3200",
   "currentPublishedVersion": "2.8.0.2510",
   "state": "development",
-  "branch": "feat/3.0.0.3200-integration",
+  "branch": "feat/p0-p1-unified-capability-switcher",
   "releaseBlocked": true,
   "requireAllGatesPassed": true,
   "gates": [
@@ -35,18 +35,18 @@
     },
     {
       "id": "unified-win2022-win2025-build-tests",
-      "status": "pending",
-      "evidence": ".github/workflows/3.0-integration.yml"
+      "status": "in-review",
+      "evidence": "aee7f57 audit 45467808321 failed CS0165; c5345d9 fixed; 9f97858 integrates PR12 Athens. Latest CI pending; prior 5b4d25d passes only prior SHA."
     },
     {
       "id": "webview2-gpu-weather-renderer-captures",
-      "status": "pending",
-      "evidence": "tests/weather-spatial/WebViewSmoke.csproj"
+      "status": "in-review",
+      "evidence": "aee7f57 audit 45467808321 failed CS0165; c5345d9 fixed; 9f97858 integrates PR12 Athens. Latest CI pending; prior 5b4d25d passes only prior SHA."
     },
     {
       "id": "installer-install-reinstall-uninstall-windows-vm",
-      "status": "pending",
-      "evidence": ".github/workflows/3.0-installer-e2e.yml"
+      "status": "in-review",
+      "evidence": "aee7f57 audit 45467808321 failed CS0165; c5345d9 fixed; 9f97858 integrates PR12 Athens. Latest CI pending; prior 5b4d25d passes only prior SHA."
     },
     {
       "id": "integrated-plugins-e2e",
@@ -61,7 +61,7 @@
     {
       "id": "complete-original-feature-list",
       "status": "incomplete",
-      "evidence": "Native Windows Start replacement, full Rainmeter plugins, Windhawk mods, SCR registration, online marketplace and full 3D models are not complete"
+      "evidence": "Native Shell XAML engine, guaranteed native Explorer tab grouping, Rainmeter full runtime, HDR, verified geographical assets and all final tests remain incomplete; photo-first and composite widget increments, actual 200-image abstract pack delivered; see canonical progress log."
     },
     {
       "id": "approved-version-bump-and-production-release",

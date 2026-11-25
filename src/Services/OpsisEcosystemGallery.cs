@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.IO.Compression;
+using System.Security.Cryptography;
 using System.Linq;
 using System.Text.Json;
 
@@ -86,11 +88,11 @@ public static class OpsisEcosystemGallery
                 if ((File.GetAttributes(dir) & FileAttributes.ReparsePoint) != 0) continue;
                 var path = Path.Combine(dir, "opsis-contributions.json");
                 if (!File.Exists(path) || (File.GetAttributes(path) & FileAttributes.ReparsePoint) != 0 ||
-                    new FileInfo(path).Length > 128 * 1024) continue;
+                    new FileInfo(path).Length > (origin == "gallery-pack" ? MaxManifestBytes : 128 * 1024)) continue;
                 manifest = JsonSerializer.Deserialize<Manifest>(File.ReadAllText(path),
                     new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
                 if (manifest == null || manifest.Schema != 1 || !SafeToken(manifest.PluginId) ||
-                    manifest.Contributions == null || manifest.Contributions.Count > 100)
+                    manifest.Contributions == null || manifest.Contributions.Count > (origin == "gallery-pack" ? MaxPackImages : 100))
                     continue;
             }
             catch (Exception e) when (e is IOException or UnauthorizedAccessException or
@@ -139,7 +141,7 @@ public static class OpsisEcosystemGallery
             {
                 Name = imported.Name, Binding = imported.Binding, Text = imported.Text,
                 AccentHex = imported.AccentHex, FontSize = imported.FontSize,
-                Width = imported.Width, Height = imported.Height
+                Width = imported.Width, Height = imported.Height, Rows = imported.Rows
             };
             OpsisWidgetDesigner.Validate(data);
             return data;
@@ -166,6 +168,107 @@ public static class OpsisEcosystemGallery
         if (selected == null || new FileInfo(selected.AssetPath).Length > 1024 * 1024)
             throw new InvalidDataException("Theme contribution missing or too large.");
         return OpsisThemeBundle.Import(selected.AssetPath);
+    }
+
+    private static readonly object PackGate = new();
+    private static readonly HashSet<string> PackImageExtensions = new(StringComparer.OrdinalIgnoreCase) { ".jpg", ".jpeg", ".png", ".webp" };
+    public const int MaxPackImages = 200;
+    private const long MaxPackBytes = 1024L * 1024 * 1024;
+    private const int MaxManifestBytes = 512 * 1024;
+
+    /// <summary>Install a data-only static wallpaper pack into the existing gallery.
+    /// No scripts, DLLs, archives within archives or auto-application. Publish only
+    /// after the complete manifest, bounded extraction and image checks succeed.</summary>
+    public static int ImportWallpaperPack(string zipPath)
+    {
+        if (!Path.GetExtension(zipPath).Equals(".zip", StringComparison.OrdinalIgnoreCase))
+            throw new InvalidDataException("Expected a ZIP gallery pack.");
+        lock (PackGate)
+        {
+            using var archive = ZipFile.OpenRead(zipPath);
+            if (archive.Entries.Count < 2 || archive.Entries.Count > MaxPackImages + 1) throw new InvalidDataException("A gallery pack must contain one manifest and 1–200 images.");
+            var entries = new Dictionary<string, ZipArchiveEntry>(StringComparer.OrdinalIgnoreCase);
+            long total = 0;
+            foreach (var entry in archive.Entries)
+            {
+                var name = entry.FullName;
+                if (!SafeRelative(name) || ((entry.ExternalAttributes >> 16) & 0xF000) == 0xA000 ||
+                    (entry.ExternalAttributes & 0x400) != 0 || !entries.TryAdd(name, entry))
+                    throw new InvalidDataException("Unsafe or duplicate gallery ZIP entry.");
+                if (entry.Length <= 0 || entry.Length > 32L * 1024 * 1024 || entry.Length > MaxPackBytes - total)
+                    throw new InvalidDataException("Gallery ZIP size quota exceeded.");
+                total += entry.Length;
+            }
+            if (!entries.TryGetValue("opsis-contributions.json", out var manifestEntry) || manifestEntry.Length > MaxManifestBytes)
+                throw new InvalidDataException("Gallery manifest missing or too large.");
+            byte[] manifestBytes = ReadEntry(manifestEntry);
+            var manifest = JsonSerializer.Deserialize<Manifest>(manifestBytes, new JsonSerializerOptions { PropertyNameCaseInsensitive = true })
+                ?? throw new InvalidDataException("Invalid gallery manifest.");
+            if (manifest.Schema != 1 || !SafeToken(manifest.PluginId) || manifest.PluginId is "." or ".." ||
+                manifest.PluginId.EndsWith('.') || manifest.Contributions == null || (manifest.Contributions.Count < 1 || manifest.Contributions.Count > MaxPackImages) ||
+                !Version.TryParse(manifest.Version, out _) || entries.Count != manifest.Contributions.Count + 1)
+                throw new InvalidDataException("Invalid gallery pack identity or count.");
+            // Use a fixed, generated folder name rather than trusting a manifest path.
+            var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var assets = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var item in manifest.Contributions)
+            {
+                if (item == null || !SafeToken(item.Id) || !ids.Add(item.Id) || item.Type != "wallpaper" ||
+                    !SafeRelative(item.Asset) || !assets.Add(item.Asset) || !entries.ContainsKey(item.Asset) ||
+                    !item.Asset.StartsWith("images/", StringComparison.Ordinal) || item.Asset.Count(c => c == '/') != 1 ||
+                    !SafeToken(Path.GetFileName(item.Asset)) || !PackImageExtensions.Contains(Path.GetExtension(item.Asset)) ||
+                    string.IsNullOrWhiteSpace(item.Title) || item.Title.Length > 120 ||
+                    string.IsNullOrWhiteSpace(item.Category) || item.Category.Length > 60 ||
+                    (item.Author?.Length ?? 0) > 120 || (item.Description?.Length ?? 0) > 1024)
+                    throw new InvalidDataException("Invalid data-only wallpaper contribution.");
+            }
+            if (Manifests().Any(x => string.Equals(x.Data.PluginId, manifest.PluginId, StringComparison.OrdinalIgnoreCase)))
+                throw new InvalidDataException("A gallery pack with this identity is already installed.");
+            string root = Path.Combine(AppPaths.AppDataFolder, "gallery-packs");
+            Directory.CreateDirectory(root);
+            if ((File.GetAttributes(root) & FileAttributes.ReparsePoint) != 0) throw new InvalidDataException("Linked gallery storage is not supported.");
+            // Staging is a sibling, so Gallery cannot discover a partial manifest.
+            string stage = Path.Combine(AppPaths.AppDataFolder, ".gallery-stage-" + Guid.NewGuid().ToString("N"));
+            string destination = Path.Combine(root, "pack-" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(stage);
+            try
+            {
+                Directory.CreateDirectory(Path.Combine(stage, "images"));
+                var hashes = new HashSet<string>(StringComparer.Ordinal);
+                foreach (var item in manifest.Contributions)
+                {
+                    byte[] data = ReadEntry(entries[item.Asset]);
+                    string hash = Convert.ToHexString(SHA256.HashData(data));
+                    if (!hashes.Add(hash)) throw new InvalidDataException("Duplicate image contents in the pack.");
+                    string extension = Path.GetExtension(item.Asset).ToLowerInvariant();
+                    using (var decoded = WallpaperPackImage.Decode(data, extension)) { }
+                    // Keep the original compressed media unchanged. Only the controlled
+                    // storage filename and its manifest path are rewritten.
+                    string safeName = "image-" + hashes.Count.ToString("D3") + (extension == ".jpeg" ? ".jpg" : extension);
+                    File.WriteAllBytes(Path.Combine(stage, "images", safeName), data);
+                    item.Asset = "images/" + safeName;
+                }
+                File.WriteAllText(Path.Combine(stage, "opsis-contributions.json"), JsonSerializer.Serialize(manifest));
+                Directory.Move(stage, destination);
+                return manifest.Contributions.Count;
+            }
+            finally { if (Directory.Exists(stage)) Directory.Delete(stage, true); }
+        }
+    }
+
+    private static byte[] ReadEntry(ZipArchiveEntry entry)
+    {
+        using var input = entry.Open();
+        using var output = new MemoryStream((int)entry.Length);
+        var buffer = new byte[81920];
+        int count;
+        while ((count = input.Read(buffer, 0, buffer.Length)) > 0)
+        {
+            if (count > entry.Length - output.Length) throw new InvalidDataException("Gallery ZIP entry exceeds declared size.");
+            output.Write(buffer, 0, count);
+        }
+        if (output.Length != entry.Length) throw new InvalidDataException("Gallery ZIP entry length mismatch.");
+        return output.ToArray();
     }
 
     /// <summary>Apply only a selected, verified static image contribution. Never execute plugin code.</summary>

@@ -12,6 +12,8 @@ namespace MotionDesk.Services;
 /// </summary>
 public static class OpsisWidgetDesigner
 {
+    public sealed record Row(string Binding, string Text, string AccentHex, int FontSize);
+
     public sealed class Layout
     {
         public int Schema { get; set; } = 1;
@@ -28,6 +30,7 @@ public static class OpsisWidgetDesigner
         public int ContentXPercent { get; set; } = 50;
         public int ContentYPercent { get; set; } = 50;
         public bool ShowWidgetBorder { get; set; } = true;
+        public Row[]? Rows { get; set; }
     }
 
     private static readonly object Sync = new();
@@ -53,6 +56,13 @@ public static class OpsisWidgetDesigner
             layout.Height is < 80 or > 700 || layout.OpacityPercent is < 60 or > 100 ||
             layout.ContentXPercent is < 0 or > 100 || layout.ContentYPercent is < 0 or > 100)
             throw new InvalidDataException("Unsupported widget layout field.");
+        if (layout.Rows != null && (layout.Rows.Length is < 2 or > 8 || layout.Rows.Any(row => row == null ||
+            row.Binding is not ("Clock" or "Date" or "Text" or "CPU" or "RAM" or "Battery") ||
+            row.Text == null || row.Text.Length > 250 || row.FontSize is < 12 or > 80 ||
+            row.AccentHex == null || row.AccentHex.Length != 7 || row.AccentHex[0] != '#' ||
+            !int.TryParse(row.AccentHex.AsSpan(1), System.Globalization.NumberStyles.HexNumber,
+                System.Globalization.CultureInfo.InvariantCulture, out _))))
+            throw new InvalidDataException("Unsupported composite widget row.");
     }
 
     public static IReadOnlyList<string> List() =>

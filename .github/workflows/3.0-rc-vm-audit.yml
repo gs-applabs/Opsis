@@ -3,7 +3,7 @@ on:
   push:
     branches: [test/3.0.0.3200-rc-vm-audit]
   pull_request:
-    branches: [feat/p2-win11-square-start-presets]
+    branches: [feat/p2-win11-square-start-presets, test/3.0.0.3200-rc-vm-audit]
   workflow_dispatch:
 permissions:
   contents: read
@@ -76,11 +76,11 @@ jobs:
             ConvertTo-Json | Set-Content evidence/rc-runtime.json
       - name: Weather JavaScript syntax and fallback engine
         run: |
-          foreach ($file in @('weather.js','weather-spatial.js','weather-landscape.js','weather-atmosphere.js','sky-mask.js')) {
+          foreach ($file in @('weather.js','weather-spatial.js','weather-landscape.js','weather-atmosphere.js','sky-mask.js','ancient-athens.js','ancient-athens-effects.js')) {
             node --check "src/Widgets/wallpaper/$file"
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           }
-          node --test tests/weather-spatial/weather-spatial.test.cjs
+          node --test tests/weather-spatial/weather-spatial.test.cjs tests/weather-spatial/ancient-athens.test.cjs
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Render Weather in real WebView2 Windows runner
         run: |

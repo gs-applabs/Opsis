@@ -31,7 +31,7 @@ public static class OpsisStartButtonArt
                 var square = Rectangle.Inflate(rect, -inset, -inset);
                 var radius = sharp ? Math.Max(2, side / 14f) : Math.Max(4, side / 5f);
                 using var path = RoundedSquare(square, radius);
-                var top = style switch
+                var squareTop = style switch
                 {
                     "Win11 Dark" => Color.FromArgb(246, 52, 62, 86),
                     "Win11 Fluent" => Color.FromArgb(250, 73, 165, 237),
@@ -39,13 +39,13 @@ public static class OpsisStartButtonArt
                     "Win11 Sharp" => Color.FromArgb(248, 58, 116, 201),
                     _ => Color.FromArgb(238, 135, 222, 255)
                 };
-                var bottom = style switch
+                var squareBottom = style switch
                 {
                     "Win11 Dark" => Color.FromArgb(252, 13, 17, 31),
                     "Win11 Glass" => Color.FromArgb(237, 31, 100, 181),
                     _ => Color.FromArgb(248, 20, 53, 138)
                 };
-                using var fill = new LinearGradientBrush(square, top, bottom, 87f);
+                using var fill = new LinearGradientBrush(square, squareTop, squareBottom, 87f);
                 using var border = new Pen(Color.FromArgb(195, 219, 244, 255), Math.Max(1f, side / 36f));
                 g.FillPath(fill, path);
                 g.DrawPath(border, path);

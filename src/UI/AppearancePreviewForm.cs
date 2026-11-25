@@ -17,7 +17,7 @@ public sealed class AppearancePreviewForm : Form
         StartPosition = FormStartPosition.CenterParent;
         Size = new Size(870, 570);
         MinimumSize = new Size(570, 420);
-        Controls.Add(new DesktopCanvas(preset) { Dock = DockStyle.Fill });
+        Controls.Add(new DesktopCanvas(preset) { Dock = DockStyle.Fill, AccessibleName = "Appearance preview canvas" });
         Controls.Add(new Label
         {
             Text = "Visual simulation only — your Windows settings are unchanged. / Ενδεικτική απεικόνιση — καμία αλλαγή συστήματος.",
@@ -82,6 +82,34 @@ public sealed class AppearancePreviewForm : Form
             g.DrawString("Explorer: " + (_p.CompactMode == 1 ? "compact" : "regular") +
                 " · Extensions: " + (_p.HideFileExt == 0 ? "shown" : "hidden"), small,
                 secondary, Math.Min(b.Width - 290, 460), 115);
+            if (_p.OpsisTaskbar is { } visual)
+            {
+                // Render the same detached geometry as the live Opsis bar, on a scaled
+                // separate monitor diagram so it cannot obscure the native shell preview.
+                var sample = new Rectangle(Math.Max(10, b.Right - 245), Math.Max(190, b.Bottom - 205), 220, 120);
+                using var screenBrush = new SolidBrush(Color.FromArgb(22, 29, 46));
+                g.FillRectangle(screenBrush, sample);
+                var modelScreen = new Rectangle(0, 0, 1920, 1080);
+                var modelWork = new Rectangle(0, 0, 1920, 1032);
+                var native = new Rectangle(0, 1032, 1920, 48);
+                var box = OpsisTaskbarDesigner.CalculateBounds(visual, modelScreen, modelWork, native, 5);
+                var scaled = new Rectangle(sample.Left + box.X * sample.Width / 1920,
+                    sample.Top + box.Y * sample.Height / 1080,
+                    Math.Max(2, box.Width * sample.Width / 1920), Math.Max(2, box.Height * sample.Height / 1080));
+                using var accent = new SolidBrush(Color.FromArgb(102, 190, 238));
+                if (visual.Segmented)
+                {
+                    bool vertical = box.Height > box.Width;
+                    int segmentCount = 4;
+                    int segment = Math.Max(1, (vertical ? scaled.Height : scaled.Width) / segmentCount);
+                    for (int i = 0; i < segmentCount; i++)
+                        g.FillRectangle(accent, vertical ?
+                            new Rectangle(scaled.Left, scaled.Top + i * segment, scaled.Width, Math.Max(1, segment - 1)) :
+                            new Rectangle(scaled.Left + i * segment, scaled.Top, Math.Max(1, segment - 1), scaled.Height));
+                }
+                else g.FillRectangle(accent, scaled);
+                g.DrawString("Opsis • " + visual.Edge, small, secondary, sample.Left, sample.Top - 18);
+            }
             g.DrawString("Hot Corners: " + (_p.HotCornersEnabled ? "on" : "off"), small,
                 secondary, Math.Min(b.Width - 290, 460), 143);
         }

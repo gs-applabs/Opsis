@@ -27,6 +27,7 @@ namespace MotionDesk.Widgets
         private readonly HotCornersService _hotCorners;
         private readonly System.Windows.Forms.Timer _experienceTimer = new() { Interval = 60_000 };
         private int _experienceChecks;
+        private bool _compatibilityIsolationApplied;
 
         public static event Action? ExitRequested;
         public static void RequestExit() => ExitRequested?.Invoke();
@@ -71,7 +72,7 @@ namespace MotionDesk.Widgets
             {
                 if (!reviewRequired) { PluginHost.Instance.StartAll(); SchedulePluginApproval(); }
                 else RotatingLogger.Write("Optional plugins held until Windows build compatibility review and Opsis restart.");
-                try { MotionDesk.Appearance.AppearanceService.Instance.Start(); }
+                try { if (!reviewRequired) MotionDesk.Appearance.AppearanceService.Instance.Start(); }
                 catch (Exception e) { RotatingLogger.Write("Appearance service: " + e.Message); }
             }
             // Start-up before the other start-up apps: switched on ONCE after the first run when Start with Windows is on (Settings can turn it off; never repeated)
@@ -182,6 +183,26 @@ namespace MotionDesk.Widgets
             };
 
             _trayIcon.DoubleClick += (s, e) => ShowMainWindow();
+            // Reuse the current NotifyIcon; no added background process or timer.
+            var trayStudio = new ToolStripMenuItem("Opsis tray icon / Εικονίδιο Opsis");
+            foreach (var option in new[] { "Original", "Information", "Shield" })
+            {
+                var entry = new ToolStripMenuItem(option);
+                entry.Click += (_, _) =>
+                {
+                    try
+                    {
+                        OpsisModCore.SetOption("control.opsis-center", "tray-icon", option);
+                        ApplyTrayIconStyle();
+                    }
+                    catch (Exception ex) { MessageBox.Show(ex.Message, "Opsis"); }
+                };
+                trayStudio.DropDownItems.Add(entry);
+            }
+            trayStudio.DropDownItems.Add("Windows taskbar / notification area", null, (_, _) => TaskbarViewProfiles.OpenWindowsTaskbarSettings());
+            contextMenu.Items.Insert(1, trayStudio);
+            _pluginMenuIndex++; // preserve insertion point after adding the icon studio
+            ApplyTrayIconStyle();
 
             _alertTimer = new System.Windows.Forms.Timer { Interval = 5000 };
             _alertTimer.Tick += (_, _) => UsageAlertTick();
@@ -200,7 +221,7 @@ namespace MotionDesk.Widgets
             // χρήστης το απενεργοποίησε ρητά (DeskZones page, "AppSettings.QuickHideDoubleClickEnabled").
             _taskbarWatcher.ExplorerRestarted += () =>
             {
-                try { GlassBlur.SetTaskbarTranslucency(WindowsSystemSettings.GetTransparencyEffectsEnabled()); }
+                try { if (!WindowsUpdateGuard.RequiresReview) GlassBlur.SetTaskbarTranslucency(WindowsSystemSettings.GetTransparencyEffectsEnabled()); }
                 catch (Exception) { } // σιωπηλό fallback — ζητήθηκε ρητά, βλ. E2
             };
 
@@ -228,19 +249,21 @@ namespace MotionDesk.Widgets
                     {
                         if ((++_experienceChecks % 15) == 0)
                         {
-                            WindowsUpdateGuard.EvaluateStartup();
+                            if (WindowsUpdateGuard.EvaluateStartup()) IsolateShellForUpdate();
                             // Opsis-only accent; no Windows registry writes and only
                             // one settings save when the actual color changes.
                             try { WallpaperAccentEngine.RefreshIfChanged(); }
                             catch (Exception e) { RotatingLogger.Write("Wallpaper accent refresh: " + e.Message); }
                         }
+                        if (WindowsUpdateGuard.RequiresReview) IsolateShellForUpdate();
+                        else if (!_compatibilityIsolationApplied && AppSettings.Peek().ReplaceWindowsTaskbar) ReplacementTaskbar.RefreshSettings();
                         OpsisAutomationStudio.ExecuteDue(false);
                     }
                     catch (Exception e) { RotatingLogger.Write("Opsis experience check: " + e.Message); }
                 };
                 _experienceTimer.Start();
             }
-            if (!safeMode) _hotCorners.Start();
+            if (!safeMode && !reviewRequired) _hotCorners.Start();
             DesktopToolbar.RefreshSettings();
             if (!reviewRequired) ReplacementTaskbar.RefreshSettings();
             if (!safeMode) VirtualWorkspaces.Start();
@@ -408,8 +431,28 @@ namespace MotionDesk.Widgets
             t.Start();
         }
 
+        private void IsolateShellForUpdate()
+        {
+            if (_compatibilityIsolationApplied) return;
+            _compatibilityIsolationApplied = true;
+            void Hold(Action action, string name)
+            {
+                try { action(); }
+                catch (Exception e) { RotatingLogger.Write("Windows update isolation " + name + ": " + e.Message); }
+            }
+            Hold(ReplacementTaskbar.Stop, "taskbar");
+            Hold(WindowRulesEngine.Instance.Stop, "window rules");
+            Hold(AutoTileService.Stop, "auto tile");
+            Hold(_hotCorners.Stop, "hot corners");
+            Hold(MotionDesk.UI.OpsisCursorFx.Stop, "cursor effects");
+            Hold(() => MotionDesk.Appearance.AppearanceService.Instance.Stop(), "appearance");
+            Hold(PluginHost.Instance.SuspendForCompatibility, "plugins");
+            RotatingLogger.Write("Windows update isolation applied. Preferences preserved; restart after explicit approval.");
+        }
+
         private void AskPluginApproval()
         {
+            if (WindowsUpdateGuard.RequiresReview || _compatibilityIsolationApplied) return;
             // a hidden top-most owner so the box is never lost behind other windows (it used to appear behind the desktop at login and was never answered)
             using var owner = new Form { TopMost = true, ShowInTaskbar = false, FormBorderStyle = FormBorderStyle.None, Opacity = 0, Size = new System.Drawing.Size(1, 1), StartPosition = FormStartPosition.CenterScreen };
             owner.Show();
@@ -672,6 +715,24 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
             DesktopIconVisibilityEngine.Instance.Stop();
             _trayIcon.Visible = false;
             Application.Exit();
+        }
+
+        private void ApplyTrayIconStyle()
+        {
+            try
+            {
+                var state = OpsisModCore.Read();
+                string? style = null;
+                if (state.Options.TryGetValue("control.opsis-center", out var options))
+                    options.TryGetValue("tray-icon", out style);
+                _trayIcon.Icon = style switch
+                {
+                    "Information" => System.Drawing.SystemIcons.Information,
+                    "Shield" => System.Drawing.SystemIcons.Shield,
+                    _ => MotionDesk.UI.AppWindowIcon.Value
+                };
+            }
+            catch (Exception ex) { RotatingLogger.Write("Tray icon style: " + ex.Message); }
         }
 
         private void ChooseWallpaperFolder()

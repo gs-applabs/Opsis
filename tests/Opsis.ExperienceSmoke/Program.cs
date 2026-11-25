@@ -100,6 +100,20 @@ try
         "audit warns about overlapping taskbar, DeskStrip, toolbar and accent owners");
 
 
+    var windhawkMods = OpsisModCompatibility.EvaluateWindhawkMods(new (string Id, bool? Disabled)[]
+    {
+        ("windows-11-taskbar-styler", false), ("WINDOWS-11-TASKBAR-STYLER", false),
+        ("windows-11-start-menu-styler", true), ("custom-unknown", null)
+    });
+    Check(windhawkMods.Count == 2 && windhawkMods.Any(m => m.Area == "Taskbar") &&
+        windhawkMods.Any(m => m.Area == "Unknown mod" && m.Risk == "Review") &&
+        windhawkMods.Count(OpsisModCompatibility.BlocksTaskbarOverlay) == 1,
+        "Windhawk per-mod detection deduplicates, excludes disabled and holds competing taskbar styling");
+    Check(!OpsisIntegrationAudit.TaskbarOverlayAllowed(true, windhawkMods, false), "configured competing taskbar mod prevents simultaneous Opsis overlay");
+    Check(!OpsisModCompatibility.EvaluateWindhawkMods(new (string Id, bool? Disabled)[] { ("windows-11-taskbar-styler", true) }).Any(), "disabled competing Windhawk mod does not block Opsis");
+    Check(NativeStartPreferences.IsValid("Start_Layout", 2) && !NativeStartPreferences.IsValid("Start_Layout", 3) &&
+        NativeStartPreferences.IsValid("ShowAllPinsList", 1) && !NativeStartPreferences.IsValid("unregistered", 1),
+        "native Start preference allowlist validates values without modifying runner registry");
     Check(OpsisModCore.Catalog.Count >= 10, "unified module catalog available");
     Check(OpsisModCore.Read().Enabled.Count == 0, "module flags disabled by default");
     OpsisModCore.SetModule("windows.hot-corners", true, 22631, false);
@@ -112,6 +126,18 @@ try
     Check(rejected, "planned modules cannot be activated as implemented");
     OpsisModCore.SetOption("widgets.opsis", "category", "Weather");
     Check(OpsisModCore.Read().Options["widgets.opsis"]["category"] == "Weather", "typed module options persisted");
+    OpsisModCore.SetOption("WIDGETS.OPSIS", "CATEGORY", "Weather");
+    Check(OpsisModCore.Read().Options.Keys.Count(k => k.Equals("widgets.opsis", StringComparison.OrdinalIgnoreCase)) == 1 &&
+        OpsisModCore.Read().Options["widgets.opsis"].Count == 1, "case-insensitive module and option identity preserved after JSON round trip");
+    OpsisModCore.SetModule("WINDOWS.HOT-CORNERS", false, 22631, false);
+    Check(OpsisModCore.Read().Enabled.Count == 1, "case aliases do not duplicate module flags");
+    Check(MotionDesk.Widgets.DeskFlipEngine.Style == "Flip 3D", "DeskFlip default remains compatible");
+    foreach (var style in new[] { "Flip 3D", "Thumbnail grid", "Compact list" })
+    {
+        MotionDesk.Widgets.DeskFlipEngine.SetStyle(style);
+        Check(MotionDesk.Widgets.DeskFlipEngine.Style == style, "DeskFlip style roundtrip " + style);
+    }
+    Check(!MotionDesk.Widgets.DeskFlipEngine.IsValidStyle("unknown"), "unknown DeskFlip style rejected");
 
     var unchangedAppearance = new AppearancePresets.Preset { Name = "Sample" };
     var sameAppearance = new AppearancePresets.Preset { Name = "Different name" };
@@ -202,7 +228,12 @@ try
     Check(WindowsUpdateGuard.EvaluateStartup(), "changed Windows build triggers review");
     Check(WindowsUpdateGuard.RequiresReview, "hold persists after change");
     WindowsUpdateGuard.ApproveCurrentBuild();
-    Check(!WindowsUpdateGuard.RequiresReview, "user approval clears hold");
+    Check(!WindowsUpdateGuard.RequiresReview && !WindowsUpdateGuard.RuntimeHold, "user approval clears hold");
+    File.WriteAllText(stateFile, "{ malformed");
+    Check(WindowsUpdateGuard.RequiresReview && WindowsUpdateGuard.RuntimeHold, "malformed guard state fails closed");
+    File.WriteAllText(stateFile, JsonSerializer.Serialize(new WindowsUpdateGuard.State { LastApprovedFingerprint = OpsisRecoveryHub.WindowsFingerprint() }));
+    WindowsUpdateGuard.ApproveCurrentBuild();
+    Check(!WindowsUpdateGuard.RequiresReview, "explicit approval after valid state restored clears runtime latch");
 
     var windowsInventory = OpsisRecoveryHub.InspectWindowsShell();
     Check(windowsInventory.Files.Count == 6, "Windows shell file inventory includes six monitored binaries");
@@ -255,6 +286,71 @@ try
         } }
     }));
     Check(OpsisEcosystemGallery.Discover().Any(x => x.PluginId == "example.plugin"), "plugin wallpaper contribution discovered");
+    var addonZip = Path.Combine(folder, "addon-fixture.zip");
+    using (var zip = System.IO.Compression.ZipFile.Open(addonZip, System.IO.Compression.ZipArchiveMode.Create))
+    {
+        using (var writer = new StreamWriter(zip.CreateEntry("opsis-contributions.json").Open()))
+            writer.Write(JsonSerializer.Serialize(new OpsisEcosystemGallery.Manifest { PluginId = "fixture.images", Version = "1.0.0",
+                Contributions = new() { new() { Id = "image1", Type = "wallpaper", Title = "Fixture image", Category = "Test", Asset = "images/fixture.png" } } }));
+        using var png = new System.Drawing.Bitmap(8, 8);
+        using var pngData = new MemoryStream();
+        png.Save(pngData, System.Drawing.Imaging.ImageFormat.Png);
+        using var entry = zip.CreateEntry("images/fixture.png").Open();
+        pngData.Position = 0; pngData.CopyTo(entry);
+    }
+    Check(OpsisEcosystemGallery.ImportWallpaperPack(addonZip) == 1 &&
+        OpsisEcosystemGallery.Discover().Any(x => x.PluginId == "fixture.images" && x.Category == "Test"),
+        "data-only wallpaper pack imported and categorized without applying wallpaper");
+    var localFolder = Path.GetTempPath().TrimEnd(Path.DirectorySeparatorChar);
+    Check(ExplorerSessionStore.IsLocalFolderPath(localFolder) &&
+        !ExplorerSessionStore.IsLocalFolderPath(@"\\server\share") &&
+        !ExplorerSessionStore.IsLocalFolderPath("https://example.invalid") &&
+        ExplorerSessionStore.Normalize(new[] { localFolder, localFolder }).Length == 1,
+        "Explorer session accepts only distinct local filesystem paths");
+    ExplorerSessionStore.Save(new[] { localFolder });
+    Check(ExplorerSessionStore.Read().SequenceEqual(new[] { localFolder }, StringComparer.OrdinalIgnoreCase),
+        "Explorer folder session roundtrip without launching Explorer");
+    var webpBytes = Convert.FromBase64String("UklGRh4AAABXRUJQVlA4TBEAAAAvB8ABAAdQs840s/+BiOh/AAA=");
+    var webpZip = Path.Combine(folder, "addon-webp.zip");
+    using (var zip = System.IO.Compression.ZipFile.Open(webpZip, System.IO.Compression.ZipArchiveMode.Create))
+    {
+        using (var writer = new StreamWriter(zip.CreateEntry("opsis-contributions.json").Open()))
+            writer.Write(JsonSerializer.Serialize(new OpsisEcosystemGallery.Manifest { PluginId = "fixture.webp", Version = "1.0.0",
+                Contributions = new() { new() { Id = "webp", Type = "wallpaper", Title = "WebP fixture", Category = "Test", Asset = "images/fixture.webp" } } }));
+        using var entry = zip.CreateEntry("images/fixture.webp").Open();
+        entry.Write(webpBytes);
+    }
+    Check(OpsisEcosystemGallery.ImportWallpaperPack(webpZip) == 1, "static WebP pack imported");
+    var webpItem = OpsisEcosystemGallery.Discover().Single(x => x.PluginId == "fixture.webp");
+    Check(Path.GetExtension(webpItem.AssetPath) == ".webp" && File.ReadAllBytes(webpItem.AssetPath).SequenceEqual(webpBytes),
+        "WebP original preserved without transcoding");
+    using (var thumbnail = WallpaperPackImage.ReadThumbnail(webpItem.AssetPath, 4))
+        Check(thumbnail.Width == 4 && thumbnail.Height == 4, "WebP thumbnail decoded without Windows codec extension");
+    var largePack = Path.Combine(folder, "addon-200.zip");
+    using (var zip = System.IO.Compression.ZipFile.Open(largePack, System.IO.Compression.ZipArchiveMode.Create))
+    {
+        var manifest = new OpsisEcosystemGallery.Manifest { PluginId = "fixture.200", Version = "1.0.0" };
+        for (int i = 0; i < 200; i++)
+        {
+            var asset = $"images/image-{i:D3}.png";
+            manifest.Contributions.Add(new() { Id = $"image-{i:D3}", Type = "wallpaper", Title = $"Image {i}", Category = "Test", Asset = asset });
+            using var bmp = new System.Drawing.Bitmap(8, 8);
+            bmp.SetPixel(0, 0, System.Drawing.Color.FromArgb(255, i, 0, 0));
+            using var data = new MemoryStream();
+            bmp.Save(data, System.Drawing.Imaging.ImageFormat.Png);
+            using var entry = zip.CreateEntry(asset).Open();
+            data.Position = 0; data.CopyTo(entry);
+        }
+        using var writer = new StreamWriter(zip.CreateEntry("opsis-contributions.json").Open());
+        writer.Write(JsonSerializer.Serialize(manifest));
+    }
+    Check(OpsisEcosystemGallery.ImportWallpaperPack(largePack) == 200 &&
+        OpsisEcosystemGallery.Discover().Count(x => x.PluginId == "fixture.200") == 200,
+        "200-image pack imported and all entries discoverable");
+    bool duplicatePackRejected = false;
+    try { OpsisEcosystemGallery.ImportWallpaperPack(addonZip); }
+    catch (InvalidDataException) { duplicatePackRejected = true; }
+    Check(duplicatePackRejected, "duplicate gallery pack identity rejected");
     var overlapFolder = Path.Combine(folder, "gallery-packs", "example-override");
     Directory.CreateDirectory(overlapFolder);
     File.WriteAllText(Path.Combine(overlapFolder, "cover.webp"), "updated fixture");
@@ -299,19 +395,22 @@ try
         "safe plugin widget contribution instantiated as native layout");
 
 
-    const string supportedRainmeter = "[Rainmeter]\\nUpdate=1000\\n[MeasureClock]\\nMeasure=Time\\nFormat=%H:%M\\n[MeterClock]\\nMeter=String\\nMeasureName=MeasureClock\\nFontColor=64,160,224\\nFontSize=28\\nW=350\\nH=160";
-    var rainPreview = OpsisRainmeterSkinImporter.PreviewIni(supportedRainmeter.Replace("\\\\n", "\\n"), "Converted Clock");
+    const string supportedRainmeter = "[Rainmeter]\nUpdate=1000\n[MeasureClock]\nMeasure=Time\nFormat=%H:%M\n[MeterClock]\nMeter=String\nMeasureName=MeasureClock\nFontColor=64,160,224\nFontSize=28\nW=350\nH=160";
+    var cpuRain = OpsisRainmeterSkinImporter.PreviewIni("[CPU]\nMeasure=CPU\nProcessor=0\n[Meter]\nMeter=String\nMeasureName=CPU", "CPU");
+    var ramRain = OpsisRainmeterSkinImporter.PreviewIni("[RAM]\nMeasure=PhysicalMemory\n[Meter]\nMeter=String\nMeasureName=RAM", "RAM");
+    Check(cpuRain.Binding == "CPU" && ramRain.Binding == "RAM", "Rainmeter CPU and used physical memory mapped to existing percentage widgets");
+    var rainPreview = OpsisRainmeterSkinImporter.PreviewIni(supportedRainmeter, "Converted Clock");
     Check(rainPreview.Binding == "Clock" && rainPreview.AccentHex == "#40A0E0",
         "Rainmeter built-in Time/clock INI mapped to native Opsis widget");
     var rainFile = Path.Combine(folder, "Converted Clock.ini");
-    File.WriteAllText(rainFile, supportedRainmeter.Replace("\\\\n", "\\n"));
+    File.WriteAllText(rainFile, supportedRainmeter);
     Check(OpsisRainmeterSkinImporter.Import(rainFile) == "Converted Clock",
         "safe Rainmeter INI import writes widget layout");
     rejected = false;
     try
     {
         OpsisRainmeterSkinImporter.PreviewIni(
-            "[Rainmeter]\\nUpdate=1000\\n[MeasureScript]\\nMeasure=Plugin\\nPlugin=RunCommand\\n[MeterA]\\nMeter=String\\nMeasureName=MeasureScript".Replace("\\\\n", "\\n"),
+            "[Rainmeter]\nUpdate=1000\n[MeasureScript]\nMeasure=Plugin\nPlugin=RunCommand\n[MeterA]\nMeter=String\nMeasureName=MeasureScript",
             "Blocked");
     }
     catch (InvalidDataException) { rejected = true; }
@@ -320,20 +419,22 @@ try
     try
     {
         OpsisRainmeterSkinImporter.PreviewIni(
-            "[MeterA]\\nMeter=String\\nText=[!Execute \"notepad.exe\"]".Replace("\\\\n", "\\n"),
+            "[MeterA]\nMeter=String\nText=[!Execute \"notepad.exe\"]",
             "Blocked");
     }
     catch (InvalidDataException) { rejected = true; }
     Check(rejected, "Rainmeter bang commands rejected");
+    var multi = OpsisRainmeterSkinImporter.PreviewIni("[MeterA]\nMeter=String\nText=Hello\n[MeterB]\nMeter=String\nText=World", "Two Meters");
+    Check(multi.Rows is { Length: 2 } && multi.Rows[0].Text == "Hello" && multi.Rows[1].Text == "World",
+        "Rainmeter multi-meter data preserved as stacked native rows");
+    var multiFile = Path.Combine(folder, "Multi Meter.ini");
+    File.WriteAllText(multiFile, "[Clock]\nMeasure=Time\n[MeterA]\nMeter=String\nMeasureName=Clock\n[MeterB]\nMeter=String\nText=Welcome");
+    OpsisRainmeterSkinImporter.Import(multiFile);
+    Check(OpsisWidgetDesigner.Read("Multi Meter").Rows is { Length: 2 }, "composite widget persistence");
     rejected = false;
-    try
-    {
-        OpsisRainmeterSkinImporter.PreviewIni(
-            "[MeterA]\\nMeter=String\\nText=Hello\\n[MeterB]\\nMeter=String\\nText=World".Replace("\\\\n", "\\n"),
-            "Two Meters");
-    }
+    try { OpsisRainmeterSkinImporter.PreviewIni("[MeterA]\nMeter=String\nText=Hello\n[MeterB]\nMeter=String\nText=World\n[Other]\nMeasure=Plugin\nPlugin=RunCommand", "Blocked"); }
     catch (InvalidDataException) { rejected = true; }
-    Check(rejected, "Rainmeter multiple meters fail closed instead of losing elements");
+    Check(rejected, "composite Rainmeter import rejects unused executable measures");
     rejected = false;
     try
     {
@@ -345,7 +446,7 @@ try
     try
     {
         OpsisRainmeterSkinImporter.PreviewIni(
-            "[MeterA]\\nMeter=String\\nText=Hello\\nPlugin=RunCommand".Replace("\\\\n", "\\n"),
+            "[MeterA]\nMeter=String\nText=Hello\nPlugin=RunCommand",
             "Extra Commands");
     }
     catch (InvalidDataException) { rejected = true; }
@@ -386,6 +487,57 @@ try
     catch (InvalidDataException) { rejected = true; }
     Check(rejected, "taskbar animation rejects extremely fast CPU-intensive polling");
 
+    var desktop = new System.Drawing.Rectangle(-1920, 0, 1920, 1080);
+    var work = new System.Drawing.Rectangle(-1920, 0, 1920, 1032);
+    var nativeBar = new System.Drawing.Rectangle(-1920, 1032, 1920, 48);
+    Check(OpsisTaskbarDesigner.CalculateBounds(new OpsisTaskbarDesigner.Profile(), desktop, work, nativeBar, 3) == nativeBar,
+        "unchanged taskbar profile preserves native bounds");
+    foreach (var edge in new[] { "Top", "Bottom", "Left", "Right" })
+    {
+        var geometry = new OpsisTaskbarDesigner.Profile { Edge = edge, Floating = true, Segmented = true, DynamicSize = true };
+        var small = OpsisTaskbarDesigner.CalculateBounds(geometry, desktop, work, nativeBar, 2);
+        var large = OpsisTaskbarDesigner.CalculateBounds(geometry, desktop, work, nativeBar, 15);
+        Check(work.Contains(small) && work.Contains(large) && !small.IntersectsWith(nativeBar) &&
+            (edge is "Left" or "Right" ? large.Height >= small.Height : large.Width >= small.Width),
+            "detached adaptive bar respects work area at " + edge);
+    }
+    Check(TaskbarViewProfiles.IsValid("TaskbarGlomLevel", 2) && !TaskbarViewProfiles.IsValid("TaskbarGlomLevel", 3) &&
+        ExplorerViewProfiles.IsValid("ShowStatusBar", 0) && !ExplorerViewProfiles.IsValid("ShowStatusBar", 2),
+        "native Explorer and Taskbar options validate without touching registry");
+    Check(NativeShellThemeBridge.IsKnownTheme("windows-11-notification-center-styler", "LiquidGlass") &&
+        !NativeShellThemeBridge.IsKnownTheme("unregistered", "LiquidGlass") &&
+        !NativeShellThemeBridge.IsKnownTheme("windows-11-notification-center-styler", "unknown"),
+        "native shell provider only accepts known theme choices");
+    Check(NativeShellThemeBridge.ParseTheme("{\"schemaVersion\":1,\"success\":true,\"data\":{\"id\":\"windows-11-notification-center-styler\",\"key\":\"theme\",\"value\":\"LiquidGlass\"}}",
+        "windows-11-notification-center-styler") == "LiquidGlass", "native theme CLI schema validated without starting third party executable");
+    Check(NativeShellThemeBridge.IsKnownTheme("taskbar-volume-control", "classic") &&
+        NativeShellThemeBridge.IsKnownTheme("confirm-closing-multiple-explorer-tabs", "cancel") &&
+        NativeShellThemeBridge.ParseTheme("{\"schemaVersion\":1,\"success\":true,\"data\":{\"id\":\"explorer-command-bar\",\"key\":\"showSettingsItem\",\"value\":true}}", "explorer-command-bar") == "true",
+        "external native provider validates known volume/tab/command bar settings and typed readback");
+    Check(OpsisModCompatibility.ResolveWindhawkDisabled(1, 1, 0, false) == false &&
+        OpsisModCompatibility.ResolveWindhawkDisabled(0, 0, 1, false) == false &&
+        OpsisModCompatibility.ResolveWindhawkDisabled(0, 1, 0, true) == true &&
+        OpsisModCompatibility.ResolveWindhawkDisabled(null, null, null, false) == null,
+        "Windhawk user scope and revoked mods follow upstream disabled semantics");
+    Check(OpsisTaskbarDesigner.ValidGesture("Quick settings") && !OpsisTaskbarDesigner.ValidGesture("run.exe") &&
+        OpsisTaskbarDesigner.ValidVolumeStyle("Compact") && !OpsisTaskbarDesigner.ValidVolumeStyle("unknown"),
+        "P2 gesture and sound styles have fixed allowlists");
+    var monitorProfile = new OpsisTaskbarDesigner.Profile { Edge = "Left", EmptyMiddleClick = "DeskFlip", VolumeStyle = "Large" };
+    OpsisTaskbarDesigner.SaveMonitorProfile("id:test-monitor-a", monitorProfile);
+    Check(OpsisTaskbarDesigner.ReadMonitorProfiles().TryGetValue("ID:TEST-MONITOR-A", out var restoredMonitor) &&
+        restoredMonitor.Edge == "Left" && restoredMonitor.EmptyMiddleClick == "DeskFlip" && restoredMonitor.VolumeStyle == "Large",
+        "P2 monitor profile roundtrip case-insensitive without changing global profile");
+    OpsisTaskbarDesigner.SaveMonitorProfile("id:test-monitor-a", null);
+    Check(!OpsisTaskbarDesigner.ReadMonitorProfiles().ContainsKey("id:test-monitor-a"), "P2 monitor override removal returns to default");
+    Check(OpsisTaskbarDesigner.Profile.IsThumbnailStyle("Large") && !OpsisTaskbarDesigner.Profile.IsThumbnailStyle("Unknown"),
+        "taskbar thumbnail preferences use fixed allowlist");
+    Check(StartStudioPreferences.ValidPowerActions(new[] { "Lock", "Restart" }) &&
+        !StartStudioPreferences.ValidPowerActions(new[] { "Restart", "Restart" }) &&
+        !StartStudioPreferences.ValidPowerActions(new[] { "custom.exe" }),
+        "power menu allows only known distinct actions without executing power operations");
+    StartStudioPreferences.SetPowerActions(new[] { "Lock" });
+    Check(StartStudioPreferences.Read().PowerActions.SequenceEqual(new[] { "Lock" }), "power menu preference roundtrip");
+    StartStudioPreferences.SetPowerActions(StartStudioPreferences.AvailablePowerActions.ToArray());
     Check(OpsisTaskbarDesigner.ButtonHeight(taskbar, false, 44) == 38,
         "taskbar designer calculates horizontal button geometry");
     rejected = false;

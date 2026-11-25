@@ -133,8 +133,11 @@ function init() {
 function resize(quality) {
   if (!canvas || !gl) return;
   const dpr = Math.min(window.devicePixelRatio || 1, quality === 'High' ? 1.5 : 1);
-  const w = Math.max(1, Math.round(window.innerWidth * dpr));
-  const h = Math.max(1, Math.round(window.innerHeight * dpr));
+  const pixels = Math.max(1, window.innerWidth * window.innerHeight * dpr * dpr);
+  const budget = quality === 'High' ? 3840*2160 : 2560*1440;
+  const scale = dpr * Math.min(1, Math.sqrt(budget / pixels));
+  const w = Math.max(1, Math.floor(window.innerWidth * scale));
+  const h = Math.max(1, Math.floor(window.innerHeight * scale));
   if (canvas.width !== w) canvas.width = w;
   if (canvas.height !== h) canvas.height = h;
   gl.viewport(0, 0, w, h);

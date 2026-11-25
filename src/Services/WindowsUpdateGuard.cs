@@ -21,6 +21,8 @@ public static class WindowsUpdateGuard
     }
 
     private static readonly object Gate = new();
+    private static volatile bool _runtimeHold;
+    public static bool RuntimeHold => _runtimeHold;
     private static string StateFile => Path.Combine(OpsisRecoveryHub.Root, "update-guard.json");
 
     public static State Read()
@@ -47,8 +49,18 @@ public static class WindowsUpdateGuard
     {
         get
         {
-            var s = Read();
-            return !string.IsNullOrWhiteSpace(s.PendingFingerprint);
+            if (_runtimeHold) return true;
+            try
+            {
+                var s = Read();
+                return !string.IsNullOrWhiteSpace(s.PendingFingerprint);
+            }
+            catch (Exception e) when (e is IOException or InvalidDataException or UnauthorizedAccessException or JsonException or System.Security.SecurityException)
+            {
+                _runtimeHold = true;
+                RotatingLogger.Write("Windows update guard unreadable; shell features held: " + e.Message);
+                return true;
+            }
         }
     }
 
@@ -76,10 +88,27 @@ public static class WindowsUpdateGuard
     /// </summary>
     public static bool EvaluateStartup()
     {
+        try { return EvaluateFingerprint(); }
+        catch (Exception e) when (e is IOException or InvalidDataException or UnauthorizedAccessException or JsonException or System.Security.SecurityException)
+        {
+            _runtimeHold = true;
+            RotatingLogger.Write("Windows compatibility state unavailable; shell features held: " + e.Message);
+            return true;
+        }
+    }
+
+    private static bool EvaluateFingerprint()
+    {
         lock (Gate)
         {
+            if (_runtimeHold) return true;
             var fingerprint = OpsisRecoveryHub.WindowsFingerprint();
             var state = Read();
+            if (!IsUsableFingerprint(fingerprint))
+            {
+                _runtimeHold = true;
+                return true;
+            }
             if (string.IsNullOrWhiteSpace(state.LastApprovedFingerprint))
             {
                 state.LastApprovedFingerprint = fingerprint;
@@ -90,12 +119,16 @@ public static class WindowsUpdateGuard
             if (state.LastApprovedFingerprint == fingerprint && string.IsNullOrEmpty(state.PendingFingerprint))
                 return false;
             if (state.PendingFingerprint == fingerprint)
+            {
+                _runtimeHold = true;
                 return true;
+            }
             // One snapshot per detected Windows build. Failure must not block boot,
             // but pending review must still be persisted whenever possible.
             try { state.LastSnapshotId = OpsisRecoveryHub.Snapshot("Before Windows shell compatibility review").Id; }
             catch (Exception e) when (e is IOException or UnauthorizedAccessException or InvalidDataException)
             { RotatingLogger.Write("Update guard backup warning: " + e.Message); }
+            _runtimeHold = true; // latch before any disk write can fail
             state.PendingFingerprint = fingerprint;
             state.DetectedUtc = DateTime.UtcNow;
             Save(state);
@@ -104,16 +137,28 @@ public static class WindowsUpdateGuard
         }
     }
 
+    private static bool IsUsableFingerprint(string fingerprint)
+    {
+        var fields = fingerprint.Split(';');
+        return fields.Length >= 2 && fields[0].StartsWith("Build=", StringComparison.Ordinal) &&
+            int.TryParse(fields[0][6..], out var build) && build > 0 &&
+            fields[1].StartsWith("UBR=", StringComparison.Ordinal) &&
+            int.TryParse(fields[1][4..], out var ubr) && ubr >= 0;
+    }
+
     /// <summary>Only the user can acknowledge the new Windows build after reviewing.</summary>
     public static void ApproveCurrentBuild()
     {
         lock (Gate)
         {
             var state = Read();
-            state.LastApprovedFingerprint = OpsisRecoveryHub.WindowsFingerprint();
+            var fingerprint = OpsisRecoveryHub.WindowsFingerprint();
+            if (!IsUsableFingerprint(fingerprint)) throw new InvalidDataException("Windows build could not be identified.");
+            state.LastApprovedFingerprint = fingerprint;
             state.PendingFingerprint = "";
             state.DetectedUtc = null;
             Save(state);
+            _runtimeHold = false;
         }
     }
 }

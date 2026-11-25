@@ -32,6 +32,7 @@ public sealed class OpsisWidgetVisualDesignerForm : Form
     public OpsisWidgetVisualDesignerForm(OpsisWidgetDesigner.Layout layout)
     {
         OpsisWidgetDesigner.Validate(layout);
+        if (layout.Rows is { Length: > 0 }) throw new InvalidOperationException("Composite Rainmeter widgets retain their imported rows; the single-element editor cannot modify them yet.");
         _layout = layout;
         _originalName = layout.Name;
         Text = "Opsis Visual Widget Designer — " + layout.Name;

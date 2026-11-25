@@ -89,8 +89,12 @@ namespace MotionDesk.Services
             return found == null ? "Unknown" : PluginCapabilityManifest.Summary(found.Folder);
         }
 
+        private bool _compatibilitySuspended;
+
         public void SetPluginEnabled(string id, bool enabled)
         {
+            if (enabled && (_compatibilitySuspended || WindowsUpdateGuard.RequiresReview))
+                throw new InvalidOperationException("Windows compatibility review and Opsis restart required before enabling plugins.");
             var settings = AppSettings.Load();
             if (enabled) { settings.DisabledPluginIds.Remove(id); PluginFailureQuarantine.Clear(id); }
             else if (!settings.DisabledPluginIds.Contains(id)) settings.DisabledPluginIds.Add(id);
@@ -154,7 +158,7 @@ namespace MotionDesk.Services
         /// <summary>Φορτώνει και ξεκινά όλα τα plugin. Πρέπει να κληθεί στο UI thread.</summary>
         public void StartAll()
         {
-            if (_started) return;
+            if (_started || _compatibilitySuspended || WindowsUpdateGuard.RequiresReview) return;
             _started = true;
             SweepPendingRemovals();
             if (!AppSettings.Load().PluginsEnabled) return;
@@ -195,6 +199,22 @@ namespace MotionDesk.Services
             // Η γλώσσα του Opsis ισχύει και για τα plugin: αλλάζει ΚΑΙ στα δύο ταυτόχρονα.
             LocalizationManager.Changed += () => { foreach (var p in Snap()) PushLanguage(p.Plugin); };
             HardwareProfileService.ProfileChanged += _ => { foreach (var p in Snap()) PushHardwareProfile(p.Plugin); };
+            Changed?.Invoke();
+        }
+
+        // In-process DLLs cannot be unloaded safely. Prevent future host starts and
+        // stop active plugins; full isolation is achieved on the next Opsis restart.
+        public void SuspendForCompatibility()
+        {
+            if (_compatibilitySuspended) return;
+            _compatibilitySuspended = true;
+            foreach (var p in Snap())
+            {
+                if (!p.Started) continue;
+                p.Started = false;
+                try { p.Plugin.Stop(); }
+                catch (Exception ex) { Log($"Plugin '{p.Plugin.Name}' failed to stop during compatibility hold: {ex.Message}"); }
+            }
             Changed?.Invoke();
         }
 
@@ -405,12 +425,14 @@ namespace MotionDesk.Services
         /// <summary>Asks about every pending plugin (on the UI thread, after start-up); the approved ones are loaded and started at once. Returns how many were approved.</summary>
         public int ResolvePending(Func<PluginTrustRequest, bool> ask)
         {
+            if (_compatibilitySuspended || WindowsUpdateGuard.RequiresReview) return 0;
             int approved = 0;
             foreach (var req in PendingApprovals)
             {
                 bool yes;
                 try { yes = ask(req); } catch (Exception ex) { Log($"Plugin '{req.Name}' approval prompt failed: {ex.Message}"); yes = false; }
                 if (!yes) { Log($"Plugin '{req.Name}' not approved by the user (sha256 {req.Sha256})."); continue; }
+                if (_compatibilitySuspended || WindowsUpdateGuard.RequiresReview) break;
                 try
                 {
                     string currentHash = PluginTrust.HashFolder(req.Folder);
@@ -424,6 +446,7 @@ namespace MotionDesk.Services
                         Log($"Plugin '{req.Name}' changed before approval completed; it requires a new approval.");
                         continue;
                     }
+                    if (_compatibilitySuspended || WindowsUpdateGuard.RequiresReview) break;
                     TrustStore.Approve(req.Name, req.Sha256);
                     Log($"Plugin '{req.Name}' approved by the user (sha256 {req.Sha256}).");
                     var before = Snap().ToHashSet();

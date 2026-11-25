@@ -13,6 +13,7 @@ public sealed class OpsisCustomWidgetWindow : Form
 {
     private readonly OpsisWidgetDesigner.Layout _layout;
     private readonly Label _content;
+    private readonly System.Collections.Generic.List<(Label Label, OpsisWidgetDesigner.Row Row)> _rows = new();
     private readonly System.Windows.Forms.Timer _refresh = new() { Interval = 1000 };
     public OpsisCustomWidgetWindow(OpsisWidgetDesigner.Layout layout)
     {
@@ -47,18 +48,35 @@ public sealed class OpsisCustomWidgetWindow : Form
         }
         Resize += (_, _) => PositionContent();
         PositionContent();
+        if (layout.Rows is { Length: > 0 } rows)
+        {
+            _content.Visible = false;
+            var table = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = rows.Length,
+                Padding = new Padding(8), BackColor = UiTheme.Surface };
+            for (int i = 0; i < rows.Length; i++)
+            {
+                var row = rows[i];
+                var label = new Label { Dock = DockStyle.Fill, TextAlign = ContentAlignment.MiddleCenter, AutoEllipsis = true,
+                    ForeColor = ColorTranslator.FromHtml(row.AccentHex), Font = new Font("Segoe UI Variable Display", row.FontSize),
+                    BackColor = UiTheme.Surface };
+                table.RowStyles.Add(new RowStyle(SizeType.Percent, 100f / rows.Length));
+                table.Controls.Add(label, 0, i);
+                _rows.Add((label, row));
+            }
+            Controls.Add(table); table.BringToFront();
+        }
         _refresh.Tick += (_, _) => UpdateText();
-        Shown += (_, _) => { UpdateText(); if (layout.Binding != "Text") _refresh.Start(); };
-        FormClosed += (_, _) => { _refresh.Stop(); _refresh.Dispose(); _content.Font.Dispose(); };
+        Shown += (_, _) => { UpdateText(); if (_rows.Count > 0 ? _rows.Any(x => x.Row.Binding != "Text") : layout.Binding != "Text") _refresh.Start(); };
+        FormClosed += (_, _) => { _refresh.Stop(); _refresh.Dispose(); _content.Font.Dispose(); foreach (var entry in _rows) entry.Label.Font.Dispose(); };
     }
 
     private void UpdateText()
     {
         try
         {
-            var system = _layout.Binding is "CPU" or "RAM"
-                ? AdvancedSystemMonitorService.Instance.GetSnapshot() : default;
-            _content.Text = _layout.Binding switch
+            var needsSystem = _rows.Count > 0 ? _rows.Any(x => x.Row.Binding is "CPU" or "RAM") : _layout.Binding is "CPU" or "RAM";
+            var system = needsSystem ? AdvancedSystemMonitorService.Instance.GetSnapshot() : default;
+            string Value(string binding, string text) => binding switch
             {
                 "Clock" => DateTime.Now.ToString("HH:mm:ss"),
                 "Date" => DateTime.Now.ToString("dddd, dd MMMM yyyy"),
@@ -69,12 +87,16 @@ public sealed class OpsisCustomWidgetWindow : Form
                 "Battery" => SystemInformation.PowerStatus.BatteryLifePercent is >= 0 and <= 1
                     ? $"Battery {SystemInformation.PowerStatus.BatteryLifePercent * 100:0}%"
                     : "Battery —",
-                _ => _layout.Text
+                _ => text
             };
+            if (_rows.Count > 0)
+                foreach (var entry in _rows) entry.Label.Text = Value(entry.Row.Binding, entry.Row.Text);
+            else _content.Text = Value(_layout.Binding, _layout.Text);
         }
         catch (Exception)
         {
-            _content.Text = _layout.Binding + " —";
+            if (_rows.Count > 0) foreach (var entry in _rows) entry.Label.Text = entry.Row.Binding + " —";
+            else _content.Text = _layout.Binding + " —";
         }
     }
 }

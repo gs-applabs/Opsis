@@ -2619,6 +2619,32 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
             AddText(panel, LocalizationManager.T("Personalization.Intro"));
             BuildWindowsAppearance(panel);   // Windows look, themes, safety (2.6.0): the same Personalization tab, no sub-tab
             BuildEcosystemStudios(panel); // Shared P3/P4/P5 controls, backed by the Opsis Core contracts
+            bool deskFlipGreek = LocalizationManager.CurrentLanguage == "el";
+            var flipCard = AddCardSection(panel, deskFlipGreek ? "DeskFlip — Εναλλαγή παραθύρων" : "DeskFlip — Window switcher");
+            var flipPicker = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 280 };
+            flipPicker.Items.AddRange(new object[] { "Flip 3D", "Thumbnail grid", "Compact list" });
+            flipPicker.SelectedItem = DeskFlipEngine.Style;
+            flipCard.Controls.Add(flipPicker);
+            AddText(flipCard, deskFlipGreek
+                ? "Επιλέξτε εμφάνιση για το Ctrl+Alt+F. Η συντόμευση Alt+Tab των Windows δεν αλλάζει."
+                : "Choose the Ctrl+Alt+F appearance. Windows Alt+Tab remains unchanged.");
+            AddButtonGrid(flipCard,
+                (deskFlipGreek ? "Αποθήκευση εμφάνισης" : "Save style", (_, _) =>
+                {
+                    try
+                    {
+                        if (flipPicker.SelectedItem is string style) DeskFlipEngine.SetStyle(style);
+                    }
+                    catch (Exception ex) { MessageBox.Show(this, ex.Message, "DeskFlip", MessageBoxButtons.OK, MessageBoxIcon.Warning); }
+                }),
+                (deskFlipGreek ? "Άνοιγμα DeskFlip" : "Open DeskFlip", (_, _) => DeskFlipEngine.Show()));
+
+            var nativeThemeCard = AddCardSection(panel, StudioText("Native Shell themes (optional provider)", "Εγγενή θέματα Shell (προαιρετικός πάροχος)"));
+            AddText(nativeThemeCard, StudioText("Use a compatible existing Windhawk styler to avoid duplicate native hooks. Experimental, requires installed CLI and mod.", "Χρήση συμβατού υπάρχοντος Windhawk styler χωρίς διπλούς μηχανισμούς. Πειραματικό, απαιτεί εγκατεστημένο CLI και mod."));
+            AddButtonGrid(nativeThemeCard, (StudioText("Native Shell Theme Editor", "Επεξεργαστής εγγενών θεμάτων"), (_, _) =>
+            {
+                using var dialog = new NativeShellThemeForm(); dialog.ShowDialog(this);
+            }));
 
             // ---------- Unified Opsis ecosystem: core modules, gallery, recovery ----------
             var coreCard = AddCardSection(panel, LocalizationManager.CurrentLanguage == "el"
@@ -3085,7 +3111,7 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                         ? "Επαναφορά των ρυθμίσεων Taskbar πριν από το Opsis;"
                         : "Restore original Taskbar settings from before Opsis?",
                         "Opsis — Taskbar", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes) return;
-                    try { TaskbarViewProfiles.Restore(); _statusLabel.Text = "Opsis — Taskbar settings restored."; }
+                    try { if (TaskbarViewProfiles.HasBackup) TaskbarViewProfiles.Restore(); TaskbarViewProfiles.RestoreAutoHide(); _statusLabel.Text = "Opsis — Taskbar settings restored."; }
                     catch (Exception ex) { MessageBox.Show(this, ex.Message, "Opsis — Taskbar", MessageBoxButtons.OK, MessageBoxIcon.Error); }
                 }),
                 (LocalizationManager.CurrentLanguage == "el" ? "Ρυθμίσεις Start" : "Start settings", (_, _) =>
@@ -3173,6 +3199,19 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                      : new[] { "Hidden", "Icon", "Icon and label", "Box" },
                 new[] { 0, 1, 3, 2 }, () => TaskbarViewProfiles.ReadOption("SearchboxTaskbarMode"),
                 value => TaskbarViewProfiles.ApplyOption("SearchboxTaskbarMode", value), TaskbarViewProfiles.IsWindows11);
+
+            AddShellOption(StudioText("Taskbar: Combine buttons", "Taskbar: Ομαδοποίηση κουμπιών"),
+                new[] { StudioText("Always", "Πάντα"), StudioText("When full", "Όταν γεμίσει"), StudioText("Never", "Ποτέ") },
+                new[] { 0, 1, 2 }, () => TaskbarViewProfiles.ReadOption("TaskbarGlomLevel"),
+                value => TaskbarViewProfiles.ApplyOption("TaskbarGlomLevel", value), TaskbarViewProfiles.IsWindows11);
+            AddShellOption(StudioText("Secondary taskbars: Combine buttons", "Δευτερεύουσες Taskbar: Ομαδοποίηση"),
+                new[] { StudioText("Always", "Πάντα"), StudioText("When full", "Όταν γεμίσει"), StudioText("Never", "Ποτέ") },
+                new[] { 0, 1, 2 }, () => TaskbarViewProfiles.ReadOption("MMTaskbarGlomLevel"),
+                value => TaskbarViewProfiles.ApplyOption("MMTaskbarGlomLevel", value), TaskbarViewProfiles.IsWindows11);
+
+            AddShellOption(StudioText("Native taskbar: Auto-hide", "Εγγενής Taskbar: Αυτόματη απόκρυψη"),
+                new[] { StudioText("Always visible", "Πάντα ορατή"), StudioText("Auto-hide", "Αυτόματη απόκρυψη") },
+                new[] { 0, 1 }, TaskbarViewProfiles.ReadAutoHide, TaskbarViewProfiles.ApplyAutoHide, TaskbarViewProfiles.IsWindows11);
 
             // ---------- P1 Start Studio ----------
             AddButtonGrid(shellAdvancedCard, (LocalizationManager.CurrentLanguage == "el"
@@ -4840,7 +4879,19 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                         BackColor = UiTheme.PageBackground,
                         Margin = new Padding(0, 0, 0, 6)
                     };
-                    enableToggle.CheckedChanged += (_, _) => Services.PluginHost.Instance.SetPluginEnabled(capturedId, enableToggle.Checked);
+                    bool refreshingPluginToggle = false;
+                    enableToggle.CheckedChanged += (_, _) =>
+                    {
+                        if (refreshingPluginToggle) return;
+                        try { Services.PluginHost.Instance.SetPluginEnabled(capturedId, enableToggle.Checked); }
+                        catch (Exception ex)
+                        {
+                            refreshingPluginToggle = true;
+                            try { enableToggle.Checked = Services.PluginHost.Instance.IsPluginEnabled(capturedId); }
+                            finally { refreshingPluginToggle = false; }
+                            MessageBox.Show(this, ex.Message, "Opsis", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        }
+                    };
                     panel.Controls.Add(enableToggle);
                     AddText(panel, StudioText("Declared plugin capabilities: ", "Δηλωμένες δυνατότητες plugin: ")
                         + Services.PluginHost.Instance.PluginPermissions(capturedId));

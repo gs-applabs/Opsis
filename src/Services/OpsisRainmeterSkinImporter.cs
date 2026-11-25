@@ -16,7 +16,7 @@ namespace MotionDesk.Services;
 public static class OpsisRainmeterSkinImporter
 {
     public sealed record Preview(string Name, string Binding, string Text, string AccentHex,
-        int FontSize, int Width, int Height);
+        int FontSize, int Width, int Height, OpsisWidgetDesigner.Row[]? Rows = null);
 
     private static readonly HashSet<string> HeaderSections = new(StringComparer.OrdinalIgnoreCase)
     { "Rainmeter", "Variables", "Metadata" };
@@ -91,6 +91,44 @@ public static class OpsisRainmeterSkinImporter
     public static Preview PreviewIni(string text, string importedName)
     {
         var sections = Parse(text);
+        var meters = sections.Where(x => x.Value.ContainsKey("Meter")).ToArray();
+        if (meters.Length <= 1) return PreviewSingle(text, importedName);
+        if (meters.Length > 8 || meters.Any(x => !x.Value["Meter"].Equals("String", StringComparison.OrdinalIgnoreCase)))
+            throw new InvalidDataException("Only 1–8 built-in String meters are supported.");
+        if (sections.Keys.Any(x => x.Contains("Plugin", StringComparison.OrdinalIgnoreCase) || x.Contains("Script", StringComparison.OrdinalIgnoreCase)))
+            throw new InvalidDataException("Executable/plugin components are unsupported.");
+        var used = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var header in sections.Keys.Where(HeaderSections.Contains)) used.Add(header);
+        var previews = new List<Preview>();
+        foreach (var meter in meters)
+        {
+            if (HeaderSections.Contains(meter.Key)) throw new InvalidDataException("Invalid meter header.");
+            used.Add(meter.Key);
+            var subset = new StringBuilder();
+            void AddSection(string name, Dictionary<string, string> options)
+            {
+                subset.Append('[').Append(name).AppendLine("]");
+                foreach (var (key, value) in options) subset.Append(key).Append('=').AppendLine(value);
+            }
+            foreach (var header in sections.Where(x => HeaderSections.Contains(x.Key))) AddSection(header.Key, header.Value);
+            if (meter.Value.TryGetValue("MeasureName", out var measure) && measure.Length > 0)
+            {
+                if (!sections.TryGetValue(measure, out var measureOptions) || HeaderSections.Contains(measure) || measureOptions.ContainsKey("Meter"))
+                    throw new InvalidDataException("Invalid linked measure.");
+                used.Add(measure); AddSection(measure, measureOptions);
+            }
+            AddSection(meter.Key, meter.Value);
+            previews.Add(PreviewSingle(subset.ToString(), importedName));
+        }
+        if (sections.Keys.Any(x => !used.Contains(x))) throw new InvalidDataException("Unrecognized active skin section.");
+        var first = previews[0];
+        return first with { Width = previews.Max(x => x.Width), Height = Math.Clamp(previews.Sum(x => x.Height), 80, 700),
+            Rows = previews.Select(x => new OpsisWidgetDesigner.Row(x.Binding, x.Text, x.AccentHex, x.FontSize)).ToArray() };
+    }
+
+    private static Preview PreviewSingle(string text, string importedName)
+    {
+        var sections = Parse(text);
         if (sections.Keys.Any(s => s.Contains("Script", StringComparison.OrdinalIgnoreCase) ||
             s.Contains("Plugin", StringComparison.OrdinalIgnoreCase)))
             throw new InvalidDataException("Executable/plugin skin components are unsupported.");
@@ -115,16 +153,23 @@ public static class OpsisRainmeterSkinImporter
         if (Read("MeasureName") is { Length: > 0 } measure)
         {
             if (!sections.TryGetValue(measure, out var options) ||
-                !options.TryGetValue("Measure", out var type) ||
-                !type.Equals("Time", StringComparison.OrdinalIgnoreCase))
-                throw new InvalidDataException("Only a built-in Time measure is supported.");
-            var format = options.TryGetValue("Format", out var f) ? f : "%H:%M";
-            binding = format is "%H:%M" or "%H:%M:%S" ? "Clock"
-                : format is "%d/%m/%Y" or "%A, %d %B %Y" ? "Date"
-                : throw new InvalidDataException("Unsupported Rainmeter Time format.");
+                !options.TryGetValue("Measure", out var type))
+                throw new InvalidDataException("Missing or unsupported built-in measure.");
+            var format = options.TryGetValue("Format", out var f) ? f : "";
+            if (type.Equals("Time", StringComparison.OrdinalIgnoreCase))
+                binding = format is "" or "%H:%M" or "%H:%M:%S" ? "Clock"
+                    : format is "%d/%m/%Y" or "%A, %d %B %Y" ? "Date"
+                    : throw new InvalidDataException("Unsupported Rainmeter Time format.");
+            else if (type.Equals("CPU", StringComparison.OrdinalIgnoreCase) && format == "" &&
+                (!options.TryGetValue("Processor", out var processor) || processor == "0"))
+                binding = "CPU";
+            else if (type.Equals("PhysicalMemory", StringComparison.OrdinalIgnoreCase) && format == "" &&
+                (!options.TryGetValue("Total", out var total) || total == "0"))
+                binding = "RAM";
+            else throw new InvalidDataException("Only built-in Time, total CPU and used physical-memory measures are supported.");
         }
 
-        // No active components other than one meter and optionally one Time measure.
+        // No active components other than one meter and one allowlisted built-in measure.
         foreach (var (section, opts) in sections)
         {
             if (section.Equals(meters[0].Key, StringComparison.OrdinalIgnoreCase))
@@ -146,7 +191,11 @@ public static class OpsisRainmeterSkinImporter
             }
             else if (section.Equals(Read("MeasureName"), StringComparison.OrdinalIgnoreCase))
             {
-                if (opts.Keys.Any(k => k is not ("Measure" or "Format" or "UpdateDivider" or "DynamicVariables")))
+                var allowed = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Measure", "UpdateDivider", "DynamicVariables" };
+                if (binding is "Clock" or "Date") allowed.Add("Format");
+                if (binding == "CPU") allowed.Add("Processor");
+                if (binding == "RAM") allowed.Add("Total");
+                if (opts.Keys.Any(k => !allowed.Contains(k)))
                     throw new InvalidDataException("Unsupported measure option.");
                 if (opts.TryGetValue("DynamicVariables", out var flag) && flag != "0")
                     throw new InvalidDataException("Dynamic measures cannot be imported.");
@@ -178,7 +227,7 @@ public static class OpsisRainmeterSkinImporter
         {
             Name = name, Binding = preview.Binding, Text = preview.Text,
             AccentHex = preview.AccentHex, FontSize = preview.FontSize,
-            Width = preview.Width, Height = preview.Height
+            Width = preview.Width, Height = preview.Height, Rows = preview.Rows
         };
         OpsisWidgetDesigner.Save(layout);
         return layout.Name;

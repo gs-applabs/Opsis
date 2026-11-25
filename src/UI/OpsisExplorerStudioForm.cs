@@ -14,6 +14,9 @@ public sealed class OpsisExplorerStudioForm : Form
     private readonly CheckBox _extensions = new() { Text = "Show file extensions / Επεκτάσεις αρχείων", AutoSize = true };
     private readonly CheckBox _hidden = new() { Text = "Show hidden items / Κρυφά στοιχεία", AutoSize = true };
     private readonly CheckBox _compact = new() { Text = "Compact file spacing / Συμπαγής προβολή", AutoSize = true };
+    private readonly CheckBox _statusBar = new() { Text = "Status bar / Γραμμή κατάστασης", AutoSize = true };
+    private readonly CheckBox _sync = new() { Text = "Sync provider notifications / Ειδοποιήσεις συγχρονισμού", AutoSize = true };
+    private readonly CheckBox _handlers = new() { Text = "Preview handlers / Χειριστές προεπισκόπησης", AutoSize = true };
     private readonly ComboBox _home = new() { DropDownStyle = ComboBoxStyle.DropDownList, Width = 210 };
     private readonly Label _preview = new() { AutoSize = false, Height = 122, Dock = DockStyle.Bottom };
 
@@ -21,7 +24,7 @@ public sealed class OpsisExplorerStudioForm : Form
     {
         Text = "Opsis — Explorer Studio";
         StartPosition = FormStartPosition.CenterParent;
-        ClientSize = new Size(650, 430);
+        ClientSize = new Size(700, 560);
         MinimumSize = new Size(560, 390);
         BackColor = UiTheme.PageBackground;
         ForeColor = UiTheme.TextPrimary;
@@ -41,8 +44,65 @@ public sealed class OpsisExplorerStudioForm : Form
         options.Controls.Add(_extensions);
         options.Controls.Add(_hidden);
         options.Controls.Add(_compact);
+        options.Controls.Add(_statusBar); options.Controls.Add(_sync); options.Controls.Add(_handlers);
         options.Controls.Add(new Label { Text = "Open Explorer at / Εκκίνηση Explorer", AutoSize = true });
         options.Controls.Add(_home);
+        var commands = new FlowLayoutPanel { AutoSize = true, WrapContents = true, Width = 480 };
+        foreach (var target in new[] { ("This PC", "shell:MyComputerFolder"), ("Home", "shell:HomeFolder"),
+            ("Downloads", "shell:Downloads"), ("Recycle Bin", "shell:RecycleBinFolder") })
+        {
+            var button = new Button { AutoSize = true, Text = target.Item1 };
+            button.Click += (_, _) =>
+            {
+                try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(target.Item2) { UseShellExecute = true }); }
+                catch (Exception ex) { MessageBox.Show(this, ex.Message, Text); }
+            };
+            commands.Controls.Add(button);
+        }
+        options.Controls.Add(new Label { AutoSize = true, Text = "Explorer shortcuts / Συντομεύσεις (not native command bar)" });
+        options.Controls.Add(commands);
+        var tabs = new Button { AutoSize = true, Text = "Open folder in Explorer / Άνοιγμα φακέλου" };
+        tabs.Click += (_, _) =>
+        {
+            using var picker = new FolderBrowserDialog();
+            if (picker.ShowDialog(this) != DialogResult.OK) return;
+            try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(picker.SelectedPath) { UseShellExecute = true }); }
+            catch (Exception ex) { MessageBox.Show(this, ex.Message, Text); }
+        };
+        options.Controls.Add(tabs);
+        var nativeEditor = new Button { Text = "Native Explorer options (Windhawk)", AutoSize = true };
+        nativeEditor.Click += (_, _) => { using var dialog = new NativeShellThemeForm(); dialog.ShowDialog(this); };
+        options.Controls.Add(nativeEditor);
+        var session = new Button { Text = "Explorer session / Συνεδρία φακέλων", AutoSize = true };
+        session.Click += (_, _) =>
+        {
+            using var dialog = new Form { Text = "Explorer folder session", StartPosition = FormStartPosition.CenterParent,
+                ClientSize = new Size(650, 390) };
+            var folders = new CheckedListBox { Dock = DockStyle.Fill, CheckOnClick = true, HorizontalScrollbar = true };
+            var footerSession = new FlowLayoutPanel { Dock = DockStyle.Bottom, Height = 52 };
+            var capture = new Button { Text = "Capture open folders", AutoSize = true };
+            var save = new Button { Text = "Save checked", AutoSize = true };
+            var load = new Button { Text = "Load saved", AutoSize = true };
+            var restoreSession = new Button { Text = "Open checked folders", AutoSize = true };
+            void Display(string[] paths) { folders.Items.Clear(); foreach (var path in paths) folders.Items.Add(path, true); }
+            string[] SelectedFolders() => folders.CheckedItems.Cast<string>().ToArray();
+            void TryAction(Action action) { try { action(); } catch (Exception err) { MessageBox.Show(dialog, err.Message, "Opsis"); } }
+            capture.Click += (_, _) => TryAction(() => Display(ExplorerSessionStore.Capture()));
+            save.Click += (_, _) => TryAction(() => ExplorerSessionStore.Save(SelectedFolders()));
+            load.Click += (_, _) => TryAction(() => Display(ExplorerSessionStore.Read()));
+            restoreSession.Click += (_, _) =>
+            {
+                if (MessageBox.Show(dialog, "Open selected local folders? Explorer decides window/tab placement.", "Opsis", MessageBoxButtons.YesNo) != DialogResult.Yes) return;
+                TryAction(() => MessageBox.Show(dialog, ExplorerSessionStore.Restore(SelectedFolders()) + " folders requested."));
+            };
+            footerSession.Controls.AddRange([capture, save, load, restoreSession]);
+            dialog.Controls.Add(folders); dialog.Controls.Add(footerSession);
+            TryAction(() => Display(ExplorerSessionStore.Read()));
+            dialog.ShowDialog(this);
+        };
+        options.Controls.Add(session);
+        options.Controls.Add(new Label { AutoSize = true, MaximumSize = new Size(490, 0),
+            Text = "Windows 11 tabs: Ctrl+T new tab · Ctrl+W close · Ctrl+Tab next. Native tab styling is not available here." });
         Controls.Add(options);
 
         _preview.BackColor = UiTheme.Surface;
@@ -79,7 +139,7 @@ public sealed class OpsisExplorerStudioForm : Form
                 return;
             }
             if (MessageBox.Show(this,
-                "Apply these four HKCU Explorer preferences? A complete Opsis backup is saved first.",
+                "Apply these seven HKCU Explorer preferences? A complete Opsis backup is saved first.",
                 "Opsis Explorer", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes) return;
             try
             {
@@ -89,6 +149,9 @@ public sealed class OpsisExplorerStudioForm : Form
                 ExplorerViewProfiles.ApplyOption("Hidden", _hidden.Checked ? 1 : 2);
                 ExplorerViewProfiles.ApplyOption("UseCompactMode", _compact.Checked ? 1 : 0);
                 ExplorerViewProfiles.ApplyOption("LaunchTo", _home.SelectedIndex == 0 ? 1 : 2);
+                ExplorerViewProfiles.ApplyOption("ShowStatusBar", _statusBar.Checked ? 1 : 0);
+                ExplorerViewProfiles.ApplyOption("ShowSyncProviderNotifications", _sync.Checked ? 1 : 0);
+                ExplorerViewProfiles.ApplyOption("ShowPreviewHandlers", _handlers.Checked ? 1 : 0);
                 MessageBox.Show(this, "Explorer settings applied. Some changes may appear in the next Explorer window.",
                     "Opsis Explorer", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
@@ -115,6 +178,9 @@ public sealed class OpsisExplorerStudioForm : Form
             _extensions.Checked = ExplorerViewProfiles.ReadOption("HideFileExt") == 0;
             _hidden.Checked = ExplorerViewProfiles.ReadOption("Hidden") == 1;
             _compact.Checked = ExplorerViewProfiles.ReadOption("UseCompactMode") == 1;
+            _statusBar.Checked = ExplorerViewProfiles.ReadOption("ShowStatusBar") == 1;
+            _sync.Checked = ExplorerViewProfiles.ReadOption("ShowSyncProviderNotifications") == 1;
+            _handlers.Checked = ExplorerViewProfiles.ReadOption("ShowPreviewHandlers") == 1;
             _home.SelectedIndex = ExplorerViewProfiles.ReadOption("LaunchTo") == 1 ? 0 : 1;
         }
         catch (Exception ex)
