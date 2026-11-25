@@ -1,0 +1,801 @@
+{
+  "schemaVersion": 1,
+  "scope": "49 modern capitals; Athens excluded",
+  "approval": "No candidate is approved for runtime or Gallery until geographical, license, skyline mask, lighting and renderer review. No historical painting, vehicle photograph, collage, or equirectangular crop.",
+  "source_runs": [
+    45616021185,
+    45616359855,
+    45616599486
+  ],
+  "replacements_pending": "R21; do not restore rejected earlier files when replacement fails",
+  "cities": [
+    {
+      "id": "eu-amsterdam",
+      "state": "downloaded-review-required",
+      "active_source": "https://commons.wikimedia.org/wiki/File:Amsterdam_-_Oosterdokskade_-_Amsterdam_Public_Library_2007_by_Jo_Coenen_-_Restaurant_Floor_-_Panorama_View_on_Oosterdok,_NEMO_Science_Centre_1997_by_Renzo_Piano,_Maritime_Museum_Amsterdam_%26_Old_City_Centre_of_Amsterdam_05.jpg",
+      "history": [
+        {
+          "id": "eu-amsterdam",
+          "status": "candidate-only",
+          "source": "File:Amsterdam - Oosterdokskade - Amsterdam Public Library 2007 by Jo Coenen - Restaurant Floor - Panorama View on Oosterdok, NEMO Science Centre 1997 by Renzo Piano, Maritime Museum Amsterdam & Old City Centre of Amsterdam 05.jpg",
+          "source_page": "https://commons.wikimedia.org/wiki/File:Amsterdam_-_Oosterdokskade_-_Amsterdam_Public_Library_2007_by_Jo_Coenen_-_Restaurant_Floor_-_Panorama_View_on_Oosterdok,_NEMO_Science_Centre_1997_by_Renzo_Piano,_Maritime_Museum_Amsterdam_%26_Old_City_Centre_of_Amsterdam_05.jpg",
+          "revision": "R18",
+          "job_id": 139211491453
+        }
+      ]
+    },
+    {
+      "id": "eu-andorra-la-vella",
+      "state": "downloaded-review-required",
+      "active_source": "https://commons.wikimedia.org/wiki/File:Andorra_la_Vella_view2.jpg",
+      "history": [
+        {
+          "id": "eu-andorra-la-vella",
+          "status": "candidate-only",
+          "source": "File:Andorra la Vella view2.jpg",
+          "source_page": "https://commons.wikimedia.org/wiki/File:Andorra_la_Vella_view2.jpg",
+          "revision": "R18",
+          "job_id": 139211491453
+        }
+      ]
+    },
+    {
+      "id": "eu-ankara",
+      "state": "downloaded-review-required",
+      "active_source": "https://commons.wikimedia.org/wiki/File:Views_from_the_Ankara_Castle_(5).jpg",
+      "history": [
+        {
+          "id": "eu-ankara",
+          "status": "candidate-only",
+          "source": "File:Views from the Ankara Castle (5).jpg",
+          "source_page": "https://commons.wikimedia.org/wiki/File:Views_from_the_Ankara_Castle_(5).jpg",
+          "revision": "R18",
+          "job_id": 139211491453
+        }
+      ]
+    },
+    {
+      "id": "eu-baku",
+      "state": "downloaded-review-required",
+      "active_source": "https://commons.wikimedia.org/wiki/File:Baku_Skyline_(221090125).jpeg",
+      "history": [
+        {
+          "id": "eu-baku",
+          "status": "candidate-only",
+          "source": "File:Baku Skyline (221090125).jpeg",
+          "source_page": "https://commons.wikimedia.org/wiki/File:Baku_Skyline_(221090125).jpeg",
+          "revision": "R18",
+          "job_id": 139211491453
+        }
+      ]
+    },
+    {
+      "id": "eu-belgrade",
+      "state": "downloaded-review-required",
+      "active_source": "https://commons.wikimedia.org/wiki/File:B%C4%9Blehrad,_Kalemegdan,_panorama_v%C3%BDchodn%C3%AD_hr%C3%A1ze.jpg",
+      "history": [
+        {
+          "id": "eu-belgrade",
+          "status": "candidate-only",
+          "source": "File:Bělehrad, Kalemegdan, panorama východní hráze.jpg",
+          "source_page": "https://commons.wikimedia.org/wiki/File:B%C4%9Blehrad,_Kalemegdan,_panorama_v%C3%BDchodn%C3%AD_hr%C3%A1ze.jpg",
+          "revision": "R18",
+          "job_id": 139211491453
+        }
+      ]
+    },
+    {
+      "id": "eu-berlin",
+      "state": "downloaded-review-required",
+      "active_source": "https://commons.wikimedia.org/wiki/File:Berlin_Panorama_Mitte.jpg",
+      "history": [
+        {
+          "id": "eu-berlin",
+          "status": "candidate-only",
+          "source": "File:Berlin Panorama Mitte.jpg",
+          "source_page": "https://commons.wikimedia.org/wiki/File:Berlin_Panorama_Mitte.jpg",
+          "revision": "R18",
+          "job_id": 139211491453
+        }
+      ]
+    },
+    {
+      "id": "eu-bern",
+      "state": "downloaded-review-required",
+      "active_source": "https://commons.wikimedia.org/wiki/File:Bern_Altstadt_von_Rosengarten_20211007.jpg",
+      "history": [
+        {
+          "id": "eu-bern",
+          "status": "candidate-only",
+          "source": "File:Karl Hänny Neptun Rosengarten Bern.jpg",
+          "source_page": "https://commons.wikimedia.org/wiki/File:Karl_H%C3%A4nny_Neptun_Rosengarten_Bern.jpg",
+          "revision": "R18",
+          "job_id": 139211491453
+        },
+        {
+          "id": "eu-bern",
+          "status": "candidate-only",
+          "source": "File:Bern Altstadt von Rosengarten 20211007.jpg",
+          "source_page": "https://commons.wikimedia.org/wiki/File:Bern_Altstadt_von_Rosengarten_20211007.jpg",
+          "revision": "R19",
+          "job_id": 139212661478
+        }
+      ]
+    },
+    {
+      "id": "eu-bratislava",
+      "state": "downloaded-review-required",
+      "active_source": "https://commons.wikimedia.org/wiki/File:Bratislava_Panorama_R01.jpg",
+      "history": [
+        {
+          "id": "eu-bratislava",
+          "status": "candidate-only",
+          "source": "File:Bratislava Panorama R01.jpg",
+          "source_page": "https://commons.wikimedia.org/wiki/File:Bratislava_Panorama_R01.jpg",
+          "revision": "R18",
+          "job_id": 139211491389
+        }
+      ]
+    },
+    {
+      "id": "eu-brussels",
+      "state": "additional-viewpoint-review-required",
+      "active_source": null,
+      "history": [
+        {
+          "id": "eu-brussels",
+          "status": "candidate-only",
+          "source": "File:Brussels Castle panorama (7666898876).jpg",
+          "source_page": "https://commons.wikimedia.org/wiki/File:Brussels_Castle_panorama_(7666898876).jpg",
+          "revision": "R18",
+          "job_id": 139211491389
+        }
+      ]
+    },
+    {
+      "id": "eu-bucharest",
+      "state": "additional-viewpoint-review-required",
+      "active_source": null,
+      "history": [
+        {
+          "id": "eu-bucharest",
+          "status": "candidate-only",
+          "source": "File:Dâmbovița River seen form Grozăvești bridge in July 2009.jpg",
+          "source_page": "https://commons.wikimedia.org/wiki/File:D%C3%A2mbovi%C8%9Ba_River_seen_form_Groz%C4%83ve%C8%99ti_bridge_in_July_2009.jpg",
+          "revision": "R18",
+          "job_id": 139211491389
+        }
+      ]
+    },
+    {
+      "id": "eu-budapest",
+      "state": "replacement-r21-pending",
+      "active_source": null,
+      "history": [
+        {
+          "id": "eu-budapest",
+          "status": "candidate-only",
+          "source": "File:Budapest. Panorama, vom Blocksberg gesehen (rechts), 1904 - Fortepan 277721.jpg",
+          "source_page": "https://commons.wikimedia.org/wiki/File:Budapest._Panorama,_vom_Blocksberg_gesehen_(rechts),_1904_-_Fortepan_277721.jpg",
+          "revision": "R18",
+          "job_id": 139211491389
+        },
+        {
+          "id": "eu-budapest",
+          "status": "not-acquired",
+          "errors": [
+            "Image type or size mismatch"
+          ],
+          "revision": "R20",
+          "job_id": 139213488827
+        }
+      ]
+    },
+    {
+      "id": "eu-chisinau",
+      "state": "downloaded-review-required",
+      "active_source": "https://commons.wikimedia.org/wiki/File:View.from.city.gates.terrace_(3863905871).jpg",
+      "history": [
+        {
+          "id": "eu-chisinau",
+          "status": "candidate-only",
+          "source": "File:Towers of city hall in chisinau.JPG",
+          "source_page": "https://commons.wikimedia.org/wiki/File:Towers_of_city_hall_in_chisinau.JPG",
+          "revision": "R18",
+          "job_id": 139211491389
+        },
+        {
+          "id": "eu-chisinau",
+          "status": "candidate-only",
+          "source": "File:View.from.city.gates.terrace (3863905871).jpg",
+          "source_page": "https://commons.wikimedia.org/wiki/File:View.from.city.gates.terrace_(3863905871).jpg",
+          "revision": "R20",
+          "job_id": 139213488827
+        }
+      ]
+    },
+    {
+      "id": "eu-copenhagen",
+      "state": "downloaded-review-required",
+      "active_source": "https://commons.wikimedia.org/wiki/File:Copenhagen_view_from_Christiansborg%27s_Tower_1.jpg",
+      "history": [
+        {
+          "id": "eu-copenhagen",
+          "status": "candidate-only",
+          "source": "File:Christiansborg Slot Copenhagen 2014 01.jpg",
+          "source_page": "https://commons.wikimedia.org/wiki/File:Christiansborg_Slot_Copenhagen_2014_01.jpg",
+          "revision": "R18",
+          "job_id": 139211491276
+        },
+        {
+          "id": "eu-copenhagen",
+          "status": "candidate-only",
+          "source": "File:Copenhagen view from Christiansborg's Tower 1.jpg",
+          "source_page": "https://commons.wikimedia.org/wiki/File:Copenhagen_view_from_Christiansborg%27s_Tower_1.jpg",
+          "revision": "R19",
+          "job_id": 139212661478
+        }
+      ]
+    },
+    {
+      "id": "eu-helsinki",
+      "state": "downloaded-review-required",
+      "active_source": "https://commons.wikimedia.org/wiki/File:HelsinkiPanorama_rocco.jpg",
+      "history": [
+        {
+          "id": "eu-helsinki",
+          "status": "candidate-only",
+          "source": "File:HelsinkiPanorama rocco.jpg",
+          "source_page": "https://commons.wikimedia.org/wiki/File:HelsinkiPanorama_rocco.jpg",
+          "revision": "R18",
+          "job_id": 139211491276
+        }
+      ]
+    },
+    {
+      "id": "eu-kyiv",
+      "state": "downloaded-review-required",
+      "active_source": "https://commons.wikimedia.org/wiki/File:PaKyiv1(Panorama).jpg",
+      "history": [
+        {
+          "id": "eu-kyiv",
+          "status": "candidate-only",
+          "source": "File:PaKyiv1(Panorama).jpg",
+          "source_page": "https://commons.wikimedia.org/wiki/File:PaKyiv1(Panorama).jpg",
+          "revision": "R18",
+          "job_id": 139211491389
+        }
+      ]
+    },
+    {
+      "id": "eu-lisbon",
+      "state": "downloaded-review-required",
+      "active_source": "https://commons.wikimedia.org/wiki/File:Panoramic_View_from_Miradouro_da_Senhora_do_Monte_in_Lisbon_(54742879994).jpg",
+      "history": [
+        {
+          "id": "eu-lisbon",
+          "status": "candidate-only",
+          "source": "File:Panoramic View from Miradouro da Senhora do Monte in Lisbon (54742879994).jpg",
+          "source_page": "https://commons.wikimedia.org/wiki/File:Panoramic_View_from_Miradouro_da_Senhora_do_Monte_in_Lisbon_(54742879994).jpg",
+          "revision": "R18",
+          "job_id": 139211491389
+        }
+      ]
+    },
+    {
+      "id": "eu-ljubljana",
+      "state": "downloaded-review-required",
+      "active_source": "https://commons.wikimedia.org/wiki/File:Ljubljana,_view_from_the_castle_tower_to_the_castle_and_the_city.JPG",
+      "history": [
+        {
+          "id": "eu-ljubljana",
+          "status": "candidate-only",
+          "source": "File:Ljubljana-Old-Town-Street-Performers (15474957982).jpg",
+          "source_page": "https://commons.wikimedia.org/wiki/File:Ljubljana-Old-Town-Street-Performers_(15474957982).jpg",
+          "revision": "R18",
+          "job_id": 139211491575
+        },
+        {
+          "id": "eu-ljubljana",
+          "status": "candidate-only",
+          "source": "File:Ljubljana, view from the castle tower to the castle and the city.JPG",
+          "source_page": "https://commons.wikimedia.org/wiki/File:Ljubljana,_view_from_the_castle_tower_to_the_castle_and_the_city.JPG",
+          "revision": "R20",
+          "job_id": 139213488827
+        }
+      ]
+    },
+    {
+      "id": "eu-london",
+      "state": "additional-viewpoint-review-required",
+      "active_source": null,
+      "history": [
+        {
+          "id": "eu-london",
+          "status": "candidate-only",
+          "source": "File:Greenwich Park 19k – Panorama (Andreas Mischok via Poly Haven).jpg",
+          "source_page": "https://commons.wikimedia.org/wiki/File:Greenwich_Park_19k_%E2%80%93_Panorama_(Andreas_Mischok_via_Poly_Haven).jpg",
+          "revision": "R18",
+          "job_id": 139211491575
+        }
+      ]
+    },
+    {
+      "id": "eu-luxembourg",
+      "state": "downloaded-review-required",
+      "active_source": "https://commons.wikimedia.org/wiki/File:Luxembourg_(city)_-_view_from_Metz_square_2_sur_1.jpg",
+      "history": [
+        {
+          "id": "eu-luxembourg",
+          "status": "candidate-only",
+          "source": "File:Luxembourg (city) - view from Metz square 2 sur 1.jpg",
+          "source_page": "https://commons.wikimedia.org/wiki/File:Luxembourg_(city)_-_view_from_Metz_square_2_sur_1.jpg",
+          "revision": "R18",
+          "job_id": 139211491575
+        }
+      ]
+    },
+    {
+      "id": "eu-madrid",
+      "state": "downloaded-review-required",
+      "active_source": "https://commons.wikimedia.org/wiki/File:Panorama_de_Madrid_desde_el_parque_de_San_Isidro.JPG",
+      "history": [
+        {
+          "id": "eu-madrid",
+          "status": "candidate-only",
+          "source": "File:Panorama de Madrid desde el parque de San Isidro.JPG",
+          "source_page": "https://commons.wikimedia.org/wiki/File:Panorama_de_Madrid_desde_el_parque_de_San_Isidro.JPG",
+          "revision": "R18",
+          "job_id": 139211491276
+        }
+      ]
+    },
+    {
+      "id": "eu-minsk",
+      "state": "downloaded-review-required",
+      "active_source": "https://commons.wikimedia.org/wiki/File:Minsk_city_skyline.jpg",
+      "history": [
+        {
+          "id": "eu-minsk",
+          "status": "not-acquired",
+          "errors": [],
+          "revision": "R18",
+          "job_id": 139211491575
+        },
+        {
+          "id": "eu-minsk",
+          "status": "candidate-only",
+          "source": "File:Minsk city skyline.jpg",
+          "source_page": "https://commons.wikimedia.org/wiki/File:Minsk_city_skyline.jpg",
+          "revision": "R20",
+          "job_id": 139213488827
+        }
+      ]
+    },
+    {
+      "id": "eu-monaco",
+      "state": "downloaded-review-required",
+      "active_source": "https://commons.wikimedia.org/wiki/File:Panorama_of_Port_Hercule_(50326133393).jpg",
+      "history": [
+        {
+          "id": "eu-monaco",
+          "status": "candidate-only",
+          "source": "File:Panorama of Port Hercule (50326133393).jpg",
+          "source_page": "https://commons.wikimedia.org/wiki/File:Panorama_of_Port_Hercule_(50326133393).jpg",
+          "revision": "R18",
+          "job_id": 139211491575
+        }
+      ]
+    },
+    {
+      "id": "eu-moscow",
+      "state": "additional-viewpoint-review-required",
+      "active_source": null,
+      "history": [
+        {
+          "id": "eu-moscow",
+          "status": "candidate-only",
+          "source": "File:Saint Basil's Cathedral (19966921905).jpg",
+          "source_page": "https://commons.wikimedia.org/wiki/File:Saint_Basil%27s_Cathedral_(19966921905).jpg",
+          "revision": "R18",
+          "job_id": 139211491575
+        }
+      ]
+    },
+    {
+      "id": "eu-nicosia",
+      "state": "replacement-r21-pending",
+      "active_source": null,
+      "history": [
+        {
+          "id": "eu-nicosia",
+          "status": "candidate-only",
+          "source": "File:Nicosia panorama in evening.JPG",
+          "source_page": "https://commons.wikimedia.org/wiki/File:Nicosia_panorama_in_evening.JPG",
+          "revision": "R18",
+          "job_id": 139211491575
+        },
+        {
+          "id": "eu-nicosia",
+          "status": "not-acquired",
+          "errors": [],
+          "revision": "R20",
+          "job_id": 139213488827
+        }
+      ]
+    },
+    {
+      "id": "eu-oslo",
+      "state": "downloaded-review-required",
+      "active_source": "https://commons.wikimedia.org/wiki/File:Bj%C3%B8rvika_01.jpg",
+      "history": [
+        {
+          "id": "eu-oslo",
+          "status": "candidate-only",
+          "source": "File:5141 Oslo. Panorama - no-nb digifoto 20151218 00124 bldsa PK05714.jpg",
+          "source_page": "https://commons.wikimedia.org/wiki/File:5141_Oslo._Panorama_-_no-nb_digifoto_20151218_00124_bldsa_PK05714.jpg",
+          "revision": "R18",
+          "job_id": 139211491276
+        },
+        {
+          "id": "eu-oslo",
+          "status": "candidate-only",
+          "source": "File:Bjørvika 01.jpg",
+          "source_page": "https://commons.wikimedia.org/wiki/File:Bj%C3%B8rvika_01.jpg",
+          "revision": "R19",
+          "job_id": 139212661478
+        }
+      ]
+    },
+    {
+      "id": "eu-paris",
+      "state": "downloaded-review-required",
+      "active_source": "https://commons.wikimedia.org/wiki/File:Panoramic_from_the_Tour_Montparnasse.jpg",
+      "history": [
+        {
+          "id": "eu-paris",
+          "status": "candidate-only",
+          "source": "File:Panoramic from the Tour Montparnasse.jpg",
+          "source_page": "https://commons.wikimedia.org/wiki/File:Panoramic_from_the_Tour_Montparnasse.jpg",
+          "revision": "R18",
+          "job_id": 139211491276
+        }
+      ]
+    },
+    {
+      "id": "eu-podgorica",
+      "state": "additional-viewpoint-review-required",
+      "active_source": null,
+      "history": [
+        {
+          "id": "eu-podgorica",
+          "status": "candidate-only",
+          "source": "File:P064720-800224 - Aerial view of the Capital Plaza's commercial zone.jpg",
+          "source_page": "https://commons.wikimedia.org/wiki/File:P064720-800224_-_Aerial_view_of_the_Capital_Plaza%27s_commercial_zone.jpg",
+          "revision": "R18",
+          "job_id": 139211490862
+        }
+      ]
+    },
+    {
+      "id": "eu-prague",
+      "state": "downloaded-review-required",
+      "active_source": "https://commons.wikimedia.org/wiki/File:Praha_InterContinental_z_Letn%C3%A9_2_panorama.jpg",
+      "history": [
+        {
+          "id": "eu-prague",
+          "status": "candidate-only",
+          "source": "File:Praha InterContinental z Letné 2 panorama.jpg",
+          "source_page": "https://commons.wikimedia.org/wiki/File:Praha_InterContinental_z_Letn%C3%A9_2_panorama.jpg",
+          "revision": "R18",
+          "job_id": 139211490862
+        }
+      ]
+    },
+    {
+      "id": "eu-pristina",
+      "state": "replacement-r21-pending",
+      "active_source": null,
+      "history": [
+        {
+          "id": "eu-pristina",
+          "status": "not-acquired",
+          "errors": [],
+          "revision": "R18",
+          "job_id": 139211490862
+        }
+      ]
+    },
+    {
+      "id": "eu-reykjavik",
+      "state": "replacement-r21-pending",
+      "active_source": null,
+      "history": [
+        {
+          "id": "eu-reykjavik",
+          "status": "candidate-only",
+          "source": "File:Reykjavik sunrise panorama.jpg",
+          "source_page": "https://commons.wikimedia.org/wiki/File:Reykjavik_sunrise_panorama.jpg",
+          "revision": "R18",
+          "job_id": 139211490862
+        }
+      ]
+    },
+    {
+      "id": "eu-riga",
+      "state": "downloaded-review-required",
+      "active_source": "https://commons.wikimedia.org/wiki/File:RigaSkyline.jpg",
+      "history": [
+        {
+          "id": "eu-riga",
+          "status": "candidate-only",
+          "source": "File:RigaSkyline.jpg",
+          "source_page": "https://commons.wikimedia.org/wiki/File:RigaSkyline.jpg",
+          "revision": "R18",
+          "job_id": 139211490862
+        }
+      ]
+    },
+    {
+      "id": "eu-rome",
+      "state": "downloaded-review-required",
+      "active_source": "https://commons.wikimedia.org/wiki/File:Panoramic_view_of_Rome_from_Gianicolo_Hill_01.jpg",
+      "history": [
+        {
+          "id": "eu-rome",
+          "status": "candidate-only",
+          "source": "File:Panoramic view of Rome from Gianicolo Hill 01.jpg",
+          "source_page": "https://commons.wikimedia.org/wiki/File:Panoramic_view_of_Rome_from_Gianicolo_Hill_01.jpg",
+          "revision": "R18",
+          "job_id": 139211491276
+        }
+      ]
+    },
+    {
+      "id": "eu-san-marino",
+      "state": "replacement-r21-pending",
+      "active_source": null,
+      "history": [
+        {
+          "id": "eu-san-marino",
+          "status": "candidate-only",
+          "source": "File:Torri, Cesta e Montale - San Marino - GT 02 v3 - 2024-03-25.jpg",
+          "source_page": "https://commons.wikimedia.org/wiki/File:Torri,_Cesta_e_Montale_-_San_Marino_-_GT_02_v3_-_2024-03-25.jpg",
+          "revision": "R18",
+          "job_id": 139211490862
+        }
+      ]
+    },
+    {
+      "id": "eu-sarajevo",
+      "state": "downloaded-review-required",
+      "active_source": "https://commons.wikimedia.org/wiki/File:Sarajevo,_panoramatick%C3%BD_pohled_na_Ba%C5%A1%C4%8Dar%C5%A1iji.jpg",
+      "history": [
+        {
+          "id": "eu-sarajevo",
+          "status": "candidate-only",
+          "source": "File:Sarajevo, panoramatický pohled na Baščaršiji.jpg",
+          "source_page": "https://commons.wikimedia.org/wiki/File:Sarajevo,_panoramatick%C3%BD_pohled_na_Ba%C5%A1%C4%8Dar%C5%A1iji.jpg",
+          "revision": "R18",
+          "job_id": 139211490862
+        }
+      ]
+    },
+    {
+      "id": "eu-skopje",
+      "state": "additional-viewpoint-review-required",
+      "active_source": null,
+      "history": [
+        {
+          "id": "eu-skopje",
+          "status": "candidate-only",
+          "source": "File:Macedonia Square Viewed from Stone Bridge in 2026.jpg",
+          "source_page": "https://commons.wikimedia.org/wiki/File:Macedonia_Square_Viewed_from_Stone_Bridge_in_2026.jpg",
+          "revision": "R18",
+          "job_id": 139211491371
+        }
+      ]
+    },
+    {
+      "id": "eu-sofia",
+      "state": "downloaded-review-required",
+      "active_source": "https://commons.wikimedia.org/wiki/File:Panorama_of_Sofia_with_the_National_Palace_of_Culture,_the_National_Stadium,_Sofia_University_Rectorate_and_the_Cathedral_of_St._Alexander_Nevsky.jpg",
+      "history": [
+        {
+          "id": "eu-sofia",
+          "status": "candidate-only",
+          "source": "File:Panorama of Sofia with the National Palace of Culture, the National Stadium, Sofia University Rectorate and the Cathedral of St. Alexander Nevsky.jpg",
+          "source_page": "https://commons.wikimedia.org/wiki/File:Panorama_of_Sofia_with_the_National_Palace_of_Culture,_the_National_Stadium,_Sofia_University_Rectorate_and_the_Cathedral_of_St._Alexander_Nevsky.jpg",
+          "revision": "R18",
+          "job_id": 139211491371
+        }
+      ]
+    },
+    {
+      "id": "eu-stockholm",
+      "state": "downloaded-review-required",
+      "active_source": "https://commons.wikimedia.org/wiki/File:Monteliusv%C3%A4gen_panorama_2009c.jpg",
+      "history": [
+        {
+          "id": "eu-stockholm",
+          "status": "candidate-only",
+          "source": "File:Monteliusvägen panorama 2009c.jpg",
+          "source_page": "https://commons.wikimedia.org/wiki/File:Monteliusv%C3%A4gen_panorama_2009c.jpg",
+          "revision": "R18",
+          "job_id": 139211491276
+        }
+      ]
+    },
+    {
+      "id": "eu-tallinn",
+      "state": "additional-viewpoint-review-required",
+      "active_source": null,
+      "history": [
+        {
+          "id": "eu-tallinn",
+          "status": "candidate-only",
+          "source": "File:Riigikogu and Pikk Hermann panorama.jpg",
+          "source_page": "https://commons.wikimedia.org/wiki/File:Riigikogu_and_Pikk_Hermann_panorama.jpg",
+          "revision": "R18",
+          "job_id": 139211491371
+        }
+      ]
+    },
+    {
+      "id": "eu-tbilisi",
+      "state": "downloaded-review-required",
+      "active_source": "https://commons.wikimedia.org/wiki/File:Tbilisi,_Georgia._View_on_historical_neighborhoods_from_a_hill.jpg",
+      "history": [
+        {
+          "id": "eu-tbilisi",
+          "status": "candidate-only",
+          "source": "File:Tbilisi, Georgia. View on historical neighborhoods from a hill.jpg",
+          "source_page": "https://commons.wikimedia.org/wiki/File:Tbilisi,_Georgia._View_on_historical_neighborhoods_from_a_hill.jpg",
+          "revision": "R18",
+          "job_id": 139211491371
+        }
+      ]
+    },
+    {
+      "id": "eu-tirana",
+      "state": "downloaded-review-required",
+      "active_source": "https://commons.wikimedia.org/wiki/File:Tirana_panorama_2016.jpg",
+      "history": [
+        {
+          "id": "eu-tirana",
+          "status": "candidate-only",
+          "source": "File:Tirana panorama 2016.jpg",
+          "source_page": "https://commons.wikimedia.org/wiki/File:Tirana_panorama_2016.jpg",
+          "revision": "R18",
+          "job_id": 139211491371
+        }
+      ]
+    },
+    {
+      "id": "eu-vaduz",
+      "state": "replacement-r21-pending",
+      "active_source": null,
+      "history": [
+        {
+          "id": "eu-vaduz",
+          "status": "candidate-only",
+          "source": "File:Kunstmuseum Liechtenstein 2.jpg",
+          "source_page": "https://commons.wikimedia.org/wiki/File:Kunstmuseum_Liechtenstein_2.jpg",
+          "revision": "R18",
+          "job_id": 139211491371
+        }
+      ]
+    },
+    {
+      "id": "eu-valletta",
+      "state": "downloaded-review-required",
+      "active_source": "https://commons.wikimedia.org/wiki/File:Malta_Valletta_Panorama_03.jpg",
+      "history": [
+        {
+          "id": "eu-valletta",
+          "status": "candidate-only",
+          "source": "File:Malta Valletta Panorama 03.jpg",
+          "source_page": "https://commons.wikimedia.org/wiki/File:Malta_Valletta_Panorama_03.jpg",
+          "revision": "R18",
+          "job_id": 139211491371
+        }
+      ]
+    },
+    {
+      "id": "eu-vatican-city",
+      "state": "downloaded-review-required",
+      "active_source": "https://commons.wikimedia.org/wiki/File:Panorama_Vatican,_St._Peter%27s_Basilica_and_Gardens_of_Vatican_City_(39834994173).jpg",
+      "history": [
+        {
+          "id": "eu-vatican-city",
+          "status": "candidate-only",
+          "source": "File:Panorama Vatican, St. Peter's Basilica and Gardens of Vatican City (39834994173).jpg",
+          "source_page": "https://commons.wikimedia.org/wiki/File:Panorama_Vatican,_St._Peter%27s_Basilica_and_Gardens_of_Vatican_City_(39834994173).jpg",
+          "revision": "R18",
+          "job_id": 139211491573
+        }
+      ]
+    },
+    {
+      "id": "eu-vienna",
+      "state": "downloaded-review-required",
+      "active_source": "https://commons.wikimedia.org/wiki/File:Donau_City_Vienna_from_Donauinsel_on_2014-08-28_crop.png",
+      "history": [
+        {
+          "id": "eu-vienna",
+          "status": "candidate-only",
+          "source": "File:Donau City Vienna from Donauinsel on 2014-08-28 crop.png",
+          "source_page": "https://commons.wikimedia.org/wiki/File:Donau_City_Vienna_from_Donauinsel_on_2014-08-28_crop.png",
+          "revision": "R18",
+          "job_id": 139211491573
+        }
+      ]
+    },
+    {
+      "id": "eu-vilnius",
+      "state": "replacement-r21-pending",
+      "active_source": null,
+      "history": [
+        {
+          "id": "eu-vilnius",
+          "status": "candidate-only",
+          "source": "File:Palace of the Grand Dukes of Lithuania (October 4, 2015).jpg",
+          "source_page": "https://commons.wikimedia.org/wiki/File:Palace_of_the_Grand_Dukes_of_Lithuania_(October_4,_2015).jpg",
+          "revision": "R18",
+          "job_id": 139211491573
+        }
+      ]
+    },
+    {
+      "id": "eu-warsaw",
+      "state": "replacement-r21-pending",
+      "active_source": null,
+      "history": [
+        {
+          "id": "eu-warsaw",
+          "status": "candidate-only",
+          "source": "File:Bellotto View of Warsaw from Praga.jpg",
+          "source_page": "https://commons.wikimedia.org/wiki/File:Bellotto_View_of_Warsaw_from_Praga.jpg",
+          "revision": "R18",
+          "job_id": 139211491573
+        }
+      ]
+    },
+    {
+      "id": "eu-yerevan",
+      "state": "replacement-r21-pending",
+      "active_source": null,
+      "history": [
+        {
+          "id": "eu-yerevan",
+          "status": "candidate-only",
+          "source": "File:Yandex Panorama shooting car in Yerevan, Republic Square, fall 2016.jpg",
+          "source_page": "https://commons.wikimedia.org/wiki/File:Yandex_Panorama_shooting_car_in_Yerevan,_Republic_Square,_fall_2016.jpg",
+          "revision": "R18",
+          "job_id": 139211491573
+        }
+      ]
+    },
+    {
+      "id": "eu-zagreb",
+      "state": "replacement-r21-pending",
+      "active_source": null,
+      "history": [
+        {
+          "id": "eu-zagreb",
+          "status": "candidate-only",
+          "source": "File:Zagreb - Crkva svetog Marka.jpg",
+          "source_page": "https://commons.wikimedia.org/wiki/File:Zagreb_-_Crkva_svetog_Marka.jpg",
+          "revision": "R18",
+          "job_id": 139211491573
+        }
+      ]
+    },
+    {
+      "id": "eu-dublin",
+      "state": "external-r16-package-not-in-github-artifacts",
+      "active_source": null,
+      "history": []
+    }
+  ]
+}
