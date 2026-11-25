@@ -108,19 +108,27 @@ public sealed partial class MainWindow
         var previousPackPage = new Button { Text = "‹", AutoSize = true };
         var nextPackPage = new Button { Text = "›", AutoSize = true };
         var packCount = new Label { AutoSize = true, Margin = new Padding(5, 8, 5, 3) };
-        var importPack = StudioButton(StudioText("Install image pack", "Εγκατάσταση πακέτου"), () =>
+        Button? importPackButton = null;
+        var importPack = StudioButton(StudioText("Install image pack", "Εγκατάσταση πακέτου"), async () =>
         {
             using var picker = new OpenFileDialog { Filter = "Opsis image packs (*.zip)|*.zip", CheckFileExists = true };
             if (picker.ShowDialog(this) != DialogResult.OK) return;
             if (MessageBox.Show(this, StudioText("Install data-only wallpapers from this ZIP? No files will be executed.", "Εγκατάσταση μόνο εικόνων από αυτό το ZIP; Δεν θα εκτελεστεί κανένα αρχείο."), "Opsis", MessageBoxButtons.YesNo) != DialogResult.Yes) return;
             try
             {
-                int count = OpsisEcosystemGallery.ImportWallpaperPack(picker.FileName);
+                // up to 200 images are read, hashed and decoded: keep that off the UI thread
+                string zipPath = picker.FileName;
+                if (importPackButton != null) importPackButton.Enabled = false;
+                int count;
+                try { count = await Task.Run(() => OpsisEcosystemGallery.ImportWallpaperPack(zipPath)); }
+                finally { if (importPackButton is { IsDisposed: false }) importPackButton.Enabled = true; }
+                if (IsDisposed) return;
                 MessageBox.Show(this, count + " wallpaper images installed.", "Opsis");
                 ShowWallpaper();
             }
-            catch (Exception ex) { MessageBox.Show(this, ex.Message, "Opsis", MessageBoxButtons.OK, MessageBoxIcon.Warning); }
+            catch (Exception ex) { if (!IsDisposed) MessageBox.Show(this, ex.Message, "Opsis", MessageBoxButtons.OK, MessageBoxIcon.Warning); }
         }, 195);
+        importPackButton = importPack;
         packControls.Controls.AddRange([categoryPicker, previousPackPage, nextPackPage, packCount, importPack]);
         page.Controls.Add(packControls);
         var addonGrid = NewGrid();

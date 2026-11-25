@@ -328,6 +328,15 @@ try
     Check(OpsisEcosystemGallery.ImportWallpaperPack(addonZip) == 1 &&
         OpsisEcosystemGallery.Discover().Any(x => x.PluginId == "fixture.images" && x.Category == "Test"),
         "data-only wallpaper pack imported and categorized without applying wallpaper");
+    // optional: the real 200-image static pack (OPSIS_TEST_WEBP200=<path of Opsis-Abstract-Horizons-200-WebP.zip>)
+    var webp200 = Environment.GetEnvironmentVariable("OPSIS_TEST_WEBP200");
+    if (!string.IsNullOrEmpty(webp200) && File.Exists(webp200))
+    {
+        var clock200 = System.Diagnostics.Stopwatch.StartNew();
+        int imported200 = OpsisEcosystemGallery.ImportWallpaperPack(webp200);
+        Check(imported200 == 200 && OpsisEcosystemGallery.Discover().Count(x => x.PluginId == "opsis.procedural.static.200") == 200,
+            "real 200 static WebP pack imported: 200 distinct, decoded, static (" + clock200.ElapsedMilliseconds + " ms)");
+    }
     {
         // Explorer capture is bounded: a Shell automation that never answers times out instead of freezing the UI
         var clock = System.Diagnostics.Stopwatch.StartNew();
