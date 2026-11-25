@@ -23,6 +23,12 @@ jobs:
         run: |
           python tests/integration/check_baseline_and_release.py
           python tools/build_source_handoff.py --output out/Opsis-3.0.0.3200-RC-source-no-wallpaper-media.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Opsis-3.0.0.3200-RC-source-no-wallpaper-media
+          path: out/*.zip*
+          if-no-files-found: error
+          retention-days: 30
       - name: Full tracked source and pinned branch reference archive
         shell: bash
         run: |
@@ -35,7 +41,14 @@ jobs:
             sha="${spec#*:}"
             git cat-file -e "$sha^{commit}"
             git archive --format=zip -o "out/full/references/$name-source.zip" "$sha"
-            git diff --binary "$(git merge-base HEAD "$sha")" "$sha" > "out/full/references/$name.patch"
+            if base="$(git merge-base HEAD "$sha")"; then
+              git diff --binary "$base" "$sha" -- > "out/full/references/$name.patch"
+              printf '%s %s merge-base %s\n' "$name" "$sha" "$base" >> out/full/references/PATCH-BASES.txt
+            else
+              # Independent imported history: preserve both trees without pretending they share ancestry.
+              git diff --binary HEAD "$sha" -- > "out/full/references/$name.tree-comparison.patch"
+              printf '%s %s direct-tree-comparison %s (review only; do not apply wholesale)\n' "$name" "$sha" "$(git rev-parse HEAD)" >> out/full/references/PATCH-BASES.txt
+            fi
             printf '%s %s\n' "$name" "$sha" >> out/full/references/REFS.txt
           done
           git diff --binary ab9f08800b2fd22d8396ba6afa77a229fedd34ee HEAD > out/full/2.8.0.2510-to-RC.patch
@@ -45,11 +58,5 @@ jobs:
         with:
           name: Opsis-3.0.0.3200-RC-full-source-and-branch-references
           path: out/full/
-          if-no-files-found: error
-          retention-days: 30
-      - uses: actions/upload-artifact@v4
-        with:
-          name: Opsis-3.0.0.3200-RC-source-no-wallpaper-media
-          path: out/*.zip*
           if-no-files-found: error
           retention-days: 30
