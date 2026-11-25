@@ -86,3 +86,23 @@ Rules kept: assembly ABI 1.0.0.0 unchanged, 205 baseline settings, one PluginHos
 | X2, X4, X5, X6, X9, X14, X16 | P2 | Marketplace, animated taskbar effects, icon packs 2.0, lock screen, widget data sources, weather previews/privacy, diagnostics centre | L |
 
 Release gates for the SDK: tests for legacy plugin, new API, incompatible API, duplicate ID, dependency cycle, denied permission, changed hash, interrupted update, crashed/slow/disabled plugin, uninstall/rollback; real Crawler, Chronikologio and Media Suite binaries.
+
+## Carried over from the 2.6 / 2.8 work (merged into the 3.0 list on request)
+All of these were open or unverified when 2.8.0.2510 was released. They are now part of the 3.0.0.3200 scope; IDs `C1…` are new, nothing above was renamed.
+
+| ID | Pri | Item | Origin | Effort |
+|---|---|---|---|---|
+| C1 | P0 | Interactive install on a clean Windows 11 VM, upgrade 2.6.0 → 2.8.0.2510 → 3.0 and uninstall; mixed DPI / multi-monitor (NOT VERIFIED for 2.8.0.2510) | 2.8 release | L |
+| C2 | P0 | Installer is unsigned: code signing (or a documented SmartScreen notice) for the final installer | 2.8 release | X |
+| C3 | P1 | Secondary windows: automated GUI/function audit (Profile mapping, Weather triptych, Zone editor, Skyline mask editor, Help, dialogs) with screenshots and an "unstyled control / low contrast" check (`OPSIS_AUDIT_SECONDARY`) | 2.8 request | M |
+| C4 | P1 | Containers context menus and native `MessageBox` dialogs still use system colours: Opsis-styled message box and menu renderer | 2.8 request | M |
+| C5 | P1 | Visual verification of the Wallpaper Gallery with the new entries (Signature R14, 109 add-on, 200 static) | 3.0 patch | M |
+| C6 | P1 | 110-wallpaper add-on installer: real install / uninstall / rollback on Windows (built and unified, not run) | add-on | M |
+| C7 | P1 | Opsis.UI: 1 px overlap of the AdvancedSection border; Ctrl+F missing from the shortcuts list (needs 14-language text) | Opsis.UI | S |
+| C8 | P1 | Opsis.UI release hygiene: tag v0.6.1 pushed; PR #3 (Signature Glass) and PR #1 (CI matrix) still draft | Opsis.UI | M |
+| C9 | P1 | Home/start screen, About notes, README and locales refreshed (14 languages): build, test, commit, decide the version of the re-release | this session | S |
+| C10 | P2 | Other apps: News Crawler, Appearance, Chronikologio (libs commits local, not pushed; Appearance hygiene test `TrackedSourcesHaveNoPersonalPathsOrEmail` fails on `docs/PLAN-INTAKE.md`), GearWin / Kombos (local branches `opsis-detect-exe-only`), EnfiaPro (net11, WPF styles), Media Suite (contract 1.0.0.0): push, release and verify the Program Files install | siblings | M |
+| C11 | P2 | Older copies of Opsis.UI.dll in the `_crawler28` and `p3-src` working folders | audit | S |
+| C12 | P2 | Keep `OPSIS_TRACE` diagnostics (HangTrace) out of the user path and document them | audit | S |
+
+Done and verified since: audit hang fixed and Windows audit PASS on the release and patch branches; v2.8.0.2510 released; `main` now contains the 2.8.0.2510 tree (history merged); final Opsis.UI 0.6.0 DLLs in the plugin repos and in 2.6.0.
