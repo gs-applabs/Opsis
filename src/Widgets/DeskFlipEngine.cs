@@ -30,7 +30,7 @@ public sealed class DeskFlipOverlay : Form
 
     internal DeskFlipOverlay(string style)
     {
-        _style = style;
+        _style = SystemInformation.HighContrast ? "Compact list" : style; // high contrast: the plain list (no desktop capture, readable)
         var foreground = GetForegroundWindow();
         Bounds = Screen.FromHandle(foreground).Bounds;
         FormBorderStyle = FormBorderStyle.None;

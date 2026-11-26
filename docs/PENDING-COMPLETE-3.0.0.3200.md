@@ -37,6 +37,15 @@ Detailed acceptance criteria stay in `REMAINING-TASKS-3.0.0.3200.md` (IDs unchan
 | B13 | 3.0 start screen / notes | texts are in; visual check in every language NOT VERIFIED |
 | B14 | In-app history/help/instructions | family state refresh requested by another session (Crawler 0.28.1, Chronikologio 1.1.0, GearWin 7.0.0, Opsis.UI 0.6.0), 14 languages, README, CLAUDE.md, CHANGELOG — queued, not started |
 
+### B9 triage result (2026-11-26, stage 1) — B9 is CLOSED
+31 unresolved entries compared three-way with this build:
+- 14 locale files: only `VersionNotes.2.8.0.2511` was missing — added.
+- `Opsis.csproj` (`_compat` excludes) already present; `Version.props` nothing to add.
+- Ported: DeskFlip uses the plain list in high contrast; the replacement taskbar uses system colours and no window opacity in high contrast.
+- NOT ported, moved to S3 (Signature Glass / Opsis.UI 6, stage 2): the `SignatureGlass` theme, Signature styling of launcher / taskbar / DeskFlip layouts, animated brand mark (this build keeps the static Opsis 3 logo), composition preview opt-in.
+- NOT ported: workflow files (this build's are newer; the crawler-bridge workflow still expects Opsis.UI 0.1.0.0), the one-line Rainmeter test fixture.
+- DECISION NEEDED (C13): wallpaper info box text colour. 2.8.0.2511 follows the "text colour follows the wallpaper" switch; the 3.0 RC forces white text and ignores the switch.
+
 ## C. Not started (OPEN)
 - Wave 1 remainder: #20 shared shell profile editor (import/export, snapshots), #16 per-monitor appearance, #12 Tray Icon Studio consent rules.
 - Wave 2: #1/#2 native Start/Explorer per build, #9 Explorer command bar, #4–#7 replacement taskbar (4 edges, floating, segmented, dynamic), #11 thumbnails, #17 gestures, S3 Signature Glass / Opsis.UI 6 merge (PR #3/#12 drafts), S4 DeskFlip real Alt+Tab, S5 Rainmeter importer, P1 plugin interoperability.

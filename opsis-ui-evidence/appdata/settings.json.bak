@@ -154,7 +154,8 @@
     "ItemFontSize": 0,
     "TitleColor": null,
     "ItemColor": null,
-    "AccentColor": null
+    "AccentColor": null,
+    "RadiusSet": false
   },
   "DeskStripMaterial": {
     "Mode": "Default",
@@ -169,7 +170,8 @@
     "ItemFontSize": 0,
     "TitleColor": null,
     "ItemColor": null,
-    "AccentColor": null
+    "AccentColor": null,
+    "RadiusSet": false
   },
   "WidgetMaterial": {
     "Mode": "Default",
@@ -184,6 +186,7 @@
     "ItemFontSize": 0,
     "TitleColor": null,
     "ItemColor": null,
-    "AccentColor": null
+    "AccentColor": null,
+    "RadiusSet": false
   }
 }

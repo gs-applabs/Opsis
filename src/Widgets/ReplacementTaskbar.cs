@@ -256,10 +256,11 @@ internal sealed class ReplacementTaskbar : Form
         // Color-key transparency creates real gaps between existing controls.
         // No second taskbar window, no continuous animation and no native HWND edits.
         var gapColor = Color.FromArgb(255, 0, 254);
-        var background = _visual.Segmented ? gapColor : UiTheme.NavBackground;
+        var background = _visual.Segmented ? gapColor : SystemInformation.HighContrast ? SystemColors.Window : UiTheme.NavBackground; // high contrast: system colours
         TransparencyKey = _visual.Segmented ? gapColor : Color.Empty;
         BackColor = _root.BackColor = _apps.BackColor = background;
-        Opacity = _visual.Style == "Glass" && !_visual.Segmented ? _visual.OpacityPercent / 100.0 : 1.0;
+        // window opacity also dims the text: never in high contrast
+        Opacity = _visual.Style == "Glass" && !_visual.Segmented && !SystemInformation.HighContrast ? _visual.OpacityPercent / 100.0 : 1.0;
         try { _startArtStyle = StartStudioPreferences.Read().StartButtonStyle; }
         catch (Exception ex) { RotatingLogger.Write("Opsis Start design: " + ex.Message); _startArtStyle = "Opsis Glass"; }
         _start.BackColor = UiTheme.Surface;
