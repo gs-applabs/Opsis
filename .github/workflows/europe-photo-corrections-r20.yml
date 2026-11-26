@@ -1,0 +1,64 @@
+name: Europe exact viewpoint corrections R20
+on:
+  push:
+    branches: [feat/europe-photo-acquisition-r17]
+    paths: ['.github/workflows/europe-photo-corrections-r20.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  corrections:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install Pillow
+      - name: Acquire exact source titles only
+        shell: bash
+        run: |
+          python - <<'PY'
+          import importlib.util,json,shutil
+          from pathlib import Path
+          base=Path("addons/opsis-100/authoring")
+          spec=importlib.util.spec_from_file_location("acquire",base/"acquire-commons-candidates.py")
+          m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m)
+          exact={
+            "eu-budapest":"Budapest skyline from Gellért Hill (10).jpg",
+            "eu-ljubljana":"Ljubljana, view from the castle tower to the castle and the city.JPG",
+            "eu-minsk":"Minsk city skyline.jpg",
+            "eu-nicosia":"Nicosia's Skyline.jpg",
+            "eu-chisinau":"View.from.city.gates.terrace (3863905871).jpg",
+          }
+          m.EXACT.update({k.removeprefix("eu-"):v for k,v in exact.items()})
+          original=m.candidates
+          def candidates(city):
+              title="File:"+exact[city["id"]]
+              for p,i,meta in original(city):
+                  if p["title"].replace("_"," ")==title:
+                      yield p,i,meta
+                      return
+                  break
+          m.candidates=candidates
+          out=Path("review-corrections");out.mkdir(exist_ok=True)
+          report=[]
+          for city in json.loads((base/"europe-capitals.json").read_text(encoding="utf-8"))["scenes"]:
+              if city["id"] not in exact: continue
+              try:
+                  row=m.acquire(city,out)
+              except Exception as e:
+                  shutil.rmtree(out/city["id"],ignore_errors=True)
+                  row={"id":city["id"],"status":"not-acquired","error":str(e)}
+              report.append(row)
+              (out/"report.json").write_text(json.dumps(report,ensure_ascii=False,indent=2),encoding="utf-8")
+              print(json.dumps(row,ensure_ascii=False),flush=True)
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: Europe-exact-viewpoint-corrections-R20
+          path: review-corrections/
+          if-no-files-found: error
+          retention-days: 14

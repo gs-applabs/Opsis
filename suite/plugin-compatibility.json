@@ -1,38 +1,38 @@
 {
   "schemaVersion": 1,
-  "releaseTarget": "2.8.0.2500",
+  "releaseTarget": "3.0.0.3200",
   "sharedUi": {
     "name": "Opsis.UI",
-    "assemblyVersion": "0.1.0.0",
+    "assemblyVersion": "0.6.0.0",
     "repository": "gs-applabs/Opsis.UI",
     "requiredToShareHostLoadContext": true
   },
   "sharedContract": {
     "name": "OpsisNewsCrawler.Plugin.Abstractions",
-    "assemblyVersion": "0.8.0.0"
+    "assemblyVersion": "1.0.0.0"
   },
   "plugins": [
     {
       "name": "Opsis News Crawler",
       "repository": "gs-applabs/OpsisNewsCrawler",
       "integration": "in-process DLL plugin",
-      "branch": "release/plugin-dll-1.0.0.0-opsis-280",
+      "branch": "main (release v0.28.1)",
       "dll": "OpsisNewsCrawler.OpsisPlugin.dll",
       "assemblyVersion": "1.0.0.0",
-      "productVersion": "0.24.1",
+      "productVersion": "0.28.1",
       "installation": "%AppData%\\Opsis\\plugins\\; <Opsis>\\plugins\\",
-      "validation": "awaiting full Windows host E2E"
+      "validation": "released; live loading in Opsis 3.0 not yet verified on Windows"
     },
     {
       "name": "Χρονικολόγιο",
       "repository": "gs-applabs/san-shmera",
       "integration": "in-process DLL plugin",
-      "branch": "release/plugin-dll-1.0.0.0-opsis-280",
+      "branch": "main (release v1.1.0)",
       "dll": "Chronikologio.OpsisPlugin.dll",
       "assemblyVersion": "1.0.0.0",
-      "productVersion": "0.9.0",
+      "productVersion": "1.1.0",
       "installation": "<Opsis>\\plugins\\Chronikologio\\; %AppData%\\Opsis\\plugins\\Chronikologio\\",
-      "validation": "awaiting full Windows host E2E"
+      "validation": "released; live loading in Opsis 3.0 not yet verified on Windows"
     },
     {
       "name": "Opsis Appearance",

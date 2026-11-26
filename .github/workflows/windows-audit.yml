@@ -3,7 +3,7 @@ name: Opsis - Desktop Customization Windows audit
 on:
   workflow_dispatch:
   push:
-    branches: [rc3.0-base, patch/3.0.0.3200-appearance]
+    branches: [rc3.0-base, patch/3.0.0.3200-appearance, integration/r28-on-3.0-mine]
 
 permissions:
   contents: read

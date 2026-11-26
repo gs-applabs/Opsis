@@ -9,9 +9,11 @@ public enum DesktopSurface { Containers, DeskStrip, Widgets }
 public sealed record DesktopMaterial(string Mode = "Default", string Tint = "#1E2128", int Opacity = 32,
     int Blur = 8, int Refraction = 85, int Rim = 70, int Radius = 18,
     string? TitleFont = null, string? ItemFont = null, int ItemFontSize = 0,
-    string? TitleColor = null, string? ItemColor = null, string? AccentColor = null)
+    string? TitleColor = null, string? ItemColor = null, string? AccentColor = null, bool RadiusSet = false)
 {
     internal bool UsesCustom => Mode != "Default";
+    /// <summary>The corner radius to draw: the chosen one for a custom material, or in the Default look when the person set the radius on its own (RadiusSet); otherwise the built-in value.</summary>
+    internal int EffectiveRadius(int builtIn) => UsesCustom || RadiusSet ? Radius : builtIn;
     internal bool WantsGlass => Mode is "Clear" or "Frosted" or "Custom";
     internal Color Color => ColorTranslator.FromHtml(Tint);
 
@@ -112,6 +114,24 @@ internal static class DesktopMaterials
             _ => settings.WidgetMaterial
         };
         return (material ?? new()).Normalized();
+    }
+
+    // One explicit user action, one settings save; reuse existing GPU/DWM policy.
+    internal static void ApplySignature()
+    {
+        var settings = AppSettings.Load();
+        var material = new DesktopMaterial("Custom", "#153451", 30, 14, 85, 90, 20,
+            TitleColor: "#F5FAFF", ItemColor: "#F5FAFF", AccentColor: "#7EDBFF").Normalized();
+        settings.ContainerMaterial = material;
+        settings.DeskStripMaterial = material with { Radius = 24 };
+        settings.WidgetMaterial = material;
+        settings.WidgetsThemeMode = "Transparent";
+        settings.WidgetsTintPercent = 0;
+        settings.WidgetsTintColor = "Material";
+        // Do not override an explicit GPU disable or the existing accessibility policy.
+        settings.ThemeMode = "SignatureGlass";
+        settings.Save();
+        ThemeManager.RefreshOpsisAccent();
     }
 
     internal static void Set(DesktopSurface surface, DesktopMaterial material)

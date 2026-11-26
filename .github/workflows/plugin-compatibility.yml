@@ -61,15 +61,16 @@ jobs:
       - name: Build Opsis, both plugins, and run their tests
         shell: pwsh
         run: |
+          New-Item -ItemType Directory -Force 'compat-results' | Out-Null
           dotnet publish Opsis.csproj -c Release -r win-x64 --self-contained false -o publish -m:1 --nologo
           if ($LASTEXITCODE -ne 0) { throw 'Opsis build failed' }
-          dotnet test _compat/crawler/tests/OpsisNewsCrawler.Core.Tests/OpsisNewsCrawler.Core.Tests.csproj -c Release -m:1 --nologo
+          dotnet test _compat/crawler/tests/OpsisNewsCrawler.Core.Tests/OpsisNewsCrawler.Core.Tests.csproj -c Release -m:1 --nologo --blame-hang --blame-hang-timeout 3m --blame-hang-dump-type none --results-directory "$PWD/compat-results/crawler-core" --logger "trx;LogFileName=crawler-core.trx"
           if ($LASTEXITCODE -ne 0) { throw 'Crawler Core tests failed' }
-          dotnet test _compat/crawler/tests/OpsisNewsCrawler.Plugin.Tests/OpsisNewsCrawler.Plugin.Tests.csproj -c Release -m:1 --nologo
+          dotnet test _compat/crawler/tests/OpsisNewsCrawler.Plugin.Tests/OpsisNewsCrawler.Plugin.Tests.csproj -c Release -m:1 --nologo --blame-hang --blame-hang-timeout 3m --blame-hang-dump-type none --results-directory "$PWD/compat-results/crawler-plugin" --logger "trx;LogFileName=crawler-plugin.trx"
           if ($LASTEXITCODE -ne 0) { throw 'Crawler plugin tests failed' }
-          dotnet test _compat/chronikologio/tests/Chronikologio.Core.Tests/Chronikologio.Core.Tests.csproj -c Release -m:1 --nologo
+          dotnet test _compat/chronikologio/tests/Chronikologio.Core.Tests/Chronikologio.Core.Tests.csproj -c Release -m:1 --nologo --blame-hang --blame-hang-timeout 3m --blame-hang-dump-type none --results-directory "$PWD/compat-results/chronikologio-core" --logger "trx;LogFileName=chronikologio-core.trx"
           if ($LASTEXITCODE -ne 0) { throw 'Chronikologio Core tests failed' }
-          dotnet test _compat/chronikologio/tests/Chronikologio.Plugin.Tests/Chronikologio.Plugin.Tests.csproj -c Release -m:1 --nologo
+          dotnet test _compat/chronikologio/tests/Chronikologio.Plugin.Tests/Chronikologio.Plugin.Tests.csproj -c Release -m:1 --nologo --blame-hang --blame-hang-timeout 3m --blame-hang-dump-type none --results-directory "$PWD/compat-results/chronikologio-plugin" --logger "trx;LogFileName=chronikologio-plugin.trx"
           if ($LASTEXITCODE -ne 0) { throw 'Chronikologio plugin tests failed' }
           dotnet publish _compat/crawler/src/OpsisNewsCrawler.OpsisPlugin/OpsisNewsCrawler.OpsisPlugin.csproj -c Release -o plugin-crawler -m:1 --nologo
           if ($LASTEXITCODE -ne 0) { throw 'Crawler plugin publish failed' }

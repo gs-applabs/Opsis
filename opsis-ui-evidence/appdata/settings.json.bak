@@ -86,8 +86,17 @@
   "QuickHideExtraKept": [],
   "LastSeenAppVersion": "2.8.0.2510",
   "WindowMemory": {
-    "ByScreen": {},
-    "LastScreen": ""
+    "ByScreen": {
+      "\\\\.\\DISPLAY1": {
+        "Screen": "\\\\.\\DISPLAY1",
+        "X": 640,
+        "Y": 300,
+        "Width": 1280,
+        "Height": 800,
+        "Maximized": false
+      }
+    },
+    "LastScreen": "\\\\.\\DISPLAY1"
   },
   "UiScalePercent": 100,
   "CardFontScalePercent": 100,

@@ -1,6 +1,6 @@
 {
   "passed": true,
-  "runtimeSeconds": 16.0068314,
+  "runtimeSeconds": 15.690114,
   "environment": "Microsoft Windows NT 10.0.26300.0",
   "checks": [
     {
@@ -158,16 +158,16 @@
       "measurements": [
         {
           "page": "Dashboard",
-          "elapsedMs": 186.1947,
-          "controls": 57,
-          "clickableButtons": 21,
+          "elapsedMs": 259.3345,
+          "controls": 66,
+          "clickableButtons": 27,
           "settingsInputs": 1,
           "scrollingContainers": 2,
           "visibleScrollbars": 1
         },
         {
           "page": "Widgets",
-          "elapsedMs": 354.288,
+          "elapsedMs": 288.6587,
           "controls": 128,
           "clickableButtons": 38,
           "settingsInputs": 9,
@@ -176,7 +176,7 @@
         },
         {
           "page": "DeskZones",
-          "elapsedMs": 299.6496,
+          "elapsedMs": 267.2599,
           "controls": 93,
           "clickableButtons": 21,
           "settingsInputs": 9,
@@ -185,16 +185,16 @@
         },
         {
           "page": "DeskContainers",
-          "elapsedMs": 211.0201,
-          "controls": 64,
+          "elapsedMs": 209.8505,
+          "controls": 70,
           "clickableButtons": 18,
-          "settingsInputs": 1,
+          "settingsInputs": 3,
           "scrollingContainers": 2,
           "visibleScrollbars": 0
         },
         {
           "page": "DeskStrip",
-          "elapsedMs": 384.4584,
+          "elapsedMs": 348.4011,
           "controls": 89,
           "clickableButtons": 29,
           "settingsInputs": 1,
@@ -203,7 +203,7 @@
         },
         {
           "page": "Wallpaper",
-          "elapsedMs": 552.636,
+          "elapsedMs": 529.4214,
           "controls": 103,
           "clickableButtons": 58,
           "settingsInputs": 2,
@@ -212,7 +212,7 @@
         },
         {
           "page": "DeskMusicVisualizer",
-          "elapsedMs": 667.525,
+          "elapsedMs": 634.6847,
           "controls": 91,
           "clickableButtons": 24,
           "settingsInputs": 13,
@@ -221,7 +221,7 @@
         },
         {
           "page": "Performance",
-          "elapsedMs": 165.7053,
+          "elapsedMs": 149.977,
           "controls": 55,
           "clickableButtons": 15,
           "settingsInputs": 1,
@@ -230,7 +230,7 @@
         },
         {
           "page": "Settings",
-          "elapsedMs": 278.1593,
+          "elapsedMs": 280.0984,
           "controls": 120,
           "clickableButtons": 31,
           "settingsInputs": 2,
@@ -239,7 +239,7 @@
         },
         {
           "page": "Automation",
-          "elapsedMs": 210.4788,
+          "elapsedMs": 191.7666,
           "controls": 72,
           "clickableButtons": 28,
           "settingsInputs": 2,
@@ -248,16 +248,16 @@
         },
         {
           "page": "Personalization",
-          "elapsedMs": 10174.9015,
-          "controls": 678,
-          "clickableButtons": 214,
+          "elapsedMs": 10123.8103,
+          "controls": 680,
+          "clickableButtons": 215,
           "settingsInputs": 68,
           "scrollingContainers": 2,
           "visibleScrollbars": 1
         },
         {
           "page": "Theme",
-          "elapsedMs": 332.4827,
+          "elapsedMs": 314.9855,
           "controls": 141,
           "clickableButtons": 16,
           "settingsInputs": 1,
@@ -266,7 +266,7 @@
         },
         {
           "page": "AudioEnhancement",
-          "elapsedMs": 261.934,
+          "elapsedMs": 231.2064,
           "controls": 74,
           "clickableButtons": 26,
           "settingsInputs": 1,
@@ -275,7 +275,7 @@
         },
         {
           "page": "About",
-          "elapsedMs": 521.0822,
+          "elapsedMs": 398.6588,
           "controls": 98,
           "clickableButtons": 16,
           "settingsInputs": 1,
@@ -287,7 +287,7 @@
     {
       "title": "Stress",
       "controlCount": 80,
-      "privateMemoryDeltaMiB": 94.1328125
+      "privateMemoryDeltaMiB": 87.44140625
     }
   ]
 }

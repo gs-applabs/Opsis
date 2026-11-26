@@ -1,0 +1,95 @@
+name: Europe wallpaper preview installer R26
+on:
+  push:
+    branches: [feat/europe-photo-installer-r24]
+    paths: ['.github/workflows/europe-preview-installer-r26.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  installer:
+    runs-on: windows-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install Pillow
+      - uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          run-id: 45617103408
+          name: Europe-photo-layer-review-R22
+          path: incoming/r22
+      - uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          run-id: 45617208016
+          name: Europe-photo-replacement-layer-review-R23
+          path: incoming/r23
+      - uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          run-id: 45618032708
+          name: Europe-photo-replacement-layer-review-R25
+          path: incoming/r25
+      - name: Stage real photo preview only
+        run: python addons/opsis-100/authoring/stage-preview-r26.py --src incoming --out payload --catalog addons/opsis-100/authoring/europe-capitals.json
+      - name: Compile Inno Setup
+        shell: pwsh
+        run: |
+          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          if (!(Test-Path $iscc)) { choco install innosetup -y --no-progress; if ($LASTEXITCODE -ne 0) { throw 'Inno Setup install failed' } }
+          $out = Join-Path $PWD 'dist'
+          New-Item -ItemType Directory -Path $out -Force | Out-Null
+          & $iscc "/DPreviewPayload=$PWD\payload" "/DOutputFolder=$out" "addons\opsis-100\authoring\europe-preview-r26.iss"
+          if ($LASTEXITCODE -ne 0) { throw 'Installer compilation failed' }
+          Copy-Item payload\PREVIEW-REPORT.json dist
+          Get-FileHash dist\*.exe -Algorithm SHA256 | Format-List | Out-File dist\SHA256.txt
+      - name: Smoke install and uninstall with existing OPSIS marker
+        shell: pwsh
+        run: |
+          $target=Join-Path $env:RUNNER_TEMP 'OPSIS preview smoke'
+          New-Item -ItemType Directory -Path $target -Force | Out-Null
+          New-Item -ItemType File -Path "$target\Opsis.exe" | Out-Null
+          New-Item -ItemType Directory -Path "$target\widgets\wallpaper\scenes\greece" -Force | Out-Null
+          Set-Content "$target\widgets\wallpaper\scenes\greece\sentinel.txt" 'preserve'
+          $setup=(Get-ChildItem dist\*.exe | Select-Object -First 1).FullName
+          $p=Start-Process $setup -ArgumentList @('/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART',"/DIR=`"$target`"") -PassThru -Wait
+          if ($p.ExitCode -ne 0) { throw "install exit $($p.ExitCode)" }
+          $folder="$target\widgets\wallpaper\scenes\europe-preview"
+          $expected=@(Get-Content payload\PREVIEW-REPORT.json -Raw | ConvertFrom-Json | Where-Object status -eq 'preview-installed-payload')
+          foreach ($row in $expected) {
+            foreach ($prop in $row.sha256.PSObject.Properties) {
+              $actual=(Get-FileHash (Join-Path (Join-Path $folder $row.id) $prop.Name) -Algorithm SHA256).Hash.ToLowerInvariant()
+              if ($actual -ne $prop.Value) { throw "Installed file mismatch: $($row.id) $($prop.Name)" }
+            }
+          }
+          if (!(Test-Path "$target\widgets\wallpaper\scenes\greece\sentinel.txt")) { throw 'Greek assets changed' }
+          $uninstaller=(Get-ChildItem "$folder\uninstall\unins*.exe" | Select-Object -First 1).FullName
+          $p=Start-Process $uninstaller -ArgumentList '/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART' -Wait -PassThru
+          if ($p.ExitCode -ne 0 -or !(Test-Path "$target\Opsis.exe") -or !(Test-Path "$target\widgets\wallpaper\scenes\greece\sentinel.txt")) { throw 'Uninstall preservation failed' }
+          if (Get-ChildItem $folder -Filter preview.json -Recurse -ErrorAction SilentlyContinue) { throw 'Preview files remained after uninstall' }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: OPSIS-European-Capitals-R26-Preview-Installer
+          path: dist/
+          if-no-files-found: error
+          retention-days: 30
+  host-preview:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '11.0.x'
+      - run: dotnet publish Opsis.csproj -c Release -r win-x64 --self-contained false -o host-preview
+      - uses: actions/upload-artifact@v4
+        with:
+          name: OPSIS-R26-Compatible-Host-Preview
+          path: host-preview/
+          if-no-files-found: error
+          retention-days: 30

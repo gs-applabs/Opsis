@@ -76,7 +76,20 @@ internal sealed class SecondaryWindowStyler : IMessageFilter
                 if (defaultFore) b.ForeColor = t.Text;
                 break;
             case ComboBox cb:
-                cb.FlatStyle = FlatStyle.Flat; if (defaultBack) cb.BackColor = t.Surface; if (defaultFore) cb.ForeColor = t.Text; break;
+                cb.FlatStyle = FlatStyle.Flat; if (defaultBack) cb.BackColor = t.Surface; if (defaultFore) cb.ForeColor = t.Text;
+                if (cb.DropDownStyle != ComboBoxStyle.Simple && cb.DrawMode == DrawMode.Normal)
+                {
+                    // the native selection box and list ignore BackColor: owner-draw them in the token colours
+                    cb.DrawMode = DrawMode.OwnerDrawFixed;
+                    cb.DrawItem += (s, e) =>
+                    {
+                        var box = (ComboBox)s!; var tk = new OpsisUiTokens();
+                        bool sel = (e.State & DrawItemState.Selected) != 0 && (e.State & DrawItemState.ComboBoxEdit) == 0;
+                        using (var bg = new SolidBrush(sel ? tk.SurfaceHover : tk.Surface)) e.Graphics.FillRectangle(bg, e.Bounds);
+                        if (e.Index >= 0) TextRenderer.DrawText(e.Graphics, box.GetItemText(box.Items[e.Index]), box.Font, new Rectangle(e.Bounds.X + 2, e.Bounds.Y, e.Bounds.Width - 2, e.Bounds.Height), tk.Text, TextFormatFlags.VerticalCenter | TextFormatFlags.Left | TextFormatFlags.NoPrefix);
+                    };
+                }
+                break;
             case TextBoxBase or ListBox or ListView or TreeView or NumericUpDown or DataGridView:
                 if (defaultBack) c.BackColor = t.Surface; if (defaultFore) c.ForeColor = t.Text;
                 if (c is TextBoxBase or ListBox) { try { ((dynamic)c).BorderStyle = BorderStyle.FixedSingle; } catch (Exception) { } }
