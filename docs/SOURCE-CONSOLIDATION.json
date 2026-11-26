@@ -907,16 +907,6 @@
     },
     {
       "branch": "europe-R26",
-      "path": "src/UI/MainWindow.WallpaperGallery.cs",
-      "ancestor": "cf906d7840a37af3f1dcaa8977ccaa7a4f3278c3",
-      "head": "e72ee5877526c03ead97ce8bbdd098fe41b49838",
-      "base_blob": "69eee2837278e4926ff359ba4cf6da79d9ad24fd",
-      "incoming_blob": "b998cb357b18500a25a744b13979b60a8952a828",
-      "current_blob": "bd5e62d36b01de369d94d9091bb81c48e8711a18",
-      "reason": "Git three-way conflict"
-    },
-    {
-      "branch": "europe-R26",
       "path": "src/UI/MainWindow.cs",
       "ancestor": "cf906d7840a37af3f1dcaa8977ccaa7a4f3278c3",
       "head": "e72ee5877526c03ead97ce8bbdd098fe41b49838",
@@ -977,16 +967,6 @@
     },
     {
       "branch": "europe-R26",
-      "path": "src/Widgets/wallpaper/weather.js",
-      "ancestor": "cf906d7840a37af3f1dcaa8977ccaa7a4f3278c3",
-      "head": "e72ee5877526c03ead97ce8bbdd098fe41b49838",
-      "base_blob": "d8a04fbd5913193520d5e220e9028028ba78fb1e",
-      "incoming_blob": "618b932a0640e2ec7fd54a54a4746f565f819397",
-      "current_blob": "fa4d7f015b9446c6b65834686bfcb3991f59ee9f",
-      "reason": "Git three-way conflict"
-    },
-    {
-      "branch": "europe-R26",
       "path": "tests/Opsis.ExperienceSmoke/Program.cs",
       "ancestor": "cf906d7840a37af3f1dcaa8977ccaa7a4f3278c3",
       "head": "e72ee5877526c03ead97ce8bbdd098fe41b49838",
@@ -994,16 +974,6 @@
       "incoming_blob": "903ba3d0c3432d224cbf2c7cbbb46a807c0a824b",
       "current_blob": "4d749bed41d34a4e8a53552fde53e60a90814982",
       "reason": "Git three-way conflict"
-    },
-    {
-      "branch": "europe-R26",
-      "path": "src/Services/WallpaperGalleryCatalog.cs",
-      "ancestor": "cf906d7840a37af3f1dcaa8977ccaa7a4f3278c3",
-      "head": "e72ee5877526c03ead97ce8bbdd098fe41b49838",
-      "base_blob": null,
-      "incoming_blob": "83efa813cb93107c3944d533d0d67875524968b2",
-      "current_blob": "e67426108673267b35fe2669e1b7ce2186bfe3b2",
-      "reason": "add/add or missing common base"
     },
     {
       "branch": "crawler-bridge",
@@ -1214,6 +1184,41 @@
       "incoming_blob": "7f3550490d383f4df5ade4831b25dfe15c0afdee",
       "current_blob": "3846233faea2c9d58ac52e7b1f78e00498577356",
       "reason": "add/add or missing common base"
+    }
+  ],
+  "manual_resolutions": [
+    {
+      "branch": "europe-R26",
+      "path": "src/UI/MainWindow.WallpaperGallery.cs",
+      "ancestor": "cf906d7840a37af3f1dcaa8977ccaa7a4f3278c3",
+      "head": "e72ee5877526c03ead97ce8bbdd098fe41b49838",
+      "base_blob": "69eee2837278e4926ff359ba4cf6da79d9ad24fd",
+      "incoming_blob": "b998cb357b18500a25a744b13979b60a8952a828",
+      "current_blob": "bd5e62d36b01de369d94d9091bb81c48e8711a18",
+      "reason": "Git three-way conflict",
+      "method": "R28 targeted port; preserve current paginated Gallery / existing deduplication / native renderer; tests pending"
+    },
+    {
+      "branch": "europe-R26",
+      "path": "src/Widgets/wallpaper/weather.js",
+      "ancestor": "cf906d7840a37af3f1dcaa8977ccaa7a4f3278c3",
+      "head": "e72ee5877526c03ead97ce8bbdd098fe41b49838",
+      "base_blob": "d8a04fbd5913193520d5e220e9028028ba78fb1e",
+      "incoming_blob": "618b932a0640e2ec7fd54a54a4746f565f819397",
+      "current_blob": "fa4d7f015b9446c6b65834686bfcb3991f59ee9f",
+      "reason": "Git three-way conflict",
+      "method": "R28 targeted port; preserve current paginated Gallery / existing deduplication / native renderer; tests pending"
+    },
+    {
+      "branch": "europe-R26",
+      "path": "src/Services/WallpaperGalleryCatalog.cs",
+      "ancestor": "cf906d7840a37af3f1dcaa8977ccaa7a4f3278c3",
+      "head": "e72ee5877526c03ead97ce8bbdd098fe41b49838",
+      "base_blob": null,
+      "incoming_blob": "83efa813cb93107c3944d533d0d67875524968b2",
+      "current_blob": "e67426108673267b35fe2669e1b7ce2186bfe3b2",
+      "reason": "add/add or missing common base",
+      "method": "R28 targeted port; preserve current paginated Gallery / existing deduplication / native renderer; tests pending"
     }
   ]
 }

@@ -65,3 +65,7 @@ Cleanly reconciled: 14. Unresolved: 34.
 - main-2.8-followup: locales/zh-CN.json — Git three-way conflict
 - main-2.8-followup: src/Widgets/wallpaper/index.html — Git three-way conflict
 - main-2.8-followup: tests/WeatherInfoTone.test.cjs — add/add or missing common base
+
+## R28 targeted reconciliation
+
+Excluded documentation C# examples from application compilation (duplicate Gallery type). Ported R26 European photo discovery into current paginated Gallery, explicit preview labels and selection state. Ported mask handling into current native renderer, preserving existing photograph-ready logic. Retained current Glass Signature deduplication in WallpaperGalleryCatalog. Remaining conflict records: 31. Windows tests pending.

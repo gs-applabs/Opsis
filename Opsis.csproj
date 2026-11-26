@@ -20,7 +20,7 @@
   <ItemGroup>
     <Using Include="Opsis.UI" />
     <!-- tests\ holds separate projects (e.g. AtomicWriteCrashHarness with top-level statements): they must NEVER be compiled into the app, or their Main replaces the real entry point and Opsis exits with code 2 at start-up -->
-    <Compile Remove="tests/**;_compat/**;publish/**;Output/**" />
+    <Compile Remove="tests/**;_compat/**;publish/**;Output/**;docs/**" />
     <EmbeddedResource Remove="tests/**;_compat/**;publish/**;Output/**" />
     <None Remove="tests/**;_compat/**;publish/**;Output/**" />
     <Content Remove="_compat/**" />

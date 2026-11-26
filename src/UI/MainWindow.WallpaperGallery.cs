@@ -64,6 +64,24 @@ public sealed partial class MainWindow
             host.Enable();
             host.RefreshAll();
         }
+        var europeanPhotos = EuropeanPhotoCatalog.Discover();
+        void ApplyEuropean(string id)
+        {
+            var entry = EuropeanPhotoCatalog.Discover().FirstOrDefault(x => x.Scene.Id == id);
+            if (entry == null) { ShowWallpaper(); return; }
+            var city = entry.Scene;
+            var settings = WallpaperSettings.Load();
+            settings.WeatherLandmarkId = city.Id;
+            settings.WeatherLandmarks = true;
+            settings.WeatherCity = StudioGreek ? city.Name : city.NameEn;
+            settings.WeatherLat = city.Lat; settings.WeatherLon = city.Lon;
+            settings.WeatherPlaceSource = "OPSIS Europe";
+            settings.WeatherPlaceDetail = city.NameEn;
+            settings.Mode = "Weather";
+            settings.Save();
+            host.Enable();
+            host.RefreshAll();
+        }
         var addonItems = OpsisEcosystemGallery.Discover().Where(x => x.Type.Equals("wallpaper", StringComparison.OrdinalIgnoreCase) &&
             Path.GetExtension(x.AssetPath).ToLowerInvariant() is ".jpg" or ".jpeg" or ".png" or ".webp")
             .Select(x => (Title: x.Title, Category: x.Category, Path: x.AssetPath, Poster: (string?)x.AssetPath,
@@ -71,6 +89,9 @@ public sealed partial class MainWindow
             .Concat(webItems.Where(x => x.Id != "opsis-glass-signature")
                 .Select(x => (Title: StudioText(x.Name, string.IsNullOrWhiteSpace(x.NameEl) ? x.Name : x.NameEl),
                     Category: x.Category, Path: x.IndexPath, Poster: x.PosterPath, Mode: "Page", Apply: (Action)(() => ApplyWeb(x)))))
+            .Concat(europeanPhotos.Select(x => (Title: StudioGreek ? x.Scene.Name : x.Scene.NameEn,
+                Category: x.IsPreview ? StudioText("European Capitals — REVIEW PREVIEW", "Ευρωπαϊκές πρωτεύουσες — ΔΟΚΙΜΑΣΤΙΚΕΣ") : StudioText("European Capitals", "Ευρωπαϊκές πρωτεύουσες"),
+                Path: x.Scene.Id, Poster: (string?)x.Poster, Mode: "Weather", Apply: (Action)(() => ApplyEuropean(x.Scene.Id)))))
             .OrderBy(x => x.Category, StringComparer.CurrentCultureIgnoreCase)
             .ThenBy(x => x.Title, StringComparer.CurrentCultureIgnoreCase).ToArray();
         foreach (var scene in StudioWallpaperCatalog.Scenes)
@@ -171,13 +192,14 @@ public sealed partial class MainWindow
         void Sync()
         {
             if (page.IsDisposed) return;
-            var mode = WallpaperSettings.Load().Mode;
+            var settings = WallpaperSettings.Load();
+            var mode = settings.Mode;
             weatherDepth.Visible = mode == "Weather";
             power.Text = host.IsEnabled ? StudioText("Disable wallpaper", "Απενεργοποίηση φόντου")
                 : StudioText("Enable wallpaper", "Ενεργοποίηση φόντου");
             details.Text = mode == "Weather" ? StudioText("Weather settings", "Ρυθμίσεις Weather") : StudioText("Wallpaper settings", "Ρυθμίσεις φόντου");
-            foreach (var tile in tiles) tile.SetActive(host.IsEnabled && tile.Mode == mode && tile.Mode is not ("Page" or "Image"));
-            var settings = WallpaperSettings.Load();
+            foreach (var tile in tiles) tile.SetActive(host.IsEnabled && tile.Mode == mode && tile.Mode is not ("Page" or "Image") &&
+                (mode != "Weather" || !europeanPhotos.Any(x => x.Scene.Id == settings.WeatherLandmarkId)));
             string? pagePath = MediaSource.LocalPagePath(settings.PageSource);
             foreach (var tile in tiles.Where(x => x.Mode is "Page" or "Image"))
             {
@@ -187,7 +209,7 @@ public sealed partial class MainWindow
             }
             signatureTile?.SetActive(host.IsEnabled && mode == "Page" && string.Equals(pagePath, signature?.IndexPath, StringComparison.OrdinalIgnoreCase));
             foreach (var tile in addonTiles) tile.Tile.SetActive(host.IsEnabled && mode == tile.Mode &&
-                string.Equals(tile.Mode == "Page" ? pagePath : settings.ImagePath, tile.Path, StringComparison.OrdinalIgnoreCase));
+                string.Equals(tile.Mode == "Weather" ? settings.WeatherLandmarkId : tile.Mode == "Page" ? pagePath : settings.ImagePath, tile.Path, StringComparison.OrdinalIgnoreCase));
         }
 
         void DrawAddonPage()
