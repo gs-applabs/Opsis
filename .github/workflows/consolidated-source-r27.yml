@@ -1,4 +1,4 @@
-name: OPSIS consolidated source and files R27
+name: OPSIS consolidated source and files R27 (retry without workflow edits)
 on:
   push:
     branches: [integration/opsis-unified-source-r27]
