@@ -1,0 +1,72 @@
+{
+  "schema": 1,
+  "baseline": "2.8.0.2510",
+  "targetVersion": "3.0.0.3200",
+  "currentPublishedVersion": "2.8.0.2510",
+  "state": "development",
+  "branch": "feat/3.0.0.3200-integration",
+  "releaseBlocked": true,
+  "requireAllGatesPassed": true,
+  "gates": [
+    {
+      "id": "baseline-source-settings-inventory",
+      "status": "passed",
+      "evidence": "docs/OPSIS-2.8.0.2510-SETTINGS-BASELINE.json; 205 source-scanned properties"
+    },
+    {
+      "id": "source-setting-schema-preservation",
+      "status": "passed",
+      "evidence": "docs/OPSIS-3.0.0.3200-SETTINGS-DELTA.json; 0 removed or type-changed in 205 keys"
+    },
+    {
+      "id": "p0-p1-p2-p3-p5-code-stacked",
+      "status": "passed",
+      "evidence": "Integration branch based on feat/p3-p5-unified-experience (which includes P0/P1/P2)"
+    },
+    {
+      "id": "weather-pr8-code-stacked",
+      "status": "passed",
+      "evidence": "Spatial Weather PR #8 files integrated without replacing updated MainWindow"
+    },
+    {
+      "id": "plugin-runtime-and-gallery-collision-audit",
+      "status": "in-review",
+      "evidence": "src/Services/OpsisIntegrationAudit.cs, src/Services/OpsisEcosystemGallery.cs"
+    },
+    {
+      "id": "unified-win2022-win2025-build-tests",
+      "status": "pending",
+      "evidence": ".github/workflows/3.0-integration.yml"
+    },
+    {
+      "id": "webview2-gpu-weather-renderer-captures",
+      "status": "pending",
+      "evidence": "tests/weather-spatial/WebViewSmoke.csproj"
+    },
+    {
+      "id": "installer-install-reinstall-uninstall-windows-vm",
+      "status": "pending",
+      "evidence": ".github/workflows/3.0-installer-e2e.yml"
+    },
+    {
+      "id": "integrated-plugins-e2e",
+      "status": "pending",
+      "evidence": "Crawler, Chronikologio, Media Suite and other installed plugins must pass live host validation"
+    },
+    {
+      "id": "windows11-visual-dpi-multimonitor-performance",
+      "status": "pending",
+      "evidence": "Interactive Windows 11 with graphics/display/session edge cases"
+    },
+    {
+      "id": "complete-original-feature-list",
+      "status": "incomplete",
+      "evidence": "Native Windows Start replacement, full Rainmeter plugins, Windhawk mods, SCR registration, online marketplace and full 3D models are not complete"
+    },
+    {
+      "id": "approved-version-bump-and-production-release",
+      "status": "incomplete",
+      "evidence": "Keep Version.props at 2.8.0.2510 until other mandatory gates passed"
+    }
+  ]
+}

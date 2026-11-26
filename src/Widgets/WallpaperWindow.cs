@@ -254,6 +254,8 @@ namespace MotionDesk.Widgets
                 weatherSim = settings.WeatherSimulation,
                 timeSim = settings.TimeSimulation,
                 weatherGlass = settings.WeatherGlass,
+                weatherSpatialMode = settings.WeatherSpatialMode is "2.5D" or "3D"
+                    ? settings.WeatherSpatialMode : "Off",
                 rainLandscapeIntensity = Math.Clamp(settings.RainLandscapeIntensity, 0, 200) / 100.0,
                 rainGlassIntensity = Math.Clamp(settings.RainGlassIntensity, 0, 200) / 100.0,
                 weatherPhotoFocusX = Math.Clamp(settings.WeatherPhotoFocusX, 0, 100) / 100.0,
@@ -523,6 +525,9 @@ namespace MotionDesk.Widgets
         // "Auto" = live wind. Otherwise Calm|LightBreeze|FreshBreeze|Strong|Gale (Beaufort 1/3/5/7/9) — drives waves and cloud speed
         public string WindSimulation { get; set; } = "Auto";
         public bool WeatherGlass { get; set; } = true;   // raindrops on a window pane while it rains
+        // 2.5D = depth-separated sky parallax; 3D also adds GPU perspective weather particles.
+        // Off remains the safe default for upgrades and low-end or unsupported GPUs.
+        public string WeatherSpatialMode { get; set; } = "Off";
         public int RainLandscapeIntensity { get; set; } = 100; // 0..200 percent, independent of actual weather data
         public int RainGlassIntensity { get; set; } = 100;     // 0..200 percent; 0 disables window droplets
         public int WeatherPhotoFocusX { get; set; } = 50;     // 0..100, subject placement in portrait photo crop
@@ -1830,6 +1835,16 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Count);
                 if (settings.RainLandscapeIntensity == percent) return;
                 settings.RainLandscapeIntensity = percent;
             }
+            settings.Save();
+            _ = RefreshAllAsync();
+        }
+
+        public void SetWeatherSpatialMode(string mode)
+        {
+            if (mode is not ("Off" or "2.5D" or "3D")) mode = "Off";
+            var settings = WallpaperSettings.Load();
+            if (settings.WeatherSpatialMode == mode) return;
+            settings.WeatherSpatialMode = mode;
             settings.Save();
             _ = RefreshAllAsync();
         }

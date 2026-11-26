@@ -101,7 +101,9 @@ public sealed class WindowRulesEngine : IDisposable
 
     private void Evaluate()
     {
-        if (!AppSettings.Peek().WindowRulesEnabled || WindowsUpdateGuard.RequiresReview || SafeModeService.IsSafeMode) return;
+        var settings = AppSettings.Peek();
+        if (!settings.WindowRulesEnabled || settings.AutoTileEnabled ||
+            WindowsUpdateGuard.RequiresReview || SafeModeService.IsSafeMode) return;
         try
         {
             var hwnd = GetForegroundWindow();

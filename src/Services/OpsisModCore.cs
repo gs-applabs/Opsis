@@ -63,7 +63,7 @@ public static class OpsisModCore
         new ModuleDefinition("wallpaper.weather", "Wallpaper", "Live Weather Wallpaper", Array.Empty<string>(), Array.Empty<string>(), 19041, true),
         new ModuleDefinition("wallpaper.scene-composer", "Wallpaper", "Weather Scene Composer", new[] { "wallpaper.weather" }, Array.Empty<string>(), 19041, true),
         new ModuleDefinition("wallpaper.scene-rules", "Wallpaper", "Weather Scene scheduled rules", new[] { "wallpaper.scene-composer" }, Array.Empty<string>(), 19041, true),
-        new ModuleDefinition("wallpaper.scene-3d", "Wallpaper", "Spatial Weather 3D (separate PR)", Array.Empty<string>(), Array.Empty<string>()),
+        new ModuleDefinition("wallpaper.scene-3d", "Wallpaper", "Spatial 2.5D/WebGL2 weather overlays with 2D fallback", new[] { "wallpaper.weather" }, Array.Empty<string>(), 19041, true),
         new ModuleDefinition("wallpaper.performance", "Wallpaper", "Adaptive wallpaper performance profiles", Array.Empty<string>(), Array.Empty<string>(), 19041, true),
         new ModuleDefinition("wallpaper.gpu-manager", "Wallpaper", "GPU rendering controls", Array.Empty<string>(), Array.Empty<string>(), 19041, true),
         new ModuleDefinition("widgets.opsis", "Widgets", "Opsis native widget engine", Array.Empty<string>(), Array.Empty<string>(), 19041, true),

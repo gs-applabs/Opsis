@@ -6,6 +6,30 @@ namespace MotionDesk.UI;
 
 public sealed partial class MainWindow
 {
+    private FlowLayoutPanel WeatherDepthPicker(string selected)
+    {
+        var spatialRow = new FlowLayoutPanel { AutoSize = true, WrapContents = false, Margin = new Padding(0, 5, 0, 8) };
+        spatialRow.Controls.Add(new Label { Text = StudioText("Weather scene depth", "Βάθος καιρού / σκηνής"),
+            Width = 190, Height = 30, TextAlign = ContentAlignment.MiddleLeft,
+            ForeColor = UiTheme.TextSecondary, Font = UiTheme.FontBody });
+        var spatialModes = new[] { "Off", "2.5D", "3D" };
+        var spatialLabels = new[] {
+            StudioText("Off — classic 2D", "Κλειστό — κλασικό 2D"),
+            StudioText("2.5D — parallax", "2.5D — παράλλαξη βάθους"),
+            StudioText("3D — landscapes and monuments", "3D — τοπία και μνημεία")
+        };
+        var spatialPicker = new FlatComboBox { Width = 330 };
+        var currentSpatial = Array.IndexOf(spatialModes, selected);
+        spatialPicker.SetItems(spatialLabels, spatialLabels[Math.Max(0, currentSpatial)]);
+        spatialPicker.SelectedIndexChanged += (_, _) =>
+        {
+            if (spatialPicker.SelectedIndex is >= 0 and < 3)
+                WallpaperHostEngine.Instance.SetWeatherSpatialMode(spatialModes[spatialPicker.SelectedIndex]);
+        };
+        spatialRow.Controls.Add(spatialPicker);
+        return spatialRow;
+    }
+
     private void ShowWallpaper()
     {
         _currentPageKey = "Wallpaper";
@@ -20,6 +44,7 @@ public sealed partial class MainWindow
         var details = StudioButton(StudioText("Wallpaper settings", "Ρυθμίσεις φόντου"), ShowWallpaperDetails, 194);
         controls.Controls.AddRange([power, details]);
         page.Controls.Add(controls);
+        var weatherDepth = WeatherDepthPicker(WallpaperSettings.Load().WeatherSpatialMode);
         var featured = NewGrid();
         var library = NewGrid();
         var tiles = new List<WallpaperTile>();
@@ -37,6 +62,7 @@ public sealed partial class MainWindow
         AddTile(library, "Desktop", StudioText("Windows wallpaper", "Φόντο Windows"), StudioText("Show your system wallpaper", "Εμφάνιση του φόντου των Windows"), null);
         AddTile(library, "Waves", StudioText("Waves", "Κύματα"), StudioText("Audio-reactive ribbons", "Κορδέλες που αντιδρούν στον ήχο"), null);
         AddTile(library, "Particles", StudioText("Particles", "Σωματίδια"), StudioText("Floating particles", "Αιωρούμενα σωματίδια"), null);
+        page.Controls.Add(weatherDepth);
         page.Controls.Add(library);
 
         int lastLayoutWidth = 0;
@@ -68,6 +94,7 @@ public sealed partial class MainWindow
         {
             if (page.IsDisposed) return;
             var mode = WallpaperSettings.Load().Mode;
+            weatherDepth.Visible = mode == "Weather";
             power.Text = host.IsEnabled ? StudioText("Disable wallpaper", "Απενεργοποίηση φόντου")
                 : StudioText("Enable wallpaper", "Ενεργοποίηση φόντου");
             details.Text = mode == "Weather" ? StudioText("Weather settings", "Ρυθμίσεις Weather") : StudioText("Wallpaper settings", "Ρυθμίσεις φόντου");

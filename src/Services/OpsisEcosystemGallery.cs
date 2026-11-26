@@ -32,12 +32,13 @@ public static class OpsisEcosystemGallery
         public int Schema { get; set; } = 1;
         public string PluginId { get; set; } = "";
         public string Name { get; set; } = "";
+        public string Version { get; set; } = "0.0.0";
         public List<Contribution> Contributions { get; set; } = new();
     }
 
     public sealed record Item(
         string PluginId, string Id, string Type, string Category, string Title,
-        string Author, string Description, string AssetPath, string Origin);
+        string Author, string Description, string AssetPath, string Origin, string Version = "0.0.0");
 
     private static bool SafeToken(string? value) =>
         value != null && value.Length is >= 1 and <= 80 &&
@@ -52,11 +53,53 @@ public static class OpsisEcosystemGallery
             value.All(x => x >= 32);
     }
 
-    private static IEnumerable<(string Root, string Origin)> Roots()
+    // The plugin host is the authoritative directory discovery mechanism,
+    // including HKCU registered plugin installers, user storage, and protected
+    // install roots. Previously the Gallery scanned only two roots and missed
+    // installed plugins registered under PluginPaths.
+    private static IEnumerable<(string Dir, string Origin)> ContributorDirs()
     {
-        yield return (Path.Combine(AppContext.BaseDirectory, "plugins"), "installed");
-        yield return (Path.Combine(AppPaths.AppDataFolder, "plugins"), "user");
-        yield return (Path.Combine(AppPaths.AppDataFolder, "gallery-packs"), "gallery-pack");
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var (dir, trustedRoot) in PluginHost.EnumerateCandidateFolders().Take(400))
+        {
+            if (seen.Add(Path.GetFullPath(dir)))
+                yield return (dir, trustedRoot ? "installed" : "registered-plugin");
+        }
+        var gallery = Path.Combine(AppPaths.AppDataFolder, "gallery-packs");
+        if (!Directory.Exists(gallery) ||
+            (File.GetAttributes(gallery) & FileAttributes.ReparsePoint) != 0)
+            yield break;
+        foreach (var dir in Directory.EnumerateDirectories(gallery).Take(200))
+        {
+            if (seen.Add(Path.GetFullPath(dir)))
+                yield return (dir, "gallery-pack");
+        }
+    }
+
+    private static IEnumerable<(Manifest Data, string Dir, string Origin)> Manifests()
+    {
+        foreach (var (dir, origin) in ContributorDirs())
+        {
+            Manifest? manifest = null;
+            try
+            {
+                if ((File.GetAttributes(dir) & FileAttributes.ReparsePoint) != 0) continue;
+                var path = Path.Combine(dir, "opsis-contributions.json");
+                if (!File.Exists(path) || (File.GetAttributes(path) & FileAttributes.ReparsePoint) != 0 ||
+                    new FileInfo(path).Length > 128 * 1024) continue;
+                manifest = JsonSerializer.Deserialize<Manifest>(File.ReadAllText(path),
+                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                if (manifest == null || manifest.Schema != 1 || !SafeToken(manifest.PluginId) ||
+                    manifest.Contributions == null || manifest.Contributions.Count > 100)
+                    continue;
+            }
+            catch (Exception e) when (e is IOException or UnauthorizedAccessException or
+                                      JsonException or ArgumentException or NotSupportedException)
+            {
+                continue; // isolate broken or unapproved *metadata*; never load its DLL.
+            }
+            if (manifest != null) yield return (manifest, dir, origin);
+        }
     }
 
     private static readonly HashSet<string> ImageExtensions = new(StringComparer.OrdinalIgnoreCase)
@@ -109,8 +152,8 @@ public static class OpsisEcosystemGallery
     }
 
     /// <summary>
-    /// Install an explicitly chosen signed-by-content (SHA-256 manifest) declarative
-    /// theme bundle from the same plugin Gallery. Does not auto-apply settings.
+    /// Install an explicitly chosen declarative theme with SHA-256 integrity checks;
+    /// hashes are NOT a digital publisher signature. Does not auto-apply settings.
     /// </summary>
     public static string InstallThemeContribution(Item item)
     {
@@ -145,47 +188,60 @@ public static class OpsisEcosystemGallery
         MotionDesk.Widgets.WallpaperHostEngine.Instance.RefreshAll();
     }
 
+    /// <summary>Raw source identities for duplicate-conflict auditing before Gallery de-duplication.</summary>
+    public static IReadOnlyList<(string PluginId, string ItemId, string Origin)> ContributionOrigins()
+    {
+        var results = new List<(string PluginId, string ItemId, string Origin)>();
+        foreach (var (manifest, dir, origin) in Manifests())
+        {
+            foreach (var entry in manifest.Contributions)
+                if (entry != null && SafeToken(entry.Id) && Types.Contains(entry.Type) &&
+                    SafeRelative(entry.Asset))
+                    results.Add((manifest.PluginId, entry.Id, origin + ":" + Path.GetFileName(dir)));
+        }
+        return results.Take(20000).ToArray();
+    }
+
+    private static bool IsNewer(string candidate, string existing) =>
+        Version.TryParse(candidate, out var newVersion) &&
+        (!Version.TryParse(existing, out var current) || newVersion > current);
+
     public static IReadOnlyList<Item> Discover()
     {
         var results = new Dictionary<string, Item>(StringComparer.OrdinalIgnoreCase);
-        foreach (var (root, origin) in Roots())
+        foreach (var (manifest, dir, origin) in Manifests())
         {
-            if (!Directory.Exists(root) || (File.GetAttributes(root) & FileAttributes.ReparsePoint) != 0) continue;
-            foreach (var dir in Directory.EnumerateDirectories(root).Take(200))
+            foreach (var item in manifest.Contributions)
             {
+                if (item == null || !SafeToken(item.Id) || !Types.Contains(item.Type) ||
+                    !SafeRelative(item.Asset) || string.IsNullOrWhiteSpace(item.Title) ||
+                    item.Title.Length > 120 || string.IsNullOrWhiteSpace(item.Category) ||
+                    item.Category.Length > 60 || (item.Author?.Length ?? 0) > 120 ||
+                    (item.Description?.Length ?? 0) > 1024) continue;
                 try
                 {
-                    if ((File.GetAttributes(dir) & FileAttributes.ReparsePoint) != 0) continue;
-                    var manifestPath = Path.Combine(dir, "opsis-contributions.json");
-                    if (!File.Exists(manifestPath) || new FileInfo(manifestPath).Length > 128 * 1024) continue;
-                    var manifest = JsonSerializer.Deserialize<Manifest>(File.ReadAllText(manifestPath),
-                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-                    if (manifest == null || manifest.Schema != 1 || !SafeToken(manifest.PluginId) ||
-                        manifest.Contributions?.Count > 100) continue;
-                    foreach (var item in manifest.Contributions ?? new List<Contribution>())
-                    {
-                        if (item == null || !SafeToken(item.Id) || !Types.Contains(item.Type) ||
-                            !SafeRelative(item.Asset) || string.IsNullOrWhiteSpace(item.Title) ||
-                            item.Title.Length > 120 || string.IsNullOrWhiteSpace(item.Category) ||
-                            item.Category.Length > 60 || (item.Author?.Length ?? 0) > 120 ||
-                            (item.Description?.Length ?? 0) > 1024) continue;
-                        var filename = Path.GetFullPath(Path.Combine(dir, item.Asset.Replace('/', Path.DirectorySeparatorChar)));
-                        var basePath = Path.GetFullPath(dir) + Path.DirectorySeparatorChar;
-                        if (!filename.StartsWith(basePath, StringComparison.OrdinalIgnoreCase) || !File.Exists(filename)) continue;
-                        if (HasLinkedPathComponents(dir, filename) ||
-                            new FileInfo(filename).Length > 500L * 1024 * 1024) continue;
-                        var key = manifest.PluginId + ":" + item.Id;
-                        if (results.ContainsKey(key)) continue;
-                        results.Add(key, new Item(manifest.PluginId, item.Id, item.Type, item.Category,
-                            item.Title, item.Author, item.Description, filename, origin));
-                    }
+                    var filename = Path.GetFullPath(Path.Combine(
+                        dir, item.Asset.Replace('/', Path.DirectorySeparatorChar)));
+                    var basePath = Path.GetFullPath(dir) + Path.DirectorySeparatorChar;
+                    if (!filename.StartsWith(basePath, StringComparison.OrdinalIgnoreCase) ||
+                        !File.Exists(filename) || HasLinkedPathComponents(dir, filename) ||
+                        new FileInfo(filename).Length > 500L * 1024 * 1024) continue;
+                    var key = manifest.PluginId + ":" + item.Id;
+                    var incoming = new Item(manifest.PluginId, item.Id, item.Type, item.Category,
+                        item.Title, item.Author ?? "", item.Description ?? "", filename,
+                        origin, manifest.Version ?? "0.0.0");
+                    if (results.TryGetValue(key, out var existing) &&
+                        !IsNewer(incoming.Version, existing.Version)) continue;
+                    results[key] = incoming;
                 }
-                catch (Exception e) when (e is IOException or UnauthorizedAccessException or JsonException or ArgumentException)
+                catch (Exception e) when (e is IOException or UnauthorizedAccessException or
+                                          ArgumentException or NotSupportedException)
                 {
-                    // Broken plugin metadata is isolated; other contributors remain visible.
+                    // Broken individual asset does not affect other plugins.
                 }
             }
         }
-        return results.Values.OrderBy(x => x.Type).ThenBy(x => x.Category).ThenBy(x => x.Title).ToArray();
+        return results.Values.OrderBy(x => x.Type).ThenBy(x => x.Category)
+            .ThenBy(x => x.Title).ToArray();
     }
 }

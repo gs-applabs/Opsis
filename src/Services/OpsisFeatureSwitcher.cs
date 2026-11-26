@@ -56,6 +56,8 @@ public static class OpsisFeatureSwitcher
                 case "windows.hot-corners":
                     s.HotCornersEnabled = enabled; s.Save(); break;
                 case "windows.window-rules":
+                    if (enabled && s.AutoTileEnabled)
+                        throw new InvalidOperationException("AutoTile must be disabled before enabling Window Rules.");
                     s.WindowRulesEnabled = enabled; s.Save();
                     if (enabled) WindowRulesEngine.Instance.Start();
                     else { WindowRulesEngine.Instance.Stop(); WindowRulesEngine.Instance.Restore(); }

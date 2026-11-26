@@ -2041,6 +2041,11 @@ namespace MotionDesk.UI
             host.Controls.Add(ComboRow("Wallpaper.WindSimLabel", WindSimIds, "Wallpaper.Wind.", settings.WindSimulation, id => WallpaperHostEngine.Instance.SetWindSimulation(id)));
             host.Controls.Add(ComboRow("Wallpaper.TimeSimLabel", TimeSimIds, "Wallpaper.Time.", settings.TimeSimulation, id => WallpaperHostEngine.Instance.SetTimeSimulation(id)));
 
+            host.Controls.Add(WeatherDepthPicker(settings.WeatherSpatialMode));
+            AddText(host, StudioText(
+                "3D needs WebGL2 hardware support and is reduced on low-power profiles; the normal 2D engine remains the automatic fallback.",
+                "Το 3D χρειάζεται WebGL2 και περιορίζεται στα προφίλ χαμηλής κατανάλωσης. Ο κλασικός 2D renderer παραμένει διαθέσιμος ως fallback."));
+
             var glass = new FlatToggle { RowWidth = 700, Text = LocalizationManager.T("Wallpaper.WeatherGlass"), Checked = settings.WeatherGlass, BackColor = UiTheme.PageBackground, Margin = new Padding(0, 6, 0, 10) };
             glass.CheckedChanged += (_, _) => WallpaperHostEngine.Instance.SetWeatherGlass(glass.Checked);
             host.Controls.Add(glass);
