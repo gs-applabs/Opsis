@@ -35,12 +35,26 @@ internal static class MonitorTopologyService
                     stable = device.DeviceID.Trim(); // PnP identity survives most DISPLAY1 renumberings
             }
             catch { }
-            var dpi = 96;
-            try { using var g = Graphics.FromHwnd(IntPtr.Zero); dpi = (int)Math.Round(g.DpiX); } catch { }
-            screens.Add(new Display(stable, s.DeviceName, s.Bounds, s.WorkingArea, dpi, s.Primary));
+            screens.Add(new Display(stable, s.DeviceName, s.Bounds, s.WorkingArea, DpiOf(s.Bounds), s.Primary));
         }
         return screens;
     }
+    [DllImport("user32.dll")] private static extern IntPtr MonitorFromPoint(Point point, uint flags);
+    [DllImport("shcore.dll")] private static extern int GetDpiForMonitor(IntPtr monitor, int dpiType, out uint dpiX, out uint dpiY);
+
+    /// <summary>The effective DPI of THAT monitor (mixed-DPI desktops have a different value per screen); 96 when Windows cannot tell.</summary>
+    private static int DpiOf(Rectangle bounds)
+    {
+        try
+        {
+            var centre = new Point(bounds.Left + bounds.Width / 2, bounds.Top + bounds.Height / 2);
+            var monitor = MonitorFromPoint(centre, 2 /* MONITOR_DEFAULTTONEAREST */);
+            if (monitor != IntPtr.Zero && GetDpiForMonitor(monitor, 0 /* MDT_EFFECTIVE_DPI */, out var x, out _) == 0 && x is >= 48 and <= 960) return (int)x;
+        }
+        catch (Exception e) when (e is DllNotFoundException or EntryPointNotFoundException) { }
+        return 96;
+    }
+
     internal static Display? ForDevice(string? device) => Current().FirstOrDefault(s => s.DeviceName == device);
     internal static Display? Match(string? id, string? device = null, int width = 0, int height = 0)
     {

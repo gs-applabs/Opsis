@@ -46,6 +46,12 @@ Detailed acceptance criteria stay in `REMAINING-TASKS-3.0.0.3200.md` (IDs unchan
 - NOT ported: workflow files (this build's are newer; the crawler-bridge workflow still expects Opsis.UI 0.1.0.0), the one-line Rainmeter test fixture.
 - DECISION NEEDED (C13): wallpaper info box text colour. 2.8.0.2511 follows the "text colour follows the wallpaper" switch; the 3.0 RC forces white text and ignores the switch.
 
+### Stage 1 progress (continued)
+- C13 CLOSED (user decision): the wallpaper info box follows "text colour follows the wallpaper" again; sampled at most every 15 s (no per-second read-back). Visual check on a real bright sky NOT VERIFIED.
+- #20 VERIFIED existing: portable data-only import/export with validation, snapshot before apply, no writes for an unchanged preset, nullable fields keep old presets valid (smoke tests). Per-display mapping applies to workspace profiles only (shell options are global).
+- #16 FIXED one defect: monitor DPI was the system DPI for every screen; now the effective DPI of each monitor (`GetDpiForMonitor`). Mixed DPI / RDP / unplugged displays NOT VERIFIED.
+- #12 VERIFIED by source search: Opsis writes no other program's tray-icon settings.
+
 ## C. Not started (OPEN)
 - Wave 1 remainder: #20 shared shell profile editor (import/export, snapshots), #16 per-monitor appearance, #12 Tray Icon Studio consent rules.
 - Wave 2: #1/#2 native Start/Explorer per build, #9 Explorer command bar, #4–#7 replacement taskbar (4 edges, floating, segmented, dynamic), #11 thumbnails, #17 gestures, S3 Signature Glass / Opsis.UI 6 merge (PR #3/#12 drafts), S4 DeskFlip real Alt+Tab, S5 Rainmeter importer, P1 plugin interoperability.

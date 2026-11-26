@@ -705,11 +705,49 @@ function updateWeatherInfo() {
     box.style.top = (cfg.infoY ?? 34) + '%';
     box.style.setProperty('--s', ((cfg.infoScale ?? 100) / 100).toFixed(2));
     box.style.display = card ? 'grid' : 'block';
-    if (card) { box.style.color='#fff'; box.style.textShadow='0 1px 4px #061528'; }
-    // R20: white labels and fixed dark outline, no per-second GPU readback.
-    box.style.color = '#ffffff';
-    box.style.textShadow = card ? '0 1px 4px #061528' : '0 2px 18px rgba(0,0,0,.88), 0 1px 4px rgba(0,0,0,.95), 0 0 1px #000';
-    box.dataset.contrast = 'white-fixed';
+    // The same switch as the wallpaper elements ("text colour follows the wallpaper"): OFF (and the card layout, which has its own dark backdrop) =
+    // always light text with a dark halo; ON = dark text only on a clearly bright sky. The backdrop is sampled at most every 15 s or when the
+    // block moves or the size changes (this function runs every second: no per-second pixel read-back).
+    const lightText = () => {
+        box.style.color = '#ffffff';
+        box.style.textShadow = card ? '0 1px 4px #061528' : '0 2px 18px rgba(0,0,0,.88), 0 1px 4px rgba(0,0,0,.95), 0 0 1px #000';
+        box.dataset.tone = 'light'; delete box.dataset.contrast;
+    };
+    if (card || cfg.elAuto === false || !isWeatherMode(cfg.mode) || canvas.style.display === 'none') {
+        lightText(); delete box.dataset.sample;
+    } else {
+        const sampleKey = [cfg.infoX, cfg.infoY, cfg.infoScale, canvas.width, canvas.height].join('|');
+        const due = box.dataset.sample !== sampleKey || performance.now() - Number(box.dataset.sampledAt || 0) >= 15000;
+        if (due) {
+            box.dataset.sample = sampleKey; box.dataset.sampledAt = String(performance.now());
+            try {
+                const r = box.getBoundingClientRect();
+                let samples = 0, sum = 0;
+                const linear = value => { const s = value / 255; return s <= .04045 ? s / 12.92 : ((s + .055) / 1.055) ** 2.4; };
+                const canvasRect = canvas.getBoundingClientRect();
+                const scaleX = canvas.width / Math.max(1, canvasRect.width);
+                const scaleY = canvas.height / Math.max(1, canvasRect.height);
+                for (const ox of [-.25, 0, .25]) for (const oy of [-.18, 0, .18]) {
+                    const x = Math.max(0, Math.min(canvas.width - 1, Math.round((r.left - canvasRect.left + r.width * (.5 + ox)) * scaleX)));
+                    const y = Math.max(0, Math.min(canvas.height - 1, Math.round((r.top - canvasRect.top + r.height * (.5 + oy)) * scaleY)));
+                    const data = ctx.getImageData(x, y, 1, 1).data;
+                    sum += .2126 * linear(data[0]) + .7152 * linear(data[1]) + .0722 * linear(data[2]);
+                    samples++;
+                }
+                const luminosity = sum / Math.max(samples, 1);
+                // dark text only above 0.45 (a clearly bright sky), back to light below 0.32: the letters never flip to black on a mid-tone or dark scene
+                const wasDarkText = box.dataset.tone === 'dark';
+                const useWhite = wasDarkText ? luminosity < 0.32 : luminosity < 0.45;
+                if (useWhite) lightText();
+                else {
+                    box.style.color = '#111';
+                    box.style.textShadow = '0 2px 18px rgba(255,255,255,.82),0 1px 3px #fff';
+                    box.dataset.tone = 'dark';
+                }
+                box.dataset.contrast = Math.max(1.05 / (luminosity + .05), (luminosity + .05) / .05).toFixed(1);
+            } catch { lightText(); /* canvas unavailable or tainted: keep the readable default */ }
+        }
+    }
     // fade in once the temperature is known (or after 3.5 s without data) — no half-empty block that jumps when the data arrives
     box.style.opacity = (typeof i.temp === 'number' || performance.now() > 3500) ? '1' : '0';
 }
