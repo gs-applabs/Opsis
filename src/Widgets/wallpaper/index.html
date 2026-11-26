@@ -23,6 +23,16 @@ html,body{margin:0;padding:0;width:100vw;height:100vh;overflow:hidden;background
 /* P0: keep weather overlay labels white under all Windows/embedding themes. */
 #wxInfo, #wxInfo #wxTime, #wxInfo #wxDate, #wxInfo #wxTemp, #wxInfo #wxWind, #wxInfo #wxCity, #wxInfo #wxSource { color:#fff !important; -webkit-text-fill-color:#fff !important; }
 #wxInfo #wxCity { text-shadow:0 1px 4px rgba(0,0,0,.85), 0 2px 16px rgba(0,0,0,.65); }
+/* Opt-in shared theme: live values, never baked into the scene. */
+#wxInfo.signature-card{width:min(calc(var(--s)*340px),88vw);padding:clamp(12px,1.5vw,23px);box-sizing:border-box;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px 13px;text-align:left;white-space:normal;border:1px solid rgba(174,228,255,.8);border-radius:clamp(16px,2vw,26px);background:linear-gradient(145deg,rgba(31,91,138,.86),rgba(6,29,54,.90) 64%,rgba(16,58,91,.86));box-shadow:inset 0 1px 1px rgba(255,255,255,.7),inset 0 -2px 7px rgba(100,207,255,.35),0 5px 24px rgba(0,0,0,.42);text-shadow:0 1px 4px #061528}
+@supports(backdrop-filter:blur(8px)){#wxInfo.signature-card{backdrop-filter:blur(8px);background:linear-gradient(145deg,rgba(31,91,138,.73),rgba(6,29,54,.86) 64%,rgba(16,58,91,.76))}}
+#wxInfo.signature-card #wxCity{grid-column:1;grid-row:1;font:600 clamp(13px,calc(var(--s)*18px),22px)/1.25 "Segoe UI",sans-serif;letter-spacing:0;margin:0;opacity:1;overflow-wrap:anywhere;text-transform:none}
+#wxInfo.signature-card #wxTime{grid-column:2;grid-row:1/3;font-size:clamp(18px,calc(var(--s)*34px),40px);font-weight:500;align-self:center;text-align:right}
+#wxInfo.signature-card #wxDate{grid-column:1;grid-row:2;font-size:clamp(10px,calc(var(--s)*12px),16px);letter-spacing:0;margin:0}
+#wxInfo.signature-card #wxTemp{grid-column:1/3;grid-row:3;font-size:clamp(23px,calc(var(--s)*48px),58px);font-weight:500;border-top:1px solid rgba(190,227,255,.28);padding-top:10px;margin:0;line-height:1.1}
+#wxInfo.signature-card #wxWind{grid-column:1/3;grid-row:4;font-size:clamp(11px,calc(var(--s)*14px),18px);margin:0;opacity:1}
+#wxInfo.signature-card #wxSource{grid-column:1/3;grid-row:5;font-size:clamp(9px,calc(var(--s)*11px),13px);margin:0;overflow-wrap:anywhere}
+#wxInfo.signature-card #wxTemp:empty{display:none}
 #pulse{position:fixed;inset:0;pointer-events:none;background:radial-gradient(circle at 50% 50%,rgba(255,255,255,.14),transparent 65%);opacity:0;transition:opacity 120ms linear}
 body.reduced-motion *,body.reduced-motion *::before,body.reduced-motion *::after{animation-duration:0.001ms!important;animation-iteration-count:1!important;transition-duration:0.001ms!important}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:0.001ms!important;transition-duration:0.001ms!important}}
@@ -47,6 +57,7 @@ body.reduced-motion *,body.reduced-motion *::before,body.reduced-motion *::after
 <script src="weather-spatial.js"></script>
 <script src="weather.js"></script>
 <script src="weather-freshness.js"></script>
+<script src="ancient-athens-effects.js"></script>
 <script src="ancient-athens.js"></script>
 <script src="studio-landscapes.js"></script>
 <script src="studio-scenes.js"></script>
@@ -73,7 +84,7 @@ function applyReducedMotion() {
     document.body.classList.toggle('reduced-motion', reduced);
     if (reduced) videoLayers.forEach(v => { if (!v.paused) v.pause(); });
 }
-reducedMotionQuery.addEventListener?.('change', () => { applyReducedMotion(); cancelWaveLoop(); if (!isPaused && canvas.style.display !== 'none') waveLoopHandle = requestAnimationFrame(waveLoop); });
+reducedMotionQuery.addEventListener?.('change', () => { applyReducedMotion(); sendSignaturePolicy(); cancelWaveLoop(); if (!isPaused && canvas.style.display !== 'none') waveLoopHandle = requestAnimationFrame(waveLoop); });
 videoLayers.forEach(v => v.addEventListener('play', () => { if (reduceWallpaperMotion()) v.pause(); }));
 
 // Πραγματικό DSP (όχι μόνο ανάλυση/visualizer) πάνω στον ΔΙΚΟ ΜΑΣ ήχο του wallpaper video, μέσω
@@ -188,14 +199,14 @@ function resizeCanvas() {
     canvas.style.height = window.innerHeight + 'px';
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     // το Weather σκηνικό δουλεύει σε φυσικά pixels (ταυτοτικός μετασχηματισμός) — βλ. drawWeather
-    if (isWeatherMode(cfg.mode)) WeatherWallpaper.resize(width, height);
+    if (usesAtmosphere(cfg.mode)) WeatherWallpaper.resize(width, height);
     if (cfg.mode === 'Ancient Athens') drawAthens(true);
 }
 window.addEventListener('resize', () => { resizeCanvas(); lastFrameTime = 0; });
 resizeCanvas();
 
 // 2.4.0: the C# side sends ONE profile (cfg.perf, from PerformanceProfile) that follows the hardware tier and the dynamic scaling; it is updated live by opsisSetPerf.
-window.opsisSetPerf = p => { cfg.perf = p; adaptiveScale = 1; resetFrameStats(); applyReducedMotion(); resizeCanvas(); };
+window.opsisSetPerf = p => { cfg.perf = p; adaptiveScale = 1; resetFrameStats(); applyReducedMotion(); resizeCanvas(); sendSignaturePolicy(); };
 function perfProfile() {
     if (cfg.perf && cfg.perf.targetFps && cfg.performanceMode !== 'Battery') return cfg.perf;
     switch (cfg.performanceMode) {
@@ -650,15 +661,24 @@ function updateWeatherInfo() {
     const box = document.getElementById('wxInfo');
     if (!box) return;
     if (!cfg.weatherInfo || !window.WeatherWallpaper) { box.style.display = 'none'; return; }   // το cfg.weatherInfo ισχύει ήδη ανά mode (βλ. C#)
+    const ancientAthens = cfg.mode === 'Ancient Athens';
+    const card = cfg.signatureWeatherCard === true;
+    box.classList.toggle('signature-card', card);
     const i = WeatherWallpaper.info();
     // 1.7.8: 14 γλώσσες (ίδιες με το GearWin) - το cfg.lang είναι ο κωδικός της εφαρμογής (el/en/de/fr/...).
     const LOCALES = { el: 'el-GR', en: 'en-US', de: 'de-DE', fr: 'fr-FR', es: 'es-ES', ko: 'ko-KR', zh: 'zh-CN', it: 'it-IT',
                       ru: 'ru-RU', ja: 'ja-JP', pt: 'pt-PT', tr: 'tr-TR', ar: 'ar-SA', hi: 'hi-IN' };
     const lang = LOCALES[cfg.lang] || 'en-US';
     document.documentElement.lang = LOCALES[cfg.lang] ? cfg.lang : 'en';   // σωστά κεφαλαία στα ελληνικά (χωρίς τόνους) στο text-transform
-    const t = new Date(2000, 0, 1, i.h, i.m);
-    document.getElementById('wxTime').textContent = t.toLocaleTimeString(lang, { hour: '2-digit', minute: '2-digit', hour12: cfg.lang === 'el' ? false : undefined });
-    document.getElementById('wxDate').textContent = i.date.toLocaleDateString(lang, { weekday: 'long', day: 'numeric', month: 'long' });
+    const t = ancientAthens ? new Date() : new Date(2000, 0, 1, i.h, i.m);
+    document.getElementById('wxTime').textContent = t.toLocaleTimeString(lang, {
+        hour: '2-digit', minute: '2-digit', hour12: cfg.lang === 'el' ? false : undefined,
+        ...(ancientAthens ? { timeZone: 'Europe/Athens' } : {})
+    });
+    document.getElementById('wxDate').textContent = (ancientAthens ? t : i.date).toLocaleDateString(lang, {
+        weekday: 'long', day: 'numeric', month: 'long',
+        ...(ancientAthens ? { timeZone: 'Europe/Athens' } : {})
+    });
     const condId = ({ 0: 'Clear', 1: 'PartlyCloudy', 2: 'PartlyCloudy', 3: 'Cloudy', 45: 'Fog', 48: 'Fog', 51: 'Drizzle', 53: 'Drizzle', 55: 'Drizzle', 56: 'Drizzle', 57: 'Drizzle',
         61: 'Rain', 63: 'Rain', 66: 'Rain', 67: 'Rain', 80: 'Rain', 81: 'Rain', 65: 'HeavyRain', 82: 'HeavyRain', 71: 'Snow', 73: 'Snow', 75: 'Snow', 77: 'Snow', 85: 'Snow', 86: 'Snow',
         95: 'Thunderstorm', 96: 'Thunderstorm', 99: 'Thunderstorm' })[i.code];
@@ -674,19 +694,21 @@ function updateWeatherInfo() {
     // που ήδη ενώνει θερμοκρασία+συνθήκη. Το #wxWind element μένει στο DOM (θέση/CSS ανέγγιχτη) αλλά
     // άδειο — κρύβεται μέσω CSS (:empty) ώστε να μη μείνει κενό διάστημα.
     const windText = typeof i.windKmh === 'number' ? `${i.windKmh} km/h` : '';
-    document.getElementById('wxTemp').textContent = [tempText, windText, cond].filter(Boolean).join('  ·  ');
-    document.getElementById('wxWind').textContent = '';
-    document.getElementById('wxCity').textContent = cfg.weatherCity || '';
+    document.getElementById('wxTemp').textContent = card ? tempText : [tempText, windText, cond].filter(Boolean).join('  ·  ');
+    document.getElementById('wxWind').textContent = card ? [cond,windText].filter(Boolean).join('  ·  ') : '';
+    document.getElementById('wxCity').textContent = ancientAthens
+        ? (cfg.lang === 'el' ? 'ΑΡΧΑΙΑ ΑΘΗΝΑ' : 'ANCIENT ATHENS') : (cfg.weatherCity || '');
     document.getElementById('wxSource').textContent = window.OpsisWeatherFreshness
         ? window.OpsisWeatherFreshness.format(i, Date.now(), cfg.lang) : '';
     box.style.fontFamily = '"' + String(cfg.infoFont || 'Segoe UI Light').replace(/["\\]/g, '') + '", "Segoe UI", system-ui, sans-serif';
     box.style.left = (cfg.infoX ?? 50) + '%';
     box.style.top = (cfg.infoY ?? 34) + '%';
     box.style.setProperty('--s', ((cfg.infoScale ?? 100) / 100).toFixed(2));
-    box.style.display = 'block';
+    box.style.display = card ? 'grid' : 'block';
+    if (card) { box.style.color='#fff'; box.style.textShadow='0 1px 4px #061528'; }
     // Sample the actual composited weather canvas at the current clock location.
     // Browser/video fallback keeps the existing shadow (never read an unrelated frame).
-    if (isWeatherMode(cfg.mode) && canvas.style.display !== 'none') {
+    if (!card && isWeatherMode(cfg.mode) && canvas.style.display !== 'none') {
         try {
             const r = box.getBoundingClientRect();
             let samples = 0, sum = 0;
@@ -725,7 +747,8 @@ async function pollWeatherOnce(revision) {
     const b = bridge();
     if (!b || !window.WeatherWallpaper) return false;
     try {
-        const data = JSON.parse(await b.GetWeatherJson());
+        const data = JSON.parse(await (cfg.mode === 'Ancient Athens'
+            ? b.GetAncientAthensWeatherJson() : b.GetWeatherJson()));
         if (revision !== weatherRevision || isPaused) return false;
         WeatherWallpaper.setWeather(data);
         updateWeatherInfo();
@@ -738,7 +761,10 @@ async function refreshWeather() {
     if (!b || !window.WeatherWallpaper) return;
     weatherPollHandles.forEach(clearTimeout);
     weatherPollHandles = [];
-    try { b.RequestWeatherRefresh(); } catch (e) { /* ignore */ }
+    try {
+        if (cfg.mode === 'Ancient Athens') b.RequestAncientAthensWeatherRefresh();
+        else b.RequestWeatherRefresh();
+    } catch (e) { /* keep last cached observation */ }
     const revision = ++weatherRevision;
     const ok = await pollWeatherOnce(revision);
     if (revision !== weatherRevision || isPaused) return;
@@ -751,17 +777,21 @@ async function refreshWeather() {
 }
 
 function isWeatherMode(mode) { return mode === 'Weather'; }
+function usesAtmosphere(mode) { return isWeatherMode(mode) || mode === 'Ancient Athens'; }
 
-function drawAthens(force = false) {
+function drawAthens(force = false, dt = .04) {
     const second = Math.floor(Date.now() / 1000);
-    if (!force && second === athensSecond) return;
+    const lowPower = cfg.performanceMode === 'Battery' || cfg.performanceMode === 'Low Power';
+    const reduced = reduceWallpaperMotion();
+    if (!force && (lowPower || reduced) && second === athensSecond) return;
     athensSecond = second;
-    OpsisAncientAthens.draw(ctx, canvas.width, canvas.height, cfg.athensPhase, force);
+    WeatherWallpaper.resize(canvas.width, canvas.height);
+    drawWeather(reduced ? 0 : lowPower ? .1 : dt);
 }
 
 let studioTime = 0;
 function renderFrame(dt) {
-    if (cfg.mode === 'Ancient Athens') drawAthens();
+    if (cfg.mode === 'Ancient Athens') drawAthens(false, dt);
     else if (OpsisStudioScenes.has(cfg.mode)) {
         studioTime += dt;
         OpsisStudioScenes.draw(ctx, cfg.mode, canvas.width, canvas.height, studioTime);
@@ -776,7 +806,11 @@ function renderFrame(dt) {
 function waveLoop(now) {
     const profile = perfProfile();
     const reduced = reduceWallpaperMotion();
-    const minFrameMs = reduced ? 10000 : 1000 / Math.max(1, profile.targetFps);
+    const athensMode = cfg.mode === 'Ancient Athens';
+    const athensIdle = athensMode && (reduced || cfg.performanceMode === 'Low Power' || cfg.performanceMode === 'Battery');
+    const minFrameMs = athensIdle ? 1000
+        : athensMode ? 1000 / Math.min(24, Math.max(12, profile.targetFps || 24))
+        : reduced ? 10000 : 1000 / Math.max(1, profile.targetFps);
 
     if (now - lastFrameTime >= minFrameMs) {
         const dt = Math.min(0.1, (now - lastFrameTime) / 1000 || 0.016);
@@ -809,7 +843,7 @@ function waveLoop(now) {
         lastFrameTime = now;
     }
     waveLoopHandle = null;
-    const delay = cfg.mode === 'Ancient Athens' ? 1000 - Date.now() % 1000
+    const delay = athensIdle ? 1000 - Date.now() % 1000
         : minFrameMs - (performance.now() - lastFrameTime) - 12;
     if (delay >= 20) {
         waveWakeTimer = setTimeout(() => {
@@ -843,6 +877,7 @@ const mediaImg = document.getElementById('mediaImg');
 const mediaFrame = document.getElementById('mediaFrame');
 let mediaSrc = '';
 function hideMedia() {
+    resetSignatureFrame();
     mediaImg.style.display = 'none'; mediaImg.removeAttribute('src');
     mediaFrame.style.display = 'none'; mediaFrame.removeAttribute('src');
     mediaSrc = '';
@@ -854,8 +889,12 @@ async function startMedia() {
     const isImg = cfg.mode === 'Image';
     const src = isImg ? cfg.imageUri : cfg.pageUri;
     if (!src) { startWaves(); return; }
-    if (isPaused) { hideMedia(); return; }
+    if (isPaused) {
+        if (isSignatureFrame() && signatureReady && mediaSrc === src) return;
+        hideMedia(); return;
+    }
     if (isImg) {
+        resetSignatureFrame();
         mediaFrame.style.display = 'none'; mediaFrame.removeAttribute('src');
         mediaImg.style.objectFit = cfg.imageFit === 'Contain' ? 'contain' : 'cover';
         // A panoramic photo is cropped independently by the two selected displays.
@@ -874,13 +913,53 @@ async function startMedia() {
         mediaImg.style.display = 'block';
     } else {
         mediaImg.style.display = 'none'; mediaImg.removeAttribute('src');
-        if (mediaSrc !== src) { localFrameReady = false; mediaFrame.src = src; mediaSrc = src; }
+        if (mediaSrc !== src) { resetSignatureFrame(); mediaFrame.src = src; mediaSrc = src; }
         mediaFrame.style.display = 'block';
     }
 }
 
 // ---- API for local web wallpapers: the page in the frame talks to Opsis only through window messages ----
 let localFrameReady = false;
+let signatureReady = false, signaturePauseTimer = 0, signaturePauseSeq = 0;
+function resetSignatureFrame() {
+    signatureReady = false; localFrameReady = false;
+    clearTimeout(signaturePauseTimer); signaturePauseTimer = 0;
+    signaturePauseSeq++;
+}
+function isSignatureFrame() {
+    if (!cfg.pageLocal || cfg.mode !== 'Page' || !localFrameReady) return false;
+    try {
+        const url = new URL(cfg.pageUri);
+        return url.protocol === 'file:' && /\/wallpapers\/(?:packs\/opsis-100|samples)\/opsis-glass-signature\/index\.html$/i.test(decodeURIComponent(url.pathname));
+    } catch { return false; }
+}
+function sendSignaturePolicy() {
+    if (!isSignatureFrame() || !signatureReady) return;
+    const p = cfg.perf || {};
+    const low = cfg.performanceMode === 'Battery' || cfg.performanceMode === 'Low Power';
+    postToFrame({opsis:true,type:'host-policy',policy:{
+        targetFps:Math.min(low ? 15 : 30, Number(p.targetFps) || 30),
+        renderScale:Math.min(low ? .6 : 1, Number(p.renderScale) || 1),
+        pixelBudget:Math.min(low ? 921600 : 8294400, Number(p.pixelBudget) || 8294400),
+        reducedMotion:reduceWallpaperMotion()
+    }});
+}
+function pauseSignatureFrame() {
+    if (!isSignatureFrame() || !signatureReady) return false;
+    clearTimeout(signaturePauseTimer);
+    const seq = ++signaturePauseSeq;
+    postToFrame({opsis:true,type:'pause',paused:true,seq});
+    signaturePauseTimer = setTimeout(() => {
+        if (isPaused && seq === signaturePauseSeq) hideMedia();
+    },500);
+    return true;
+}
+function resumeSignatureFrame() {
+    if (!isSignatureFrame() || !signatureReady) return;
+    clearTimeout(signaturePauseTimer); signaturePauseTimer=0;
+    postToFrame({opsis:true,type:'pause',paused:false,seq:++signaturePauseSeq});
+    sendSignaturePolicy();
+}
 function postToFrame(msg) {
     if (!cfg.pageLocal || !localFrameReady) return;
     try { mediaFrame.contentWindow?.postMessage(msg, '*'); } catch (e) { /* frame gone */ }
@@ -892,6 +971,7 @@ window.opsisSendProps = async () => {
     try { postToFrame({ opsis: true, type: 'props', props: JSON.parse(await b.GetPagePropertiesJson()) }); } catch (e) { /* ignore */ }
 };
 mediaFrame.addEventListener('load', () => {
+    resetSignatureFrame();
     localFrameReady = cfg.pageLocal && mediaFrame.getAttribute('src') === cfg.pageUri;
     if (!localFrameReady) return;
     postToFrame({ opsis: true, type: 'hello', version: 1 });
@@ -899,7 +979,16 @@ mediaFrame.addEventListener('load', () => {
 });
 window.addEventListener('message', (e) => {
     const d = e.data;
-    if (!d || d.opsis !== 'subscribe' || e.source !== mediaFrame.contentWindow || !localFrameReady || !cfg.pageLocal || (e.origin !== 'null' && e.origin !== 'file://')) return;
+    if (!d || e.source !== mediaFrame.contentWindow || !localFrameReady || !cfg.pageLocal || (e.origin !== 'null' && e.origin !== 'file://')) return;
+    if (isSignatureFrame() && d.opsis === 'signature-capabilities' && d.version === 1) {
+        signatureReady = true; sendSignaturePolicy();
+        if (isPaused) pauseSignatureFrame();
+        return;
+    }
+    if (isSignatureFrame() && signatureReady && d.opsis === 'signature-paused' && d.seq === signaturePauseSeq && isPaused) {
+        clearTimeout(signaturePauseTimer); signaturePauseTimer=0; return;
+    }
+    if (d.opsis !== 'subscribe') return;
     try { const b = bridge(); if (b) b.SetSubscription(!!d.audio, !!d.gpu, !!d.pointer); } catch (x) { /* ignore */ }
 });
 
@@ -1042,13 +1131,13 @@ async function doRefresh() {
     const wasAthens = previousMode === 'Ancient Athens';
     const previousScale = cfg.perf?.renderScale;
     try { cfg = JSON.parse(await b.GetWaveConfigJson()); } catch (e) { /* keep previous cfg */ }
-    applyReducedMotion();
+    applyReducedMotion(); sendSignaturePolicy();
     if (previousMode !== cfg.mode) studioTime = 0;
     const scaleReset = !cfg.perf?.adaptive && adaptiveScale !== 1;
     if (previousMode !== cfg.mode || scaleReset) { adaptiveScale = 1; resetFrameStats(); }
     if (previousMode !== cfg.mode || previousScale !== cfg.perf?.renderScale || scaleReset) {
         if (wasAthens && cfg.mode !== 'Ancient Athens') OpsisAncientAthens.release();
-        if (isWeatherMode(previousMode) && !isWeatherMode(cfg.mode)) WeatherWallpaper.release();
+        if (usesAtmosphere(previousMode) && !usesAtmosphere(cfg.mode)) WeatherWallpaper.release();
         resizeCanvas();
     }
 
@@ -1056,10 +1145,27 @@ async function doRefresh() {
         const wx = isWeatherMode(cfg.mode);
         window.OpsisWeatherSpatial?.setMode(wx ? (cfg.weatherSpatialMode || 'Off') : 'Off');
         if (wx) window.OpsisLandmarks?.setCities(cfg.cityScenes);   // οι προσομοιώσεις (καιρός/ώρα/άνεμος) ισχύουν μόνο στο Weather mode — τα υπόλοιπα modes δείχνουν την πραγματική ώρα/θερμοκρασία
-        WeatherWallpaper.setConfig({ realistic: wx, spatialMode: wx ? (cfg.weatherSpatialMode || 'Off') : 'Off', reducedMotion: reduceWallpaperMotion(), weatherSim: wx ? (cfg.weatherSim || 'Auto') : 'Auto', timeSim: wx ? (cfg.timeSim || 'Auto') : 'Auto', windSim: wx ? (cfg.windSim || 'Auto') : 'Auto', glass: cfg.weatherGlass !== false, rainGlassIntensity: cfg.rainGlassIntensity, rainLandscapeIntensity: cfg.rainLandscapeIntensity, photoFocusX: cfg.weatherPhotoFocusX, skylinePreview: cfg.weatherSkylinePreview === true, skyEdits: cfg.weatherSkyEdits || {}, landmarks: cfg.weatherLandmarks !== false, landmarkId: cfg.weatherLandmarkId || 'Auto', lat: cfg.weatherLat, lon: cfg.weatherLon });
+        const historical = cfg.mode === 'Ancient Athens';
+        const atmospheric = wx || historical;
+        WeatherWallpaper.setConfig({
+            realistic: atmospheric,
+            historicalAthens: historical, athensPhase: cfg.athensPhase || 'Auto',
+            spatialMode: wx ? (cfg.weatherSpatialMode || 'Off') : 'Off',
+            reducedMotion: reduceWallpaperMotion(),
+            weatherSim: atmospheric ? (cfg.weatherSim || 'Auto') : 'Auto',
+            timeSim: historical ? (cfg.athensPhase || 'Auto') : wx ? (cfg.timeSim || 'Auto') : 'Auto',
+            windSim: atmospheric ? (cfg.windSim || 'Auto') : 'Auto',
+            glass: cfg.weatherGlass !== false, rainGlassIntensity: cfg.rainGlassIntensity,
+            rainLandscapeIntensity: cfg.rainLandscapeIntensity,
+            photoFocusX: cfg.weatherPhotoFocusX, skylinePreview: cfg.weatherSkylinePreview === true,
+            skyEdits: cfg.weatherSkyEdits || {}, landmarks: cfg.weatherLandmarks !== false,
+            landmarkId: cfg.weatherLandmarkId || 'Auto',
+            lat: historical ? 37.9715 : cfg.weatherLat,
+            lon: historical ? 23.7267 : cfg.weatherLon
+        });
     }
     stopPolling();
-    if (!isPaused && (isWeatherMode(cfg.mode) || cfg.weatherInfo))
+    if (!isPaused && (usesAtmosphere(cfg.mode) || cfg.weatherInfo))
         await Promise.race([refreshWeather(), new Promise(res => setTimeout(res, 400))]);
 
     if (cfg.mode === 'Video') {
@@ -1103,7 +1209,7 @@ function startPolling() {
     if (isPaused) return;
     updateWeatherInfo();
     if (cfg.weatherInfo) infoTimer = setInterval(updateWeatherInfo, 1000);
-    if (isWeatherMode(cfg.mode) || cfg.weatherInfo) weatherTimer = setInterval(refreshWeather, 600000);
+    if (usesAtmosphere(cfg.mode) || cfg.weatherInfo) weatherTimer = setInterval(refreshWeather, 600000);
     if (cfg.mode === 'Desktop') deskTimer = setInterval(refreshDesk, 60000);
     if (cfg.mode !== 'Ancient Athens' && cfg.performanceMode !== 'Battery')
         audioTimer = setInterval(refreshAudioPulse, cfg.performanceMode === 'High' ? 250 : 600);
@@ -1125,15 +1231,15 @@ window.motionDeskSetPaused = (paused) => {
     if (paused) {
         cancelWaveLoop();
         activeVideo().pause();
-        if (cfg.mode === 'Image' || cfg.mode === 'Page') hideMedia();
+        if (cfg.mode === 'Image' || (cfg.mode === 'Page' && !pauseSignatureFrame())) hideMedia();
         stopPolling();
     } else {
         if (cfg.mode === 'Video') { activeVideo().play().catch(() => {}); }
-        else if (cfg.mode === 'Image' || cfg.mode === 'Page') { startMedia(); }
+        else if (cfg.mode === 'Image' || cfg.mode === 'Page') { startMedia(); resumeSignatureFrame(); }
         else if (cfg.mode === 'Desktop') { /* static picture, nothing to restart */ }
         else if (!waveLoopHandle && !waveWakeTimer) { waveLoopHandle = requestAnimationFrame(waveLoop); }
         startPolling();
-        if (isWeatherMode(cfg.mode) || cfg.weatherInfo) refreshWeather();
+        if (usesAtmosphere(cfg.mode) || cfg.weatherInfo) refreshWeather();
         if (cfg.mode === 'Desktop') refreshDesk();
     }
 };

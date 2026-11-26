@@ -16,6 +16,7 @@ internal sealed class DesktopLauncher : Form
     private readonly ListBox _results = new() { Dock = DockStyle.Fill, IntegralHeight = false, Font = UiTheme.FontBody };
     private readonly CancellationTokenSource _closing = new();
     private Entry[] _index = [];
+    private readonly bool _signature = AppSettings.Peek().ThemeMode == "SignatureGlass" && !SystemInformation.HighContrast;
 
     internal static void Open()
     {
@@ -55,8 +56,11 @@ internal sealed class DesktopLauncher : Form
         _query.AccessibleName = Text;
         _query.MaxLength = 1024;
         _query.PlaceholderText = MainWindow.StudioText("Search apps, open windows or desktop files", "Αναζήτηση εφαρμογών, παραθύρων ή αρχείων επιφάνειας");
-        _results.BackColor = UiTheme.Surface;
-        _results.ForeColor = UiTheme.TextPrimary;
+        _query.BackColor = SystemInformation.HighContrast ? SystemColors.Window : UiTheme.Surface;
+        _query.ForeColor = SystemInformation.HighContrast ? SystemColors.WindowText : UiTheme.TextPrimary;
+        _results.BackColor = _query.BackColor;
+        _results.ForeColor = _query.ForeColor;
+        if (_signature) _results.BorderStyle = BorderStyle.FixedSingle;
         var layout = new TableLayoutPanel { Dock = DockStyle.Fill, RowCount = 2, ColumnCount = 1, Padding = new Padding(14) };
         layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
@@ -72,6 +76,7 @@ internal sealed class DesktopLauncher : Form
             void Add(string label, Action action)
             {
                 var button = new Button { Text = label, AutoSize = true };
+                StyleShortcut(button);
                 button.Click += (_, _) => { Close(); action(); };
                 shortcuts.Controls.Add(button);
             }
@@ -81,6 +86,22 @@ internal sealed class DesktopLauncher : Form
             layout.Controls.Add(shortcuts, 0, 2);
         }
         Controls.Add(layout);
+        if (_signature && startMenu)
+        {
+            var header = new Panel { Dock = DockStyle.Top, Height = 62, BackColor = UiTheme.Sidebar };
+            header.Paint += (_, e) =>
+            {
+                int size = Math.Min(header.Height - 12, 48);
+                if (size < 12) return;
+                OpsisBrandMark.Draw(e.Graphics, new RectangleF(14, (header.Height-size)/2f, size, size));
+                using var font = new Font("Segoe UI", 17, FontStyle.Bold);
+                TextRenderer.DrawText(e.Graphics, Text, font, new Rectangle(size+25, 0, Math.Max(1, header.Width-size-40), header.Height),
+                    UiTheme.TextPrimary, TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis);
+                using var rim = new Pen(UiTheme.Border);
+                e.Graphics.DrawLine(rim, 0, header.Height-1, header.Width, header.Height-1);
+            };
+            Controls.Add(header);
+        }
         // Quick Look from the launcher: F3/Space shows file contents without executing a handler.
         // Files with reparse points or larger than 64 MiB are not previewed.
         int nextRow = layout.RowCount;
@@ -91,6 +112,7 @@ internal sealed class DesktopLauncher : Form
             Text = MainWindow.StudioText("Preview selected file (F3)", "Προεπισκόπηση αρχείου (F3)"),
             Dock = DockStyle.Fill, Height = 32, AccessibleName = "Preview selected file"
         };
+        StyleShortcut(preview);
         preview.Click += (_, _) => PreviewSelection();
         var launcherTools = new FlowLayoutPanel { Dock = DockStyle.Fill, AutoSize = true, WrapContents = true };
         launcherTools.Controls.Add(preview);
@@ -99,6 +121,7 @@ internal sealed class DesktopLauncher : Form
             Text = MainWindow.StudioText("Shortcut conflicts", "Συγκρούσεις συντομεύσεων"),
             AutoSize = true
         };
+        StyleShortcut(conflicts);
         conflicts.Click += (_, _) => HotkeyDiagnosticDialog.Open(this);
         launcherTools.Controls.Add(conflicts);
         layout.Controls.Add(launcherTools, 0, nextRow);
@@ -133,6 +156,17 @@ internal sealed class DesktopLauncher : Form
         FormClosed += (_, _) => { _closing.Cancel(); _closing.Dispose(); };
     }
 
+    private void StyleShortcut(Button button)
+    {
+        if (!_signature) return;
+        button.FlatStyle = FlatStyle.Flat;
+        button.UseVisualStyleBackColor = false;
+        button.BackColor = UiTheme.Surface;
+        button.ForeColor = UiTheme.TextPrimary;
+        button.FlatAppearance.BorderColor = UiTheme.Border;
+        button.FlatAppearance.MouseOverBackColor = UiTheme.SurfaceHover;
+    }
+
     private static Entry[] ReadEntries(CancellationToken token)
     {
         var entries = WinApi.EnumerateAppWindows().Select(window => new Entry(window.Title, window.ExePath, window.Handle)).ToList();
@@ -162,7 +196,17 @@ internal sealed class DesktopLauncher : Form
     {
         string query = _query.Text.Trim();
         var words = query.Split(' ', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
-        var matches = _index.Select(entry => (entry, score: words.Sum(word => Score(entry.Name, word))))
+        var matches = _index.Select(entry =>
+            {
+                int sum = 0;
+                foreach (string word in words)
+                {
+                    int score = Score(entry.Name, word);
+                    if (score < 0) return (entry, score: -1);
+                    sum += score;
+                }
+                return (entry, score: sum);
+            })
             .Where(pair => pair.score >= 0)
             .OrderByDescending(pair => pair.score).ThenByDescending(pair => pair.entry.Window != IntPtr.Zero)
             .ThenBy(pair => pair.entry.Name, StringComparer.CurrentCultureIgnoreCase).Take(75).Select(pair => pair.entry).ToList();

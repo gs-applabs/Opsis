@@ -18,7 +18,8 @@ public sealed partial class MainWindow
         var theme = ThemeManager.Current;
         var settings = AppSettings.Peek();
         _windowBaseColors = theme;
-        _windowPalette = SystemInformation.HighContrast || settings.ThemeMode == "Contrast" ? null : WindowSkinColors.Default(_windowSkin, theme.IsDark);
+        _windowPalette = SystemInformation.HighContrast || settings.ThemeMode == "Contrast" ? null :
+            settings.ThemeMode == "SignatureGlass" ? ColorsFromTheme(theme) : WindowSkinColors.Default(_windowSkin, theme.IsDark);
         if (_windowPalette is { } colors)
         {
             if (theme.IsDark && settings.ThemeMode is "Dark" or "Follow")

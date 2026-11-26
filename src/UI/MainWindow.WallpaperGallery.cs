@@ -48,6 +48,7 @@ public sealed partial class MainWindow
         var featured = NewGrid();
         var library = NewGrid();
         var tiles = new List<WallpaperTile>();
+        var addonGrids = new List<FlowLayoutPanel>();
         foreach (var scene in StudioWallpaperCatalog.Scenes)
             AddTile(featured, scene.Mode, scene.Title(StudioGreek), scene.Detail(StudioGreek), scene.Asset, true);
         page.Controls.Add(featured);
@@ -64,6 +65,57 @@ public sealed partial class MainWindow
         AddTile(library, "Particles", StudioText("Particles", "Σωματίδια"), StudioText("Floating particles", "Αιωρούμενα σωματίδια"), null);
         page.Controls.Add(weatherDepth);
         page.Controls.Add(library);
+        var installed = WallpaperGalleryCatalog.Discover();
+        if (installed.Count > 0)
+        {
+            AddSection(page, StudioText("OPSIS 100 Wallpapers — installed", "OPSIS 100 Wallpapers — εγκατεστημένα"));
+            foreach (var group in installed.GroupBy(item => item.Category))
+            {
+                AddSection(page, AddonCategoryLabel(group.Key));
+                var grid = NewGrid();
+                addonGrids.Add(grid);
+                foreach (var item in group)
+                {
+                    var tile = new WallpaperTile("Page", StudioGreek && !string.IsNullOrWhiteSpace(item.NameEl)
+                        ? item.NameEl : item.Name, StudioGreek && !string.IsNullOrWhiteSpace(item.DescriptionEl)
+                        ? item.DescriptionEl : item.Description, null, false, item.IndexPath, item.PosterPath);
+                    tile.Click += (_, _) =>
+                    {
+                        // Revalidate on selection: the optional pack may have been uninstalled.
+                        var valid = WallpaperGalleryCatalog.Discover().FirstOrDefault(entry =>
+                            entry.Id == item.Id && string.Equals(entry.IndexPath, item.IndexPath, StringComparison.OrdinalIgnoreCase));
+                        if (valid == null) { ShowWallpaper(); return; }
+                        var s = WallpaperSettings.Load();
+                        s.PageSource = valid.IndexPath;
+                        s.Mode = "Page";
+                        s.Save();
+                        host.Enable();
+                        host.RefreshAll();
+                        Sync();
+                    };
+                    grid.Controls.Add(tile);
+                    tiles.Add(tile);
+                }
+                page.Controls.Add(grid);
+            }
+        }
+
+        string AddonCategoryLabel(string category) => category switch
+        {
+            "Abstract" => StudioText("Abstract", "Αφηρημένα"),
+            "Nature" => StudioText("Nature", "Φύση"),
+            "Tech" => StudioText("Tech", "Τεχνολογία"),
+            "Space" => StudioText("Space", "Διάστημα"),
+            "City / Night" => StudioText("City / Night", "Πόλεις / Νύχτα"),
+            "Minimal" => StudioText("Minimal", "Μινιμαλιστικά"),
+            "Weather" => StudioText("Weather", "Καιρός"),
+            "Neon" => "Neon",
+            "Fantasy" => StudioText("Fantasy", "Φαντασία"),
+            "Greek Landmarks" => StudioText("Greek Landmarks", "Ελληνικά τοπόσημα"),
+            "European Capitals" => StudioText("European Capitals", "Ευρωπαϊκές πρωτεύουσες"),
+            "Historical Cities" => StudioText("Historical Cities", "Ιστορικές πόλεις"),
+            _ => category
+        };
 
         int lastLayoutWidth = 0;
         void ResizeTiles()
@@ -80,6 +132,7 @@ public sealed partial class MainWindow
             try
             {
                 featured.MaximumSize = library.MaximumSize = new Size(area, 0);
+                foreach (var grid in addonGrids) grid.MaximumSize = new Size(area, 0);
                 foreach (var tile in tiles) tile.Size = new Size(width, Math.Max(145, (width - 14) * 9 / 16 + 61));
             }
             finally
@@ -93,12 +146,18 @@ public sealed partial class MainWindow
         void Sync()
         {
             if (page.IsDisposed) return;
-            var mode = WallpaperSettings.Load().Mode;
+            var selection = WallpaperSettings.Load();
+            var mode = selection.Mode;
             weatherDepth.Visible = mode == "Weather";
             power.Text = host.IsEnabled ? StudioText("Disable wallpaper", "Απενεργοποίηση φόντου")
                 : StudioText("Enable wallpaper", "Ενεργοποίηση φόντου");
             details.Text = mode == "Weather" ? StudioText("Weather settings", "Ρυθμίσεις Weather") : StudioText("Wallpaper settings", "Ρυθμίσεις φόντου");
-            foreach (var tile in tiles) tile.SetActive(host.IsEnabled && tile.Mode == mode);
+            foreach (var tile in tiles)
+                tile.SetActive(host.IsEnabled && tile.Mode == mode &&
+                    (tile.PagePath != null
+                        ? string.Equals(tile.PagePath, selection.PageSource, StringComparison.OrdinalIgnoreCase)
+                        : mode != "Page" || !tiles.Any(t => t.PagePath != null &&
+                            string.Equals(t.PagePath, selection.PageSource, StringComparison.OrdinalIgnoreCase))));
         }
 
         void OnWallpaperChanged()
@@ -151,15 +210,18 @@ public sealed partial class MainWindow
         private int _frame;
 
         internal string Mode { get; }
+        internal string? PagePath { get; }
 
-        internal WallpaperTile(string mode, string title, string subtitle, string? asset, bool animate)
+        internal WallpaperTile(string mode, string title, string subtitle, string? asset, bool animate,
+            string? pagePath = null, string? posterPath = null)
         {
             Mode = mode;
+            PagePath = pagePath;
             Text = title;
             _subtitle = subtitle;
             AccessibleName = title;
             AccessibleDescription = subtitle;
-            Name = "wallpaper-tile-" + (asset ?? mode).ToLowerInvariant();
+            Name = "wallpaper-tile-" + (pagePath != null ? Path.GetFileName(Path.GetDirectoryName(pagePath)) : asset ?? mode).ToLowerInvariant();
             FlatStyle = FlatStyle.Flat;
             FlatAppearance.BorderSize = 0;
             UseVisualStyleBackColor = false;
@@ -173,7 +235,8 @@ public sealed partial class MainWindow
                 _posterPath = Path.Combine(folder, asset + ".jpg");
                 if (animate) _previewPath = Path.Combine(folder, asset + ".preview.jpg");
             }
-            _builtIn = BuiltInWallpaperPreview.Create(mode);
+            if (posterPath != null) _posterPath = posterPath;
+            _builtIn = pagePath == null ? BuiltInWallpaperPreview.Create(mode) : null;
             _timer.Interval = _builtIn?.Animated == true ? 50 : 100;
             _timer.Tick += (_, _) =>
             {

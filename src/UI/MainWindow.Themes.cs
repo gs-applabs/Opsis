@@ -217,6 +217,59 @@ namespace MotionDesk.UI
             };
             statesPreview.Click += (_, _) => ShowThemeReadabilityPreview();
             card.Controls.Add(statesPreview);
+#if SIGNATURE_COMPOSITION_PREVIEW
+            var materialEditor = new Opsis.UI.FlatButton
+            {
+                Text = StudioText("Signature Glass material editor…", "Επεξεργασία υλικού Signature Glass…"),
+                AutoSize = false, Width = 380, Height = 38
+            };
+            materialEditor.Click += (_, _) =>
+            {
+                var staged = AppSettings.Peek().Glass.Clone();
+                using var dialog = new Form
+                {
+                    Text = "Signature Glass", StartPosition = FormStartPosition.CenterParent,
+                    Size = new Size(780, 700), MinimumSize = new Size(580, 480),
+                    BackColor = UiTheme.Background, ForeColor = UiTheme.TextPrimary,
+                    Font = UiTheme.FontBody
+                };
+                using var editor = new Opsis.UI.GlassSettingsPage(staged, false) { Dock = DockStyle.Fill };
+                var actions = new FlowLayoutPanel { Dock = DockStyle.Bottom, Height = 55, FlowDirection = FlowDirection.RightToLeft, Padding = new Padding(8) };
+                var save = new Opsis.UI.FlatButton { Text = StudioText("Apply", "Εφαρμογή"), Width = 130, Height = 34, DialogResult = DialogResult.OK };
+                var cancel = new Opsis.UI.FlatButton { Text = StudioText("Cancel", "Ακύρωση"), Width = 130, Height = 34, DialogResult = DialogResult.Cancel };
+                actions.Controls.Add(save); actions.Controls.Add(cancel);
+                var applyDesktop = new CheckBox { AutoSize = true, Text = StudioText("Apply to desktop surfaces", "Εφαρμογή στις επιφάνειες desktop"), ForeColor = UiTheme.TextPrimary, Checked = false };
+                actions.Controls.Add(applyDesktop);
+                dialog.Controls.Add(editor); dialog.Controls.Add(actions);
+                dialog.AcceptButton = save; dialog.CancelButton = cancel;
+                if (dialog.ShowDialog(this) != DialogResult.OK) return;
+                var app = AppSettings.Load();
+                Opsis.UI.GlassMaterialProfiles.ApplyTo(app.Glass, staged);
+                app.WallpaperAccentEnabled = staged.AdaptiveAccent;
+                if (applyDesktop.Checked)
+                {
+                    // Explicit opt-in. Reuse the existing three material slots; preserve typography.
+                    DesktopMaterial Convert(DesktopMaterial? old) => ((old ?? new DesktopMaterial()) with
+                    {
+                        Mode = staged.ModeValue == Opsis.UI.GlassMode.Solid ? "Solid" : "Custom",
+                        Tint = staged.TintColor, Opacity = staged.ModeValue == Opsis.UI.GlassMode.Solid ? 100 : Math.Clamp(staged.Intensity, 0, 100),
+                        Blur = staged.Blur, Radius = staged.CornerRadius, Refraction = Math.Clamp(staged.Glossy, 0, 100) * 2,
+                        Rim = staged.RimLight
+                    }).Normalized();
+                    app.ContainerMaterial = Convert(app.ContainerMaterial);
+                    app.DeskStripMaterial = Convert(app.DeskStripMaterial);
+                    app.WidgetMaterial = Convert(app.WidgetMaterial);
+                    app.WidgetsThemeMode = "Transparent";
+                    app.WidgetsTintPercent = staged.ModeValue == Opsis.UI.GlassMode.Solid ? 100 : 0;
+                    app.WidgetsTintColor = "Material";
+                }
+                // Do not switch shell replacement modes or override reduced-effects preferences.
+                app.Save();
+                ThemeManager.RefreshOpsisAccent();
+                GlassService.Refresh();
+            };
+            card.Controls.Add(materialEditor);
+#endif
             foreach (var t in GearWinThemes.All)
             {
                 var row = new FlowLayoutPanel { AutoSize = true, WrapContents = false, Margin = new Padding(0, 0, 0, 2) };

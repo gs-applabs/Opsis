@@ -372,6 +372,8 @@ namespace MotionDesk.Widgets
                 _webView = null;
                 if (_themeHandler != null) { ThemeManager.Changed -= _themeHandler; ThemeManager.Repainted -= _themeHandler; }
                 _themeHandler = null;
+                _glassPane?.Dispose();
+                _glassPane = null;
             }
             base.Dispose(disposing);
         }
@@ -886,9 +888,7 @@ namespace MotionDesk.Widgets
             _themeHandler = () =>
             {
                 if (IsDisposed) return;
-                panel.BackColor = WidgetSurface();
-                BackColor = WidgetSurface();
-                TransparencyKey = UsesTransparentWidgetPixels ? Color.Black : default;
+                RefreshWidgetSurface();
                 closeLabel.ForeColor = UiTheme.TextSecondary;
                 lockLabel.ForeColor = UiTheme.TextSecondary;
                 menuLabel.ForeColor = UiTheme.TextSecondary;
@@ -909,9 +909,23 @@ namespace MotionDesk.Widgets
         private GlassPaneBinder? _glassPane;
         private Color SurfaceTint => _customTintArgb is int tint ? Color.FromArgb(tint) : UiTheme.TintColor;
         private int TintAlpha => _customTintArgb != null ? Math.Max(70, UiTheme.TintAlpha) : UiTheme.TintAlpha;
-        private bool WantsSurfaceGlass => UiTheme.IsFullyTransparent && GlassService.Enabled &&
+        private bool WantsSurfaceGlass => UiTheme.IsFullyTransparent && !SystemInformation.HighContrast &&
             DesktopMaterials.Get(DesktopSurface.Widgets).Mode != "Solid";
-        private bool UsesTransparentWidgetPixels => UiTheme.IsFullyTransparent && (TintAlpha == 0 || WantsSurfaceGlass);
+        // Explicit legacy clear mode remains available. A custom glass material needs
+        // an actual bound pane, not merely permission to start the GPU engine.
+        private bool UsesTransparentWidgetPixels => UiTheme.IsFullyTransparent && !SystemInformation.HighContrast &&
+            (_glassPane?.HasPane == true || (TintAlpha == 0 && !DesktopMaterials.Get(DesktopSurface.Widgets).WantsGlass));
+
+        private void RefreshWidgetSurface()
+        {
+            if (IsDisposed || Disposing) return;
+            var color = WidgetSurface();
+            BackColor = color;
+            if (_themedPanel != null) _themedPanel.BackColor = color;
+            var key = UsesTransparentWidgetPixels ? Color.Black : Color.Empty;
+            if (TransparencyKey != key) TransparencyKey = key;
+            Invalidate(true);
+        }
 
         private void EnsureGlassPane()
         {
@@ -919,6 +933,7 @@ namespace MotionDesk.Widgets
             _glassPane = new GlassPaneBinder(this, 12, () => WantsSurfaceGlass, DesktopSurface.Widgets, () => _customRadius,
                 style => TintAlpha == 0 ? style : style with
                 { Tint = SurfaceTint, TintAlpha = (float)(TintAlpha / 255.0 * _backgroundOpacity) });
+            _glassPane.PaneChanged += RefreshWidgetSurface;
         }
 
         internal static Color SurfaceFor(Control control) =>
@@ -926,6 +941,7 @@ namespace MotionDesk.Widgets
 
         private Color WidgetSurface()
         {
+            if (SystemInformation.HighContrast) return SystemColors.Window;
             if (UsesTransparentWidgetPixels) return Color.Black;
             Color surface = UiTheme.Surface;
             int a = TintAlpha;
@@ -947,8 +963,9 @@ namespace MotionDesk.Widgets
         private void ApplyGlassBlur()
         {
             _glassPane?.Sync();
-            if (UiTheme.IsFullyTransparent) GlassBlur.Disable(Handle);
+            if (UiTheme.IsFullyTransparent || SystemInformation.HighContrast) GlassBlur.Disable(Handle);
             else GlassBlur.Apply(Handle, SurfaceTint, _backgroundOpacity);
+            RefreshWidgetSurface();
         }
 
         private void InitializeNativeClock()
@@ -1293,7 +1310,7 @@ namespace MotionDesk.Widgets
             values.Height = 44;
             values.Text = LocalizationManager.T("WidgetText.Loading");
 
-            var icon = new WeatherIconControl { Dock = DockStyle.Fill };
+            var icon = new WeatherIconControl { Dock = DockStyle.Fill, HasObservation = false };
             panel.Controls.Add(icon);
             icon.BringToFront();
 
@@ -1301,8 +1318,10 @@ namespace MotionDesk.Widgets
             _weatherAnimation.Tick += (_, _) => icon.AdvancePhase();
             UpdateNativeTimers();
 
+            int updateRevision = 0;
             async void Update()
             {
+                int revision = ++updateRevision;
                 bool ok = true;
                 try
                 {
@@ -1311,19 +1330,22 @@ namespace MotionDesk.Widgets
                     if (_titleLabelRef != null) _titleLabelRef.Text = SharedName();
                     // the same providers, fallback and 10-minute cache as the wallpaper (NWS / Open-Meteo / MET Norway)
                     using var doc = System.Text.Json.JsonDocument.Parse(await WeatherService.GetWallpaperWeatherJsonAsync(lat, lon));
+                    if (IsDisposed || revision != updateRevision) return;
                     var r = doc.RootElement;
                     if (r.TryGetProperty("ok", out var okEl) && okEl.GetBoolean())
                     {
                         icon.Condition = WeatherService.ClassifyWeatherCode(r.GetProperty("code").GetInt32());
+                        icon.HasObservation = true;
+                        icon.Invalidate();
                         double wind = r.GetProperty("wind").GetDouble();
                         int beaufort = WeatherService.ToBeaufort(wind);
                         double hum = r.TryGetProperty("humidity", out var hEl) ? hEl.GetDouble() : -1;
                         string humidityText = hum >= 0 ? $"{hum:0}%" : "—";
                         values.Text = string.Format(LocalizationManager.T("WidgetText.WeatherLineFormat"), r.GetProperty("temp").GetDouble(), wind, beaufort, humidityText);
                     }
-                    else { values.Text = LocalizationManager.T("WidgetText.WeatherUnavailable"); ok = false; }
+                    else { icon.HasObservation = false; icon.Invalidate(); values.Text = LocalizationManager.T("WidgetText.WeatherUnavailable"); ok = false; }
                 }
-                catch { values.Text = LocalizationManager.T("WidgetText.WeatherUnavailable"); ok = false; }
+                catch { if (IsDisposed || revision != updateRevision) return; icon.HasObservation = false; icon.Invalidate(); values.Text = LocalizationManager.T("WidgetText.WeatherUnavailable"); ok = false; }
                 // Αν ο καιρός απέτυχε (π.χ. καμία σύνδεση στην εκκίνηση), ξαναδοκιμάζουμε σε 1 λεπτό αντί να
                 // περιμένουμε 15 λεπτά με "μη διαθέσιμο"· μετά την επιτυχία επιστρέφει στο κανονικό διάστημα.
                 if (!IsDisposed && _nativeMonitorTimer != null) _nativeMonitorTimer.Interval = ok ? 900000 : 60000;
@@ -2074,6 +2096,7 @@ namespace MotionDesk.Widgets
     internal sealed class WeatherIconControl : Control
     {
         public WeatherCondition Condition { get; set; } = WeatherCondition.Clear;
+        public bool HasObservation { get; set; } = true;
         private int _phase;
         private readonly Random _rng = new();
         private readonly PointF[] _drops;
@@ -2085,7 +2108,7 @@ namespace MotionDesk.Widgets
             for (int i = 0; i < _drops.Length; i++) _drops[i] = new PointF((float)_rng.NextDouble(), (float)_rng.NextDouble());
         }
 
-        public void AdvancePhase() { _phase++; Invalidate(); }
+        public void AdvancePhase() { if (!HasObservation) return; _phase = (_phase + 1) % 36000; Invalidate(); }
 
         protected override void OnPaint(PaintEventArgs e)
         {
@@ -2093,6 +2116,7 @@ namespace MotionDesk.Widgets
             g.SmoothingMode = SmoothingMode.AntiAlias;
             using (var bg = new SolidBrush(WidgetWindow.SurfaceFor(this))) g.FillRectangle(bg, ClientRectangle);
 
+            if (!HasObservation) return;
             float cx = Width / 2f, cy = Height / 2f - 4;
             // Μεγαλύτερο κινούμενο εικονίδιο καιρού — ζητήθηκε ρητά (ήταν πολύ μικρό σε σχέση με
             // το widget). Μικρότερος διαιρέτης = μεγαλύτερο εικονίδιο για το ίδιο μέγεθος control.
@@ -2122,15 +2146,18 @@ namespace MotionDesk.Widgets
                     cx + (float)Math.Cos(a) * r1, cy + (float)Math.Sin(a) * r1,
                     cx + (float)Math.Cos(a) * r2, cy + (float)Math.Sin(a) * r2);
             }
-            using var sunBrush = new SolidBrush(Color.FromArgb((int)(255 * alpha), 255, 205, 90));
-            g.FillEllipse(sunBrush, cx - 18 * scale, cy - 18 * scale, 36 * scale, 36 * scale);
+            var disc = new RectangleF(cx - 18 * scale, cy - 18 * scale, 36 * scale, 36 * scale);
+            using var sunBrush = new LinearGradientBrush(disc, Color.FromArgb((int)(255 * alpha), 255, 252, 204),
+                Color.FromArgb((int)(255 * alpha), 255, 161, 34), LinearGradientMode.ForwardDiagonal);
+            g.FillEllipse(sunBrush, disc);
         }
 
         private void DrawCloud(Graphics g, float cx, float cy, float scale)
         {
             float drift = (float)Math.Sin(_phase * 0.02) * 6f * scale;
             cx += drift;
-            using var cloudBrush = new SolidBrush(UiTheme.TextMuted);
+            var cloudBounds = new RectangleF(cx - 27 * scale, cy - 17 * scale, 70 * scale, 38 * scale);
+            using var cloudBrush = new LinearGradientBrush(cloudBounds, Color.FromArgb(247, 252, 255), Color.FromArgb(126, 163, 196), LinearGradientMode.Vertical);
             g.FillEllipse(cloudBrush, cx - 26 * scale, cy - 6 * scale, 30 * scale, 24 * scale);
             g.FillEllipse(cloudBrush, cx - 6 * scale, cy - 16 * scale, 36 * scale, 32 * scale);
             g.FillEllipse(cloudBrush, cx + 16 * scale, cy - 2 * scale, 26 * scale, 22 * scale);

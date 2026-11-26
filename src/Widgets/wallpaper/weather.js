@@ -98,6 +98,16 @@ function sunTimes(offMin) {
 }
 
 function offsetMinutes() {
+    if (cfg.historicalAthens) {
+        // Athens time is correct offline too, independently of the computer's zone.
+        const now = new Date();
+        const parts = new Intl.DateTimeFormat('en-GB', {timeZone:'Europe/Athens',
+            hourCycle:'h23',hour:'numeric',minute:'numeric'}).formatToParts(now);
+        const hour = +parts.find(p=>p.type==='hour').value;
+        const minute = +parts.find(p=>p.type==='minute').value;
+        const offset = hour*60 + minute - now.getUTCHours()*60 - now.getUTCMinutes();
+        return ((offset + 720) % 1440 + 1440) % 1440 - 720;
+    }
     if (data && typeof data.utcOffsetSec === 'number') return data.utcOffsetSec / 60;
     return -new Date().getTimezoneOffset();
 }
@@ -109,6 +119,8 @@ function localMinutes() {
     if (sim === 'Day') return (sr + ss) / 2;
     if (sim === 'Dusk') return ss - 4;
     if (sim === 'Night') return 60;
+    if (cfg.historicalAthens && sim === 'Golden') return ss - 25;
+    if (cfg.historicalAthens && sim === 'Blue') return ss + 26;
     const d = new Date();
     const utc = d.getUTCHours() * 60 + d.getUTCMinutes() + d.getUTCSeconds() / 60;
     return (utc + offsetMinutes() + 1440) % 1440;
@@ -415,8 +427,11 @@ function setConfig(c) {
     cfg.rainLandscapeIntensity = Number.isFinite(+cfg.rainLandscapeIntensity) ? clamp(+cfg.rainLandscapeIntensity, 0, 2) : 1;
     // Weather observations belong to a location. Never briefly show the previous city's
     // temperature when the user changes coordinates while the next request is pending.
-    if (old.lat !== cfg.lat || old.lon !== cfg.lon) data = null;
-    if (old.weatherSim !== cfg.weatherSim || old.windSim !== cfg.windSim || old.lat !== cfg.lat || old.lon !== cfg.lon) computeTargets();
+    const locationChanged = old.lat !== cfg.lat || old.lon !== cfg.lon ||
+        Boolean(old.historicalAthens) !== Boolean(cfg.historicalAthens);
+    if (locationChanged) data = null;
+    if (old.weatherSim !== cfg.weatherSim || old.windSim !== cfg.windSim || locationChanged) computeTargets();
+    if (locationChanged) { Object.assign(S, TGT); birds = []; birdWait = 4; }
     sunCache.key = '';
 }
 
@@ -1558,12 +1573,13 @@ function draw(target, dt, profile) {
 
     // ease the scene toward the weather targets (so a weather change is a slow cross-fade, never a pop)
     const rate = 0.55;
-    S.cloud = approach(S.cloud, TGT.cloud, dt, rate); S.rain = approach(S.rain, TGT.rain, dt, rate);
-    S.snow = approach(S.snow, TGT.snow, dt, rate); S.fog = approach(S.fog, TGT.fog, dt, rate * 0.7);
-    S.storm = approach(S.storm, TGT.storm, dt, rate); S.windX = approach(S.windX, TGT.windX, dt, 0.4);
-    S.wind = approach(S.wind, TGT.wind, dt, 0.35); S.dir = approach(S.dir, TGT.dir, dt, 0.3);
+    const weatherDt = cfg.historicalAthens && cfg.reducedMotion ? 2 : dt;
+    S.cloud = approach(S.cloud, TGT.cloud, weatherDt, rate); S.rain = approach(S.rain, TGT.rain, weatherDt, rate);
+    S.snow = approach(S.snow, TGT.snow, weatherDt, rate); S.fog = approach(S.fog, TGT.fog, weatherDt, rate * 0.7);
+    S.storm = approach(S.storm, TGT.storm, weatherDt, rate); S.windX = approach(S.windX, TGT.windX, weatherDt, 0.4);
+    S.wind = approach(S.wind, TGT.wind, weatherDt, 0.35); S.dir = approach(S.dir, TGT.dir, weatherDt, 0.3);
     BFN = beaufort(S.wind);
-    S.snowCover = approach(S.snowCover, TGT.snow > 0.3 ? Math.min(1, TGT.snow) : 0, dt, 0.06);
+    S.snowCover = approach(S.snowCover, TGT.snow > 0.3 ? Math.min(1, TGT.snow) : 0, weatherDt, 0.06);
 
     const t = localMinutes();
     const { sr, ss } = sunTimes(offsetMinutes());
@@ -1583,14 +1599,15 @@ function draw(target, dt, profile) {
 
     // ---- sky canvas
     const graded = drawSkyLayer(sky, t, sr, ss);
-    const location = cfg.realistic && cfg.spatialMode === '3D' && resolveLandmark();
+    const historical = cfg.historicalAthens === true;
+    const location = !historical && cfg.realistic && cfg.spatialMode === '3D' && resolveLandmark();
     const mesh = window.OpsisWeatherSpatial?.update(dt,
         { rain: S.rain, snow: S.snow, windX: S.windX, seconds: animTime },
         profile?.id || 'Balanced', cfg.reducedMotion === true,
         location ? { id: location.id, city: landmarkScene.city, ambient: sky.amb,
             horizon: graded.hor, fog: S.fog, snowCover: S.snowCover, lightSide: t < (sr + ss) / 2 ? -1 : 1 } : null);
-    const photograph = !mesh && onPhoto();
-    const cityPhoto = photograph && !photoState.landscape;
+    const photograph = historical || (!mesh && onPhoto());
+    const cityPhoto = historical || (photograph && !photoState.landscape);
     drawStarsLayer(sky, 1 - S.cloud * 0.8 - S.fog * 0.5);
     drawMilkyWay(sky);
     const moon = drawMoonLayer(t, sr, ss, 1, cityPhoto);
@@ -1633,8 +1650,21 @@ function draw(target, dt, profile) {
     } else {
         c2.drawImage(skyCv, 0, 0);
     }
-    drawBirds(c2, dt, sky, cityPhoto);
-    if (mesh) c2.drawImage(mesh, 0, 0, W, H);
+    if (!cfg.reducedMotion) drawBirds(c2, dt, sky, cityPhoto);
+    if (historical) {
+        const athens = window.OpsisAncientAthens;
+        const phase = cfg.athensPhase || 'Auto';
+        const ok = athens?.draw(c2, W, H, phase, false, {
+            sharedWeather:true, horizon:HORIZON, weather:S
+        });
+        // During asset loading, or if mask detection fails, retain the original
+        // photographic scene; never layer a second atmospheric engine over it.
+        if (!ok) {
+            c2.fillStyle=rgba(graded.hor,1);c2.fillRect(0,HORIZON,W,H-HORIZON);
+            athens?.draw(c2,W,H,phase,false,{noEffects:true});
+        }
+    }
+    else if (mesh) c2.drawImage(mesh, 0, 0, W, H);
     else if (photograph) drawScenePhoto(c2, sky, graded);
     else if (onLand()) {
         drawLand(c2, sky, graded);
@@ -1652,7 +1682,7 @@ function draw(target, dt, profile) {
     drawFog(c2, dt, graded, sky.amb);
     drawRain(c2, dt, sky.amb, density);
     drawSnow(c2, dt, sky.amb);
-    if (flash > 0) { c2.fillStyle = `rgba(210,222,255,${flash * 0.35})`; c2.fillRect(0, 0, W, H); }
+    if (flash > 0 && !cfg.reducedMotion) { c2.fillStyle = `rgba(210,222,255,${flash * 0.35})`; c2.fillRect(0, 0, W, H); }
     drawVignette(c2);
 
     if (useGlass) {

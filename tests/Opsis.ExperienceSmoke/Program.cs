@@ -245,19 +245,19 @@ try
         "safe plugin widget contribution instantiated as native layout");
 
 
-    const string supportedRainmeter = "[Rainmeter]\\nUpdate=1000\\n[MeasureClock]\\nMeasure=Time\\nFormat=%H:%M\\n[MeterClock]\\nMeter=String\\nMeasureName=MeasureClock\\nFontColor=64,160,224\\nFontSize=28\\nW=350\\nH=160";
-    var rainPreview = OpsisRainmeterSkinImporter.PreviewIni(supportedRainmeter.Replace("\\\\n", "\\n"), "Converted Clock");
+    const string supportedRainmeter = "[Rainmeter]\nUpdate=1000\n[MeasureClock]\nMeasure=Time\nFormat=%H:%M\n[MeterClock]\nMeter=String\nMeasureName=MeasureClock\nFontColor=64,160,224\nFontSize=28\nW=350\nH=160";
+    var rainPreview = OpsisRainmeterSkinImporter.PreviewIni(supportedRainmeter, "Converted Clock");
     Check(rainPreview.Binding == "Clock" && rainPreview.AccentHex == "#40A0E0",
         "Rainmeter built-in Time/clock INI mapped to native Opsis widget");
     var rainFile = Path.Combine(folder, "Converted Clock.ini");
-    File.WriteAllText(rainFile, supportedRainmeter.Replace("\\\\n", "\\n"));
+    File.WriteAllText(rainFile, supportedRainmeter);
     Check(OpsisRainmeterSkinImporter.Import(rainFile) == "Converted Clock",
         "safe Rainmeter INI import writes widget layout");
     rejected = false;
     try
     {
         OpsisRainmeterSkinImporter.PreviewIni(
-            "[Rainmeter]\\nUpdate=1000\\n[MeasureScript]\\nMeasure=Plugin\\nPlugin=RunCommand\\n[MeterA]\\nMeter=String\\nMeasureName=MeasureScript".Replace("\\\\n", "\\n"),
+            "[Rainmeter]\nUpdate=1000\n[MeasureScript]\nMeasure=Plugin\nPlugin=RunCommand\n[MeterA]\nMeter=String\nMeasureName=MeasureScript",
             "Blocked");
     }
     catch (InvalidDataException) { rejected = true; }
@@ -266,7 +266,7 @@ try
     try
     {
         OpsisRainmeterSkinImporter.PreviewIni(
-            "[MeterA]\\nMeter=String\\nText=[!Execute \"notepad.exe\"]".Replace("\\\\n", "\\n"),
+            "[MeterA]\nMeter=String\nText=[!Execute \"notepad.exe\"]",
             "Blocked");
     }
     catch (InvalidDataException) { rejected = true; }
@@ -275,7 +275,7 @@ try
     try
     {
         OpsisRainmeterSkinImporter.PreviewIni(
-            "[MeterA]\\nMeter=String\\nText=Hello\\n[MeterB]\\nMeter=String\\nText=World".Replace("\\\\n", "\\n"),
+            "[MeterA]\nMeter=String\nText=Hello\n[MeterB]\nMeter=String\nText=World",
             "Two Meters");
     }
     catch (InvalidDataException) { rejected = true; }

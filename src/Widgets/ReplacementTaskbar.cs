@@ -23,6 +23,23 @@ internal sealed class ReplacementTaskbar : Form
     private readonly System.Windows.Forms.Timer _pulse = new() { Interval = 300 };
     private Button? _activeItem;
     private bool _pulseBright;
+    private bool SignatureLook => AppSettings.Peek().ThemeMode == "SignatureGlass" && !SystemInformation.HighContrast;
+    private bool ShowGlassMark => _visual.StartGlassIcon && !SystemInformation.HighContrast;
+    private bool CanPulse => _visual.ActiveButtonAnimation && Visible && _activeItem is { IsDisposed: false } &&
+        !SystemInformation.HighContrast && !AppActivity.IsPausedFor(Screen.FromControl(this));
+
+    private void SyncPulse()
+    {
+        bool animate = CanPulse;
+        _pulse.Interval = _visual.AnimationIntervalMs;
+        _pulse.Enabled = animate;
+        if (!animate && _activeItem is { IsDisposed: false } item)
+        {
+            _pulseBright = false;
+            item.FlatAppearance.BorderSize = 1;
+            item.FlatAppearance.BorderColor = UiTheme.AccentCyan;
+        }
+    }
 
     internal static void RefreshSettings()
     {
@@ -131,12 +148,36 @@ internal sealed class ReplacementTaskbar : Form
         _start.Text = "Opsis";
         _start.AccessibleName = MainWindow.StudioText("Start", "Έναρξη");
         _start.Click += (_, _) => DesktopLauncher.OpenStart(Bounds);
+        _start.Paint += (_, e) =>
+        {
+            if (!ShowGlassMark) return;
+            float size = Math.Max(12, Math.Min(_start.ClientSize.Width, _start.ClientSize.Height) - 6);
+            OpsisBrandMark.Draw(e.Graphics, new RectangleF(
+                (_start.ClientSize.Width-size)/2f, (_start.ClientSize.Height-size)/2f, size, size));
+        };
         _taskView.Text = "▣";
         _taskView.AccessibleName = MainWindow.StudioText("Task View", "Προβολή εργασιών");
         _taskView.Click += (_, _) => VirtualWorkspaces.OpenTaskView();
         _clock.AccessibleName = MainWindow.StudioText("Clock and calendar", "Ρολόι και ημερολόγιο");
         _clock.Click += (_, _) => TrayApplicationContext.OpenPage?.Invoke("Widgets");
         var menu = new ContextMenuStrip();
+        var glassStart = new ToolStripMenuItem(MainWindow.StudioText("Glass Opsis Start button", "Γυάλινο κουμπί Έναρξης Opsis"));
+        glassStart.Click += (_, _) =>
+        {
+            try
+            {
+                var profile = OpsisTaskbarDesigner.Read();
+                profile.StartGlassIcon = !profile.StartGlassIcon;
+                OpsisTaskbarDesigner.Save(profile);
+                RefreshBars();
+            }
+            catch (Exception ex)
+            {
+                RotatingLogger.Write("Start button appearance: " + ex.Message);
+            }
+        };
+        menu.Opening += (_, _) => glassStart.Checked = _visual.StartGlassIcon;
+        menu.Items.Add(glassStart);
         menu.Items.Add(MainWindow.StudioText("DeskStrip settings", "Ρυθμίσεις DeskStrip"), null, (_, _) => TrayApplicationContext.OpenPage?.Invoke("DeskStrip"));
         menu.Items.Add(MainWindow.StudioText("Open Windows notification area", "Περιοχή ειδοποιήσεων Windows"), null, (_, _) =>
         {
@@ -153,7 +194,8 @@ internal sealed class ReplacementTaskbar : Form
         Disposed += (_, _) => { _pulse.Stop(); _pulse.Dispose(); menu.Dispose(); };
         _pulse.Tick += (_, _) =>
         {
-            if (_activeItem == null || _activeItem.IsDisposed || !Visible) return;
+            if (!CanPulse) { SyncPulse(); return; }
+            if (_activeItem == null) return;
             _pulseBright = !_pulseBright;
             _activeItem.FlatAppearance.BorderSize = _pulseBright ? 2 : 1;
             _activeItem.FlatAppearance.BorderColor = _pulseBright
@@ -161,7 +203,7 @@ internal sealed class ReplacementTaskbar : Form
         };
         VisibleChanged += (_, _) =>
         {
-            _pulse.Enabled = Visible && _visual.ActiveButtonAnimation && _activeItem != null;
+            SyncPulse();
         };
         _root.Controls.AddRange([_apps, _clock, _taskView, _start]);
         Controls.Add(_root);
@@ -174,8 +216,11 @@ internal sealed class ReplacementTaskbar : Form
         // These are Opsis-owned visuals; native Windows taskbar remains unchanged.
         try { _visual = OpsisTaskbarDesigner.Read(); }
         catch (Exception e) { RotatingLogger.Write("Taskbar visual profile: " + e.Message); _visual = OpsisTaskbarDesigner.Default; }
-        BackColor = UiTheme.NavBackground;
-        Opacity = _visual.Style == "Glass" ? _visual.OpacityPercent / 100.0 : 1.0;
+        BackColor = SystemInformation.HighContrast ? SystemColors.Window : UiTheme.NavBackground;
+        // Opacity on a WinForms top-level window also dims the text. Keep the
+        // Signature palette legible; legacy Glass retains its explicit opacity setting.
+        Opacity = !SignatureLook && !SystemInformation.HighContrast && _visual.Style == "Glass" ? _visual.OpacityPercent / 100.0 : 1.0;
+        _start.Text = ShowGlassMark ? "" : "Opsis";
         _start.BackColor = UiTheme.Surface;
         _start.ForeColor = UiTheme.TextPrimary;
         _clock.Text = DateTime.Now.ToString(vertical ? "HH:mm" : "ddd  HH:mm");
@@ -183,15 +228,16 @@ internal sealed class ReplacementTaskbar : Form
         _clock.BackColor = UiTheme.Surface;
         _taskView.ForeColor = UiTheme.TextPrimary;
         _taskView.BackColor = UiTheme.Surface;
-        string key = $"{vertical}|{active}|{_visual.Style}|{_visual.Alignment}|{_visual.ButtonWidth}|{_visual.ButtonGap}|{_visual.ShowTaskView}|{_visual.ShowClock}|{_visual.ActiveButtonAnimation}|{_visual.AnimationIntervalMs}|{UiTheme.TextPrimary.ToArgb()}|{UiTheme.Surface.ToArgb()}|" +
+        foreach (var fixedButton in new[] { _start, _taskView, _clock }) StyleButton(fixedButton, false);
+        string key = $"{vertical}|{active}|{SignatureLook}|{SystemInformation.HighContrast}|{DeviceDpi}|{Width}|{Height}|{_visual.Style}|{_visual.Alignment}|{_visual.ButtonWidth}|{_visual.ButtonGap}|{_visual.ShowTaskView}|{_visual.ShowClock}|{_visual.StartGlassIcon}|{_visual.ActiveButtonAnimation}|{_visual.AnimationIntervalMs}|{UiTheme.TextPrimary.ToArgb()}|{UiTheme.Surface.ToArgb()}|" +
             string.Join('|', pins) + "|" + string.Join('|', list.Select(window => $"{window.Handle}:{window.Title}"));
         if (_content == key)
         {
-            _pulse.Interval = _visual.AnimationIntervalMs;
-            _pulse.Enabled = _visual.ActiveButtonAnimation && Visible && _activeItem != null;
+            SyncPulse();
             return;
         }
         _content = key;
+        _start.Invalidate();
         _vertical = vertical;
         _start.Dock = _taskView.Dock = vertical ? DockStyle.Top : DockStyle.Left;
         _clock.Dock = vertical ? DockStyle.Bottom : DockStyle.Right;
@@ -202,7 +248,6 @@ internal sealed class ReplacementTaskbar : Form
         _start.Size = new Size(_visual.Style == "Compact" ? 60 : 66, _visual.Style == "Compact" ? 32 : 38);
         _taskView.Size = new Size(_visual.Style == "Compact" ? 35 : 42, _visual.Style == "Compact" ? 32 : 36);
         _clock.Size = new Size(104, _visual.Style == "Compact" ? 35 : 42);
-        foreach (var fixedButton in new[] { _start, _taskView, _clock }) fixedButton.FlatStyle = FlatStyle.Flat;
         _apps.FlowDirection = vertical ? FlowDirection.TopDown : FlowDirection.LeftToRight;
         _apps.SuspendLayout();
         try
@@ -234,8 +279,7 @@ internal sealed class ReplacementTaskbar : Form
         finally
         {
             _apps.ResumeLayout();
-            _pulse.Interval = _visual.AnimationIntervalMs;
-            _pulse.Enabled = _visual.ActiveButtonAnimation && Visible && _activeItem != null;
+            SyncPulse();
         }
     }
 
@@ -246,10 +290,22 @@ internal sealed class ReplacementTaskbar : Form
             Height = OpsisTaskbarDesigner.ButtonHeight(_visual, _vertical, Height),
             Margin = new Padding(_visual.ButtonGap), FlatStyle = FlatStyle.Flat, Cursor = Cursors.Hand,
             BackColor = active ? UiTheme.SurfaceHover : UiTheme.Surface, ForeColor = active ? UiTheme.AccentCyan : UiTheme.TextPrimary };
-        item.FlatAppearance.BorderSize = active ? 1 : 0;
+        StyleButton(item, active);
         if (active) _activeItem = item;
         item.Click += (_, _) => click();
         _apps.Controls.Add(item);
+    }
+
+    private void StyleButton(Button button, bool active)
+    {
+        button.FlatStyle = FlatStyle.Flat;
+        button.UseVisualStyleBackColor = false;
+        bool contrast = SystemInformation.HighContrast;
+        button.BackColor = contrast ? (active ? SystemColors.Highlight : SystemColors.Control) : active ? UiTheme.SurfaceHover : UiTheme.Surface;
+        button.ForeColor = contrast ? (active ? SystemColors.HighlightText : SystemColors.ControlText) : active ? UiTheme.AccentCyan : UiTheme.TextPrimary;
+        button.FlatAppearance.BorderSize = active || SignatureLook ? 1 : 0;
+        button.FlatAppearance.BorderColor = contrast ? SystemColors.WindowText : active ? UiTheme.AccentCyan : UiTheme.Border;
+        button.FlatAppearance.MouseOverBackColor = contrast ? SystemColors.Control : UiTheme.SurfaceHover;
     }
 
     private static Rectangle[] NativeTaskbars()

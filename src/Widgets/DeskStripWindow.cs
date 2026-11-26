@@ -90,7 +90,13 @@ namespace MotionDesk.Widgets
         private bool Low => PerformanceProfile.ForFeature(PerfFeature.DeskStrip).Tier == HardwareTier.Low;
         private Screen DockScreen => Screen.AllScreens.FirstOrDefault(screen => screen.DeviceName == (_screenOverride ?? _s.Monitor))
             ?? Screen.PrimaryScreen ?? Screen.AllScreens[0];
-        private bool WantsGpu => !Low && DesktopMaterials.Get(DesktopSurface.DeskStrip).Mode != "Solid" && GlassService.Manager != null;
+        private bool WantsGpu => !Low && DesktopMaterials.Get(DesktopSurface.DeskStrip).Mode != "Solid" &&
+#if SIGNATURE_COMPOSITION_PREVIEW
+            GlassService.Enabled;
+        private GlassPaneBinder? _signaturePane;
+#else
+            GlassService.Manager != null;
+#endif
         private int MaterialRadius => DesktopMaterials.Get(DesktopSurface.DeskStrip) is { UsesCustom: true } style ? style.Radius : 20;
         private bool Vertical => _s.Position is DockPosition.Left or DockPosition.Right;
         private double Cell => _s.IconSize * 1.32;
@@ -100,6 +106,8 @@ namespace MotionDesk.Widgets
         // 2.6.0 GPU glass: when on, this window is a LAYERED per-pixel-alpha window that only draws icons / dots (transparent background); the glass itself is a pane of
         // Opsis.Glass directly below it (real transparency, live refraction of what is behind). When off or unavailable everything is as before (DWM blur).
         private bool _wantGpu;
+        private Action? _glassPolicyHandler;
+        private int _policyRefreshQueued;
         private int _glassPane = -1;
         private LayeredSurface? _layered;
         private bool _layeredDirty;
@@ -143,6 +151,13 @@ namespace MotionDesk.Widgets
             Microsoft.Win32.SystemEvents.DisplaySettingsChanged += OnScreenChanged;
             Microsoft.Win32.SystemEvents.UserPreferenceChanged += OnScreenChanged;
             Action look = () => { if (IsHandleCreated && !IsDisposed) try { BeginInvoke(() => { RefreshMaterial(); ApplyLayout(animate: false); Invalidate(); }); } catch (Exception) { } };
+            _glassPolicyHandler = () =>
+            {
+                if (IsDisposed || Disposing || !IsHandleCreated || Interlocked.Exchange(ref _policyRefreshQueued, 1) != 0) return;
+                try { BeginInvoke(() => { Interlocked.Exchange(ref _policyRefreshQueued, 0); if (!IsDisposed && !Disposing) RefreshMaterial(); }); }
+                catch (InvalidOperationException) { Interlocked.Exchange(ref _policyRefreshQueued, 0); }
+            };
+            GlassService.PolicyChanged += _glassPolicyHandler;
             MotionDesk.UI.ThemeManager.Changed += look; MotionDesk.UI.ThemeManager.Repainted += look;                       // live: theme / tint / glass changes repaint the open strip
             FormClosed += (_, _) =>
             {
@@ -573,12 +588,43 @@ namespace MotionDesk.Widgets
             if (!_wantGpu || !IsHandleCreated || IsDisposed || !Visible || Width <= 0 || Height <= 0) return;
             _layeredDirty = false;
             _layered ??= new LayeredSurface();
-            using (var g = _layered.Begin(Width, Height)) PaintStrip(g, glass: true);
+            using (var g = _layered.Begin(Width, Height))
+            {
+#if SIGNATURE_COMPOSITION_PREVIEW
+                bool glass = _signaturePane?.HasPane == true;
+                if (!glass)
+                {
+                    // The layered foreground stays readable even when device creation
+                    // fails. Do not recreate its HWND on every failed GPU attempt.
+                    var material = DesktopMaterials.Get(DesktopSurface.DeskStrip);
+                    var fallback = SystemInformation.HighContrast ? SystemColors.Window :
+                        material.UsesCustom ? material.Color : Color.FromArgb(24, 26, 34);
+                    using var path = MotionDesk.UI.UiTheme.RoundedPath(new Rectangle(0, 0, Width - 1, Height - 1), MaterialRadius);
+                    using var brush = new SolidBrush(Color.FromArgb(255, fallback));
+                    g.FillPath(brush, path);
+                }
+                PaintStrip(g, glass);
+#else
+                PaintStrip(g, glass: true);
+#endif
+            }
             _layered.Present(Handle, Location);
         }
 
         private void SyncGlassPane()
         {
+#if SIGNATURE_COMPOSITION_PREVIEW
+            if (!_wantGpu || !IsHandleCreated || IsDisposed || Disposing) return;
+            if (_signaturePane == null)
+            {
+                _signaturePane = new GlassPaneBinder(this, 20, () => _wantGpu && WantsGpu, DesktopSurface.DeskStrip);
+                _signaturePane.PaneChanged += () =>
+                {
+                    if (!IsDisposed && !Disposing && IsHandleCreated) Invalidate();
+                };
+            }
+            _signaturePane.Sync();
+#else
             var m = MotionDesk.Services.GlassService.Manager;
             if (!_wantGpu || m == null || !IsHandleCreated) return;
             if (!Visible)
@@ -590,6 +636,7 @@ namespace MotionDesk.Widgets
             else { m.MovePane(_glassPane, Location); m.ResizePane(_glassPane, Size); }
             m.PlaceBelow(_glassPane, Handle);
             m.SetPaneVisible(_glassPane, true);
+#endif
         }
 
         protected override void OnLocationChanged(EventArgs e) { base.OnLocationChanged(e); if (_wantGpu) { SyncGlassPane(); _layeredDirty = true; } }
@@ -962,7 +1009,11 @@ namespace MotionDesk.Widgets
         {
             if (disposing)
             {
+                if (_glassPolicyHandler != null) { GlassService.PolicyChanged -= _glassPolicyHandler; _glassPolicyHandler = null; }
                 _layeredTimer.Stop(); _layeredTimer.Dispose(); _layered?.Dispose();
+#if SIGNATURE_COMPOSITION_PREVIEW
+                _signaturePane?.Dispose(); _signaturePane = null;
+#endif
                 if (_glassPane >= 0) { GlassService.ExistingManager?.RemovePane(_glassPane); _glassPane = -1; }
             }
             base.Dispose(disposing);
@@ -996,14 +1047,20 @@ namespace MotionDesk.Widgets
             var tint = material.UsesCustom ? material.Color : Color.FromArgb(32, 34, 40);
             int alpha = material.UsesCustom ? material.Opacity * 255 / 100 : 102;
             int abgr = (alpha << 24) | (tint.B << 16) | (tint.G << 8) | tint.R;
-            var accent = new ACCENT_POLICY { AccentState = Low || material.Mode == "Solid" ? 0 : 3, GradientColor = abgr };
-            BackColor = material.Mode == "Solid" || Low && material.UsesCustom ? tint : Color.FromArgb(20, 20, 20);
+            bool solid = Low || material.Mode == "Solid" || GlassService.Level == GlassLevel.Solid;
+            var accent = new ACCENT_POLICY { AccentState = solid ? 0 : 3, GradientColor = abgr };
+            BackColor = SystemInformation.HighContrast ? SystemColors.Window : solid && material.UsesCustom ? tint : Color.FromArgb(20, 20, 20);
             int size = Marshal.SizeOf(accent);
             IntPtr ptr = Marshal.AllocHGlobal(size);
-            Marshal.StructureToPtr(accent, ptr, false);
-            var data = new WINDOWCOMPOSITIONATTRIBDATA { Attribute = 19, SizeOfData = size, Data = ptr };
-            SetWindowCompositionAttribute(Handle, ref data);
-            Marshal.FreeHGlobal(ptr);
+            try
+            {
+                Marshal.StructureToPtr(accent, ptr, false);
+                var data = new WINDOWCOMPOSITIONATTRIBDATA { Attribute = 19, SizeOfData = size, Data = ptr };
+                SetWindowCompositionAttribute(Handle, ref data);
+            }
+            catch (DllNotFoundException) { }
+            catch (EntryPointNotFoundException) { }
+            finally { Marshal.FreeHGlobal(ptr); }
         }
 
         private DesktopMaterial? _shownMaterial;
@@ -1017,8 +1074,13 @@ namespace MotionDesk.Widgets
             {
                 if (_glassPane >= 0) GlassService.ExistingManager?.RemovePane(_glassPane);
                 _glassPane = -1;
+#if SIGNATURE_COMPOSITION_PREVIEW
+                _signaturePane?.Dispose(); _signaturePane = null;
+#endif
                 _wantGpu = gpu;
+                _shownMaterial = null;
                 _layeredDirty = false;
+                if (!gpu) { _layeredTimer.Stop(); _layered?.Dispose(); _layered = null; }
                 RecreateHandle();
                 UpdateRegion();
                 Invalidate();
@@ -1028,7 +1090,9 @@ namespace MotionDesk.Widgets
             if (_wantGpu)
             {
                 SyncGlassPane();
+#if !SIGNATURE_COMPOSITION_PREVIEW
                 if (_glassPane >= 0) GlassService.Manager?.SetStyle(_glassPane, GlassService.Style(20, DesktopSurface.DeskStrip));
+#endif
             }
             else { ApplyBlur(); UpdateRegion(); }
             Invalidate();

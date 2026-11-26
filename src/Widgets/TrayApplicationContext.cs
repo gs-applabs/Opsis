@@ -345,8 +345,24 @@ namespace MotionDesk.Widgets
                 ShowInTaskbar = false, ControlBox = false,
                 BackColor = UiTheme.PageBackground
             };
+            var brand = new Panel { Dock = DockStyle.Top, Height = 112, BackColor = UiTheme.Surface };
+            brand.Paint += (_, e) =>
+            {
+                int iconSize = Math.Min(brand.Height - 20, brand.Width / 4);
+                if (iconSize < 16) return;
+                MotionDesk.UI.OpsisBrandMark.Draw(e.Graphics, new RectangleF(20, 10, iconSize, iconSize));
+                using var title = new Font("Segoe UI", 24, FontStyle.Bold);
+                using var sub = new Font("Segoe UI", 10);
+                var left = 30 + iconSize;
+                TextRenderer.DrawText(e.Graphics, "OPSIS", title, new Rectangle(left, 14, Math.Max(1, brand.Width-left-12), 42),
+                    UiTheme.TextPrimary, TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis);
+                TextRenderer.DrawText(e.Graphics, "Desktop Customization  •  " + AppVersion.Label, sub,
+                    new Rectangle(left, 58, Math.Max(1, brand.Width-left-12), 32), UiTheme.TextSecondary,
+                    TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis);
+            };
             form.Controls.Add(new Label { Dock = DockStyle.Fill, Padding = new Padding(18),
                 Text = LocalizationManager.T("Welcome.Body"), Font = UiTheme.FontBody, ForeColor = UiTheme.TextPrimary });
+            form.Controls.Add(brand);
             return form;
         }
 
