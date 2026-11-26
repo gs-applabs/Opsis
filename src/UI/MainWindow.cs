@@ -2530,13 +2530,13 @@ namespace MotionDesk.UI
 
         // Το Wallpaper Studio αποδίδει τα βίντεο μέσα σε WebView2 (Chromium <video>), το οποίο ΔΕΝ
         // περιλαμβάνει decoder για τον κλασικό WMV3/VC-1 codec (μόνο H.264/VP8/VP9/AV1/Theora).
-        // Αντί για απλή προειδοποίηση, τα .wmv μετατρέπονται πλέον ΑΥΤΟΜΑΤΑ σε .mp4 μέσω FFmpeg
+        // Αντί για απλή προειδοποίηση, τα .wmv μετατρέπονται πλέον ΑΥΤΟΜΑΤΑ σε .webm μέσω FFmpeg
         // (WmvConversionService) πριν προστεθούν στη λίστα — βλ. αναλυτικό σχόλιο εκεί για το
         // γιατί επιλέχθηκε FFmpeg αντί για COM/ActiveX εναλλακτικές.
         private static async Task AddWallpaperVideosAsync(string[] fileNames, Action? onCompleted)
         {
             // Αρχεία .zip/.7z εξάγονται πρώτα — τα βίντεο που βρίσκονται μέσα τους μπαίνουν στην
-            // ίδια ροή (ίδιος έλεγχος .wmv->mp4 παρακάτω) σαν να τα είχε επιλέξει ένα-ένα ο
+            // ίδια ροή (ίδιος έλεγχος .wmv->webm παρακάτω) σαν να τα είχε επιλέξει ένα-ένα ο
             // χρήστης. Ένα .7z χωρίς εγκατεστημένο 7-Zip στο σύστημα παραλείπεται σιωπηλά εδώ,
             // με προειδοποίηση+σύνδεσμο λήψης μετά την επεξεργασία των υπολοίπων.
             var archiveFiles = fileNames.Where(ArchivePlaylistService.IsArchive).ToArray();
@@ -2577,8 +2577,8 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                 {
                     foreach (var wmv in wmvFiles)
                     {
-                        string? mp4 = await WmvConversionService.ConvertToMp4Async(wmv);
-                        if (mp4 != null) finalPaths.Add(mp4);
+                        string? webm = await WmvConversionService.ConvertToWebmAsync(wmv);
+                        if (webm != null) finalPaths.Add(webm);
                     }
                     if (finalPaths.Count == 0)
                         MessageBox.Show(LocalizationManager.T("Dialog.ConvertFailed"), LocalizationManager.T("Dialog.ConvertFailedTitle"), MessageBoxButtons.OK, MessageBoxIcon.Error);
@@ -2595,7 +2595,7 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                 // ΚΡΙΣΙΜΟ: το Enable() από μόνο του ΔΕΝ ζητάει motionDeskRefresh() από ένα ήδη
                 // ανοιχτό/ορατό wallpaper window (μόνο BringToFront/Show) — χωρίς αυτό, ένα ήδη
                 // τρέχον WebView2 σε λειτουργία Waves δεν μαθαίνει ποτέ ότι το Mode έγινε Video,
-                // το .mp4 μετατρέπεται επιτυχώς αλλά δεν παίζει ποτέ.
+                // το .webm μετατρέπεται επιτυχώς αλλά δεν παίζει ποτέ.
                 _ = WallpaperHostEngine.Instance.RefreshAllAsync();
             }
             onCompleted?.Invoke();

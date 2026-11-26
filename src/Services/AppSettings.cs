@@ -92,7 +92,7 @@ namespace MotionDesk.Services
         // διαγράφεται στην ΕΠΟΜΕΝΗ εκκίνηση, πριν φορτωθεί κανένα plugin (βλ. PluginHost.StartAll).
         public List<string> PendingPluginRemovals { get; set; } = new();
 
-        // Φάκελος όπου αποθηκεύονται τα μετατρεπόμενα .wmv->.mp4 (κενό = προεπιλογή στο AppData).
+        // Φάκελος όπου αποθηκεύονται τα μετατρεπόμενα .wmv->.webm (κενό = προεπιλογή Βίντεο/Opsis).
         public string? WmvConversionOutputDir { get; set; }
 
         // MD roadmap item: η οθόνη κλειδώματος/υποδοχής να μπορεί να γίνει ακριβές στιγμιότυπο του

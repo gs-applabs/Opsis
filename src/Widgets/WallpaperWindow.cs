@@ -1626,7 +1626,7 @@ namespace MotionDesk.Widgets
             if (!Directory.Exists(folder)) return 0;
 
             // Τα .wmv ΔΕΝ παίζουν στο WebView2 (δεν έχει decoder WMV3/VC-1) — πριν, ένας φάκελος με
-            // .wmv τα πρόσθετε ως έχουν και δεν έπαιζαν ποτέ. Τα μετατρέπουμε πρώτα σε .mp4 (FFmpeg) στο
+            // .wmv τα πρόσθετε ως έχουν και δεν έπαιζαν ποτέ. Τα μετατρέπουμε πρώτα σε .webm (FFmpeg) στο
             // παρασκήνιο, ακριβώς όπως η προσθήκη μεμονωμένων αρχείων.
             var allFiles = Directory.EnumerateFiles(folder, "*.*", WallpaperSettings.Load().IncludeSubfolders ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly)
                 .Where(f => WallpaperSettings.SupportedVideoExtensions.Contains(Path.GetExtension(f).ToLowerInvariant()))
@@ -1659,8 +1659,8 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Count);
             var converted = new List<string>();
             foreach (var wmv in wmvFiles)
             {
-                string? mp4 = await WmvConversionService.ConvertToMp4Async(wmv);
-                if (mp4 != null) converted.Add(mp4);
+                string? webm = await WmvConversionService.ConvertToWebmAsync(wmv);
+                if (webm != null) converted.Add(webm);
             }
             if (converted.Count == 0) return;
 

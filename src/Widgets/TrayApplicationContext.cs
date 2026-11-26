@@ -522,7 +522,7 @@ namespace MotionDesk.Widgets
                 _ = AddVideosAsync(dialog.FileNames);
         }
 
-        // Τα .wmv μετατρέπονται αυτόματα σε .mp4 μέσω FFmpeg (WmvConversionService) πριν
+        // Τα .wmv μετατρέπονται αυτόματα σε .webm μέσω FFmpeg (WmvConversionService) πριν
         // προστεθούν — ο ενσωματωμένος player (WebView2/Chromium) δεν έχει decoder για τον παλιό
         // codec WMV3/VC-1. Βλ. αναλυτικό σχόλιο στο WmvConversionService.
         private async Task AddVideosAsync(string[] fileNames)
@@ -540,8 +540,8 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                 {
                     foreach (var wmv in wmvFiles)
                     {
-                        string? mp4 = await WmvConversionService.ConvertToMp4Async(wmv);
-                        if (mp4 != null) finalPaths.Add(mp4);
+                        string? webm = await WmvConversionService.ConvertToWebmAsync(wmv);
+                        if (webm != null) finalPaths.Add(webm);
                     }
                 }
             }
