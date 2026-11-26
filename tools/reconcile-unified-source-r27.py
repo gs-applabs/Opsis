@@ -15,6 +15,8 @@ def textlike(b):
 resolved=[];pending=[]
 for row in report["conflicts"]:
     path=row["path"];p=ROOT/path
+    if path.startswith(".github/workflows/"):
+        pending.append({**row,"reason":"workflow edits require connector review and workflows permission"});continue
     if row["branch"]=="main-2.8-followup" and path in ("Version.props","Opsis.csproj","global.json"):
         pending.append({**row,"reason":"do not downgrade RC; manually port relevant changes"});continue
     try:
