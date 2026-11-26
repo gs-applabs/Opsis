@@ -11,6 +11,19 @@ namespace MotionDesk
         [STAThread]
         static void Main(string[] args)
         {
+            // Setup-only intro: run before the mutex, services, plugins and wallpaper engine.
+            if (args.Length == 2 && args[0] == "--installer-intro")
+            {
+                try
+                {
+                    ApplicationConfiguration.Initialize();
+                    using var intro = new UI.InstallerIntro(args[1]);
+                    Application.Run(intro);
+                }
+                catch { /* Intro failure must never block the installed application. */ }
+                return;
+            }
+
             if (args.Length == 0 && Services.ElevationGuard.RelaunchNotElevated()) return;      // an elevated Opsis cannot receive drops from Explorer (UIPI): start again with normal rights
             // Ξ•Ξ»Ξ¬Ο‡ΞΉΟƒΟ„ΞΏΟ‚ elevated "helper" branch β€” ΞΊΞ±ΞΌΞ―Ξ± ΞΈΟ…ΟΞ―Ξ΄Ξ± UI, ΞΌΟΞ½ΞΏ ΞΌΞ―Ξ± ΞµΞ³Ξ³ΟΞ±Ο†Ξ® HKLM ΞΊΞ±ΞΉ
             // Ξ­ΞΎΞΏΞ΄ΞΏΟ‚. Ξ•Ξ½ΞµΟΞ³ΞΏΟ€ΞΏΞΉΞµΞ―Ο„Ξ±ΞΉ ΞΞΞΞ ΟΟ„Ξ±Ξ½ Ο„ΞΏ ΞΊΟΟΞΉΞΏ (ΞΌΞ·-elevated) UI ΞΎΞµΞΊΞΉΞ½Ξ®ΟƒΞµΞΉ ΞΎΞ±Ξ½Ξ¬ Ο„Ξ·Ξ½ Ξ―Ξ΄ΞΉΞ±

@@ -12,6 +12,24 @@
 ; Release version is derived from the built EXE, not entered a second time.
 ; A source-only Inno compilation without `dotnet publish` must fail explicitly.
 #define MyAppVersion GetFileVersion(PublishDir + "\" + MyAppExeName)
+#if !FileExists(PublishDir + "\assets\intro\intro.webm")
+  #error Required OPSIS intro asset missing: intro.webm
+#endif
+#if !FileExists(PublishDir + "\assets\intro\index.html")
+  #error Required OPSIS intro asset missing: index.html
+#endif
+#if !FileExists(PublishDir + "\assets\intro\intro.css")
+  #error Required OPSIS intro asset missing: intro.css
+#endif
+#if !FileExists(PublishDir + "\assets\intro\intro.js")
+  #error Required OPSIS intro asset missing: intro.js
+#endif
+#if !FileExists(PublishDir + "\assets\intro\caption-plate.png")
+  #error Required OPSIS intro asset missing: caption-plate.png
+#endif
+#if !FileExists(PublishDir + "\assets\intro\poster-clean.png")
+  #error Required OPSIS intro asset missing: poster-clean.png
+#endif
 #include "installer\dependencies.iss"
 
 [Setup]
@@ -66,6 +84,20 @@ Name: "arabic"; MessagesFile: "compiler:Languages\Arabic.isl"; InfoBeforeFile: "
 Name: "hindi"; MessagesFile: "installer\Hindi.isl"; InfoBeforeFile: "installer\Info-en.txt"
 
 [CustomMessages]
+greek.PlayOpsisIntro=Αναπαραγωγή εισαγωγικού βίντεο OPSIS
+english.PlayOpsisIntro=Play the OPSIS introduction
+german.PlayOpsisIntro=OPSIS-Einführung abspielen
+french.PlayOpsisIntro=Lire la vidéo de présentation OPSIS
+spanish.PlayOpsisIntro=Reproducir la introducción de OPSIS
+korean.PlayOpsisIntro=OPSIS 소개 영상 재생
+chinese.PlayOpsisIntro=播放 OPSIS 介绍视频
+italian.PlayOpsisIntro=Riproduci il video introduttivo OPSIS
+russian.PlayOpsisIntro=Воспроизвести вступительное видео OPSIS
+japanese.PlayOpsisIntro=OPSIS 紹介動画を再生
+portuguese.PlayOpsisIntro=Reproduzir o vídeo de introdução do OPSIS
+turkish.PlayOpsisIntro=OPSIS tanıtım videosunu oynat
+arabic.PlayOpsisIntro=تشغيل الفيديو التعريفي لـ OPSIS
+hindi.PlayOpsisIntro=OPSIS परिचय वीडियो चलाएँ
 greek.UpdateDetected=Εντοπίστηκε ήδη εγκατεστημένη έκδοση %1 του {#MyAppName}.%n%nΘα ενημερωθεί στην έκδοση {#MyAppVersion}.
 english.UpdateDetected=An existing installation of {#MyAppName} version %1 was detected.%n%nIt will be updated to version {#MyAppVersion}.
 german.UpdateDetected=Eine vorhandene Installation von {#MyAppName} in Version %1 wurde erkannt.%n%nSie wird auf Version {#MyAppVersion} aktualisiert.
@@ -149,6 +181,7 @@ Filename: "{tmp}\OpsisNewsCrawler-Setup.exe"; Parameters: "/MODE=integrated /PLU
 #endif
 Filename: "{app}\{#MyAppExeName}"; Parameters: "--setup-desktop-menu on {language}"; Tasks: desktopmenu; Flags: runhidden waituntilterminated runasoriginaluser; Check: DotNetDesktop11Present
 Filename: "{app}\{#MyAppExeName}"; Parameters: "--setup-desktop-menu off {language}"; Tasks: not desktopmenu; Flags: runhidden waituntilterminated runasoriginaluser; Check: DotNetDesktop11Present
+Filename: "{app}\{#MyAppExeName}"; Parameters: "--installer-intro {language}"; Description: "{cm:PlayOpsisIntro}"; Flags: waituntilterminated postinstall skipifsilent runasoriginaluser; Check: DotNetDesktop11Present
 Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#MyAppName}}"; Flags: nowait postinstall skipifsilent runasoriginaluser; Check: DotNetDesktop11Present
 
 [Code]

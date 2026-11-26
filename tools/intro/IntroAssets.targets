@@ -1,0 +1,72 @@
+<Project>
+  <!-- Canonical approved WebM is stored in ordered binary parts due to the repository upload limit.
+       Reassemble into obj, never into tracked source, before normal build/publish.
+       No external tools, network or video transcoding are required. -->
+  <PropertyGroup>
+    <OpsisIntroMaster>$(MSBuildProjectDirectory)/obj/opsis-intro/intro.webm</OpsisIntroMaster>
+  </PropertyGroup>
+  <ItemGroup>
+    <None Include="$(OpsisIntroMaster)" Link="assets/intro/intro.webm" TargetPath="assets/intro/intro.webm"
+          CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+  <UsingTask TaskName="AssembleOpsisIntro" TaskFactory="RoslynCodeTaskFactory"
+             AssemblyFile="$(MSBuildToolsPath)/Microsoft.Build.Tasks.Core.dll">
+    <ParameterGroup>
+      <SourceDirectory ParameterType="System.String" Required="true" />
+      <OutputFile ParameterType="System.String" Required="true" />
+    </ParameterGroup>
+    <Task>
+      <Using Namespace="System" />
+      <Using Namespace="System.IO" />
+      <Using Namespace="System.Security.Cryptography" />
+      <Code Type="Fragment" Language="cs"><![CDATA[
+        const string expected = "398e8564ff27401011067a1f29bffa9c7ce134e6d30caf4b62ff2fd5f970daa6";
+        Func<string, string> digest = path => {
+          using (var stream = File.OpenRead(path))
+          using (var sha = SHA256.Create())
+            return BitConverter.ToString(sha.ComputeHash(stream)).Replace("-", "").ToLowerInvariant();
+        };
+        if (File.Exists(OutputFile) && digest(OutputFile) == expected)
+          return true;
+        Directory.CreateDirectory(Path.GetDirectoryName(OutputFile));
+        string temporary = OutputFile + "." + Guid.NewGuid().ToString("N") + ".tmp";
+        try
+        {
+          using (var output = File.Create(temporary))
+          {
+            for (int i = 0; i < 10; i++)
+            {
+              string part = Path.Combine(SourceDirectory, "intro." + i.ToString("D3") + ".part");
+              using (var input = File.OpenRead(part))
+              {
+                if (input.Length != (i == 9 ? 316840L : 375000L))
+                  throw new InvalidDataException("Incorrect OPSIS intro part length: " + part);
+                input.CopyTo(output);
+              }
+            }
+          }
+          if (digest(temporary) != expected)
+            throw new InvalidDataException("Approved OPSIS intro SHA-256 mismatch.");
+          // The destination is generated and may safely be replaced by the verified master.
+          if (File.Exists(OutputFile)) File.Replace(temporary, OutputFile, null);
+          else File.Move(temporary, OutputFile);
+          return true;
+        }
+        catch (Exception ex)
+        {
+          Log.LogErrorFromException(ex);
+          return false;
+        }
+        finally
+        {
+          if (File.Exists(temporary)) File.Delete(temporary);
+        }
+      ]]></Code>
+    </Task>
+  </UsingTask>
+  <Target Name="PrepareOpsisIntroMaster"
+          BeforeTargets="PrepareForBuild;GetCopyToOutputDirectoryItems;ComputeFilesToPublish"
+          Condition="'$(DesignTimeBuild)' != 'true'">
+    <AssembleOpsisIntro SourceDirectory="$(MSBuildThisFileDirectory)master" OutputFile="$(OpsisIntroMaster)" />
+  </Target>
+</Project>

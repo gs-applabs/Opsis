@@ -43,4 +43,5 @@
     <EmbeddedResource Include="src/Music/suite-visualizers.js" LogicalName="OpsisMusicOverlay.suite-visualizers.js" />
     <EmbeddedResource Include="src/Music/wallpaper-music.js" LogicalName="OpsisMusicOverlay.wallpaper-music.js" />
   </ItemGroup>
+  <Import Project="tools/intro/IntroAssets.targets" />
 </Project>
