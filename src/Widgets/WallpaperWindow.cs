@@ -267,7 +267,7 @@ namespace MotionDesk.Widgets
                 cityScenes = WallpaperSettings.IsWeatherMode(effectiveMode) ? LandmarkCatalog.Scenes.Select(city => new
                 {
                     id = city.Id, name = city.Name, nameEn = city.NameEn, lat = city.Lat, lon = city.Lon,
-                    terrain = city.Terrain, motif = city.Motif, file = city.File, lights = city.Lights, manualOnly = city.ManualOnly
+                    terrain = city.Terrain, motif = city.Motif, file = city.File, lights = city.Lights, manualOnly = city.ManualOnly, skyMask = city.SkyMask
                 }) : null,
                 weatherLat = settings.WeatherLat,
                 weatherLon = settings.WeatherLon,

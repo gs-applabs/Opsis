@@ -26,3 +26,42 @@ Legacy add-on handoff: 3 reference files. Its legacy code is documentation only;
 ## Outstanding gates
 
 Reconcile every overlapping code file and unrelated-history feature, compare against latest local integrated R20, verify original 110-wallpaper package, complete real-photo mask/geography/rights and remaining London/Podgorica, include Dublin R16 and confirm Ancient Rome. Re-run full Windows build, installer, UI, WebView2, plugin compatibility, security and performance. No final installer until these gates are met. Main is untouched.
+
+## Automated three-way result
+
+Cleanly reconciled: 14. Unresolved: 34.
+
+- desktop-materials: .github/workflows/windows-audit.yml — workflow edits require connector review and workflows permission
+- europe-R26: Opsis.csproj — Git three-way conflict
+- europe-R26: src/Services/OpsisTaskbarDesigner.cs — Git three-way conflict
+- europe-R26: src/UI/MainWindow.WallpaperGallery.cs — Git three-way conflict
+- europe-R26: src/UI/MainWindow.cs — Git three-way conflict
+- europe-R26: src/UI/ThemeManager.cs — Git three-way conflict
+- europe-R26: src/Widgets/DeskFlipEngine.cs — Git three-way conflict
+- europe-R26: src/Widgets/DesktopLauncher.cs — Git three-way conflict
+- europe-R26: src/Widgets/ReplacementTaskbar.cs — Git three-way conflict
+- europe-R26: src/Widgets/wallpaper/index.html — Git three-way conflict
+- europe-R26: src/Widgets/wallpaper/weather.js — Git three-way conflict
+- europe-R26: tests/Opsis.ExperienceSmoke/Program.cs — Git three-way conflict
+- europe-R26: src/Services/WallpaperGalleryCatalog.cs — add/add or missing common base
+- crawler-bridge: .github/workflows/plugin-compatibility.yml — workflow edits require connector review and workflows permission
+- crawler-bridge: Opsis.csproj — Git three-way conflict
+- main-2.8-followup: .github/workflows/windows-audit.yml — workflow edits require connector review and workflows permission
+- main-2.8-followup: Opsis.csproj — do not downgrade RC; manually port relevant changes
+- main-2.8-followup: Version.props — do not downgrade RC; manually port relevant changes
+- main-2.8-followup: locales/ar-SA.json — Git three-way conflict
+- main-2.8-followup: locales/de-DE.json — Git three-way conflict
+- main-2.8-followup: locales/el-GR.json — Git three-way conflict
+- main-2.8-followup: locales/en-US.json — Git three-way conflict
+- main-2.8-followup: locales/es-ES.json — Git three-way conflict
+- main-2.8-followup: locales/fr-FR.json — Git three-way conflict
+- main-2.8-followup: locales/hi-IN.json — Git three-way conflict
+- main-2.8-followup: locales/it-IT.json — Git three-way conflict
+- main-2.8-followup: locales/ja-JP.json — Git three-way conflict
+- main-2.8-followup: locales/ko-KR.json — Git three-way conflict
+- main-2.8-followup: locales/pt-PT.json — Git three-way conflict
+- main-2.8-followup: locales/ru-RU.json — Git three-way conflict
+- main-2.8-followup: locales/tr-TR.json — Git three-way conflict
+- main-2.8-followup: locales/zh-CN.json — Git three-way conflict
+- main-2.8-followup: src/Widgets/wallpaper/index.html — Git three-way conflict
+- main-2.8-followup: tests/WeatherInfoTone.test.cjs — add/add or missing common base

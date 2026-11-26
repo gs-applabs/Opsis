@@ -7,6 +7,7 @@ using System.Reflection;
 using System.Runtime.Loader;
 using Microsoft.Win32;
 using MotionDesk.UI;
+using MotionDesk.Widgets;
 using OpsisNewsCrawler.Plugin.Abstractions;
 
 namespace MotionDesk.Services
@@ -345,9 +346,68 @@ namespace MotionDesk.Services
 
         private void PushHostSettings(IOpsisNewsCrawlerPlugin plugin)
         {
-            if (plugin is not IPluginHostSettingsAware aware) return;
-            try { aware.SetHostSettings(BuildHostSettings(plugin)); }
-            catch (Exception ex) { Log($"Plugin '{plugin.Name}' SetHostSettings failed: {ex.Message}"); }
+            if (plugin is IPluginHostSettingsAware aware)
+            {
+                try { aware.SetHostSettings(BuildHostSettings(plugin)); }
+                catch (Exception ex) { Log($"Plugin '{plugin.Name}' SetHostSettings failed: {ex.Message}"); }
+            }
+            // Optional Crawler-specific P0 bridge. A separate, exact ABI 1.0.0.0
+            // DLL is not needed, so Chronikologio and other plugins are unchanged.
+            PushCrawlerP0Environment(plugin);
+        }
+
+        /// <summary>Notify only active Crawler plugins when DeskStrip ownership changes.
+        /// No polling, registry modifications, or callbacks to unrelated plugins.</summary>
+        public void NotifyCrawlerP0EnvironmentChanged()
+        {
+            foreach (var entry in Snap().Where(p => p.Started))
+                PushCrawlerP0Environment(entry.Plugin);
+        }
+
+        private static readonly Func<double, double, System.Threading.Tasks.Task<string>> SharedCrawlerWeather =
+            (latitude, longitude) => WeatherService.GetWallpaperWeatherJsonAsync(latitude, longitude);
+
+        /// <summary>
+        /// Integrates only the known Crawler plugin with Opsis' existing cached
+        /// WeatherHub and shell guard. This is opt-in duck typing; an older
+        /// Crawler simply lacks the method and continues to run unchanged.
+        /// No location settings or credentials are passed: the Crawler asks
+        /// for weather only for cities already in its own user configuration.
+        /// </summary>
+        private static void PushCrawlerP0Environment(IOpsisNewsCrawlerPlugin plugin)
+        {
+            if (!string.Equals(plugin.Id, "giorstergiopoulos.opsisnewscrawler",
+                    StringComparison.OrdinalIgnoreCase)) return;
+            try
+            {
+                var signature = new[] {
+                    typeof(bool), typeof(bool),
+                    typeof(Func<double, double, System.Threading.Tasks.Task<string>>)
+                };
+                var setter = plugin.GetType().GetMethod("SetOpsisP0Environment",
+                    BindingFlags.Instance | BindingFlags.Public,
+                    binder: null, types: signature, modifiers: null);
+                if (setter is null) return; // ABI-compatible older Crawler
+                var safeMode = SafeModeService.IsSafeMode;
+                // DeskStrip occupies screen edge. Yield control rather than
+                // installing another Windows AppBar or fighting its z-order.
+                bool shellHold = safeMode;
+                try { shellHold |= DeskStripHostEngine.Instance.GetSettings().StartEnabled; }
+                catch (Exception) { shellHold = true; }
+                // P3/P5 hosts may provide the extra post-Windows-Update hold.
+                // It is deliberately optional for the stable 2.8.0 host.
+                var guard = typeof(PluginHost).Assembly.GetType(
+                    "MotionDesk.Services.WindowsUpdateGuard");
+                var prop = guard?.GetProperty("RequiresReview",
+                    BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic);
+                if (prop?.GetValue(null) is true) shellHold = true;
+                setter.Invoke(plugin, new object[] { safeMode, shellHold, SharedCrawlerWeather });
+            }
+            catch (Exception ex)
+            {
+                Log($"Crawler P0 optional integration unavailable: {ex.GetBaseException().Message}");
+                // Never prevent other plugins or the Opsis tray from starting.
+            }
         }
 
         // Handoff Φάση 6 (ελάχιστο): προαιρετική ικανότητα — καλείται ΜΟΝΟ αν το plugin υλοποιεί το
@@ -549,7 +609,7 @@ namespace MotionDesk.Services
                     var identity = AssemblyName.GetAssemblyName(dll);
                     if (identity.Version != new Version(1, 0, 0, 0))
                     {
-                        Log($"Plugin '{fileName}' skipped: ABI {identity.Version} (2.8.0.2510 requires 1.0.0.0). Update this plugin before enabling it.");
+                        Log($"Plugin '{fileName}' skipped: ABI {identity.Version} (" + AppVersion.Short + " requires 1.0.0.0). Update this plugin before enabling it.");
                         continue;
                     }
                 }

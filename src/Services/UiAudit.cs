@@ -230,6 +230,23 @@ namespace MotionDesk.Services
             using var stopGuard = new CancellationTokenSource();
             var dialogGuard = StartDialogGuard(dialogProblems, () => current, stopGuard.Token);
             using var win = new MotionDesk.UI.MainWindow { StartPosition = FormStartPosition.Manual, Location = new Point(40, 40) };
+            MotionDesk.UI.SecondaryWindowStyler.Install();
+            // OPSIS_AUDIT_DIALOG=1: a plain WinForms dialog with the standard controls must come out in the Opsis design (dark title, skin colours, flat controls)
+            if (Environment.GetEnvironmentVariable("OPSIS_AUDIT_DIALOG") == "1")
+            {
+                try
+                {
+                    using var dlg = new Form { Text = "Sample dialog", Size = new Size(420, 300), StartPosition = FormStartPosition.Manual, Location = new Point(200, 200) };
+                    var combo = new ComboBox { Left = 16, Top = 16, Width = 200, DropDownStyle = ComboBoxStyle.DropDownList }; combo.Items.AddRange(new object[] { "One", "Two" }); combo.SelectedIndex = 0;
+                    dlg.Controls.AddRange(new Control[] { new Label { Text = "A label", Left = 16, Top = 52 }, combo, new TextBox { Left = 16, Top = 80, Width = 200, Text = "text" },
+                        new CheckBox { Text = "A check box", Left = 16, Top = 112, Checked = true }, new ListBox { Left = 230, Top = 16, Width = 150, Height = 90 }, new Button { Text = "Button", Left = 16, Top = 150 } });
+                    dlg.Show(); Pump(1200);
+                    using var db = new Bitmap(dlg.Width, dlg.Height); dlg.DrawToBitmap(db, new Rectangle(0, 0, dlg.Width, dlg.Height));
+                    db.Save(Path.Combine(folder, "sample-dialog.png"), System.Drawing.Imaging.ImageFormat.Png);
+                    dlg.Close();
+                }
+                catch (Exception ex) { problems.Add("sample dialog: " + ex.Message); }
+            }
             win.Show();
             int requestedWidth = int.TryParse(Environment.GetEnvironmentVariable("OPSIS_AUDIT_WIDTH"), out var width) ? width : 0;
             if (requestedWidth > 0)
