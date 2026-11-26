@@ -376,10 +376,11 @@ namespace MotionDesk.UI
             // αποτέλεσμα το _nav να ξεκινάει επικαλυπτόμενο με το brand και να κρύβει εντελώς
             // το πρώτο κουμπί πλοήγησης (Dashboard). Οι σταθερές δύο σειρές ενός
             // TableLayoutPanel δεν έχουν αυτή την ασάφεια.
-            _sidebarLayout = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 3 };
+            _sidebarLayout = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 4 };
             EnableDoubleBuffer(_sidebarLayout);
             _sidebarLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 84));
             _sidebarLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+            _sidebarLayout.RowStyles.Add(new RowStyle(SizeType.AutoSize));          // live progress card: no height while nothing runs
             _sidebarLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 40));
             _sidebarLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
             _sidebar.Controls.Add(_sidebarLayout);
@@ -439,7 +440,9 @@ namespace MotionDesk.UI
 
             _collapseToggle = new SidebarToggleButton();
             _collapseToggle.Click += (_, _) => ToggleSidebarCollapsed();
-            _sidebarLayout.Controls.Add(_collapseToggle, 0, 2);
+            _sidebarTask = new SidebarTaskPanel();
+            _sidebarLayout.Controls.Add(_sidebarTask, 0, 2);
+            _sidebarLayout.Controls.Add(_collapseToggle, 0, 3);
 
             _content = new Panel { Dock = DockStyle.Fill, Padding = new Padding(32, 24, 32, 24) };
             EnableDoubleBuffer(_content);
@@ -4884,6 +4887,8 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                     panel.Controls.Add(row);
                 }
             }
+            // optional add-on packages (wallpapers 1.3.0): download + install from the releases of this repository, live progress in the sidebar
+            BuildWallpaperAddOnCard(panel, addHeader: pluginInfos.Count == 0);
 
             // ---- updates: self-update βάσει GearWin (ζητήθηκε ρητά· ήδη portαρισμένο/ζωντανά
             // δοκιμασμένο στο OpsisNewsCrawler) — κατεβάζει+εγκαθιστά ΜΟΝΟ μετά από κλικ του χρήστη

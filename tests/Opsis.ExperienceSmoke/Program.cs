@@ -348,6 +348,43 @@ try
         ExplorerSessionStore.Capture(() => { sta = System.Threading.Thread.CurrentThread.GetApartmentState() == System.Threading.ApartmentState.STA; return Array.Empty<string>(); }, 3000);
         Check(sta, "Explorer capture runs on an STA worker");
     }
+    {
+        // wallpapers add-on package: state of the installed pack, and only the pinned release asset of this repository is trusted
+        var addonTestRoot = Path.Combine(Path.GetTempPath(), "opsis-addon-" + Guid.NewGuid().ToString("N"));
+        var packRoot = Path.Combine(addonTestRoot, "wallpapers", "packs", "opsis-100");
+        try
+        {
+            Directory.CreateDirectory(addonTestRoot);
+            Check(WallpaperAddOnService.ReadStatus(addonTestRoot).State == WallpaperAddOnService.PackState.NotInstalled, "add-on: no pack folder means not installed");
+            for (int i = 0; i < 40; i++) Directory.CreateDirectory(Path.Combine(packRoot, "old-" + i));
+            var partial = WallpaperAddOnService.ReadStatus(addonTestRoot);
+            Check(partial.State == WallpaperAddOnService.PackState.UpdateAvailable && partial.InstalledCount == 40, "add-on: an older pack is reported as update available");
+            for (int i = 40; i < WallpaperAddOnService.WallpaperCount; i++) Directory.CreateDirectory(Path.Combine(packRoot, "old-" + i));
+            Check(WallpaperAddOnService.ReadStatus(addonTestRoot).State == WallpaperAddOnService.PackState.UpToDate, "add-on: the full pack is up to date");
+        }
+        finally { try { Directory.Delete(addonTestRoot, true); } catch (IOException) { } }
+        Check(WallpaperAddOnService.IsTrustedUrl(WallpaperAddOnService.DownloadUrl) &&
+              !WallpaperAddOnService.IsTrustedUrl(WallpaperAddOnService.DownloadUrl.Replace("https://", "http://")) &&
+              !WallpaperAddOnService.IsTrustedUrl("https://evil.example/OpsisWallpapersAddOnSetup-1.3.0.exe") &&
+              !WallpaperAddOnService.IsTrustedUrl(WallpaperAddOnService.DownloadUrl + "?x=1"),
+            "add-on: only the pinned https release asset of this repository is trusted");
+        Check(WallpaperAddOnService.ExpectedSha256.Length == 64 && WallpaperAddOnService.ExpectedSha256.All(Uri.IsHexDigit), "add-on: a SHA-256 is pinned");
+        // optional (OPSIS_TEST_ADDON_DOWNLOAD=1): the real download of the published package through the service, into a temp folder
+        if (Environment.GetEnvironmentVariable("OPSIS_TEST_ADDON_DOWNLOAD") == "1")
+        {
+            var downloadTemp = Path.Combine(Path.GetTempPath(), "opsis-addon-dl-" + Guid.NewGuid().ToString("N"));
+            WallpaperAddOnService.DownloadDirOverride = downloadTemp;
+            try
+            {
+                int reports = 0;
+                var clockDl = System.Diagnostics.Stopwatch.StartNew();
+                var got = WallpaperAddOnService.DownloadAsync(new Progress<double>(_ => reports++), CancellationToken.None).GetAwaiter().GetResult();
+                Check(File.Exists(got) && new FileInfo(got).Length == WallpaperAddOnService.ExpectedBytes, "add-on: real download has the pinned size (" + clockDl.ElapsedMilliseconds / 1000 + " s)");
+                Check(!File.Exists(got + ".part"), "add-on: no partial file is left");
+            }
+            finally { WallpaperAddOnService.DownloadDirOverride = null; try { Directory.Delete(downloadTemp, true); } catch (IOException) { } }
+        }
+    }
     var localFolder = Path.GetTempPath().TrimEnd(Path.DirectorySeparatorChar);
     Check(ExplorerSessionStore.IsLocalFolderPath(localFolder) &&
         !ExplorerSessionStore.IsLocalFolderPath(@"\\server\share") &&
