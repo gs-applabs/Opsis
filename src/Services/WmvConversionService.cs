@@ -7,8 +7,8 @@ using System.Threading.Tasks;
 
 namespace MotionDesk.Services
 {
-    // Πραγματική λύση για το .wmv (όχι μόνο προειδοποίηση): μετατρέπει αυτόματα σε .mp4 (H.264/
-    // AAC) μέσω FFmpeg πριν προστεθεί στο Wallpaper Studio, αφού το ενσωματωμένο player (WebView2/
+    // Πραγματική λύση για το .wmv (όχι μόνο προειδοποίηση): μετατρέπει αυτόματα σε .webm (VP9/
+    // Opus) μέσω FFmpeg πριν προστεθεί στο Wallpaper Studio, αφού το ενσωματωμένο player (WebView2/
     // Chromium) δεν έχει decoder για τον παλιό codec WMV3/VC-1. Επιλέχθηκε FFmpeg (εξωτερική
     // διεργασία, όχι COM) αντί για το legacy Windows Media Player ActiveX control ή για χειροποίητο
     // Media Foundation COM interop — και τα δύο θα απαιτούσαν εύθραυστο, μη-επαληθεύσιμο κώδικα
@@ -17,11 +17,22 @@ namespace MotionDesk.Services
     // με σταθερό, καλά τεκμηριωμένο command-line interface.
     public static class WmvConversionService
     {
-        private static string DefaultCacheDir => Path.Combine(AppPaths.AppDataFolder, "converted");
+        private static string DefaultCacheDir
+        {
+            get
+            {
+                string videos = Environment.GetFolderPath(Environment.SpecialFolder.MyVideos);
+                if (string.IsNullOrWhiteSpace(videos))
+                    videos = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Videos");
+                return Path.Combine(videos, "Opsis");
+            }
+        }
+
+        private static readonly System.Threading.SemaphoreSlim EncodeGate = new(1, 1);
 
         // Ο χρήστης μπορεί να επιλέξει δικό του φάκελο αποθήκευσης για ΟΛΑ τα μετατρεπόμενα
         // βίντεο (ζητήθηκε ρητά "να έχει επιλογή ο χρήστης το path αποθήκευσης") — προεπιλογή
-        // παραμένει ο φάκελος της εφαρμογής στο AppData.
+        // είναι ο ειδικός φάκελος Βίντεο των Windows, υποφάκελος Opsis.
         public static string CacheDir
         {
             get
@@ -113,22 +124,35 @@ namespace MotionDesk.Services
             catch { }
         }
 
-        // Μετατρέπει ένα .wmv σε .mp4, με cache βάσει μεγέθους+ημερομηνίας αρχείου ώστε να μην
+        // Μετατρέπει ένα .wmv σε .webm, με cache βάσει μεγέθους+ημερομηνίας αρχείου ώστε να μην
         // ξαναμετατρέπεται το ίδιο αρχείο σε κάθε επανεκκίνηση της εφαρμογής.
-        public static async Task<string?> ConvertToMp4Async(string wmvPath)
+        public static async Task<string?> ConvertToWebmAsync(string wmvPath)
+        {
+            await EncodeGate.WaitAsync().ConfigureAwait(false);
+            try { return await ConvertCoreAsync(wmvPath).ConfigureAwait(false); }
+            finally { EncodeGate.Release(); }
+        }
+
+        private static async Task<string?> ConvertCoreAsync(string wmvPath)
         {
             string? ffmpeg = FindFfmpeg();
             if (ffmpeg == null || !File.Exists(wmvPath)) return null;
 
-            Directory.CreateDirectory(CacheDir);
-            string outputPath = Path.Combine(CacheDir, $"{Path.GetFileNameWithoutExtension(wmvPath)}_{QuickHash(wmvPath)}.mp4");
-            if (File.Exists(outputPath)) return outputPath;
+            string outputPath;
+            try
+            {
+                string directory = CacheDir;
+                Directory.CreateDirectory(directory);
+                outputPath = Path.Combine(directory, $"{Path.GetFileNameWithoutExtension(wmvPath)}_{QuickHash(wmvPath)}.webm");
+                if (File.Exists(outputPath) && new FileInfo(outputPath).Length > 0) return outputPath;
+            }
+            catch { return null; }
 
             // Γράφουμε πρώτα σε προσωρινό αρχείο και μετονομάζουμε μόνο σε επιτυχία — αλλιώς μια
-            // διακοπή/αποτυχία άφηνε μισό .mp4 που το cache (File.Exists) θα επέστρεφε για πάντα
+            // διακοπή/αποτυχία άφηνε μισό .webm που το cache (File.Exists) θα επέστρεφε για πάντα
             // ως "έτοιμο". Το -pix_fmt yuv420p και το scale σε ζυγές διαστάσεις είναι απαραίτητα
-            // για libx264 (αλλιώς αποτυγχάνει σε WMV με περιττό πλάτος/ύψος ή μη-4:2:0 pixel format).
-            string tempPath = outputPath + ".partial.mp4";
+            // για συμβατή έξοδο VP9 (αλλιώς αποτυγχάνει σε WMV με περιττό πλάτος/ύψος ή μη-4:2:0 pixel format).
+            string tempPath = outputPath + "." + Guid.NewGuid().ToString("N") + ".partial.webm";
             // ArgumentList, όχι interpolated string — ένα " στο όνομα του αρχείου (έγκυρο σε NTFS)
             // θα έσπαγε το parsing των ορισμάτων του ffmpeg.
             var psi = new ProcessStartInfo(ffmpeg)
@@ -139,7 +163,7 @@ namespace MotionDesk.Services
                 RedirectStandardOutput = true
             };
             foreach (var a in new[] { "-y", "-i", wmvPath, "-vf", "scale=trunc(iw/2)*2:trunc(ih/2)*2", "-pix_fmt", "yuv420p",
-                "-c:v", "libx264", "-preset", "veryfast", "-crf", "23", "-c:a", "aac", "-movflags", "+faststart", tempPath })
+                "-map", "0:v:0", "-map", "0:a:0?", "-c:v", "libvpx-vp9", "-deadline", "good", "-cpu-used", "4", "-row-mt", "1", "-threads", "2", "-b:v", "0", "-crf", "24", "-c:a", "libopus", "-b:a", "96k", "-f", "webm", tempPath })
                 psi.ArgumentList.Add(a);
 
             try
@@ -153,7 +177,7 @@ namespace MotionDesk.Services
                 await proc.WaitForExitAsync();
                 await Task.WhenAll(errTask, outTask);
 
-                if (proc.ExitCode == 0 && File.Exists(tempPath))
+                if (proc.ExitCode == 0 && File.Exists(tempPath) && new FileInfo(tempPath).Length > 0)
                 {
                     File.Move(tempPath, outputPath, overwrite: true);
                     return outputPath;
