@@ -68,14 +68,16 @@ public sealed partial class MainWindow
         var europeanPhotos = EuropeanPhotoCatalog.Discover();
         if (europeanPhotos.Count > 0)
         {
-            AddSection(page, StudioText("European Capitals — live weather", "Ευρωπαϊκές πρωτεύουσες — ζωντανός καιρός"));
+            foreach (var group in europeanPhotos.GroupBy(e => e.IsPreview).OrderBy(g => g.Key))
+            {
+            AddSection(page, group.Key ? StudioText("European Capitals — REVIEW PREVIEW", "Ευρωπαϊκές πρωτεύουσες — ΔΟΚΙΜΑΣΤΙΚΕΣ") : StudioText("European Capitals — live weather", "Ευρωπαϊκές πρωτεύουσες — ζωντανός καιρός"));
             var grid = NewGrid();
             addonGrids.Add(grid);
-            foreach (var entry in europeanPhotos)
+            foreach (var entry in group)
             {
                 var city = entry.Scene;
                 var tile = new WallpaperTile("Weather", StudioGreek ? city.Name : city.NameEn,
-                    StudioText("Live local weather", "Ζωντανός τοπικός καιρός"), null, false, null, entry.Poster, city.Id);
+                    entry.IsPreview ? StudioText("Unverified skyline and photo — preview", "Προσωρινή μάσκα και φωτογραφία — δοκιμή") : StudioText("Live local weather", "Ζωντανός τοπικός καιρός"), null, false, null, entry.Poster, city.Id);
                 tile.Click += (_, _) =>
                 {
                     if (!EuropeanPhotoCatalog.Discover().Any(e => e.Scene.Id == city.Id)) { ShowWallpaper(); return; }
@@ -96,6 +98,7 @@ public sealed partial class MainWindow
                 tiles.Add(tile);
             }
             page.Controls.Add(grid);
+            }
         }
         var installed = WallpaperGalleryCatalog.Discover();
         if (installed.Count > 0)

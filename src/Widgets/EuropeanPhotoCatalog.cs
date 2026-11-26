@@ -59,7 +59,7 @@ public static class EuropeanPhotoCatalog
         new("eu-yerevan", "Ερεβάν", "Yerevan", 40.18, 44.514),
         new("eu-baku", "Μπακού", "Baku", 40.377, 49.892),
     ];
-    public sealed record Entry(LandmarkCatalog.CityScene Scene, string Poster);
+    public sealed record Entry(LandmarkCatalog.CityScene Scene, string Poster, bool IsPreview = false);
     private sealed record Receipt(int SchemaVersion, string Id, string Status, string MasterSha256, string MaskSha256);
     private static bool Safe(string path, bool directory = false)
     {
@@ -69,9 +69,17 @@ public static class EuropeanPhotoCatalog
     }
     public static IReadOnlyList<Entry> Discover(string? baseDirectory = null)
     {
+        var result = DiscoverFolder(baseDirectory, false);
+        var installedIds = result.Select(e => e.Scene.Id).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        result.AddRange(DiscoverFolder(baseDirectory, true).Where(e => !installedIds.Contains(e.Scene.Id)));
+        return result;
+    }
+    private static List<Entry> DiscoverFolder(string? baseDirectory, bool preview)
+    {
         var result = new List<Entry>();
         var root = baseDirectory ?? AppContext.BaseDirectory;
-        foreach (var part in new[] { "widgets", "wallpaper", "scenes", "europe" })
+        string folder = preview ? "europe-preview" : "europe";
+        foreach (var part in new[] { "widgets", "wallpaper", "scenes", folder })
         {
             root = Path.Combine(root, part);
             if (!Safe(root, true)) return result;
@@ -82,18 +90,18 @@ public static class EuropeanPhotoCatalog
             {
                 var dir = Path.Combine(root, p.Id);
                 if (!Safe(dir, true)) continue;
-                var receipt = Path.Combine(dir, "release.json");
+                var receipt = Path.Combine(dir, preview ? "preview.json" : "release.json");
                 if (!Safe(receipt) || new FileInfo(receipt).Length is <= 0 or > 16384) continue;
                 var m = JsonSerializer.Deserialize<Receipt>(File.ReadAllText(receipt), JsonSerializerOptions.Web);
-                if (m is null || m.SchemaVersion != 1 || m.Id != p.Id || m.Status != "approved" ||
+                if (m is null || m.SchemaVersion != 1 || m.Id != p.Id || m.Status != (preview ? "review-preview" : "approved") ||
                     !Regex.IsMatch(m.MasterSha256 ?? "", "^[a-f0-9]{64}$") ||
                     !Regex.IsMatch(m.MaskSha256 ?? "", "^[a-f0-9]{64}$")) continue;
                 string[] required = ["master.webp", "sky-mask.png", "poster.jpg", "dawn.webp", "day.webp",
                     "golden.webp", "blue.webp", "night.webp", "attribution.json"];
                 if (required.Any(name => !Safe(Path.Combine(dir, name)) || new FileInfo(Path.Combine(dir,name)).Length <= 0)) continue;
-                string relative = "scenes/europe/" + p.Id + "/";
+                string relative = "scenes/" + folder + "/" + p.Id + "/";
                 result.Add(new Entry(new LandmarkCatalog.CityScene(p.Id, p.Name, p.NameEn, p.Lat, p.Lon,
-                    "city", "photo", relative + "master.webp", null, true, relative + "sky-mask.png"), Path.Combine(dir, "poster.jpg")));
+                    "city", "photo", relative + "master.webp", null, true, relative + "sky-mask.png"), Path.Combine(dir, "poster.jpg"), preview));
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException or ArgumentException)
             { /* Optional broken scene is omitted. */ }
