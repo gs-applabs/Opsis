@@ -73,6 +73,8 @@ namespace MotionDesk.Services
         // Κοινή εγγραφή: δικό μας Opsis.txt + (μία φορά) η γραμμή Include στο config.txt. Δεν πειράζει τίποτα άλλο του χρήστη.
         private static (bool Success, string Message) WriteInclude(string filters)
         {
+            // an isolated run (self-test, UI audit: OPSIS_APPDATA) must never change the SYSTEM-WIDE equalizer of the machine it runs on
+            if (ConfigDirOverride == null && AppSettings.IsIsolatedForTests()) return (false, "isolated test run: the system equalizer is not changed");
             try
             {
                 File.WriteAllText(MotionDeskIncludeFile,
