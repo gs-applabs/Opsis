@@ -3,7 +3,7 @@ on:
   push:
     branches: [feat/3.0.0.3200-integration]
   pull_request:
-    branches: [feat/p3-p5-unified-experience]
+    branches: [feat/p3-p5-unified-experience, feat/3.0.0.3200-integration]
   workflow_dispatch:
 
 concurrency:
@@ -73,6 +73,10 @@ jobs:
           dotnet build tests/Opsis.ShellSmoke/Opsis.ShellSmoke.csproj -c Release -m:1 -p:UseSharedCompilation=false -nodeReuse:false
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           dotnet run --project tests/Opsis.ShellSmoke/Opsis.ShellSmoke.csproj -c Release --no-build
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Run Signature Explorer scope and rollback regression tests
+        run: |
+          dotnet run --project tests/SignatureExplorerSmoke/SignatureExplorerSmoke.csproj -c Release
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Publish complete portable executable
         run: |

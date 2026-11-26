@@ -66,13 +66,26 @@ namespace MotionDesk.Services
             while (DateTime.UtcNow < end) { Application.DoEvents(); System.Threading.Thread.Sleep(10); }
         }
 
+        // hang hunting: every message the UI thread dispatches while the taskbar toggles are checked (the last one written is the one whose handler did not return)
+        private sealed class TraceFilter : IMessageFilter
+        {
+            private int _n;
+            public bool PreFilterMessage(ref Message m)
+            {
+                if (_n++ < 600) HangTrace.Mark($"msg 0x{m.Msg:X4} hwnd={(Control.FromHandle(m.HWnd)?.GetType().Name ?? m.HWnd.ToString())}");
+                return false;
+            }
+        }
+
         private static void VerifyTaskbarControls(Form window, List<string> problems, Action<string> mark)
         {
+            var traceFilter = new TraceFilter(); Application.AddMessageFilter(traceFilter);
             var engine = MotionDesk.Appearance.AppearanceService.Instance.Engine;
             var snapshot = engine.Snapshot();
             var toggles = new (string Name, Func<MotionDesk.Appearance.Look, bool?> Read)[]
             {
-                ("Settings.TransparencyEffects", x => x.Transparency),
+                // this switch writes the real Windows setting (WindowsSystemSettings), while the isolated engine of the audit keeps its values in memory: read the real one
+                ("Settings.TransparencyEffects", x => WindowsSystemSettings.GetTransparencyEffectsEnabled()),
                 ("Win.AccentSurfaces", x => x.AccentOnSurfaces),
                 ("Win.Centered", x => x.TaskbarCentered),
                 ("Win.TbSearch", x => x.ShowSearch),
@@ -90,15 +103,23 @@ namespace MotionDesk.Services
                     bool original = control.Checked;
                     try
                     {
+                        HangTrace.Mark("audit: toggling " + name);
                         control.Checked = !original;
+                        HangTrace.Mark("audit: toggled, pumping");
                         Pump(250);
-                        if (read(engine.ReadCurrent()) != !original) problems.Add("[Taskbar] Windows did not apply " + name);
+                        HangTrace.Mark("audit: pumped, reading");
+                        var afterToggle = engine.ReadCurrent();
+                        HangTrace.Mark("audit: read");
+                        if (read(afterToggle) != !original) problems.Add("[Taskbar] Windows did not apply " + name + " (wanted " + !original + ", read " + (read(afterToggle)?.ToString() ?? "null") + ", EnableTransparency=" + (Microsoft.Win32.Registry.GetValue(@"HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize", "EnableTransparency", "missing")?.ToString() ?? "null") + ")");
                     }
                     finally
                     {
                         var current = window.Controls.Find(name, true).OfType<Opsis.UI.FlatToggle>().FirstOrDefault();
+                        HangTrace.Mark("audit: restoring " + name);
                         if (current != null) current.Checked = original;
+                        HangTrace.Mark("audit: restored, pumping");
                         Pump(250);
+                        HangTrace.Mark("audit: pumped after restore");
                         if (read(engine.ReadCurrent()) != original) problems.Add("[Taskbar] Windows did not restore " + name);
                     }
                 }
@@ -120,7 +141,7 @@ namespace MotionDesk.Services
                 }
                 else problems.Add("[Taskbar] Missing Win.Combine");
             }
-            finally { engine.Restore(snapshot); }
+            finally { Application.RemoveMessageFilter(traceFilter); engine.Restore(snapshot); }
         }
 
         private static IEnumerable<MotionDesk.UI.StudioAdvancedSection> AdvancedSections(Control parent)

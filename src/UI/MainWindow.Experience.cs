@@ -68,7 +68,9 @@ public sealed partial class MainWindow
             try
             {
                 var state = WindowsUpdateGuard.Read();
-                guardStatus.Text = (WindowsUpdateGuard.RequiresReview
+                guardStatus.Text = (WindowsUpdateGuard.RestartRequired
+                    ? StudioText("Build approved: restart Opsis to re-enable shell features", "Η έκδοση εγκρίθηκε: κάνε επανεκκίνηση του Opsis για να ενεργοποιηθούν τα χαρακτηριστικά shell")
+                    : WindowsUpdateGuard.RequiresReview
                     ? StudioText("Action required: review Windows changes", "Απαιτείται έλεγχος αλλαγών Windows")
                     : StudioText("Compatibility baseline approved", "Εγκεκριμένη βάση συμβατότητας")) +
                     Environment.NewLine + "Current: " + OpsisRecoveryHub.WindowsFingerprint() +

@@ -48,9 +48,46 @@ public sealed partial class MainWindow
         var featured = NewGrid();
         var library = NewGrid();
         var tiles = new List<WallpaperTile>();
-        var addonTiles = new List<(WallpaperTile Tile, OpsisEcosystemGallery.Item Item)>();
+        var addonTiles = new List<(WallpaperTile Tile, string Mode, string Path)>();
+        var webItems = WallpaperGalleryCatalog.Discover();
+        var signature = webItems.FirstOrDefault(x => x.Id == "opsis-glass-signature");
+        WallpaperTile? signatureTile = null;
+        void ApplyWeb(WallpaperGalleryCatalog.Entry item)
+        {
+            var valid = WallpaperGalleryCatalog.Discover().FirstOrDefault(x => x.Id == item.Id &&
+                string.Equals(x.IndexPath, item.IndexPath, StringComparison.OrdinalIgnoreCase));
+            if (valid == null) { MessageBox.Show(this, StudioText("Wallpaper is no longer installed.", "Το φόντο δεν είναι πλέον εγκατεστημένο."), "Opsis"); return; }
+            var settings = WallpaperSettings.Load();
+            settings.PageSource = valid.IndexPath;
+            settings.Mode = "Page";
+            settings.Save();
+            host.Enable();
+            host.RefreshAll();
+        }
+        var addonItems = OpsisEcosystemGallery.Discover().Where(x => x.Type.Equals("wallpaper", StringComparison.OrdinalIgnoreCase) &&
+            Path.GetExtension(x.AssetPath).ToLowerInvariant() is ".jpg" or ".jpeg" or ".png" or ".webp")
+            .Select(x => (Title: x.Title, Category: x.Category, Path: x.AssetPath, Poster: (string?)x.AssetPath,
+                Mode: "Image", Apply: (Action)(() => OpsisEcosystemGallery.ApplyStaticWallpaper(x))))
+            .Concat(webItems.Where(x => x.Id != "opsis-glass-signature")
+                .Select(x => (Title: StudioText(x.Name, string.IsNullOrWhiteSpace(x.NameEl) ? x.Name : x.NameEl),
+                    Category: x.Category, Path: x.IndexPath, Poster: x.PosterPath, Mode: "Page", Apply: (Action)(() => ApplyWeb(x)))))
+            .OrderBy(x => x.Category, StringComparer.CurrentCultureIgnoreCase)
+            .ThenBy(x => x.Title, StringComparer.CurrentCultureIgnoreCase).ToArray();
         foreach (var scene in StudioWallpaperCatalog.Scenes)
             AddTile(featured, scene.Mode, scene.Title(StudioGreek), scene.Detail(StudioGreek), scene.Asset, true);
+        if (signature != null)
+        {
+            var item = signature;
+            signatureTile = new WallpaperTile("Page", StudioText(item.Name, item.NameEl),
+                StudioText(item.Description, item.DescriptionEl), null, externalPoster: item.PosterPath);
+            signatureTile.Name = "wallpaper-tile-opsis-glass-signature";
+            signatureTile.Click += (_, _) =>
+            {
+                try { ApplyWeb(item); Sync(); }
+                catch (Exception ex) { MessageBox.Show(this, ex.Message, "Opsis", MessageBoxButtons.OK, MessageBoxIcon.Warning); }
+            };
+            featured.Controls.Add(signatureTile);
+        }
         page.Controls.Add(featured);
         AddSection(page, StudioText("Weather and your library", "Καιρός και βιβλιοθήκη"));
         AddTile(library, "Weather", StudioText("Weather", "Καιρός"),
@@ -71,25 +108,31 @@ public sealed partial class MainWindow
         var previousPackPage = new Button { Text = "‹", AutoSize = true };
         var nextPackPage = new Button { Text = "›", AutoSize = true };
         var packCount = new Label { AutoSize = true, Margin = new Padding(5, 8, 5, 3) };
-        var importPack = StudioButton(StudioText("Install image pack", "Εγκατάσταση πακέτου"), () =>
+        Button? importPackButton = null;
+        var importPack = StudioButton(StudioText("Install image pack", "Εγκατάσταση πακέτου"), async () =>
         {
             using var picker = new OpenFileDialog { Filter = "Opsis image packs (*.zip)|*.zip", CheckFileExists = true };
             if (picker.ShowDialog(this) != DialogResult.OK) return;
             if (MessageBox.Show(this, StudioText("Install data-only wallpapers from this ZIP? No files will be executed.", "Εγκατάσταση μόνο εικόνων από αυτό το ZIP; Δεν θα εκτελεστεί κανένα αρχείο."), "Opsis", MessageBoxButtons.YesNo) != DialogResult.Yes) return;
             try
             {
-                int count = OpsisEcosystemGallery.ImportWallpaperPack(picker.FileName);
+                // up to 200 images are read, hashed and decoded: keep that off the UI thread
+                string zipPath = picker.FileName;
+                if (importPackButton != null) importPackButton.Enabled = false;
+                int count;
+                try { count = await Task.Run(() => OpsisEcosystemGallery.ImportWallpaperPack(zipPath)); }
+                finally { if (importPackButton is { IsDisposed: false }) importPackButton.Enabled = true; }
+                if (IsDisposed) return;
                 MessageBox.Show(this, count + " wallpaper images installed.", "Opsis");
                 ShowWallpaper();
             }
-            catch (Exception ex) { MessageBox.Show(this, ex.Message, "Opsis", MessageBoxButtons.OK, MessageBoxIcon.Warning); }
+            catch (Exception ex) { if (!IsDisposed) MessageBox.Show(this, ex.Message, "Opsis", MessageBoxButtons.OK, MessageBoxIcon.Warning); }
         }, 195);
+        importPackButton = importPack;
         packControls.Controls.AddRange([categoryPicker, previousPackPage, nextPackPage, packCount, importPack]);
         page.Controls.Add(packControls);
         var addonGrid = NewGrid();
         page.Controls.Add(addonGrid);
-        var addonItems = OpsisEcosystemGallery.Discover().Where(x => x.Type.Equals("wallpaper", StringComparison.OrdinalIgnoreCase) &&
-            Path.GetExtension(x.AssetPath).ToLowerInvariant() is ".jpg" or ".jpeg" or ".png" or ".webp").ToArray();
         int packPage = 0;
         const int PackPageSize = 18;
         categoryPicker.Items.Add(StudioText("All categories", "Όλες οι κατηγορίες"));
@@ -113,7 +156,8 @@ public sealed partial class MainWindow
             try
             {
                 featured.MaximumSize = library.MaximumSize = addonGrid.MaximumSize = new Size(area, 0);
-                foreach (var tile in tiles.Concat(addonTiles.Select(x => x.Tile))) tile.Size = new Size(width, Math.Max(145, (width - 14) * 9 / 16 + 61));
+                var visibleTiles = signatureTile == null ? tiles.AsEnumerable() : tiles.Append(signatureTile);
+                foreach (var tile in visibleTiles.Concat(addonTiles.Select(x => x.Tile))) tile.Size = new Size(width, Math.Max(145, (width - 14) * 9 / 16 + 61));
             }
             finally
             {
@@ -132,9 +176,18 @@ public sealed partial class MainWindow
             power.Text = host.IsEnabled ? StudioText("Disable wallpaper", "Απενεργοποίηση φόντου")
                 : StudioText("Enable wallpaper", "Ενεργοποίηση φόντου");
             details.Text = mode == "Weather" ? StudioText("Weather settings", "Ρυθμίσεις Weather") : StudioText("Wallpaper settings", "Ρυθμίσεις φόντου");
-            foreach (var tile in tiles) tile.SetActive(host.IsEnabled && tile.Mode == mode);
-            var imagePath = WallpaperSettings.Load().ImagePath;
-            foreach (var tile in addonTiles) tile.Tile.SetActive(host.IsEnabled && mode == "Image" && string.Equals(imagePath, tile.Item.AssetPath, StringComparison.OrdinalIgnoreCase));
+            foreach (var tile in tiles) tile.SetActive(host.IsEnabled && tile.Mode == mode && tile.Mode is not ("Page" or "Image"));
+            var settings = WallpaperSettings.Load();
+            string? pagePath = MediaSource.LocalPagePath(settings.PageSource);
+            foreach (var tile in tiles.Where(x => x.Mode is "Page" or "Image"))
+            {
+                bool known = tile.Mode == "Page" && signature != null && string.Equals(pagePath, signature.IndexPath, StringComparison.OrdinalIgnoreCase)
+                    || addonItems.Any(x => x.Mode == tile.Mode && string.Equals(x.Path, tile.Mode == "Page" ? pagePath : settings.ImagePath, StringComparison.OrdinalIgnoreCase));
+                tile.SetActive(host.IsEnabled && tile.Mode == mode && !known);
+            }
+            signatureTile?.SetActive(host.IsEnabled && mode == "Page" && string.Equals(pagePath, signature?.IndexPath, StringComparison.OrdinalIgnoreCase));
+            foreach (var tile in addonTiles) tile.Tile.SetActive(host.IsEnabled && mode == tile.Mode &&
+                string.Equals(tile.Mode == "Page" ? pagePath : settings.ImagePath, tile.Path, StringComparison.OrdinalIgnoreCase));
         }
 
         void DrawAddonPage()
@@ -150,13 +203,14 @@ public sealed partial class MainWindow
                 addonTiles.Clear();
                 foreach (var item in filtered.Skip(packPage * PackPageSize).Take(PackPageSize))
                 {
-                    var tile = new WallpaperTile("Image", item.Title, item.Category, null, externalPoster: item.AssetPath);
+                    var tile = new WallpaperTile(item.Mode, item.Title, item.Category, null, externalPoster: item.Poster);
+                    tile.Name = "wallpaper-addon-" + Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(item.Path))).Substring(0, 16);
                     tile.Click += (_, _) =>
                     {
-                        try { OpsisEcosystemGallery.ApplyStaticWallpaper(item); Sync(); }
+                        try { item.Apply(); Sync(); }
                         catch (Exception ex) { MessageBox.Show(this, ex.Message, "Opsis", MessageBoxButtons.OK, MessageBoxIcon.Warning); }
                     };
-                    addonTiles.Add((tile, item)); addonGrid.Controls.Add(tile);
+                    addonTiles.Add((tile, item.Mode, item.Path)); addonGrid.Controls.Add(tile);
                 }
             }
             finally { addonGrid.ResumeLayout(); }

@@ -17,7 +17,17 @@ namespace MotionDesk.UI
     {
         private static UiPalette Resolve()
         {
-            var settings = AppSettings.Load();
+            if (System.Windows.Forms.SystemInformation.HighContrast)
+                return new UiPalette
+                {
+                    Background = SystemColors.Window, Sidebar = SystemColors.Window,
+                    Surface = SystemColors.Window, SurfaceHover = SystemColors.Control,
+                    Border = SystemColors.WindowText, TextPrimary = SystemColors.WindowText,
+                    TextSecondary = SystemColors.WindowText, TextMuted = SystemColors.WindowText,
+                    AccentCyan = SystemColors.Highlight, AccentBlue = SystemColors.Highlight,
+                    IsDark = SystemColors.Window.GetBrightness() < .5f
+                };
+            var settings = AppSettings.Peek();
             string mode = settings.WidgetsThemeMode;
             // "Transparent": there is no surface to take the contrast from, so the text colour follows the desktop behind the widgets
             // (bright backdrop -> dark text, dark backdrop -> light text), re-evaluated while the wallpaper changes or moves.
@@ -25,7 +35,7 @@ namespace MotionDesk.UI
                 return BackdropContrast.UseDarkText ? UiPalette.Light() : UiPalette.Dark(settings.DarkIntensity);
             return mode switch
             {
-                "Windows" => ThemeManager.IsWindowsLightTheme() ? UiPalette.Light() : UiPalette.Dark(AppSettings.Load().DarkIntensity),
+                "Windows" => ThemeManager.IsWindowsLightTheme() ? UiPalette.Light() : UiPalette.Dark(settings.DarkIntensity),
                 "Dark" => UiPalette.Dark(AppSettings.Load().DarkIntensity),
                 "Light" => UiPalette.Light(),
                 _ => ThemeManager.Current, // "App" — ακολουθεί το θέμα της ίδιας της εφαρμογής (προεπιλογή, προηγούμενη συμπεριφορά)
@@ -72,7 +82,7 @@ namespace MotionDesk.UI
         // widget, άρα ήταν άσκοπο ρίσκο οπτικής ασυνέπειας χωρίς κανένα πραγματικό όφελος. Οι 4
         // κανονικές λειτουργίες θέματος μένουν ΑΚΡΙΒΩΣ όπως πριν (αδιαφανές Surface) - μόνο η ρητή
         // "Πλήρης διαφάνεια" αλλάζει συμπεριφορά.
-        public static bool IsFullyTransparent => AppSettings.Peek().WidgetsThemeMode == "Transparent";
+        public static bool IsFullyTransparent => !System.Windows.Forms.SystemInformation.HighContrast && AppSettings.Peek().WidgetsThemeMode == "Transparent";
         // Colour-key (pure see-through) only without a tint; with a tint the widget is a translucent coloured surface (same look as the DeskContainers).
         public static bool IsColorKey => IsFullyTransparent && AppSettings.Peek().WidgetsTintPercent <= 0;
         public static Color TintColor => AppSettings.Peek().WidgetsTintColor == "Material"

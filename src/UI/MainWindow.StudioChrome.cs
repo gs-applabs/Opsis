@@ -37,8 +37,8 @@ public sealed partial class MainWindow
                 _sidebar.Width = SidebarCollapsedWidth;
                 ApplySidebarCollapsedVisuals(true);
             }
-            _brandPulseTimer = new System.Windows.Forms.Timer { Interval = HardwareProfileService.ScaleDecorativeInterval(60) };
-            _brandPulseTimer.Tick += (_, _) => { _brandPulseT += .08; _brandDot.Invalidate(); };
+            _brandPulseTimer?.Dispose();
+            _brandPulseTimer = null; // canonical brand is static; no idle animation timer
         }
         Text = "Opsis - Desktop Customization";
         ApplyChromeColors();
@@ -300,22 +300,37 @@ public sealed partial class MainWindow
         _currentPageKey = "Dashboard";
         var page = CreatePagePanel();
         AddHeading(page, $"Opsis - Desktop Customization {AppVersion.Label}");
-        AddText(page, StudioText("Arrange windows with DeskZones, group files in DeskContainers and bring your desktop to life with weather, widgets and music.", "Οργάνωσε παράθυρα με DeskZones και αρχεία με DeskContainers. Πρόσθεσε ζωντανό καιρό, widgets και οπτικοποίηση μουσικής."));
-        AddSection(page, StudioText("Desktop", "Επιφάνεια εργασίας"));
+        string T(string key) => LocalizationManager.T(key);
+        AddText(page, T("Home.Intro"));
+        AddSection(page, T("Home.SecDesktop"));
         var wallpaper = WallpaperSettings.Load();
-        AddLink("Wallpaper", StudioText("Wallpaper", "Φόντο επιφάνειας"),
-            WallpaperHostEngine.Instance.IsEnabled ? WallpaperModeLabel(wallpaper.Mode) : StudioText("Wallpaper is paused", "Το φόντο είναι ανενεργό"));
-        AddLink("DeskContainers", "DeskContainers", StudioText("Organize desktop files and shortcuts", "Οργάνωση αρχείων και συντομεύσεων"));
-        AddLink("Widgets", "Widgets", StudioText("Manage and add widgets", "Διαχείριση και προσθήκη widgets"));
-        AddLink("DeskStrip", "DeskStrip", StudioText("Desktop toolbar and dock", "Γραμμή εργαλείων και dock"));
-        AddSection(page, StudioText("Appearance and settings", "Εμφάνιση και ρυθμίσεις"));
-        AddLink("Theme", StudioText("Theme", "Θέμα"), StudioText("Colors, materials and window skin", "Χρώματα, υλικά και εμφάνιση παραθύρου"));
-        AddLink("DeskMusicVisualizer", "Desk Music Visualizer", StudioText("Desktop visualization and track details", "Οπτικοποίηση και στοιχεία τραγουδιού"));
-        AddLink("Settings", StudioText("Settings", "Ρυθμίσεις"), null);
+        AddLink("Wallpaper", T("Nav.Wallpaper"), WallpaperHostEngine.Instance.IsEnabled ? WallpaperModeLabel(wallpaper.Mode) : T("Home.WallpaperPaused"));
+        AddLink("DeskContainers", "DeskContainers", T("Home.DeskContainersDetail"));
+        AddLink("Widgets", T("Nav.Widgets"), T("Home.WidgetsDetail"));
+        AddLink("DeskZones", T("Nav.DeskZones"), T("Home.DeskZonesDetail"));
+        AddLink("DeskStrip", "DeskStrip", T("Home.DeskStripDetail"));
+        AddSection(page, T("Home.SecWindows"));
+        AddLink("Personalization", T("Nav.Personalization"), T("Home.PersonalizationDetail"));
+        AddLink("Automation", T("Nav.Automation"), T("Home.AutomationDetail"));
+        AddLink("Performance", T("Nav.Performance"), T("Home.PerformanceDetail"));
+        AddLink("Profiles", T("Nav.Profiles"), T("Home.ProfilesDetail"));
+        AddLink("AudioEnhancement", T("Nav.AudioEnhancement"), T("Home.AudioDetail"));
+        AddSection(page, T("Home.SecAppearance"));
+        AddLink("Theme", T("Home.ThemeTitle"), T("Home.ThemeDetail"));
+        AddLink("DeskMusicVisualizer", "Desk Music Visualizer", T("Home.MusicDetail"));
+        AddLink("Settings", T("Nav.Settings"), null);
+        // what the RUNNING version brings (the notes of the current version, in the language of the app)
+        var notes = T("VersionNotes." + AppVersion.Short);
+        if (!string.IsNullOrWhiteSpace(notes) && !notes.StartsWith("VersionNotes.", StringComparison.Ordinal))
+        {
+            AddSection(page, string.Format(T("About.WhatBrings"), AppVersion.Label));
+            AddText(page, notes);
+        }
         SetPage("Nav.Dashboard", page);
 
         void AddLink(string key, string title, string? detail)
         {
+            if (!_pageBuilders.ContainsKey(key)) return; // a page that this build does not have is not offered
             var link = new StudioLink(key) { Text = title, Detail = detail, AccessibleName = title, Height = detail == null ? 42 : 58, Width = 680 };
             link.Click += (_, _) => NavigateTo(key);
             page.Controls.Add(link);

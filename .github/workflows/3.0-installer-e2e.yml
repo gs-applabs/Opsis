@@ -3,7 +3,7 @@ on:
   push:
     branches: [feat/3.0.0.3200-integration]
   pull_request:
-    branches: [feat/p3-p5-unified-experience]
+    branches: [feat/p3-p5-unified-experience, feat/3.0.0.3200-integration]
   workflow_dispatch:
 
 concurrency:

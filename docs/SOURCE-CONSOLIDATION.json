@@ -1,0 +1,735 @@
+{
+  "status": "PARTIAL_CONSOLIDATION_SOURCE_REVIEW_REQUIRED",
+  "base": "96bd979a03b736c8d879add9e8af888295196e2f",
+  "branches": [
+    {
+      "label": "appearance",
+      "head": "0173a75a766c055fed13fef684d4f1653f2450af",
+      "ancestor": "7a055f1e7fab4c9ae18d21c9b9692dbc37c1b469",
+      "applied": [
+        ".github/workflows/windows-audit.yml",
+        "Opsis.csproj",
+        "README-EL.md",
+        "assets/Opsis.ico",
+        "locales/ar-SA.json",
+        "locales/de-DE.json",
+        "locales/el-GR.json",
+        "locales/en-US.json",
+        "locales/es-ES.json",
+        "locales/fr-FR.json",
+        "locales/hi-IN.json",
+        "locales/it-IT.json",
+        "locales/ja-JP.json",
+        "locales/ko-KR.json",
+        "locales/pt-PT.json",
+        "locales/ru-RU.json",
+        "locales/tr-TR.json",
+        "locales/zh-CN.json",
+        "src/Services/ExplorerSessionStore.cs",
+        "src/Services/TaskbarViewProfiles.cs",
+        "src/Services/UiAudit.cs",
+        "src/Services/WallpaperGalleryCatalog.cs",
+        "src/Services/WindowsSystemSettings.cs",
+        "src/Services/WindowsUpdateGuard.cs",
+        "src/UI/MainWindow.Appearance.cs",
+        "src/UI/MainWindow.Experience.cs",
+        "src/UI/MainWindow.StudioChrome.cs",
+        "src/UI/MainWindow.UniversalSearch.cs",
+        "src/UI/MainWindow.WallpaperGallery.cs",
+        "src/UI/MainWindow.cs",
+        "src/UI/OpsisStartButtonArt.cs",
+        "src/UI/StartStudioForm.cs",
+        "src/UI/ThemeManager.cs",
+        "src/Widgets/DeskStripWindow.cs",
+        "tests/Opsis.ExperienceSmoke/Program.cs",
+        "assets/Opsis-3.svg",
+        "assets/start-buttons/Opsis-3-Glass-24.png",
+        "assets/start-buttons/Opsis-3-Glass-32.png",
+        "assets/start-buttons/Opsis-3-Glass-48.png",
+        "assets/start-buttons/Opsis-3-Glass-64.png",
+        "docs/REMAINING-TASKS-3.0.0.3200.md",
+        "opsis-ui-evidence/AppearancePreviewForm-1280x720.png",
+        "opsis-ui-evidence/AppearancePreviewForm-1600x900.png",
+        "opsis-ui-evidence/AppearancePreviewForm-800x600.png",
+        "opsis-ui-evidence/OpsisTaskbarDesignerForm-1280x720.png",
+        "opsis-ui-evidence/OpsisTaskbarDesignerForm-1600x900.png",
+        "opsis-ui-evidence/OpsisTaskbarDesignerForm-800x600.png",
+        "opsis-ui-evidence/StartStudioForm-1280x720.png",
+        "opsis-ui-evidence/StartStudioForm-1600x900.png",
+        "opsis-ui-evidence/StartStudioForm-800x600.png",
+        "opsis-ui-evidence/appdata/logs/opsis.log",
+        "opsis-ui-evidence/appdata/settings.json",
+        "opsis-ui-evidence/appdata/settings.json.bak",
+        "opsis-ui-evidence/sidebar-page-About.png",
+        "opsis-ui-evidence/sidebar-page-AudioEnhancement.png",
+        "opsis-ui-evidence/sidebar-page-Automation.png",
+        "opsis-ui-evidence/sidebar-page-Dashboard.png",
+        "opsis-ui-evidence/sidebar-page-DeskContainers.png",
+        "opsis-ui-evidence/sidebar-page-DeskMusicVisualizer.png",
+        "opsis-ui-evidence/sidebar-page-DeskStrip.png",
+        "opsis-ui-evidence/sidebar-page-DeskZones.png",
+        "opsis-ui-evidence/sidebar-page-Performance.png",
+        "opsis-ui-evidence/sidebar-page-Personalization.png",
+        "opsis-ui-evidence/sidebar-page-Settings.png",
+        "opsis-ui-evidence/sidebar-page-Theme.png",
+        "opsis-ui-evidence/sidebar-page-Wallpaper.png",
+        "opsis-ui-evidence/sidebar-page-Widgets.png",
+        "opsis-ui-evidence/start-button-gallery.png",
+        "opsis-ui-evidence/ui-smoke-report.json",
+        "src/Services/HangTrace.cs",
+        "wallpapers/samples/opsis-glass-signature/adaptive.js",
+        "wallpapers/samples/opsis-glass-signature/index.html",
+        "wallpapers/samples/opsis-glass-signature/opsis-wallpaper.json",
+        "wallpapers/samples/opsis-glass-signature/poster.png",
+        "wallpapers/samples/opsis-glass-signature/poster.webp",
+        "wallpapers/samples/opsis-glass-signature/reflection-mask.webp",
+        "wallpapers/samples/opsis-glass-signature/scene.webp",
+        "wallpapers/samples/opsis-glass-signature/signature.js"
+      ],
+      "already_present": [],
+      "conflicts": [],
+      "deletions_not_applied": []
+    },
+    {
+      "label": "desktop-materials",
+      "head": "2d15e7814e7a5e6e0e20eae50d9dd7bbceae501c",
+      "ancestor": "fbc81328622ec630f3bbc7171cd72dc8708c1a66",
+      "applied": [
+        "src/Containers/ContainerWindow.cs",
+        "src/Services/DesktopMaterials.cs",
+        "src/UI/MainWindow.DesktopMaterials.cs",
+        "src/UI/SecondaryWindowStyler.cs",
+        "tests/WeatherInfoTone.test.cjs"
+      ],
+      "already_present": [],
+      "conflicts": [
+        ".github/workflows/windows-audit.yml",
+        "Opsis.csproj",
+        "src/Services/UiAudit.cs"
+      ],
+      "deletions_not_applied": []
+    },
+    {
+      "label": "europe-R26",
+      "head": "e72ee5877526c03ead97ce8bbdd098fe41b49838",
+      "ancestor": "cf906d7840a37af3f1dcaa8977ccaa7a4f3278c3",
+      "applied": [
+        ".github/workflows/3.0-installer-e2e.yml",
+        ".github/workflows/3.0-integration.yml",
+        "src/Appearance/AppearanceService.cs",
+        "src/Appearance/WindowEffects.cs",
+        "src/Services/GlassPolicy.cs",
+        "src/Services/GlassService.cs",
+        "src/UI/MainWindow.Opacity.cs",
+        "src/UI/MainWindow.Performance.cs",
+        "src/UI/MainWindow.SkinColors.cs",
+        "src/UI/MainWindow.Themes.cs",
+        "src/UI/UiTheme.cs",
+        "src/UI/WidgetTheme.cs",
+        "src/Widgets/LandmarkCatalog.cs",
+        "src/Widgets/WidgetEngine.cs",
+        ".github/workflows/ancient-athens-core.yml",
+        ".github/workflows/europe-integration-r24.yml",
+        ".github/workflows/europe-photo-acquisition-r17.yml",
+        ".github/workflows/europe-photo-corrections-r19.yml",
+        ".github/workflows/europe-photo-corrections-r20.yml",
+        ".github/workflows/europe-photo-corrections-r21.yml",
+        ".github/workflows/europe-photo-fallback-r18.yml",
+        ".github/workflows/europe-photo-layer-review-r22.yml",
+        ".github/workflows/europe-photo-replacement-review-r23.yml",
+        ".github/workflows/europe-preview-installer-r26.yml",
+        "addons/opsis-100/authoring/R24-INSTALLER-INTEGRATION.md",
+        "addons/opsis-100/authoring/R26-PREVIEW-INSTALLER.md",
+        "addons/opsis-100/authoring/acquire-batches-r18.py",
+        "addons/opsis-100/authoring/acquire-commons-candidates.py",
+        "addons/opsis-100/authoring/build-photo-review-r22.py",
+        "addons/opsis-100/authoring/europe-files.iss",
+        "addons/opsis-100/authoring/europe-photo-review-r21.json",
+        "addons/opsis-100/authoring/europe-preview-r26.iss",
+        "addons/opsis-100/authoring/stage-approved-europe.py",
+        "addons/opsis-100/authoring/stage-preview-r26.py",
+        "addons/opsis-100/authoring/test-stage-approved-europe.py",
+        "docs/SIGNATURE-COMPOSITION-PREVIEW.md",
+        "src/UI/OpsisBrandMark.cs",
+        "src/Widgets/EuropeanPhotoCatalog.cs",
+        "tests/SignatureExplorerSmoke/Program.cs",
+        "tests/SignatureExplorerSmoke/SignatureExplorerSmoke.csproj",
+        "tools/Build-SignaturePreview.ps1"
+      ],
+      "already_present": [
+        "assets/Opsis.ico",
+        "src/Widgets/WallpaperManifest.cs",
+        "src/Widgets/wallpaper/ancient-athens.js",
+        "addons/opsis-100/authoring/README.md",
+        "addons/opsis-100/authoring/ancient-rome.theme.json",
+        "addons/opsis-100/authoring/europe-capitals.json",
+        "addons/opsis-100/authoring/validate.cjs",
+        "assets/Opsis-3.svg",
+        "assets/start-buttons/Opsis-3-Glass-24.png",
+        "assets/start-buttons/Opsis-3-Glass-32.png",
+        "assets/start-buttons/Opsis-3-Glass-48.png",
+        "assets/start-buttons/Opsis-3-Glass-64.png",
+        "src/Widgets/wallpaper/ancient-athens-effects.js",
+        "tests/weather-spatial/ancient-athens.test.cjs"
+      ],
+      "conflicts": [
+        "Opsis.csproj",
+        "src/Services/DesktopMaterials.cs",
+        "src/Services/OpsisTaskbarDesigner.cs",
+        "src/UI/MainWindow.Appearance.cs",
+        "src/UI/MainWindow.WallpaperGallery.cs",
+        "src/UI/MainWindow.cs",
+        "src/UI/ThemeManager.cs",
+        "src/Widgets/DeskFlipEngine.cs",
+        "src/Widgets/DeskStripWindow.cs",
+        "src/Widgets/DesktopLauncher.cs",
+        "src/Widgets/ReplacementTaskbar.cs",
+        "src/Widgets/TrayApplicationContext.cs",
+        "src/Widgets/WallpaperWindow.cs",
+        "src/Widgets/wallpaper/index.html",
+        "src/Widgets/wallpaper/weather.js",
+        "tests/Opsis.ExperienceSmoke/Program.cs",
+        "src/Services/WallpaperGalleryCatalog.cs"
+      ],
+      "deletions_not_applied": []
+    },
+    {
+      "label": "europe-R25",
+      "head": "5c1aefb4f587df83bb2b43a9a5ddd3ce1a76ca07",
+      "ancestor": "58f9580fafe33affa056765aaeb055f2fbc36c80",
+      "applied": [
+        ".github/workflows/europe-photo-replacement-review-r25.yml"
+      ],
+      "already_present": [],
+      "conflicts": [],
+      "deletions_not_applied": []
+    },
+    {
+      "label": "crawler-bridge",
+      "head": "9fa970b8a2f046fa6b8dcddc6acfa7ca62bd4f69",
+      "ancestor": "6f8b5da31a5951d9dd467d6ef1250c52f8e8176f",
+      "applied": [
+        "tools/check-plugin-dll-versions.ps1"
+      ],
+      "already_present": [],
+      "conflicts": [
+        ".github/workflows/plugin-compatibility.yml",
+        "Opsis.csproj",
+        "src/Services/PluginHost.cs",
+        "src/Widgets/DeskStripWindow.cs"
+      ],
+      "deletions_not_applied": []
+    },
+    {
+      "label": "main-2.8-followup",
+      "head": "12018a0b085d52dba96847e552d203787b15ed08",
+      "ancestor": "6f8b5da31a5951d9dd467d6ef1250c52f8e8176f",
+      "applied": [
+        "tests/PluginCompatibility.test.cjs",
+        "RELEASE-NOTES-2.8.0.2510.md",
+        "RELEASE-NOTES-2.8.0.2511.md"
+      ],
+      "already_present": [
+        "README-EL.md",
+        "src/Containers/ContainerWindow.cs",
+        "src/Services/DesktopMaterials.cs",
+        "src/Services/WindowsSystemSettings.cs",
+        "src/UI/MainWindow.Appearance.cs",
+        "src/UI/MainWindow.DesktopMaterials.cs",
+        "src/UI/MainWindow.UniversalSearch.cs",
+        "src/UI/SecondaryWindowStyler.cs",
+        "src/Widgets/DeskStripWindow.cs",
+        "src/Services/HangTrace.cs"
+      ],
+      "conflicts": [
+        ".github/workflows/windows-audit.yml",
+        "Opsis.csproj",
+        "Version.props",
+        "locales/ar-SA.json",
+        "locales/de-DE.json",
+        "locales/el-GR.json",
+        "locales/en-US.json",
+        "locales/es-ES.json",
+        "locales/fr-FR.json",
+        "locales/hi-IN.json",
+        "locales/it-IT.json",
+        "locales/ja-JP.json",
+        "locales/ko-KR.json",
+        "locales/pt-PT.json",
+        "locales/ru-RU.json",
+        "locales/tr-TR.json",
+        "locales/zh-CN.json",
+        "src/Services/PluginHost.cs",
+        "src/Services/UiAudit.cs",
+        "src/UI/MainWindow.StudioChrome.cs",
+        "src/UI/MainWindow.cs",
+        "src/UI/ThemeManager.cs",
+        "src/Widgets/wallpaper/index.html",
+        "tests/WeatherInfoTone.test.cjs"
+      ],
+      "deletions_not_applied": []
+    }
+  ],
+  "conflicts": [
+    {
+      "branch": "desktop-materials",
+      "path": ".github/workflows/windows-audit.yml",
+      "ancestor": "fbc81328622ec630f3bbc7171cd72dc8708c1a66",
+      "head": "2d15e7814e7a5e6e0e20eae50d9dd7bbceae501c",
+      "base_blob": "8c7c44169d73d9ae73f216593d715dcfaf4628ef",
+      "incoming_blob": "99d269ba17061cd66a56914fbbd2f34bd7c5caa1",
+      "current_blob": "0f5361c96dec80e937d844de1fb7a67ed60196a8"
+    },
+    {
+      "branch": "desktop-materials",
+      "path": "Opsis.csproj",
+      "ancestor": "fbc81328622ec630f3bbc7171cd72dc8708c1a66",
+      "head": "2d15e7814e7a5e6e0e20eae50d9dd7bbceae501c",
+      "base_blob": "431450383ce68519e714a918bf8bee4c20aea2d0",
+      "incoming_blob": "21e5452f64db9f9bcacaec2571cbd42b241cd2ac",
+      "current_blob": "4c34b27d32e34706f8697174f76e34e06c6df919"
+    },
+    {
+      "branch": "desktop-materials",
+      "path": "src/Services/UiAudit.cs",
+      "ancestor": "fbc81328622ec630f3bbc7171cd72dc8708c1a66",
+      "head": "2d15e7814e7a5e6e0e20eae50d9dd7bbceae501c",
+      "base_blob": "d8664220594f44766d3e0c62cb7af69c3fb4b643",
+      "incoming_blob": "3629b28dda9c77d6e82257e807973b3f007152f3",
+      "current_blob": "28b3834e279f164835b5d1f256ed91b9e764354e"
+    },
+    {
+      "branch": "europe-R26",
+      "path": "Opsis.csproj",
+      "ancestor": "cf906d7840a37af3f1dcaa8977ccaa7a4f3278c3",
+      "head": "e72ee5877526c03ead97ce8bbdd098fe41b49838",
+      "base_blob": "1f17b31d288ecf513f79e787e42b5e85d6ef6ead",
+      "incoming_blob": "b742226f05b03903964117c7c9b50fa08ea2a145",
+      "current_blob": "4c34b27d32e34706f8697174f76e34e06c6df919"
+    },
+    {
+      "branch": "europe-R26",
+      "path": "src/Services/DesktopMaterials.cs",
+      "ancestor": "cf906d7840a37af3f1dcaa8977ccaa7a4f3278c3",
+      "head": "e72ee5877526c03ead97ce8bbdd098fe41b49838",
+      "base_blob": "11f6849934e0e5a68a02c923b892ec9985eff591",
+      "incoming_blob": "9e433bea3ca26f77a057d3257744c73a20cb561a",
+      "current_blob": "562c3e25c2e602c8915bed91332028eb81e7af8b"
+    },
+    {
+      "branch": "europe-R26",
+      "path": "src/Services/OpsisTaskbarDesigner.cs",
+      "ancestor": "cf906d7840a37af3f1dcaa8977ccaa7a4f3278c3",
+      "head": "e72ee5877526c03ead97ce8bbdd098fe41b49838",
+      "base_blob": "7f073c09d8c85b53837ac7d75dac8b996fa9f822",
+      "incoming_blob": "d64a95fd1542baecaa2331c5fde6fb2cce45ec84",
+      "current_blob": "6b302f23dd144e064d274c1c3330d4ed68e42738"
+    },
+    {
+      "branch": "europe-R26",
+      "path": "src/UI/MainWindow.Appearance.cs",
+      "ancestor": "cf906d7840a37af3f1dcaa8977ccaa7a4f3278c3",
+      "head": "e72ee5877526c03ead97ce8bbdd098fe41b49838",
+      "base_blob": "3ee1687c7d840be2a61c033a22882389431f67ab",
+      "incoming_blob": "6f3a387389591b5f0081d6ade2834d3b7374c928",
+      "current_blob": "54f25eed9e45d2ec120ca7fd7aaefd47f1937bc6"
+    },
+    {
+      "branch": "europe-R26",
+      "path": "src/UI/MainWindow.WallpaperGallery.cs",
+      "ancestor": "cf906d7840a37af3f1dcaa8977ccaa7a4f3278c3",
+      "head": "e72ee5877526c03ead97ce8bbdd098fe41b49838",
+      "base_blob": "69eee2837278e4926ff359ba4cf6da79d9ad24fd",
+      "incoming_blob": "b998cb357b18500a25a744b13979b60a8952a828",
+      "current_blob": "bd5e62d36b01de369d94d9091bb81c48e8711a18"
+    },
+    {
+      "branch": "europe-R26",
+      "path": "src/UI/MainWindow.cs",
+      "ancestor": "cf906d7840a37af3f1dcaa8977ccaa7a4f3278c3",
+      "head": "e72ee5877526c03ead97ce8bbdd098fe41b49838",
+      "base_blob": "b897e036615a53443e0e36c4f1f3da0473578eec",
+      "incoming_blob": "d458247701c625bb880d91777e3e4306976b71d3",
+      "current_blob": "7b2bd26bf1d0e5ddbc134dfefeb7f79a21f33567"
+    },
+    {
+      "branch": "europe-R26",
+      "path": "src/UI/ThemeManager.cs",
+      "ancestor": "cf906d7840a37af3f1dcaa8977ccaa7a4f3278c3",
+      "head": "e72ee5877526c03ead97ce8bbdd098fe41b49838",
+      "base_blob": "65a1725f5bf32cc77b4da174c8432247602efe3b",
+      "incoming_blob": "ccad9f4050f210b152c4165bc153ab334ed05424",
+      "current_blob": "15f7be6c8d6d76f8d9dbc9be1c18dbbcbaabbc60"
+    },
+    {
+      "branch": "europe-R26",
+      "path": "src/Widgets/DeskFlipEngine.cs",
+      "ancestor": "cf906d7840a37af3f1dcaa8977ccaa7a4f3278c3",
+      "head": "e72ee5877526c03ead97ce8bbdd098fe41b49838",
+      "base_blob": "ed61a8e217750b55180c60cd72efedfe429e94a0",
+      "incoming_blob": "2137b0e3c8073dc08f0b107b97441a0551e91ac4",
+      "current_blob": "781ccc6504e2e3392219fa2362de619cf9f970de"
+    },
+    {
+      "branch": "europe-R26",
+      "path": "src/Widgets/DeskStripWindow.cs",
+      "ancestor": "cf906d7840a37af3f1dcaa8977ccaa7a4f3278c3",
+      "head": "e72ee5877526c03ead97ce8bbdd098fe41b49838",
+      "base_blob": "605541f57e3ff1f2155754c97fe5e34d3773294c",
+      "incoming_blob": "03ee6f43c199d518293e6552588049489e877cfa",
+      "current_blob": "b2ffd38d72ec7aadb67d875464627f148e9b9c75"
+    },
+    {
+      "branch": "europe-R26",
+      "path": "src/Widgets/DesktopLauncher.cs",
+      "ancestor": "cf906d7840a37af3f1dcaa8977ccaa7a4f3278c3",
+      "head": "e72ee5877526c03ead97ce8bbdd098fe41b49838",
+      "base_blob": "e2179b48a48bbb16d04ce83e90fc1cb49dc57a61",
+      "incoming_blob": "c17a93b5c4999005d4a94d07bb244397115871d7",
+      "current_blob": "af665120d51958c37662b4cc92a1133a8b1cb2dc"
+    },
+    {
+      "branch": "europe-R26",
+      "path": "src/Widgets/ReplacementTaskbar.cs",
+      "ancestor": "cf906d7840a37af3f1dcaa8977ccaa7a4f3278c3",
+      "head": "e72ee5877526c03ead97ce8bbdd098fe41b49838",
+      "base_blob": "7968197a4e1d886a928df606273baa992d5fa67a",
+      "incoming_blob": "1e0a0d108e5b9f7c997d7b492029043944b45d17",
+      "current_blob": "17bb5cde40d305cca7436d25169ef6d077ccafbe"
+    },
+    {
+      "branch": "europe-R26",
+      "path": "src/Widgets/TrayApplicationContext.cs",
+      "ancestor": "cf906d7840a37af3f1dcaa8977ccaa7a4f3278c3",
+      "head": "e72ee5877526c03ead97ce8bbdd098fe41b49838",
+      "base_blob": "ab61e79d3842c36423b5e5118c235dd984ba7746",
+      "incoming_blob": "9ef598a9987e9dd978ce28613b1ed13cf98d2e33",
+      "current_blob": "b372da4d96a667d320894ea25314a86839128309"
+    },
+    {
+      "branch": "europe-R26",
+      "path": "src/Widgets/WallpaperWindow.cs",
+      "ancestor": "cf906d7840a37af3f1dcaa8977ccaa7a4f3278c3",
+      "head": "e72ee5877526c03ead97ce8bbdd098fe41b49838",
+      "base_blob": "0bb1bac9384396f54755a94c6b7a77d4b1b9d1bf",
+      "incoming_blob": "e955063aad6fa8503e1a03ca7d04e4d2c2409831",
+      "current_blob": "844a24e4a1abb99d33c1eda64e8bf97d5cfff3fd"
+    },
+    {
+      "branch": "europe-R26",
+      "path": "src/Widgets/wallpaper/index.html",
+      "ancestor": "cf906d7840a37af3f1dcaa8977ccaa7a4f3278c3",
+      "head": "e72ee5877526c03ead97ce8bbdd098fe41b49838",
+      "base_blob": "af4858f238d89f1a75b68301f08d39c1fd8e8d97",
+      "incoming_blob": "38746cfb9887f73ca78aaaf0e5ceaedd9bafc6fd",
+      "current_blob": "d1e1162ac57433b6ff5815846712288e91523a8e"
+    },
+    {
+      "branch": "europe-R26",
+      "path": "src/Widgets/wallpaper/weather.js",
+      "ancestor": "cf906d7840a37af3f1dcaa8977ccaa7a4f3278c3",
+      "head": "e72ee5877526c03ead97ce8bbdd098fe41b49838",
+      "base_blob": "d8a04fbd5913193520d5e220e9028028ba78fb1e",
+      "incoming_blob": "618b932a0640e2ec7fd54a54a4746f565f819397",
+      "current_blob": "fa4d7f015b9446c6b65834686bfcb3991f59ee9f"
+    },
+    {
+      "branch": "europe-R26",
+      "path": "tests/Opsis.ExperienceSmoke/Program.cs",
+      "ancestor": "cf906d7840a37af3f1dcaa8977ccaa7a4f3278c3",
+      "head": "e72ee5877526c03ead97ce8bbdd098fe41b49838",
+      "base_blob": "bd0c7c724ed13323d527fea4bb8d57d2e18f4ecf",
+      "incoming_blob": "903ba3d0c3432d224cbf2c7cbbb46a807c0a824b",
+      "current_blob": "4d749bed41d34a4e8a53552fde53e60a90814982"
+    },
+    {
+      "branch": "europe-R26",
+      "path": "src/Services/WallpaperGalleryCatalog.cs",
+      "ancestor": "cf906d7840a37af3f1dcaa8977ccaa7a4f3278c3",
+      "head": "e72ee5877526c03ead97ce8bbdd098fe41b49838",
+      "base_blob": null,
+      "incoming_blob": "83efa813cb93107c3944d533d0d67875524968b2",
+      "current_blob": "e67426108673267b35fe2669e1b7ce2186bfe3b2"
+    },
+    {
+      "branch": "crawler-bridge",
+      "path": ".github/workflows/plugin-compatibility.yml",
+      "ancestor": "6f8b5da31a5951d9dd467d6ef1250c52f8e8176f",
+      "head": "9fa970b8a2f046fa6b8dcddc6acfa7ca62bd4f69",
+      "base_blob": "9c5ed6756222f4eb9e93ddf48e8f0e222ed5b280",
+      "incoming_blob": "211dfb9669c6398c489abca594b8688b4752e922",
+      "current_blob": "c1f6be850fb55e5debe078f8ea122795ca869758"
+    },
+    {
+      "branch": "crawler-bridge",
+      "path": "Opsis.csproj",
+      "ancestor": "6f8b5da31a5951d9dd467d6ef1250c52f8e8176f",
+      "head": "9fa970b8a2f046fa6b8dcddc6acfa7ca62bd4f69",
+      "base_blob": "3abd65bfcf680e4eb33fdcf3d1f9b182c50fdec1",
+      "incoming_blob": "8cdf1a307c5df836e3327b199069ed7d735ad976",
+      "current_blob": "4c34b27d32e34706f8697174f76e34e06c6df919"
+    },
+    {
+      "branch": "crawler-bridge",
+      "path": "src/Services/PluginHost.cs",
+      "ancestor": "6f8b5da31a5951d9dd467d6ef1250c52f8e8176f",
+      "head": "9fa970b8a2f046fa6b8dcddc6acfa7ca62bd4f69",
+      "base_blob": "c69bc42bbc00fe996eccde45c01d664f491aeeff",
+      "incoming_blob": "707995a9d5f5708d963fbca43b478d24cdc0218f",
+      "current_blob": "46976dc0144e852511c6b3ab41722f36f66a6ed6"
+    },
+    {
+      "branch": "crawler-bridge",
+      "path": "src/Widgets/DeskStripWindow.cs",
+      "ancestor": "6f8b5da31a5951d9dd467d6ef1250c52f8e8176f",
+      "head": "9fa970b8a2f046fa6b8dcddc6acfa7ca62bd4f69",
+      "base_blob": "605541f57e3ff1f2155754c97fe5e34d3773294c",
+      "incoming_blob": "2bf4e3a1bbd982c113764c95d37bf31a28fbb65d",
+      "current_blob": "b2ffd38d72ec7aadb67d875464627f148e9b9c75"
+    },
+    {
+      "branch": "main-2.8-followup",
+      "path": ".github/workflows/windows-audit.yml",
+      "ancestor": "6f8b5da31a5951d9dd467d6ef1250c52f8e8176f",
+      "head": "12018a0b085d52dba96847e552d203787b15ed08",
+      "base_blob": "8c7c44169d73d9ae73f216593d715dcfaf4628ef",
+      "incoming_blob": "987d5f27309301f3abe0e6c2ed65d1c123b484e4",
+      "current_blob": "0f5361c96dec80e937d844de1fb7a67ed60196a8"
+    },
+    {
+      "branch": "main-2.8-followup",
+      "path": "Opsis.csproj",
+      "ancestor": "6f8b5da31a5951d9dd467d6ef1250c52f8e8176f",
+      "head": "12018a0b085d52dba96847e552d203787b15ed08",
+      "base_blob": "3abd65bfcf680e4eb33fdcf3d1f9b182c50fdec1",
+      "incoming_blob": "f1121e7b46c2d7a0418b94e65a2dd5c0ca21d04d",
+      "current_blob": "4c34b27d32e34706f8697174f76e34e06c6df919"
+    },
+    {
+      "branch": "main-2.8-followup",
+      "path": "Version.props",
+      "ancestor": "6f8b5da31a5951d9dd467d6ef1250c52f8e8176f",
+      "head": "12018a0b085d52dba96847e552d203787b15ed08",
+      "base_blob": "c5a431b25c29eb0760fc69a5de0783067fda1ed2",
+      "incoming_blob": "629767f0cf60c416fad8125299f117cff27b065b",
+      "current_blob": "c5a431b25c29eb0760fc69a5de0783067fda1ed2"
+    },
+    {
+      "branch": "main-2.8-followup",
+      "path": "locales/ar-SA.json",
+      "ancestor": "6f8b5da31a5951d9dd467d6ef1250c52f8e8176f",
+      "head": "12018a0b085d52dba96847e552d203787b15ed08",
+      "base_blob": "4a671db1d434a74ae79c952d0f7bda6da64f0da3",
+      "incoming_blob": "4f09b292ad7376dbd2e9837186c3b233f7470aa2",
+      "current_blob": "62d2c2f93697aa6423ac17dedc737200fa02f335"
+    },
+    {
+      "branch": "main-2.8-followup",
+      "path": "locales/de-DE.json",
+      "ancestor": "6f8b5da31a5951d9dd467d6ef1250c52f8e8176f",
+      "head": "12018a0b085d52dba96847e552d203787b15ed08",
+      "base_blob": "d99870e21abac3cbeae04cb01d5786fc503b8a4d",
+      "incoming_blob": "82cd0ee3b56fa9e5d50b6b87e93291e65da3101f",
+      "current_blob": "c8bd91898339053a6920eeab3b5b9cef35af4f90"
+    },
+    {
+      "branch": "main-2.8-followup",
+      "path": "locales/el-GR.json",
+      "ancestor": "6f8b5da31a5951d9dd467d6ef1250c52f8e8176f",
+      "head": "12018a0b085d52dba96847e552d203787b15ed08",
+      "base_blob": "232fb07c5c806098812d526d106ddafffa65cf7f",
+      "incoming_blob": "dc81c4e2529376410d602f1f576ca4ed67f75191",
+      "current_blob": "f2647200acbcd4b37af279f3e078128b8cf6888f"
+    },
+    {
+      "branch": "main-2.8-followup",
+      "path": "locales/en-US.json",
+      "ancestor": "6f8b5da31a5951d9dd467d6ef1250c52f8e8176f",
+      "head": "12018a0b085d52dba96847e552d203787b15ed08",
+      "base_blob": "d06d35ce587b86364430b4cf17a2bbab8095603d",
+      "incoming_blob": "8ae6a0f7a3b4372daeddeb158aaa1dd7e904809f",
+      "current_blob": "31c6214553c535e21fbbd98282a312981e2cd27f"
+    },
+    {
+      "branch": "main-2.8-followup",
+      "path": "locales/es-ES.json",
+      "ancestor": "6f8b5da31a5951d9dd467d6ef1250c52f8e8176f",
+      "head": "12018a0b085d52dba96847e552d203787b15ed08",
+      "base_blob": "129baf9f40763a0d6cc1a1da4b0545822ac97f30",
+      "incoming_blob": "781bf24bb1f5c02a10f86d5c634f1a58f01afc77",
+      "current_blob": "eaa441275d14819ff9053fba9493514612598b40"
+    },
+    {
+      "branch": "main-2.8-followup",
+      "path": "locales/fr-FR.json",
+      "ancestor": "6f8b5da31a5951d9dd467d6ef1250c52f8e8176f",
+      "head": "12018a0b085d52dba96847e552d203787b15ed08",
+      "base_blob": "634cde6abcd91fb107edf96a3bbe0714d1844fe1",
+      "incoming_blob": "5fa3dd5729991bd22ff25c7ceeef4c42b53b4049",
+      "current_blob": "e44e6a98634f1b913c5298fdeca5c74eb8f6fd4b"
+    },
+    {
+      "branch": "main-2.8-followup",
+      "path": "locales/hi-IN.json",
+      "ancestor": "6f8b5da31a5951d9dd467d6ef1250c52f8e8176f",
+      "head": "12018a0b085d52dba96847e552d203787b15ed08",
+      "base_blob": "da6972e20d6831e76506613cf14d68b66235eb14",
+      "incoming_blob": "1783dbe66deabdcc60f1d8a096b5a2dcc3f041e5",
+      "current_blob": "f03e42cf354829f55a138051409cf1f6a3744b5a"
+    },
+    {
+      "branch": "main-2.8-followup",
+      "path": "locales/it-IT.json",
+      "ancestor": "6f8b5da31a5951d9dd467d6ef1250c52f8e8176f",
+      "head": "12018a0b085d52dba96847e552d203787b15ed08",
+      "base_blob": "507c35f90a92dd05be4e0c1f0e5afa1d76e7cdeb",
+      "incoming_blob": "52a09a6509f151d5e98cfd03e07954054cba12cd",
+      "current_blob": "c915fb1d6fd8c3e155d82690478ee977f4080e37"
+    },
+    {
+      "branch": "main-2.8-followup",
+      "path": "locales/ja-JP.json",
+      "ancestor": "6f8b5da31a5951d9dd467d6ef1250c52f8e8176f",
+      "head": "12018a0b085d52dba96847e552d203787b15ed08",
+      "base_blob": "c422023b2758e2c3ca8f10d11611fc3636ea8215",
+      "incoming_blob": "d31b6f874b81259b7ac4fcc0f541ad913de90463",
+      "current_blob": "1292c4c8d9d097dba905bad83575f7d4854a840c"
+    },
+    {
+      "branch": "main-2.8-followup",
+      "path": "locales/ko-KR.json",
+      "ancestor": "6f8b5da31a5951d9dd467d6ef1250c52f8e8176f",
+      "head": "12018a0b085d52dba96847e552d203787b15ed08",
+      "base_blob": "076455141fdfbfb423f485083ba0eb2dcc161e17",
+      "incoming_blob": "3f706aa79dbd94691e570befbe0358ade5c575cf",
+      "current_blob": "ac594997caedd1ef32374b473ce6fdc33dee4d2f"
+    },
+    {
+      "branch": "main-2.8-followup",
+      "path": "locales/pt-PT.json",
+      "ancestor": "6f8b5da31a5951d9dd467d6ef1250c52f8e8176f",
+      "head": "12018a0b085d52dba96847e552d203787b15ed08",
+      "base_blob": "112566c7371b87a3f48d2feee5743ce3a8735cc5",
+      "incoming_blob": "cb10469f27f663465084abe996bd7544d7e7ee47",
+      "current_blob": "cf6637ba407608a564d02072467da282b8631a24"
+    },
+    {
+      "branch": "main-2.8-followup",
+      "path": "locales/ru-RU.json",
+      "ancestor": "6f8b5da31a5951d9dd467d6ef1250c52f8e8176f",
+      "head": "12018a0b085d52dba96847e552d203787b15ed08",
+      "base_blob": "16866afcc7fb2fee42c2a1afdfb1758bbb831ff7",
+      "incoming_blob": "db9d4c038daf9f0112023167720532c83f92363a",
+      "current_blob": "e27639789c8827db18b0d1ff857c909676616d40"
+    },
+    {
+      "branch": "main-2.8-followup",
+      "path": "locales/tr-TR.json",
+      "ancestor": "6f8b5da31a5951d9dd467d6ef1250c52f8e8176f",
+      "head": "12018a0b085d52dba96847e552d203787b15ed08",
+      "base_blob": "3ff14aca3731e6111b7a4b04c07768b6e25ac03c",
+      "incoming_blob": "914c95825d90d6f62e955ee3a87ee3d2ba460428",
+      "current_blob": "71653af93ca1951659285e0fd639a50913376157"
+    },
+    {
+      "branch": "main-2.8-followup",
+      "path": "locales/zh-CN.json",
+      "ancestor": "6f8b5da31a5951d9dd467d6ef1250c52f8e8176f",
+      "head": "12018a0b085d52dba96847e552d203787b15ed08",
+      "base_blob": "bc3e62d9a5968211dab34f4e952be38d01aaadb7",
+      "incoming_blob": "d3b2dcbcb09e17faac16b16aeae82f93d2f493c6",
+      "current_blob": "18696ca80b92177f7255798f3619e77288b61441"
+    },
+    {
+      "branch": "main-2.8-followup",
+      "path": "src/Services/PluginHost.cs",
+      "ancestor": "6f8b5da31a5951d9dd467d6ef1250c52f8e8176f",
+      "head": "12018a0b085d52dba96847e552d203787b15ed08",
+      "base_blob": "c69bc42bbc00fe996eccde45c01d664f491aeeff",
+      "incoming_blob": "4487c20e166a7e8e3297139f71da788a55d2785b",
+      "current_blob": "46976dc0144e852511c6b3ab41722f36f66a6ed6"
+    },
+    {
+      "branch": "main-2.8-followup",
+      "path": "src/Services/UiAudit.cs",
+      "ancestor": "6f8b5da31a5951d9dd467d6ef1250c52f8e8176f",
+      "head": "12018a0b085d52dba96847e552d203787b15ed08",
+      "base_blob": "d8664220594f44766d3e0c62cb7af69c3fb4b643",
+      "incoming_blob": "a7025eeadad33367de864a894af3855d4bd5ec85",
+      "current_blob": "28b3834e279f164835b5d1f256ed91b9e764354e"
+    },
+    {
+      "branch": "main-2.8-followup",
+      "path": "src/UI/MainWindow.StudioChrome.cs",
+      "ancestor": "6f8b5da31a5951d9dd467d6ef1250c52f8e8176f",
+      "head": "12018a0b085d52dba96847e552d203787b15ed08",
+      "base_blob": "d680f3a0fc51c25c03402d15049ed8d3f7ac2ee8",
+      "incoming_blob": "8717c1b9e926b4dd53bd7b647aff5855c50bfe46",
+      "current_blob": "83fde6460f92f26f747d1ae467793b3643eddf02"
+    },
+    {
+      "branch": "main-2.8-followup",
+      "path": "src/UI/MainWindow.cs",
+      "ancestor": "6f8b5da31a5951d9dd467d6ef1250c52f8e8176f",
+      "head": "12018a0b085d52dba96847e552d203787b15ed08",
+      "base_blob": "1325f262680e35643d328a24c9bc6e8e6a999a4d",
+      "incoming_blob": "282fc0a255626b116a9084f11edc4cca60694c0a",
+      "current_blob": "7b2bd26bf1d0e5ddbc134dfefeb7f79a21f33567"
+    },
+    {
+      "branch": "main-2.8-followup",
+      "path": "src/UI/ThemeManager.cs",
+      "ancestor": "6f8b5da31a5951d9dd467d6ef1250c52f8e8176f",
+      "head": "12018a0b085d52dba96847e552d203787b15ed08",
+      "base_blob": "d80fba77b589ac8ac118ecd67c578e0d52278341",
+      "incoming_blob": "ffd29a7cce26ec1d865c0bebfccb2a92fe962398",
+      "current_blob": "15f7be6c8d6d76f8d9dbc9be1c18dbbcbaabbc60"
+    },
+    {
+      "branch": "main-2.8-followup",
+      "path": "src/Widgets/wallpaper/index.html",
+      "ancestor": "6f8b5da31a5951d9dd467d6ef1250c52f8e8176f",
+      "head": "12018a0b085d52dba96847e552d203787b15ed08",
+      "base_blob": "54c8430d04ede33bf10d6c840b1f364e6ec7d2f4",
+      "incoming_blob": "ee975b0dfb1d315acf2a07739aa040e6e2a0f1d0",
+      "current_blob": "d1e1162ac57433b6ff5815846712288e91523a8e"
+    },
+    {
+      "branch": "main-2.8-followup",
+      "path": "tests/WeatherInfoTone.test.cjs",
+      "ancestor": "6f8b5da31a5951d9dd467d6ef1250c52f8e8176f",
+      "head": "12018a0b085d52dba96847e552d203787b15ed08",
+      "base_blob": null,
+      "incoming_blob": "7f3550490d383f4df5ade4831b25dfe15c0afdee",
+      "current_blob": "3846233faea2c9d58ac52e7b1f78e00498577356"
+    }
+  ],
+  "legacy_handoff_copied": [
+    "docs/opsis-wallpapers-addon-r19/INTEGRATION-HANDOFF.md",
+    "docs/opsis-wallpapers-addon-r19/WEATHER-SEAM-FIX.patch",
+    "docs/opsis-wallpapers-addon-r19/WallpaperGalleryCatalog.cs"
+  ],
+  "unrelated_histories": [
+    {
+      "branch": "integration/p1-crawler-opsis-widgets",
+      "sha": "182a62a05b20a39cbdcf989c34963578ec9fcc92"
+    },
+    {
+      "branch": "feat/p0-explorer-view-profiles",
+      "sha": "3eba0c1297a02bd9005ed0bb3f7cfc7c37595acd"
+    },
+    {
+      "branch": "fix/weather-overlay-white-text",
+      "sha": "869b752efc67d4c94b0d32a0651d1ef499e3c142"
+    }
+  ],
+  "unavailable_local_sources": [
+    "OPSIS-3.0.0.3200-RC-Integrated-Source-R20.zip (not found)",
+    "R13 and older integrated source ZIPs (materialization denied)",
+    "OPSIS-110-Wallpapers-AddOn-v1.2.0",
+    "Complete Patch Claude Code v2",
+    "R16 Spectrum Wallpaper Patch",
+    "3 RC User Bugs Containers UI Installer Patch"
+  ],
+  "notes": "No branch deletions or claims of final merges. Overlaps must be reconciled, not silently overwritten. Review assets are not production."
+}

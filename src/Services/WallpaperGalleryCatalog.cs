@@ -73,6 +73,7 @@ public static class WallpaperGalleryCatalog
                         if (poster is null) continue;
                         string name = string.IsNullOrWhiteSpace(manifest.Name) ? id : manifest.Name;
                         // Installed pack is processed last. Its manifest supersedes the same legacy ID.
+                        if (id == "opsis-glass-signature" && found.ContainsKey(id)) continue;
                         found[id] = new Entry(id, name, manifest.NameEl ?? "", category, index,
                             poster, manifest.Description ?? "", manifest.DescriptionEl ?? "");
                     }

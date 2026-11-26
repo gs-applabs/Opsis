@@ -1,6 +1,9 @@
 name: Opsis - Desktop Customization Windows audit
 
-on: workflow_dispatch
+on:
+  workflow_dispatch:
+  push:
+    branches: [rc3.0-base, patch/3.0.0.3200-appearance]
 
 permissions:
   contents: read
@@ -31,8 +34,9 @@ jobs:
         shell: pwsh
         run: |
           $env:OPSIS_APPDATA = Join-Path $env:RUNNER_TEMP 'opsis-selftests'
-          & .\publish\Opsis.exe --run-selftest
-          if ($LASTEXITCODE -ne 0) { throw "Opsis self-test failed: $LASTEXITCODE" }
+          # Opsis.exe is a GUI (WinExe) program: a plain call does not wait for it and leaves $LASTEXITCODE empty, so wait for it and read the real exit code
+          $selftest = Start-Process -FilePath (Resolve-Path .\publish\Opsis.exe).Path -ArgumentList '--run-selftest' -Wait -PassThru
+          if ($selftest.ExitCode -ne 0) { throw "Opsis self-test failed: $($selftest.ExitCode)" }
           node --test
           if ($LASTEXITCODE -ne 0) { throw "Wallpaper JavaScript tests failed: $LASTEXITCODE" }
       - name: Record reproducible toolchain and installer SHA-256
@@ -59,8 +63,9 @@ jobs:
           $env:OPSIS_AUDIT_RESOURCE_CYCLES = '3'
           $output = Join-Path $env:GITHUB_WORKSPACE 'audit-result'
           New-Item -ItemType Directory -Force $output | Out-Null
+          $env:OPSIS_TRACE = Join-Path $output 'trace.txt'     # hang hunting: the last line shows where the UI thread stopped
           $process = Start-Process .\publish\Opsis.exe -ArgumentList @('--ui-audit', ('"' + $output + '"')) -PassThru
-          if (-not $process.WaitForExit(1500000)) {
+          if (-not $process.WaitForExit(480000)) {
             Stop-Process -Id $process.Id -Force
             throw 'Opsis audit timed out'
           }

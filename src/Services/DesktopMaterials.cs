@@ -9,9 +9,11 @@ public enum DesktopSurface { Containers, DeskStrip, Widgets }
 public sealed record DesktopMaterial(string Mode = "Default", string Tint = "#1E2128", int Opacity = 32,
     int Blur = 8, int Refraction = 85, int Rim = 70, int Radius = 18,
     string? TitleFont = null, string? ItemFont = null, int ItemFontSize = 0,
-    string? TitleColor = null, string? ItemColor = null, string? AccentColor = null)
+    string? TitleColor = null, string? ItemColor = null, string? AccentColor = null, bool RadiusSet = false)
 {
     internal bool UsesCustom => Mode != "Default";
+    /// <summary>The corner radius to draw: the chosen one for a custom material, or in the Default look when the person set the radius on its own (RadiusSet); otherwise the built-in value.</summary>
+    internal int EffectiveRadius(int builtIn) => UsesCustom || RadiusSet ? Radius : builtIn;
     internal bool WantsGlass => Mode is "Clear" or "Frosted" or "Custom";
     internal Color Color => ColorTranslator.FromHtml(Tint);
 

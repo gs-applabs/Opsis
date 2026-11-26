@@ -131,6 +131,9 @@ namespace MotionDesk.UI
         // the palette of the selected theme (the app's own "Glass" theme was removed on 2026-11-18)
         public static UiPalette Current { get => _raw; private set => _raw = value; }
         public static event Action? Changed;
+        // hang hunting (OPSIS_TRACE): every subscriber is marked before it runs, so the last mark names the handler that did not return
+        private static void RaiseChangedTraced() { var h = Changed; if (h == null) return; foreach (Action d in h.GetInvocationList()) { MotionDesk.Services.HangTrace.Mark("ThemeManager.Changed -> " + d.Method.DeclaringType?.Name + "." + d.Method.Name); d(); } }
+        private static void RaiseRepaintedTraced() { var h = Repainted; if (h == null) return; foreach (Action d in h.GetInvocationList()) { MotionDesk.Services.HangTrace.Mark("ThemeManager.Repainted -> " + d.Method.DeclaringType?.Name + "." + d.Method.Name); d(); } }
 
         // Ξεχωριστό, ΦΤΗΝΟ event για ζωντανή προεπισκόπηση ενώ σέρνεις το slider σκουρότητας —
         // ΟΧΙ το ίδιο με το Changed. Το Changed προκαλεί πλήρη ανακατασκευή σελίδας/sidebar (ώστε
@@ -146,13 +149,13 @@ namespace MotionDesk.UI
         // ελέγχων· η πλήρης, ακριβής ανακατασκευή γίνεται ΜΙΑ φορά όταν αφήνει ο χρήστης το slider.
         public static event Action? Repainted;
 
-        public static void RaiseRepainted() => Repainted?.Invoke();
+        public static void RaiseRepainted() => RaiseRepaintedTraced();
 
         public static void PreviewDarkIntensity(double intensity)
         {
             if (!Current.IsDark) return;
             Current = UiPalette.Dark(Math.Clamp(intensity, 0, 1));
-            Repainted?.Invoke();
+            RaiseRepaintedTraced();
         }
 
         private static UiPalette ResolveInitial()
@@ -237,7 +240,7 @@ namespace MotionDesk.UI
             settings.ThemeMode = mode;
             settings.Save();
             Current = Resolve(mode);
-            Changed?.Invoke();
+            RaiseChangedTraced();
         }
 
         public static void SetFollowWindowsAccent(bool follow)
@@ -246,7 +249,7 @@ namespace MotionDesk.UI
             settings.FollowWindowsAccent = follow;
             settings.Save();
             Current = Resolve(settings.ThemeMode);
-            Changed?.Invoke();
+            RaiseChangedTraced();
         }
 
         // Ζωντανή ενημέρωση καθώς ο χρήστης σέρνει το slider "πόσο σκούρο" στις Ρυθμίσεις — δεν
@@ -260,14 +263,14 @@ namespace MotionDesk.UI
             if (Current.IsDark)
             {
                 Current = UiPalette.Dark(settings.DarkIntensity);
-                Changed?.Invoke();
+                RaiseChangedTraced();
             }
         }
 
         // Δημόσιο "χειροκίνητο" trigger του Changed — χρειάζεται όταν αλλάζει κάτι που ΔΕΝ αγγίζει
         // το ίδιο το ThemeManager.Current (π.χ. AppSettings.WidgetsThemeMode, το ανεξάρτητο θέμα
         // widgets/DeskContainers) αλλά πρέπει να ξαναζωγραφιστούν όλα τα ήδη ανοιχτά widgets.
-        public static void NotifyChanged() => Changed?.Invoke();
+        public static void NotifyChanged() => RaiseChangedTraced();
 
         // UI SynchronizationContext — ορίζεται από το MainWindow (UI thread). Το SystemEvents.
         // UserPreferenceChanged καλείται από ΔΙΚΟ ΤΟΥ thread· χωρίς marshalling, τα widgets
@@ -280,16 +283,23 @@ namespace MotionDesk.UI
             var ui = UiContext;
             if (ui != null && System.Threading.SynchronizationContext.Current != ui)
             {
-                ui.Post(_ => RefreshFromWindows(), null);
+                // the callback runs the refresh directly: it must NOT re-test the context, because a callback that is dispatched by another context
+                // (e.g. the one of the UI audit) would then post itself again for ever and starve the message loop
+                ui.Post(_ => RefreshNow(), null);
                 return;
             }
+            RefreshNow();
+        }
+
+        private static void RefreshNow()
+        {
             if (AppSettings.Load().ThemeMode == "Follow")
             {
                 var resolved = Resolve("Follow");
                 if (resolved.IsDark != Current.IsDark)
                 {
                     Current = resolved;
-                    Changed?.Invoke();
+                    RaiseChangedTraced();
                 }
             }
         }

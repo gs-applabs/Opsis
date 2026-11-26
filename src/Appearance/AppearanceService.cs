@@ -50,7 +50,7 @@ public sealed class AppearanceService
         if (themesRoot != null) _themes = new ThemeLibrary(themesRoot);
         _wallpaperApi = wallpaper ?? new RealWallpaper();
         _engine = new AppearanceEngine(registry, noSystem ? () => { } : null);
-        _effects = new WindowEffectsEngine(dwm ?? new RealDwmWindows(), taskbar ?? new RealTaskbar(), () => _engine.IsDark);
+        _effects = new WindowEffectsEngine(dwm ?? new RealDwmWindows(() => SystemInformation.HighContrast), taskbar ?? new RealTaskbar(), () => _engine.IsDark);
         _applier = new ThemeApplier(_engine, fx => { _settings.Effects = fx; ApplyEffects(); }, _wallpaperApi, _themes);
     }
 
@@ -112,6 +112,7 @@ public sealed class AppearanceService
     /// <summary>The window hook lives ONLY while a window effect is on (no polling).</summary>
     public void ApplyEffects()
     {
+        if (_started && !EngineActive) return;
         try
         {
             _effects.AccentRgb = _engine.ReadAccent() ?? 0x0078D4;

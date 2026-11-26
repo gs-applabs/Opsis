@@ -22,6 +22,7 @@ namespace MotionDesk.Services
 
         private static GlassLevel _level = GlassLevel.Solid; private static string _reason = ""; private static DateTime _decidedAt;
         private static HardwareInfo? _hw;
+        internal static event Action? PolicyChanged;
 
         /// <summary>What is used right now and why (for the settings page).</summary>
         public static string Describe() { Decide(); return GlassPolicy.Describe(_level, _reason); }
@@ -31,6 +32,7 @@ namespace MotionDesk.Services
         {
             if ((DateTime.UtcNow - _decidedAt).TotalMilliseconds < 800) return;
             _decidedAt = DateTime.UtcNow;
+            var previous = _level;
             try
             {
                 var s = AppSettings.Peek(); var act = AppActivity.Snapshot; _hw ??= HardwareInfo.Detect();
@@ -39,6 +41,7 @@ namespace MotionDesk.Services
                 (_level, _reason) = GlassPolicy.Decide(GlassPolicy.ParseMode(s.GpuGlassMode, s.UseGpuGlass), inp);
             }
             catch (Exception) { _level = GlassLevel.Solid; _reason = "could not read the computer's state"; }
+            if (previous != _level) PolicyChanged?.Invoke();
         }
 
         /// <summary>True while the GPU glass may be used: the policy says Full or Frosted (no static default: the choice comes from the computer and follows the load live).</summary>
@@ -59,13 +62,13 @@ namespace MotionDesk.Services
                         try
                         {
                             _manager = new OpsisGlass.GlassManager();
-                            if (!_manager.IsGpuReady) { RotatingLogger.Write("GlassService: GPU glass unavailable, keeping the DWM look"); _manager.Dispose(); _manager = null; _failed = true; return null; }
+                            if (!_manager.IsGpuReady) { RotatingLogger.Write("GlassService: GPU glass unavailable, keeping the DWM look"); _manager.Dispose(); _manager = null; _failed = true; _decidedAt = DateTime.MinValue; Decide(); return null; }
                             AppActivity.FullscreenChanged += _ => Refresh();
                             PerformanceGovernor.EffectiveChanged += _ => Refresh();
                             _timer = new System.Threading.Timer(_ => Refresh(), null, 2000, 2000);   // wallpaper on/off, mode changes (cheap: pushes only when something changed)
                             Refresh();
                         }
-                        catch (Exception ex) { RotatingLogger.Write("GlassService: " + ex.Message); _manager = null; _failed = true; return null; }
+                        catch (Exception ex) { RotatingLogger.Write("GlassService: " + ex.Message); _manager?.Dispose(); _manager = null; _failed = true; _decidedAt = DateTime.MinValue; Decide(); return null; }
                     }
                     return _manager;
                 }
@@ -112,7 +115,7 @@ namespace MotionDesk.Services
                     BlurSigma = material.Blur / 5f,
                     CornerRadius = material.Radius, Gloss = material.Refraction / 200f, Rim = material.Rim / 100f
                 };
-            var g = AppSettings.Load().Glass;
+            var g = AppSettings.Peek().Glass;
             Color tint;
             try { tint = ColorTranslator.FromHtml(g.TintColor); } catch (Exception) { tint = Color.FromArgb(0x99, 0xCC, 0xFF); }
             return new OpsisGlass.GlassStyle
@@ -144,35 +147,118 @@ namespace MotionDesk.Services
         private OpsisGlass.GlassStyle? _shownStyle;
         private Rectangle _shownBounds;
         private bool _shownVisible;
-        private bool _syncQueued;
+        private int _syncQueued;
         private readonly Func<int?>? _cornerOverride;
         private readonly Func<OpsisGlass.GlassStyle, OpsisGlass.GlassStyle>? _tintOverride;
         private readonly System.Text.StringBuilder _nextClass = new(64);
+#if SIGNATURE_COMPOSITION_PREVIEW
+        private Opsis.UI.Composition.CompositionPaneBinding? _signature;
+        private bool _signatureFramePending;
+        private long _signatureNextFrame;
+        private Rectangle _signatureLastFrameBounds;
+        private async void RequestSignatureFrame()
+        {
+            if (_signature is not { Active: true } binding || _signatureFramePending || Environment.TickCount64 < _signatureNextFrame) return;
+            _signatureFramePending = true;
+            _signatureNextFrame = Environment.TickCount64 + (SignatureRenderer().AdaptiveTier == Opsis.UI.GlassTier.High && GlassService.Level == GlassLevel.Full ? 500 : 2000);
+            var bounds = _f.Bounds;
+            try
+            {
+                using var frame = await MotionDesk.Widgets.WallpaperHostEngine.Instance.CaptureSignatureCropAsync(bounds);
+                if (_disposed || _f.IsDisposed || _f.Bounds != bounds || _signature != binding || !binding.Active) return;
+                binding.SubmitBackdrop(frame);
+                _signatureLastFrameBounds = bounds;
+            }
+            catch (Exception ex) { System.Diagnostics.Debug.WriteLine("Signature frame: " + ex.Message); }
+            finally { _signatureFramePending = false; }
+        }
+        // A single native device per UI thread; the old desktop renderer remains
+        // available to the independent DeskStrip path during this preview.
+        [ThreadStatic] private static Opsis.UI.Composition.CompositionGlassRenderer? _signatureRenderer;
+        internal static Opsis.UI.Composition.CompositionDiagnostics? SignatureDiagnostics => _signatureRenderer?.Diagnostics;
+        private static Opsis.UI.Composition.CompositionGlassRenderer SignatureRenderer()
+        {
+            if (_signatureRenderer != null) return _signatureRenderer;
+            var renderer = new Opsis.UI.Composition.CompositionGlassRenderer();
+            _signatureRenderer = renderer;
+            int owner = Environment.CurrentManagedThreadId;
+            EventHandler? cleanup = null;
+            cleanup = (_, _) =>
+            {
+                if (Environment.CurrentManagedThreadId != owner) return;
+                Application.ThreadExit -= cleanup;
+                renderer.Dispose();
+                _signatureRenderer = null;
+            };
+            Application.ThreadExit += cleanup;
+            return renderer;
+        }
+        private Opsis.UI.GlassState SignatureState()
+        {
+            var level = GlassService.Level;
+            var tier = level == GlassLevel.Full ? Opsis.UI.GlassTier.High :
+                level == GlassLevel.Frosted ? Opsis.UI.GlassTier.Medium : Opsis.UI.GlassTier.Low;
+            bool active = (level is GlassLevel.Full or GlassLevel.Frosted) && !AppSettings.Peek().Glass.ReducedEffects;
+            return new Opsis.UI.GlassState(active, tier, Opsis.UI.GlassOffReason.None,
+                Opsis.UI.BackdropKind.None, active ? 14 : 0, _radius, .30, .85, 0, .80);
+        }
+        private Opsis.UI.Composition.CompositionGlassStyle SignatureStyle(Opsis.UI.GlassState state)
+        {
+            var look = GlassService.Style(_radius, _surface);
+            if (_cornerOverride?.Invoke() is int radius) look = look with { CornerRadius = radius };
+            if (_tintOverride != null) look = _tintOverride(look);
+            var material = AppSettings.Peek().Glass;
+            var pointer = _f.PointToClient(Cursor.Position);
+            bool hover = _f.ClientRectangle.Contains(pointer) && !SystemInformation.HighContrast && !material.ReducedEffects;
+            return new Opsis.UI.Composition.CompositionGlassStyle(look.Tint, look.TintAlpha,
+                look.CornerRadius, look.Gloss, look.Rim)
+            {
+                Blur = state.Tier == Opsis.UI.GlassTier.High ? look.BlurSigma : look.BlurSigma * .5f,
+                Refraction = state.Tier == Opsis.UI.GlassTier.High ? look.Gloss : 0,
+                Dispersion = Math.Clamp(material.Dispersion, 0, 100) / 100f,
+                Microtexture = Math.Clamp(material.Microtexture, 0, 100) / 100f,
+                Depth = Math.Clamp(material.Shadow, 0, 100) / 100f,
+                InteractiveLight = hover ? Math.Clamp(material.InteractiveLight, 0, 100) / 100f : 0,
+                LightX = Math.Clamp(pointer.X / (float)Math.Max(1, _f.ClientSize.Width), 0, 1),
+                LightY = Math.Clamp(pointer.Y / (float)Math.Max(1, _f.ClientSize.Height), 0, 1)
+            };
+        }
+#endif
 
         public GlassPaneBinder(Form form, int cornerRadius, Func<bool> wants, DesktopSurface? surface = null, Func<int?>? cornerOverride = null,
             Func<OpsisGlass.GlassStyle, OpsisGlass.GlassStyle>? tintOverride = null)
         {
             _f = form; _radius = cornerRadius; _wants = wants; _surface = surface; _cornerOverride = cornerOverride; _tintOverride = tintOverride;
-            form.HandleCreated += (_, _) => Sync();
-            form.LocationChanged += (_, _) => QueueSync();
-            form.SizeChanged += (_, _) => QueueSync();
-            form.VisibleChanged += (_, _) => Sync();
-            form.Disposed += (_, _) => Dispose();
+            form.HandleCreated += HandleCreated;
+            form.LocationChanged += GeometryChanged;
+            form.SizeChanged += GeometryChanged;
+            form.VisibleChanged += HandleCreated;
+            form.Disposed += FormDisposed;
             MotionDesk.UI.ThemeManager.Changed += OnTheme;
             MotionDesk.UI.ThemeManager.Repainted += OnTheme;
+            GlassService.PolicyChanged += OnPolicyChanged;
+            form.HandleDestroyed += HandleDestroyed;
             _reseat.Tick += (_, _) =>
             {
+#if SIGNATURE_COMPOSITION_PREVIEW
+                if (!_disposed && _f.Visible) Sync();
+#else
                 if (_id >= 0 && !_disposed && _f.Visible && !PaneIsBelow())
                     GlassService.ExistingManager?.PlaceBelow(_id, _f.Handle);
+#endif
             };
         }
 
+        private void HandleCreated(object? sender, EventArgs e) => Sync();
+        private void GeometryChanged(object? sender, EventArgs e) => QueueSync();
+        private void FormDisposed(object? sender, EventArgs e) => Dispose();
+        private void HandleDestroyed(object? sender, EventArgs e) { Interlocked.Exchange(ref _syncQueued, 0); Remove(); }
+
         private void QueueSync()
         {
-            if (_syncQueued || _disposed || !_f.IsHandleCreated) return;
-            _syncQueued = true;
-            try { _f.BeginInvoke(() => { _syncQueued = false; Sync(); }); }
-            catch (InvalidOperationException) { _syncQueued = false; }
+            if (_disposed || !_f.IsHandleCreated || Interlocked.Exchange(ref _syncQueued, 1) != 0) return;
+            try { _f.BeginInvoke(() => { Interlocked.Exchange(ref _syncQueued, 0); Sync(); }); }
+            catch (InvalidOperationException) { Interlocked.Exchange(ref _syncQueued, 0); }
         }
 
         private bool PaneIsBelow()
@@ -191,11 +277,32 @@ namespace MotionDesk.Services
         [DllImport("user32.dll", CharSet = CharSet.Unicode)] private static extern int GetClassName(IntPtr hwnd, System.Text.StringBuilder result, int length);
         [DllImport("user32.dll")] private static extern bool GetWindowRect(IntPtr hwnd, out NativeRect result);
 
+        private void OnPolicyChanged() => QueueSync();
+
         private void OnTheme() { if (_disposed || _f.IsDisposed) return; if (_f.InvokeRequired) { try { _f.BeginInvoke(new Action(Sync)); } catch (InvalidOperationException) { } } else Sync(); }
 
         public void Sync()
         {
-            if (_disposed || _f.IsDisposed || !_f.IsHandleCreated) return;
+            if (_disposed || _f.IsDisposed || _f.Disposing || !_f.IsHandleCreated) return;
+#if SIGNATURE_COMPOSITION_PREVIEW
+            if (!_f.Visible) { Remove(); return; }
+            // Reuse the existing reseat timer for policy and z-order changes;
+            // no per-frame timer and no additional legacy pane for this form.
+            if (!_reseat.Enabled) _reseat.Start();
+            if (!_wants()) { _signature?.Dispose(); _signature = null; return; }
+            if (_signature == null)
+            {
+                _signature = new Opsis.UI.Composition.CompositionPaneBinding(_f, SignatureRenderer(),
+                    SignatureState, SignatureStyle, _wants);
+                _signature.ActiveChanged += _ => { if (!_disposed && !_f.Disposing && _f.IsHandleCreated) PaneChanged?.Invoke(); };
+            }
+            if (_signature.Sync())
+            {
+                if (_signatureLastFrameBounds != _f.Bounds) { _signature.SubmitBackdrop(null); _signatureLastFrameBounds = _f.Bounds; }
+                RequestSignatureFrame();
+            }
+            return;
+#else
             var m = _wants() ? GlassService.Manager : null;
             if (m == null) { Remove(); return; }
             if (!_f.Visible)
@@ -210,7 +317,11 @@ namespace MotionDesk.Services
             if (_tintOverride != null) style = _tintOverride(style);
             var bounds = _f.Bounds;
             bool created = _id < 0;
-            if (created) _id = m.AddPane(bounds, style, clickThrough: true);
+            if (created)
+            {
+                _id = m.AddPane(bounds, style, clickThrough: true);
+                if (_id < 0) return;
+            }
             else
             {
                 if (_shownBounds.Location != bounds.Location) m.MovePane(_id, bounds.Location);
@@ -224,21 +335,49 @@ namespace MotionDesk.Services
             _shownVisible = true;
             if (!_reseat.Enabled) _reseat.Start();
             if (created) PaneChanged?.Invoke();
+#endif
         }
 
-        internal bool HasPane => _id >= 0;
+        internal bool HasPane =>
+#if SIGNATURE_COMPOSITION_PREVIEW
+            _signature?.Active == true;
+#else
+            _id >= 0;
+#endif
         internal event Action? PaneChanged;
 
         private void Remove()
         {
             _reseat.Stop();
+#if SIGNATURE_COMPOSITION_PREVIEW
+            _signature?.Dispose(); _signature = null;
+#endif
             if (_id < 0) return;
             GlassService.ExistingManager?.RemovePane(_id);
             _id = -1;
-            if (!_disposed) PaneChanged?.Invoke();
+            _shownVisible = false;
+            _shownStyle = null;
+            _shownBounds = Rectangle.Empty;
+            if (!_disposed && _f.IsHandleCreated && !_f.Disposing) PaneChanged?.Invoke();
         }
 
-        public void Dispose() { if (_disposed) return; _disposed = true; MotionDesk.UI.ThemeManager.Changed -= OnTheme; MotionDesk.UI.ThemeManager.Repainted -= OnTheme; Remove(); _reseat.Dispose(); }
+        public void Dispose()
+        {
+            if (_disposed) return;
+            _disposed = true;
+            _f.HandleCreated -= HandleCreated;
+            _f.LocationChanged -= GeometryChanged;
+            _f.SizeChanged -= GeometryChanged;
+            _f.VisibleChanged -= HandleCreated;
+            _f.Disposed -= FormDisposed;
+            _f.HandleDestroyed -= HandleDestroyed;
+            MotionDesk.UI.ThemeManager.Changed -= OnTheme;
+            MotionDesk.UI.ThemeManager.Repainted -= OnTheme;
+            GlassService.PolicyChanged -= OnPolicyChanged;
+            Remove();
+            _reseat.Dispose();
+            PaneChanged = null;
+        }
     }
 
     /// <summary>

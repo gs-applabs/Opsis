@@ -41,6 +41,28 @@ try
         MotionDesk.UI.OpsisStartButtonArt.IsValid("Opsis Square"),
         "P2 sharp and rounded square Start variants are available");
     StartStudioPreferences.SetStartButton("Opsis Glass");
+    var catalogRoot = Path.Combine(folder, "gallery-test");
+    void CreateCatalogFixture(string relative, string id)
+    {
+        var dir = Path.Combine(catalogRoot, relative);
+        Directory.CreateDirectory(dir);
+        File.WriteAllText(Path.Combine(dir, "index.html"), "<!doctype html><title>fixture</title>");
+        File.WriteAllText(Path.Combine(dir, "opsis-wallpaper.json"), JsonSerializer.Serialize(new {
+            WallpaperId=id, Name=id, Category="Abstract", Collection="OPSIS 100 3D Wallpapers"
+        }));
+        using var image = new System.Drawing.Bitmap(8, 8);
+        image.Save(Path.Combine(dir, "poster.png"), System.Drawing.Imaging.ImageFormat.Png);
+    }
+    CreateCatalogFixture("wallpapers/samples/opsis-glass-signature", "opsis-glass-signature");
+    CreateCatalogFixture("wallpapers/packs/opsis-100/opsis-glass-signature", "opsis-glass-signature");
+    CreateCatalogFixture("wallpapers/packs/opsis-100/animated-one", "animated-one");
+    CreateCatalogFixture("wallpapers/packs/opsis-100/ancient-athens", "ancient-athens");
+    var gallery = WallpaperGalleryCatalog.Discover(catalogRoot);
+    Check(gallery.Count == 2 && gallery.Count(x => x.Id == "opsis-glass-signature") == 1,
+        "web wallpaper catalog discovers addon scenes, deduplicates Signature and excludes Ancient Athens");
+    Check(gallery.Single(x => x.Id == "opsis-glass-signature").IndexPath ==
+        Path.Combine(catalogRoot, "wallpapers/samples/opsis-glass-signature/index.html".Replace('/', Path.DirectorySeparatorChar)),
+        "built-in Signature has priority over legacy addon copy");
     Check(OpsisPluginPackageAudit.Classify("OpsisNewsCrawler.OpsisPlugin.dll",
               new Version(1, 0, 0, 0)) == "CompatibleABI",
         "known plugin identity matches Opsis pinned 1.0.0.0 ABI");
@@ -228,12 +250,17 @@ try
     Check(WindowsUpdateGuard.EvaluateStartup(), "changed Windows build triggers review");
     Check(WindowsUpdateGuard.RequiresReview, "hold persists after change");
     WindowsUpdateGuard.ApproveCurrentBuild();
-    Check(!WindowsUpdateGuard.RequiresReview && !WindowsUpdateGuard.RuntimeHold, "user approval clears hold");
+    Check(WindowsUpdateGuard.RuntimeHold && WindowsUpdateGuard.RequiresReview && WindowsUpdateGuard.RestartRequired, "user approval keeps the process latch until restart");
+    Check(string.IsNullOrEmpty(WindowsUpdateGuard.Read().PendingFingerprint), "approval is persisted");
+    WindowsUpdateGuard.ResetProcessLatchForTests();
+    Check(!WindowsUpdateGuard.RequiresReview && !WindowsUpdateGuard.RuntimeHold, "after a restart the approved build is no longer held");
     File.WriteAllText(stateFile, "{ malformed");
     Check(WindowsUpdateGuard.RequiresReview && WindowsUpdateGuard.RuntimeHold, "malformed guard state fails closed");
     File.WriteAllText(stateFile, JsonSerializer.Serialize(new WindowsUpdateGuard.State { LastApprovedFingerprint = OpsisRecoveryHub.WindowsFingerprint() }));
     WindowsUpdateGuard.ApproveCurrentBuild();
-    Check(!WindowsUpdateGuard.RequiresReview, "explicit approval after valid state restored clears runtime latch");
+    Check(WindowsUpdateGuard.RequiresReview && WindowsUpdateGuard.RestartRequired, "explicit approval after a repaired state still waits for a restart");
+    WindowsUpdateGuard.ResetProcessLatchForTests();
+    Check(!WindowsUpdateGuard.RequiresReview, "restart clears the latch once the state is valid");
 
     var windowsInventory = OpsisRecoveryHub.InspectWindowsShell();
     Check(windowsInventory.Files.Count == 6, "Windows shell file inventory includes six monitored binaries");
@@ -301,6 +328,26 @@ try
     Check(OpsisEcosystemGallery.ImportWallpaperPack(addonZip) == 1 &&
         OpsisEcosystemGallery.Discover().Any(x => x.PluginId == "fixture.images" && x.Category == "Test"),
         "data-only wallpaper pack imported and categorized without applying wallpaper");
+    // optional: the real 200-image static pack (OPSIS_TEST_WEBP200=<path of Opsis-Abstract-Horizons-200-WebP.zip>)
+    var webp200 = Environment.GetEnvironmentVariable("OPSIS_TEST_WEBP200");
+    if (!string.IsNullOrEmpty(webp200) && File.Exists(webp200))
+    {
+        var clock200 = System.Diagnostics.Stopwatch.StartNew();
+        int imported200 = OpsisEcosystemGallery.ImportWallpaperPack(webp200);
+        Check(imported200 == 200 && OpsisEcosystemGallery.Discover().Count(x => x.PluginId == "opsis.procedural.static.200") == 200,
+            "real 200 static WebP pack imported: 200 distinct, decoded, static (" + clock200.ElapsedMilliseconds + " ms)");
+    }
+    {
+        // Explorer capture is bounded: a Shell automation that never answers times out instead of freezing the UI
+        var clock = System.Diagnostics.Stopwatch.StartNew();
+        bool timedOut = false;
+        try { ExplorerSessionStore.Capture(() => { System.Threading.Thread.Sleep(60000); return Array.Empty<string>(); }, 300); }
+        catch (TimeoutException) { timedOut = true; }
+        Check(timedOut && clock.ElapsedMilliseconds < 5000, "Explorer capture times out instead of hanging");
+        bool sta = false;
+        ExplorerSessionStore.Capture(() => { sta = System.Threading.Thread.CurrentThread.GetApartmentState() == System.Threading.ApartmentState.STA; return Array.Empty<string>(); }, 3000);
+        Check(sta, "Explorer capture runs on an STA worker");
+    }
     var localFolder = Path.GetTempPath().TrimEnd(Path.DirectorySeparatorChar);
     Check(ExplorerSessionStore.IsLocalFolderPath(localFolder) &&
         !ExplorerSessionStore.IsLocalFolderPath(@"\\server\share") &&

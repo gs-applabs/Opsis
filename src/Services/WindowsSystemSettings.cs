@@ -69,15 +69,18 @@ namespace MotionDesk.Services
             {
                 using var key = Registry.CurrentUser.CreateSubKey(@"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize");
                 key?.SetValue("EnableTransparency", enabled ? 1 : 0, RegistryValueKind.DWord);
+                HangTrace.Mark("Transparency: registry written");
                 // Η εγγραφή στο μητρώο από μόνη της δεν αρκεί — DWM/Explorer/taskbar διαβάζουν αυτή
                 // την τιμή μόνο όταν λάβουν το ίδιο broadcast που στέλνει το πραγματικό Windows Settings
                 // όταν αλλάζει αυτός ο διακόπτης, αλλιώς η αλλαγή "πιάνει" μόνο μετά από logoff/restart.
                 BroadcastSettingChange("ImmersiveColorSet");
+                HangTrace.Mark("Transparency: broadcast sent");
                 // Συμπλήρωμα του registry+broadcast: ζητά απευθείας από τον DWM να κάνει blur-behind
                 // την ίδια την Taskbar (ίδια τεχνική με το TranslucentTB, χωρίς καμία μορφή injection —
                 // βλ. GlassBlur.SetTaskbarTranslucency) — πιο αξιόπιστα ορατό από το να περιμένουμε τον
                 // Explorer να εφαρμόσει μόνος του το registry/broadcast.
                 MotionDesk.UI.GlassBlur.SetTaskbarTranslucency(enabled);
+                HangTrace.Mark("Transparency: taskbar blur set");
                 return true;
             }
             catch { return false; }
