@@ -43,9 +43,9 @@ namespace MotionDesk.Containers
             _service = new ContainersService(store, Monitors);
             _service.Mutated += () => { if (_ui.IsHandleCreated && !_ui.IsDisposed) try { _ui.BeginInvoke(Sync); } catch (Exception) { } };
             _save.Tick += (_, _) => FlushFromTimer();
-            _layoutHistorySave.Tick += (_, _) => { _layoutHistorySave.Stop(); _layoutHistory.Save(); };
-            _rules.Tick += (_, _) => EvaluateRules(); _rules.Start();
-            _z.Tick += (_, _) => ReseatZOrder(); _z.Start();
+            _layoutHistorySave.Tick += (_, _) => { _layoutHistorySave.Stop(); RunTimerAction("layout history", () => _layoutHistory.Save()); };
+            _rules.Tick += (_, _) => RunTimerAction("rules", EvaluateRules); _rules.Start();
+            _z.Tick += (_, _) => RunTimerAction("z-order", ReseatZOrder); _z.Start();
             if (pipeName != null) { _pipe = new PipeServer(pipeName, new HostApi(this)); _pipe.Start(); }
             Microsoft.Win32.SystemEvents.DisplaySettingsChanged += OnDisplayChanged;
             // live settings: a change of the global look (theme / tint / glass / performance tier / language) repaints the open windows, debounced into one repaint
@@ -87,7 +87,7 @@ namespace MotionDesk.Containers
 
         private readonly System.Windows.Forms.Timer _look = new() { Interval = 150 };
         private void OnTierChanged(MotionDesk.Services.HardwareTier _) => OnLookChanged();
-        private void OnLookChanged() { if (_ui.IsHandleCreated && !_ui.IsDisposed) try { _ui.BeginInvoke(() => { _look.Stop(); _look.Start(); }); } catch (Exception) { } }
+        private void OnLookChanged() { if (!_disposed && _ui.IsHandleCreated && !_ui.IsDisposed) try { _ui.BeginInvoke(() => { if (_disposed) return; _look.Stop(); _look.Start(); }); } catch (Exception) { } }
 
         /// <summary>Changes one container through the service and shows it at once (flushes pending window changes first so nothing is overwritten).</summary>
         public void Apply(string id, Func<Container, bool> change)
@@ -286,7 +286,13 @@ namespace MotionDesk.Containers
             try
             {
                 var doc = _service.Snapshot(); var want = doc.Containers.Where(c => !c.Hidden && (!_quickHidden || c.ExcludeFromQuickHide)).ToDictionary(c => c.Id);
-                foreach (var id in _windows.Keys.Where(k => !want.ContainsKey(k)).ToList()) { _windows[id].Close(); _windows[id].Dispose(); _windows.Remove(id); _dirty.Remove(id); }
+                // Closing a temporarily hidden window must not discard unsaved geometry/items.
+                var existingIds = doc.Containers.Select(c => c.Id).ToHashSet();
+                foreach (var id in _windows.Keys.Where(k => !want.ContainsKey(k)).ToList())
+                {
+                    _windows[id].Close(); _windows[id].Dispose(); _windows.Remove(id);
+                    if (!existingIds.Contains(id)) _dirty.Remove(id);
+                }
                 var mons = Monitors();
                 bool added = false;
                 foreach (var (id, model) in want)
@@ -367,9 +373,21 @@ namespace MotionDesk.Containers
         {
             var rules = _service.Snapshot().Rules.Where(r => r.Enabled).ToList();
             if (rules.Count == 0) { _activeRules.Clear(); return; }
-            var procs = rules.Any(r => r.When == RuleWhen.ProcessRunning)
-                ? System.Diagnostics.Process.GetProcesses().Select(p => { try { return p.ProcessName.ToLowerInvariant() + ".exe"; } finally { p.Dispose(); } }).ToHashSet()
-                : new HashSet<string>();
+            var procs = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            if (rules.Any(r => r.When == RuleWhen.ProcessRunning))
+            {
+                var processes = System.Diagnostics.Process.GetProcesses();
+                try
+                {
+                    foreach (var process in processes)
+                    {
+                        try { procs.Add(process.ProcessName.ToLowerInvariant() + ".exe"); }
+                        catch (InvalidOperationException) { } // process exited during enumeration
+                        catch (System.ComponentModel.Win32Exception) { } // inaccessible process
+                    }
+                }
+                finally { foreach (var process in processes) process.Dispose(); }
+            }
             var ctx = new RuleContext(Screen.AllScreens.Length, procs, DateTime.Now.TimeOfDay, MotionDesk.Services.AppActivity.IsFullscreenAppActive);
             var (actions, active) = RuleEngine.Evaluate(rules, ctx, _activeRules); _activeRules = active;
             foreach (var a in actions)
@@ -401,6 +419,13 @@ namespace MotionDesk.Containers
             // Clear only after persistence succeeds. On failure retain edits for a later flush.
             foreach (var c in changed)
                 if (_dirty.TryGetValue(c.Id, out var current) && ReferenceEquals(current, c)) _dirty.Remove(c.Id);
+        }
+
+        private void RunTimerAction(string name, Action action)
+        {
+            if (_disposed) return;
+            try { action(); }
+            catch (Exception ex) { try { MotionDesk.Services.RotatingLogger.Write("Container timer " + name + ": " + ex.Message); } catch { } }
         }
 
         private void FlushFromTimer()
