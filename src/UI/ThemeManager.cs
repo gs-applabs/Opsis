@@ -63,7 +63,7 @@ namespace MotionDesk.UI
 
         // v2.0.0: νέα ονομασμένα θέματα (ζητήθηκε ρητά "νέα θέματα στην εφαρμογή"). Κάθε ένα είναι
         // πλήρης παλέτα (όχι tint πάνω στο Dark) με δικό του accent· επιστρέφει null για άγνωστο όνομα.
-        public static readonly string[] NamedThemes = { "Teal", "Midnight", "Forest", "Dawn", "Contrast" };
+        public static readonly string[] NamedThemes = { "Teal", "Midnight", "Forest", "Dawn", "Contrast", "SignatureGlass" };
 
         public static UiPalette? Named(string name) => name switch
         {
@@ -102,6 +102,13 @@ namespace MotionDesk.UI
                 SurfaceHover = Color.FromArgb(38, 38, 38), Border = Color.White,
                 TextPrimary = Color.White, TextSecondary = Color.FromArgb(235, 235, 235), TextMuted = Color.FromArgb(200, 200, 200),
                 AccentCyan = Color.FromArgb(255, 221, 0), AccentBlue = Color.FromArgb(0, 232, 255), IsDark = true
+            },
+            "SignatureGlass" => new UiPalette
+            {
+                Background = Color.FromArgb(7, 20, 36), Sidebar = Color.FromArgb(12, 30, 49), Surface = Color.FromArgb(17, 43, 67),
+                SurfaceHover = Color.FromArgb(27, 67, 98), Border = Color.FromArgb(71, 130, 169),
+                TextPrimary = Color.FromArgb(245, 250, 255), TextSecondary = Color.FromArgb(192, 221, 240), TextMuted = Color.FromArgb(158, 191, 214),
+                AccentCyan = Color.FromArgb(126, 219, 255), AccentBlue = Color.FromArgb(31, 137, 219), IsDark = true
             },
             _ => null
         };
@@ -153,7 +160,7 @@ namespace MotionDesk.UI
 
         public static void PreviewDarkIntensity(double intensity)
         {
-            if (!Current.IsDark) return;
+            if (!Current.IsDark || AppSettings.Peek().ThemeMode is not ("Dark" or "Follow")) return;
             Current = UiPalette.Dark(Math.Clamp(intensity, 0, 1));
             RaiseRepaintedTraced();
         }
@@ -260,9 +267,9 @@ namespace MotionDesk.UI
             var settings = AppSettings.Load();
             settings.DarkIntensity = Math.Clamp(intensity, 0, 1);
             settings.Save();
-            if (Current.IsDark)
+            if (Current.IsDark && settings.ThemeMode is ("Dark" or "Follow"))
             {
-                Current = UiPalette.Dark(settings.DarkIntensity);
+                Current = Resolve(settings.ThemeMode);
                 RaiseChangedTraced();
             }
         }
