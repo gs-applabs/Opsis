@@ -1017,156 +1017,6 @@
     },
     {
       "branch": "main-2.8-followup",
-      "path": "Version.props",
-      "ancestor": "6f8b5da31a5951d9dd467d6ef1250c52f8e8176f",
-      "head": "12018a0b085d52dba96847e552d203787b15ed08",
-      "base_blob": "c5a431b25c29eb0760fc69a5de0783067fda1ed2",
-      "incoming_blob": "629767f0cf60c416fad8125299f117cff27b065b",
-      "current_blob": "c5a431b25c29eb0760fc69a5de0783067fda1ed2",
-      "reason": "do not downgrade RC; manually port relevant changes"
-    },
-    {
-      "branch": "main-2.8-followup",
-      "path": "locales/ar-SA.json",
-      "ancestor": "6f8b5da31a5951d9dd467d6ef1250c52f8e8176f",
-      "head": "12018a0b085d52dba96847e552d203787b15ed08",
-      "base_blob": "4a671db1d434a74ae79c952d0f7bda6da64f0da3",
-      "incoming_blob": "4f09b292ad7376dbd2e9837186c3b233f7470aa2",
-      "current_blob": "62d2c2f93697aa6423ac17dedc737200fa02f335",
-      "reason": "Git three-way conflict"
-    },
-    {
-      "branch": "main-2.8-followup",
-      "path": "locales/de-DE.json",
-      "ancestor": "6f8b5da31a5951d9dd467d6ef1250c52f8e8176f",
-      "head": "12018a0b085d52dba96847e552d203787b15ed08",
-      "base_blob": "d99870e21abac3cbeae04cb01d5786fc503b8a4d",
-      "incoming_blob": "82cd0ee3b56fa9e5d50b6b87e93291e65da3101f",
-      "current_blob": "c8bd91898339053a6920eeab3b5b9cef35af4f90",
-      "reason": "Git three-way conflict"
-    },
-    {
-      "branch": "main-2.8-followup",
-      "path": "locales/el-GR.json",
-      "ancestor": "6f8b5da31a5951d9dd467d6ef1250c52f8e8176f",
-      "head": "12018a0b085d52dba96847e552d203787b15ed08",
-      "base_blob": "232fb07c5c806098812d526d106ddafffa65cf7f",
-      "incoming_blob": "dc81c4e2529376410d602f1f576ca4ed67f75191",
-      "current_blob": "f2647200acbcd4b37af279f3e078128b8cf6888f",
-      "reason": "Git three-way conflict"
-    },
-    {
-      "branch": "main-2.8-followup",
-      "path": "locales/en-US.json",
-      "ancestor": "6f8b5da31a5951d9dd467d6ef1250c52f8e8176f",
-      "head": "12018a0b085d52dba96847e552d203787b15ed08",
-      "base_blob": "d06d35ce587b86364430b4cf17a2bbab8095603d",
-      "incoming_blob": "8ae6a0f7a3b4372daeddeb158aaa1dd7e904809f",
-      "current_blob": "31c6214553c535e21fbbd98282a312981e2cd27f",
-      "reason": "Git three-way conflict"
-    },
-    {
-      "branch": "main-2.8-followup",
-      "path": "locales/es-ES.json",
-      "ancestor": "6f8b5da31a5951d9dd467d6ef1250c52f8e8176f",
-      "head": "12018a0b085d52dba96847e552d203787b15ed08",
-      "base_blob": "129baf9f40763a0d6cc1a1da4b0545822ac97f30",
-      "incoming_blob": "781bf24bb1f5c02a10f86d5c634f1a58f01afc77",
-      "current_blob": "eaa441275d14819ff9053fba9493514612598b40",
-      "reason": "Git three-way conflict"
-    },
-    {
-      "branch": "main-2.8-followup",
-      "path": "locales/fr-FR.json",
-      "ancestor": "6f8b5da31a5951d9dd467d6ef1250c52f8e8176f",
-      "head": "12018a0b085d52dba96847e552d203787b15ed08",
-      "base_blob": "634cde6abcd91fb107edf96a3bbe0714d1844fe1",
-      "incoming_blob": "5fa3dd5729991bd22ff25c7ceeef4c42b53b4049",
-      "current_blob": "e44e6a98634f1b913c5298fdeca5c74eb8f6fd4b",
-      "reason": "Git three-way conflict"
-    },
-    {
-      "branch": "main-2.8-followup",
-      "path": "locales/hi-IN.json",
-      "ancestor": "6f8b5da31a5951d9dd467d6ef1250c52f8e8176f",
-      "head": "12018a0b085d52dba96847e552d203787b15ed08",
-      "base_blob": "da6972e20d6831e76506613cf14d68b66235eb14",
-      "incoming_blob": "1783dbe66deabdcc60f1d8a096b5a2dcc3f041e5",
-      "current_blob": "f03e42cf354829f55a138051409cf1f6a3744b5a",
-      "reason": "Git three-way conflict"
-    },
-    {
-      "branch": "main-2.8-followup",
-      "path": "locales/it-IT.json",
-      "ancestor": "6f8b5da31a5951d9dd467d6ef1250c52f8e8176f",
-      "head": "12018a0b085d52dba96847e552d203787b15ed08",
-      "base_blob": "507c35f90a92dd05be4e0c1f0e5afa1d76e7cdeb",
-      "incoming_blob": "52a09a6509f151d5e98cfd03e07954054cba12cd",
-      "current_blob": "c915fb1d6fd8c3e155d82690478ee977f4080e37",
-      "reason": "Git three-way conflict"
-    },
-    {
-      "branch": "main-2.8-followup",
-      "path": "locales/ja-JP.json",
-      "ancestor": "6f8b5da31a5951d9dd467d6ef1250c52f8e8176f",
-      "head": "12018a0b085d52dba96847e552d203787b15ed08",
-      "base_blob": "c422023b2758e2c3ca8f10d11611fc3636ea8215",
-      "incoming_blob": "d31b6f874b81259b7ac4fcc0f541ad913de90463",
-      "current_blob": "1292c4c8d9d097dba905bad83575f7d4854a840c",
-      "reason": "Git three-way conflict"
-    },
-    {
-      "branch": "main-2.8-followup",
-      "path": "locales/ko-KR.json",
-      "ancestor": "6f8b5da31a5951d9dd467d6ef1250c52f8e8176f",
-      "head": "12018a0b085d52dba96847e552d203787b15ed08",
-      "base_blob": "076455141fdfbfb423f485083ba0eb2dcc161e17",
-      "incoming_blob": "3f706aa79dbd94691e570befbe0358ade5c575cf",
-      "current_blob": "ac594997caedd1ef32374b473ce6fdc33dee4d2f",
-      "reason": "Git three-way conflict"
-    },
-    {
-      "branch": "main-2.8-followup",
-      "path": "locales/pt-PT.json",
-      "ancestor": "6f8b5da31a5951d9dd467d6ef1250c52f8e8176f",
-      "head": "12018a0b085d52dba96847e552d203787b15ed08",
-      "base_blob": "112566c7371b87a3f48d2feee5743ce3a8735cc5",
-      "incoming_blob": "cb10469f27f663465084abe996bd7544d7e7ee47",
-      "current_blob": "cf6637ba407608a564d02072467da282b8631a24",
-      "reason": "Git three-way conflict"
-    },
-    {
-      "branch": "main-2.8-followup",
-      "path": "locales/ru-RU.json",
-      "ancestor": "6f8b5da31a5951d9dd467d6ef1250c52f8e8176f",
-      "head": "12018a0b085d52dba96847e552d203787b15ed08",
-      "base_blob": "16866afcc7fb2fee42c2a1afdfb1758bbb831ff7",
-      "incoming_blob": "db9d4c038daf9f0112023167720532c83f92363a",
-      "current_blob": "e27639789c8827db18b0d1ff857c909676616d40",
-      "reason": "Git three-way conflict"
-    },
-    {
-      "branch": "main-2.8-followup",
-      "path": "locales/tr-TR.json",
-      "ancestor": "6f8b5da31a5951d9dd467d6ef1250c52f8e8176f",
-      "head": "12018a0b085d52dba96847e552d203787b15ed08",
-      "base_blob": "3ff14aca3731e6111b7a4b04c07768b6e25ac03c",
-      "incoming_blob": "914c95825d90d6f62e955ee3a87ee3d2ba460428",
-      "current_blob": "71653af93ca1951659285e0fd639a50913376157",
-      "reason": "Git three-way conflict"
-    },
-    {
-      "branch": "main-2.8-followup",
-      "path": "locales/zh-CN.json",
-      "ancestor": "6f8b5da31a5951d9dd467d6ef1250c52f8e8176f",
-      "head": "12018a0b085d52dba96847e552d203787b15ed08",
-      "base_blob": "bc3e62d9a5968211dab34f4e952be38d01aaadb7",
-      "incoming_blob": "d3b2dcbcb09e17faac16b16aeae82f93d2f493c6",
-      "current_blob": "18696ca80b92177f7255798f3619e77288b61441",
-      "reason": "Git three-way conflict"
-    },
-    {
-      "branch": "main-2.8-followup",
       "path": "src/Widgets/wallpaper/index.html",
       "ancestor": "6f8b5da31a5951d9dd467d6ef1250c52f8e8176f",
       "head": "12018a0b085d52dba96847e552d203787b15ed08",
@@ -1219,6 +1069,171 @@
       "current_blob": "e67426108673267b35fe2669e1b7ce2186bfe3b2",
       "reason": "add/add or missing common base",
       "method": "R28 targeted port; preserve current paginated Gallery / existing deduplication / native renderer; tests pending"
+    },
+    {
+      "branch": "main-2.8-followup",
+      "path": "Version.props",
+      "ancestor": "6f8b5da31a5951d9dd467d6ef1250c52f8e8176f",
+      "head": "12018a0b085d52dba96847e552d203787b15ed08",
+      "base_blob": "c5a431b25c29eb0760fc69a5de0783067fda1ed2",
+      "incoming_blob": "629767f0cf60c416fad8125299f117cff27b065b",
+      "current_blob": "c5a431b25c29eb0760fc69a5de0783067fda1ed2",
+      "reason": "do not downgrade RC; manually port relevant changes",
+      "method": "R29: set requested 3.0.0.3200 RC build identity, retain single property source; runtime verification pending"
+    },
+    {
+      "branch": "main-2.8-followup",
+      "path": "locales/ar-SA.json",
+      "ancestor": "6f8b5da31a5951d9dd467d6ef1250c52f8e8176f",
+      "head": "12018a0b085d52dba96847e552d203787b15ed08",
+      "base_blob": "4a671db1d434a74ae79c952d0f7bda6da64f0da3",
+      "incoming_blob": "4f09b292ad7376dbd2e9837186c3b233f7470aa2",
+      "current_blob": "62d2c2f93697aa6423ac17dedc737200fa02f335",
+      "reason": "Git three-way conflict",
+      "method": "R29: preserve current locale strings and append missing VersionNotes.2.8.0.2511; JSON parse and original value preservation validated"
+    },
+    {
+      "branch": "main-2.8-followup",
+      "path": "locales/de-DE.json",
+      "ancestor": "6f8b5da31a5951d9dd467d6ef1250c52f8e8176f",
+      "head": "12018a0b085d52dba96847e552d203787b15ed08",
+      "base_blob": "d99870e21abac3cbeae04cb01d5786fc503b8a4d",
+      "incoming_blob": "82cd0ee3b56fa9e5d50b6b87e93291e65da3101f",
+      "current_blob": "c8bd91898339053a6920eeab3b5b9cef35af4f90",
+      "reason": "Git three-way conflict",
+      "method": "R29: preserve current locale strings and append missing VersionNotes.2.8.0.2511; JSON parse and original value preservation validated"
+    },
+    {
+      "branch": "main-2.8-followup",
+      "path": "locales/el-GR.json",
+      "ancestor": "6f8b5da31a5951d9dd467d6ef1250c52f8e8176f",
+      "head": "12018a0b085d52dba96847e552d203787b15ed08",
+      "base_blob": "232fb07c5c806098812d526d106ddafffa65cf7f",
+      "incoming_blob": "dc81c4e2529376410d602f1f576ca4ed67f75191",
+      "current_blob": "f2647200acbcd4b37af279f3e078128b8cf6888f",
+      "reason": "Git three-way conflict",
+      "method": "R29: preserve current locale strings and append missing VersionNotes.2.8.0.2511; JSON parse and original value preservation validated"
+    },
+    {
+      "branch": "main-2.8-followup",
+      "path": "locales/en-US.json",
+      "ancestor": "6f8b5da31a5951d9dd467d6ef1250c52f8e8176f",
+      "head": "12018a0b085d52dba96847e552d203787b15ed08",
+      "base_blob": "d06d35ce587b86364430b4cf17a2bbab8095603d",
+      "incoming_blob": "8ae6a0f7a3b4372daeddeb158aaa1dd7e904809f",
+      "current_blob": "31c6214553c535e21fbbd98282a312981e2cd27f",
+      "reason": "Git three-way conflict",
+      "method": "R29: preserve current locale strings and append missing VersionNotes.2.8.0.2511; JSON parse and original value preservation validated"
+    },
+    {
+      "branch": "main-2.8-followup",
+      "path": "locales/es-ES.json",
+      "ancestor": "6f8b5da31a5951d9dd467d6ef1250c52f8e8176f",
+      "head": "12018a0b085d52dba96847e552d203787b15ed08",
+      "base_blob": "129baf9f40763a0d6cc1a1da4b0545822ac97f30",
+      "incoming_blob": "781bf24bb1f5c02a10f86d5c634f1a58f01afc77",
+      "current_blob": "eaa441275d14819ff9053fba9493514612598b40",
+      "reason": "Git three-way conflict",
+      "method": "R29: preserve current locale strings and append missing VersionNotes.2.8.0.2511; JSON parse and original value preservation validated"
+    },
+    {
+      "branch": "main-2.8-followup",
+      "path": "locales/fr-FR.json",
+      "ancestor": "6f8b5da31a5951d9dd467d6ef1250c52f8e8176f",
+      "head": "12018a0b085d52dba96847e552d203787b15ed08",
+      "base_blob": "634cde6abcd91fb107edf96a3bbe0714d1844fe1",
+      "incoming_blob": "5fa3dd5729991bd22ff25c7ceeef4c42b53b4049",
+      "current_blob": "e44e6a98634f1b913c5298fdeca5c74eb8f6fd4b",
+      "reason": "Git three-way conflict",
+      "method": "R29: preserve current locale strings and append missing VersionNotes.2.8.0.2511; JSON parse and original value preservation validated"
+    },
+    {
+      "branch": "main-2.8-followup",
+      "path": "locales/hi-IN.json",
+      "ancestor": "6f8b5da31a5951d9dd467d6ef1250c52f8e8176f",
+      "head": "12018a0b085d52dba96847e552d203787b15ed08",
+      "base_blob": "da6972e20d6831e76506613cf14d68b66235eb14",
+      "incoming_blob": "1783dbe66deabdcc60f1d8a096b5a2dcc3f041e5",
+      "current_blob": "f03e42cf354829f55a138051409cf1f6a3744b5a",
+      "reason": "Git three-way conflict",
+      "method": "R29: preserve current locale strings and append missing VersionNotes.2.8.0.2511; JSON parse and original value preservation validated"
+    },
+    {
+      "branch": "main-2.8-followup",
+      "path": "locales/it-IT.json",
+      "ancestor": "6f8b5da31a5951d9dd467d6ef1250c52f8e8176f",
+      "head": "12018a0b085d52dba96847e552d203787b15ed08",
+      "base_blob": "507c35f90a92dd05be4e0c1f0e5afa1d76e7cdeb",
+      "incoming_blob": "52a09a6509f151d5e98cfd03e07954054cba12cd",
+      "current_blob": "c915fb1d6fd8c3e155d82690478ee977f4080e37",
+      "reason": "Git three-way conflict",
+      "method": "R29: preserve current locale strings and append missing VersionNotes.2.8.0.2511; JSON parse and original value preservation validated"
+    },
+    {
+      "branch": "main-2.8-followup",
+      "path": "locales/ja-JP.json",
+      "ancestor": "6f8b5da31a5951d9dd467d6ef1250c52f8e8176f",
+      "head": "12018a0b085d52dba96847e552d203787b15ed08",
+      "base_blob": "c422023b2758e2c3ca8f10d11611fc3636ea8215",
+      "incoming_blob": "d31b6f874b81259b7ac4fcc0f541ad913de90463",
+      "current_blob": "1292c4c8d9d097dba905bad83575f7d4854a840c",
+      "reason": "Git three-way conflict",
+      "method": "R29: preserve current locale strings and append missing VersionNotes.2.8.0.2511; JSON parse and original value preservation validated"
+    },
+    {
+      "branch": "main-2.8-followup",
+      "path": "locales/ko-KR.json",
+      "ancestor": "6f8b5da31a5951d9dd467d6ef1250c52f8e8176f",
+      "head": "12018a0b085d52dba96847e552d203787b15ed08",
+      "base_blob": "076455141fdfbfb423f485083ba0eb2dcc161e17",
+      "incoming_blob": "3f706aa79dbd94691e570befbe0358ade5c575cf",
+      "current_blob": "ac594997caedd1ef32374b473ce6fdc33dee4d2f",
+      "reason": "Git three-way conflict",
+      "method": "R29: preserve current locale strings and append missing VersionNotes.2.8.0.2511; JSON parse and original value preservation validated"
+    },
+    {
+      "branch": "main-2.8-followup",
+      "path": "locales/pt-PT.json",
+      "ancestor": "6f8b5da31a5951d9dd467d6ef1250c52f8e8176f",
+      "head": "12018a0b085d52dba96847e552d203787b15ed08",
+      "base_blob": "112566c7371b87a3f48d2feee5743ce3a8735cc5",
+      "incoming_blob": "cb10469f27f663465084abe996bd7544d7e7ee47",
+      "current_blob": "cf6637ba407608a564d02072467da282b8631a24",
+      "reason": "Git three-way conflict",
+      "method": "R29: preserve current locale strings and append missing VersionNotes.2.8.0.2511; JSON parse and original value preservation validated"
+    },
+    {
+      "branch": "main-2.8-followup",
+      "path": "locales/ru-RU.json",
+      "ancestor": "6f8b5da31a5951d9dd467d6ef1250c52f8e8176f",
+      "head": "12018a0b085d52dba96847e552d203787b15ed08",
+      "base_blob": "16866afcc7fb2fee42c2a1afdfb1758bbb831ff7",
+      "incoming_blob": "db9d4c038daf9f0112023167720532c83f92363a",
+      "current_blob": "e27639789c8827db18b0d1ff857c909676616d40",
+      "reason": "Git three-way conflict",
+      "method": "R29: preserve current locale strings and append missing VersionNotes.2.8.0.2511; JSON parse and original value preservation validated"
+    },
+    {
+      "branch": "main-2.8-followup",
+      "path": "locales/tr-TR.json",
+      "ancestor": "6f8b5da31a5951d9dd467d6ef1250c52f8e8176f",
+      "head": "12018a0b085d52dba96847e552d203787b15ed08",
+      "base_blob": "3ff14aca3731e6111b7a4b04c07768b6e25ac03c",
+      "incoming_blob": "914c95825d90d6f62e955ee3a87ee3d2ba460428",
+      "current_blob": "71653af93ca1951659285e0fd639a50913376157",
+      "reason": "Git three-way conflict",
+      "method": "R29: preserve current locale strings and append missing VersionNotes.2.8.0.2511; JSON parse and original value preservation validated"
+    },
+    {
+      "branch": "main-2.8-followup",
+      "path": "locales/zh-CN.json",
+      "ancestor": "6f8b5da31a5951d9dd467d6ef1250c52f8e8176f",
+      "head": "12018a0b085d52dba96847e552d203787b15ed08",
+      "base_blob": "bc3e62d9a5968211dab34f4e952be38d01aaadb7",
+      "incoming_blob": "d3b2dcbcb09e17faac16b16aeae82f93d2f493c6",
+      "current_blob": "18696ca80b92177f7255798f3619e77288b61441",
+      "reason": "Git three-way conflict",
+      "method": "R29: preserve current locale strings and append missing VersionNotes.2.8.0.2511; JSON parse and original value preservation validated"
     }
   ]
 }
