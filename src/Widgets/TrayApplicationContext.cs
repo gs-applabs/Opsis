@@ -224,9 +224,7 @@ namespace MotionDesk.Widgets
             _hotkeys.RegisterCtrlAlt('F', () => DeskFlipEngine.Show());
             if (!safeMode) _hotkeys.RegisterCtrlAltShift(Keys.K, DesktopLauncher.Open);
             // 2.4.6.1: ενημέρωση χρήστη αν κάποια global συντόμευση ήταν ήδη πιασμένη (δεν θα δουλέψει).
-            var failedHotkeys = HotkeyManager.TakeFailureSummary();
-            if (failedHotkeys.Length > 0)
-                _trayIcon.ShowBalloonTip(8000, "Opsis", string.Format(LocalizationManager.T("Hotkey.Conflict"), failedHotkeys), ToolTipIcon.Warning);
+
 
             // Fences-style: διπλό-κλικ σε κενό σημείο της επιφάνειας εργασίας κρύβει/επαναφέρει
             // όλα τα εικονίδια εκτός του Ο Υπολογιστής μου/φάκελος χρήστη/Πίνακας Ελέγχου/Κάδος
@@ -297,6 +295,10 @@ namespace MotionDesk.Widgets
             if (!safeMode && DeskStripHostEngine.Instance.GetSettings().StartEnabled)
                 DeskStripHostEngine.Instance.Enable();
             if (!safeMode && AppSettings.Load().UseNativeContainers) StartNativeContainers();
+            // Include the seven native-container registrations in the same conflict summary.
+            var failedHotkeys = HotkeyManager.TakeFailureSummary();
+            if (failedHotkeys.Length > 0)
+                _trayIcon.ShowBalloonTip(8000, "Opsis", string.Format(LocalizationManager.T("Hotkey.Conflict"), failedHotkeys), ToolTipIcon.Warning);
 
             // Restore lightweight persistent preferences before showing the manager.
             var appSettings = AppSettings.Load();
