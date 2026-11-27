@@ -4762,6 +4762,10 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
             AddText(appCard, LocalizationManager.T("About.CapabilitiesList"));
             AddText(appCard, string.Format(LocalizationManager.T("About.RuntimeLine"), WidgetHostEngine.Instance.GetActiveWidgets().Count));
             AddButton(appCard, LocalizationManager.T("Help.Button"), (_, _) => HelpForm.ShowSingle(this, VersionHistory)).Name = "open-opsis-help";
+            AddButton(appCard, StudioText("Version history", "Ιστορικό εκδόσεων"), (_, _) =>
+                HelpForm.ShowSingle(this, VersionHistory, HelpSection.History)).Name = "open-opsis-history";
+            AddButton(appCard, StudioText("Find a feature (Ctrl+K)", "Εύρεση λειτουργίας (Ctrl+K)"), (_, _) =>
+                OpenCommandPalette()).Name = "open-opsis-feature-search";
 
             // the Opsis family: only the apps of the shared catalogue (suite/apps.json), with their state
             var familyCard = AddCardSection(panel, LocalizationManager.T("Tray.Family"));
@@ -5899,6 +5903,17 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                 EnableWheelPassthrough(page);
                 AddText(page, LocalizationManager.T("Settings.Intro"));
                 Controls.Add(page);
+
+                var discovery = AddCardSection(page, StudioText("Find and use features", "Εύρεση και χρήση λειτουργιών"));
+                AddText(discovery, StudioText(
+                    "Use search to locate settings and tools. Each feature has its own category; press F1 on a focused control for contextual help.",
+                    "Χρησιμοποίησε την αναζήτηση για ρυθμίσεις και εργαλεία. Κάθε λειτουργία έχει τη δική της κατηγορία· πάτησε F1 σε επιλεγμένο στοιχείο για σχετική βοήθεια."));
+                AddButton(discovery, StudioText("Find a feature (Ctrl+K)", "Εύρεση λειτουργίας (Ctrl+K)"), (_, _) =>
+                    (FindForm() as MainWindow)?.OpenCommandPalette());
+                AddButton(discovery, StudioText("Settings help (F1)", "Βοήθεια ρυθμίσεων (F1)"), (_, _) =>
+                    HelpForm.ShowSingle(FindForm(), VersionHistory, HelpSection.Instructions, "Settings"));
+                AddButton(discovery, StudioText("What's new / History", "Τι νέο υπάρχει / Ιστορικό"), (_, _) =>
+                    HelpForm.ShowSingle(FindForm(), VersionHistory, HelpSection.History));
 
                 FlowLayoutPanel NewCard(string title, Action? reset = null)
                 {
