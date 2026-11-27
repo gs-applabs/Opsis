@@ -285,7 +285,7 @@ namespace MotionDesk.UI
                         "Το προηγούμενο προφίλ δεν άνοιξε μετά την ενημέρωση. Επαναφορά της επαληθευμένης προηγούμενης έκδοσης Opsis; Τα αρχεία προφίλ θα διατηρηθούν."),
                     StudioText("Version recovery", "Ανάκτηση έκδοσης"), MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
                 if (choice != DialogResult.Yes) return;
-                try { UpdateInstallerService.LaunchAfterExit(previousSetup, sha256); Application.Exit(); }
+                try { UpdateInstallerService.LaunchAfterExit(previousSetup, sha256); TrayApplicationContext.RequestExit(); }
                 catch (Exception ex) { MessageBox.Show(this, ex.Message, "Opsis", MessageBoxButtons.OK, MessageBoxIcon.Error); }
             }));
             if (_navButtons.TryGetValue("Dashboard", out var dashboardButton))
@@ -4753,13 +4753,18 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
         {
             _currentPageKey = "About";
             var panel = CreatePagePanel();
-            var version = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version;
-            AddText(panel, string.Format(LocalizationManager.T("About.VersionLine"), AppVersion.Label));
-            AddText(panel, LocalizationManager.T("About.Body"));
+            var appCard = AddCardSection(panel, "Opsis - Desktop Customization");
+            AddText(appCard, string.Format(LocalizationManager.T("About.VersionLine"), AppVersion.Label));
+            AddText(appCard, LocalizationManager.T("About.Body"));
             // what this version brings (the family section is further down, from the shared catalogue; the full history is behind the button)
             // the notes of the RUNNING version (never a fixed old version number)
             var currentNotes = LocalizationManager.T("VersionNotes." + AppVersion.Short);
-            if (!string.IsNullOrWhiteSpace(currentNotes) && !currentNotes.StartsWith("VersionNotes.")) { AddSection(panel, string.Format(LocalizationManager.T("About.WhatBrings"), AppVersion.Label)); AddText(panel, currentNotes); }
+            if (!string.IsNullOrWhiteSpace(currentNotes) && !currentNotes.StartsWith("VersionNotes.")) { AddSection(appCard, string.Format(LocalizationManager.T("About.WhatBrings"), AppVersion.Label)); AddText(appCard, currentNotes); }
+
+            AddSection(appCard, LocalizationManager.T("About.SectionCapabilities"));
+            AddText(appCard, LocalizationManager.T("About.CapabilitiesList"));
+            AddText(appCard, string.Format(LocalizationManager.T("About.RuntimeLine"), WidgetHostEngine.Instance.GetActiveWidgets().Count));
+            AddButton(appCard, LocalizationManager.T("Help.Button"), (_, _) => HelpForm.ShowSingle(this, VersionHistory)).Name = "open-opsis-help";
 
             // Κάρτες ανά θέμα (πρώην ξεχωριστή σελίδα "Βοήθεια") — ζητήθηκε ρητά να ενσωματωθεί
             // εδώ αφού είχαν ίδιες πληροφορίες με τη σελίδα Σχετικά (About.InstructionsList/
@@ -4784,40 +4789,37 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
             panel.Controls.Add(BuildTopicCard("Nav.Automation", "Automation.Intro"));
 
             // the Opsis family: only the apps of the shared catalogue (suite/apps.json), with their state
-            AddSection(panel, LocalizationManager.T("Tray.Family"));
+            var familyCard = AddCardSection(panel, LocalizationManager.T("Tray.Family"));
             foreach (var app in FamilyApp.Load().Where(a => a.Id != "opsis"))
-                AddText(panel, $"{app.Name}  {(app.InstalledPath != null ? "✓" : "")}\n{app.Tagline}");
-            AddButtonGrid(panel, (LocalizationManager.T("Tray.Family"), (_, _) => FamilyWindows.ShowFamily()));
+                AddText(familyCard, $"{app.Name}  {(app.InstalledPath != null ? "✓" : "")}\n{app.Tagline}");
+            AddButtonGrid(familyCard, (LocalizationManager.T("Tray.Family"), (_, _) => FamilyWindows.ShowFamily()));
 
             // #97: source-controlled compatibility matrix, with honest validation status.
             // Showing a branch name or intended ABI here must never imply an E2E pass.
-            AddSection(panel, StudioText("Plugin compatibility for " + AppVersion.Short,
+            var pluginCard = AddCardSection(panel, LocalizationManager.T("About.SectionPlugins"));
+            AddSection(pluginCard, StudioText("Plugin compatibility for " + AppVersion.Short,
                 "Συμβατότητα plugins για " + AppVersion.Short));
             foreach (var plugin in PluginCompatibilityCatalog.Read())
             {
                 var observed = PluginCompatibilityCatalog.Probe(plugin);
-                AddText(panel, $"{plugin.Name} · {plugin.Integration}\n" +
+                AddText(pluginCard, $"{plugin.Name} · {plugin.Integration}\n" +
                     $"{plugin.Repository} [{plugin.Branch}]\n" +
                     $"{(plugin.Dll == null ? "standalone" : plugin.Dll + " · ABI " + (plugin.AssemblyVersion ?? "pending"))}\n" +
                     observed.State + " · " + plugin.Validation);
             }
 
-            AddSection(panel, LocalizationManager.T("About.SectionCapabilities"));
-            AddText(panel, LocalizationManager.T("About.CapabilitiesList"));
-            AddText(panel, string.Format(LocalizationManager.T("About.RuntimeLine"), WidgetHostEngine.Instance.GetActiveWidgets().Count));
-            AddButton(panel, LocalizationManager.T("Help.Button"), (_, _) => HelpForm.ShowSingle(this, VersionHistory)).Name = "open-opsis-help";
-
             // ---- plugins (π.χ. News Crawler): ιδιότητες, βοήθεια, οδηγίες, ιστορικό και άδεια ζουν ΕΔΩ, όχι στη σελίδα του plugin
             var pluginInfos = Services.PluginHost.Instance.GetAboutInfos();
+            if (pluginInfos.Count == 0) AddText(pluginCard, StudioText("No loaded plugins.", "Δεν υπάρχουν φορτωμένα plugins."));
             if (pluginInfos.Count > 0)
             {
-                AddSection(panel, LocalizationManager.T("About.SectionPlugins"));
+                AddSection(pluginCard, StudioText("Installed plugins", "Εγκατεστημένα plugins"));
                 bool greek = LocalizationManager.CurrentLanguage == "el";
                 foreach (var (id, info) in pluginInfos)
                 {
                     var captured = info;
                     var capturedId = id;
-                    AddText(panel, $"{captured.Name}  v{captured.Version}\n{(greek ? captured.DescriptionEl : captured.DescriptionEn)}\n{captured.Author} · {captured.License}");
+                    AddText(pluginCard, $"{captured.Name}  v{captured.Version}\n{(greek ? captured.DescriptionEl : captured.DescriptionEn)}\n{captured.Author} · {captured.License}");
 
                     // Ζητήθηκε ρητά: ξεχωριστό κουμπί ενεργοποίησης/απενεργοποίησης ΓΙΑ ΑΥΤΟ το plugin
                     // (όχι μόνο ο γενικός διακόπτης "Φόρτωση plugins" στις Ρυθμίσεις). Αλλαγές στα
@@ -4827,7 +4829,7 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                         Text = LocalizationManager.T("About.PluginEnabled"),
                         AutoSize = true,
                         Checked = Services.PluginHost.Instance.IsPluginEnabled(capturedId),
-                        BackColor = UiTheme.PageBackground,
+                        BackColor = UiTheme.Surface,
                         Margin = new Padding(0, 0, 0, 6)
                     };
                     bool refreshingPluginToggle = false;
@@ -4843,8 +4845,8 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                             MessageBox.Show(this, ex.Message, "Opsis", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                         }
                     };
-                    panel.Controls.Add(enableToggle);
-                    AddText(panel, StudioText("Declared plugin capabilities: ", "Δηλωμένες δυνατότητες plugin: ")
+                    pluginCard.Controls.Add(enableToggle);
+                    AddText(pluginCard, StudioText("Declared plugin capabilities: ", "Δηλωμένες δυνατότητες plugin: ")
                         + Services.PluginHost.Instance.PluginPermissions(capturedId));
                     var revokeBtn = NewHoverButton(StudioText("Revoke plugin approval", "Ανάκληση έγκρισης plugin"), () =>
                     {
@@ -4855,7 +4857,7 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                         Services.PluginHost.Instance.RevokePluginTrust(capturedId);
                         ShowAbout();
                     });
-                    panel.Controls.Add(revokeBtn);
+                    pluginCard.Controls.Add(revokeBtn);
 
                     // Ζητήθηκε (σύγκριση με τον μηχανισμό plugin του Kombos): αφαίρεση plugin από
                     // μέσα στο Opsis, όχι μόνο ενεργό/ανενεργό. Ο φάκελος διαγράφεται αμέσως αν
@@ -4872,25 +4874,25 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                         ShowAbout();
                     });
                     uninstallBtn.Margin = new Padding(0, 0, 0, 6);
-                    panel.Controls.Add(uninstallBtn);
+                    pluginCard.Controls.Add(uninstallBtn);
 
-                    var row = new FlowLayoutPanel { AutoSize = true, WrapContents = true, MaximumSize = new Size(740, 0), Margin = new Padding(0, 0, 0, 12) };
+                    var row = new FlowLayoutPanel { AutoSize = true, WrapContents = true, MaximumSize = new Size(710, 0), Margin = new Padding(0, 0, 0, 12) };
                     foreach (var section in captured.Sections)
                     {
                         var s = section;
                         var title = greek ? s.TitleEl : s.TitleEn;
                         row.Controls.Add(NewHoverButton(title, () => ShowTextDialog(captured.Name + " — " + title, captured.Name + " v" + captured.Version, s.Text)));
                     }
-                    panel.Controls.Add(row);
+                    pluginCard.Controls.Add(row);
                 }
             }
 
             // ---- updates: self-update βάσει GearWin (ζητήθηκε ρητά· ήδη portαρισμένο/ζωντανά
             // δοκιμασμένο στο OpsisNewsCrawler) — κατεβάζει+εγκαθιστά ΜΟΝΟ μετά από κλικ του χρήστη
             // ΚΑΙ επιβεβαίωση, μόνο από τα releases αυτού του repo, επαληθευμένο με SHA-256.
-            AddSection(panel, StudioText("Build and dependencies", "Έκδοση και εξαρτήσεις"));
-            AddText(panel, $"Opsis - Desktop Customization {AppVersion.Label}");
-            var missingDependencies = AddText(panel, "");
+            var buildCard = AddCardSection(panel, StudioText("Build and dependencies", "Έκδοση και εξαρτήσεις"));
+            AddText(buildCard, $"Opsis - Desktop Customization {AppVersion.Label}");
+            var missingDependencies = AddText(buildCard, "");
             missingDependencies.Visible = false;
             panel.HandleCreated += async (_, _) =>
             {
