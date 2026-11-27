@@ -11,8 +11,22 @@ internal static class UiResourceAudit
     [DllImport("user32.dll")]
     private static extern uint GetGuiResources(IntPtr process, uint resource);
 
+    [StructLayout(LayoutKind.Sequential)]
+    private struct IoCounters
+    {
+        public ulong ReadOperations, WriteOperations, OtherOperations;
+        public ulong ReadBytes, WriteBytes, OtherBytes;
+    }
+    [DllImport("kernel32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool GetProcessIoCounters(IntPtr process, out IoCounters counters);
+
+    private static ulong? Delta(ulong? first, ulong? last) =>
+        first.HasValue && last.HasValue && last.Value >= first.Value ? last.Value - first.Value : null;
+
     private sealed record Sample(string Phase, double ElapsedMs, double CpuMs, double CpuCorePercent,
-        long ManagedBytes, long PrivateBytes, long WorkingSetBytes, int Handles, uint GdiObjects, uint UserObjects, List<BrowserSample> Browsers);
+        long ManagedBytes, long PrivateBytes, long WorkingSetBytes, int Handles, uint GdiObjects, uint UserObjects,
+        ulong? IoWriteBytes, ulong? IoWriteOperations, List<BrowserSample> Browsers);
 
     private sealed record BrowserSample(int Pid, string Kind, double CpuMs, long PrivateBytes, double CpuCorePercent);
 
@@ -62,9 +76,11 @@ internal static class UiResourceAudit
                 var livePids = browsers.Select(b => b.Pid).ToHashSet();
                 foreach (var pid in browserCounters.Keys.Where(pid => !livePids.Contains(pid)).ToArray())
                     browserCounters.Remove(pid);
+                bool hasIo = GetProcessIoCounters(process.Handle, out var io);
                 samples.Add(new Sample(phase, Math.Round(at, 1), Math.Round(cpu, 1), Math.Round(cpuPercent, 2),
                     GC.GetTotalMemory(false), process.PrivateMemorySize64, process.WorkingSet64, process.HandleCount,
-                    GetGuiResources(process.Handle, 0), GetGuiResources(process.Handle, 1), browsers));
+                    GetGuiResources(process.Handle, 0), GetGuiResources(process.Handle, 1),
+                    hasIo ? io.WriteBytes : null, hasIo ? io.WriteOperations : null, browsers));
                 lastElapsed = at;
                 lastCpu = cpu;
             }
@@ -208,14 +224,18 @@ internal static class UiResourceAudit
                 idleBefore = Describe(idleBefore), idleAfter = Describe(idleAfter),
                 firstSettled = Describe(settled.Take(1).ToArray()),
                 lastSettled = Describe(settled.TakeLast(1).ToArray()),
-                soakFirst = Describe(soak.Take(5).ToArray()), soakLast = Describe(soak.TakeLast(5).ToArray())
+                soakFirst = Describe(soak.Take(5).ToArray()), soakLast = Describe(soak.TakeLast(5).ToArray()),
+                soakHostIoWriteBytes = Delta(soak.FirstOrDefault()?.IoWriteBytes, soak.LastOrDefault()?.IoWriteBytes),
+                soakHostIoWriteOperations = Delta(soak.FirstOrDefault()?.IoWriteOperations, soak.LastOrDefault()?.IoWriteOperations)
             };
             // Expose the measured baseline and trend in CI logs, not just a ZIP.
             Console.WriteLine("OPSIS_RESOURCE_TREND " + JsonSerializer.Serialize(trend));
             const string name = "ui-resources.json";
             File.WriteAllText(Path.Combine(folder, name), JsonSerializer.Serialize(new
             {
-                scope = "Main-process CPU is per phase in units of one core. Browser CPU is cumulative milliseconds per PID.",
+                scope = "Main-process CPU is per phase in units of one core. Browser CPU is cumulative milliseconds per PID. Host IO counters include process write IO, not physical SSD writes, and exclude child processes.",
+                hostIoWriteBytesDelta = Delta(first.IoWriteBytes, last.IoWriteBytes),
+                hostIoWriteOperationsDelta = Delta(first.IoWriteOperations, last.IoWriteOperations),
                 navigation,
                 events = eventSnapshot.Select(e => new { elapsedMs = e.AtMs, kind = e.Kind, value = e.Value }),
                 cpuSpikes,

@@ -26,6 +26,8 @@ namespace MotionDesk.Containers
         private bool _syncing, _quickHidden;
         private volatile bool _disposed;
         private int _saveFailures;
+        private const int PendingSync = 1, PendingLook = 2, PendingMonitor = 4;
+        private int _pendingUi;
         internal event Action<string, string>? ContainerRenamed;
         internal event Action<string>? ContainerDeleted;
         internal event Action? WorkspacePreviewChanged;
@@ -44,7 +46,7 @@ namespace MotionDesk.Containers
             catch { _ui.Dispose(); throw; }
             try
             {
-            _service.Mutated += () => { if (!_disposed && _ui.IsHandleCreated && !_ui.IsDisposed) try { _ui.BeginInvoke(Sync); } catch (Exception) { } };
+            _service.Mutated += OnServiceMutated;
             _save.Tick += (_, _) => FlushFromTimer();
             _layoutHistorySave.Tick += (_, _) => { _layoutHistorySave.Stop(); RunTimerAction("layout history", () => _layoutHistory.Save()); };
             _rules.Tick += (_, _) => RunTimerAction("rules", EvaluateRules); _rules.Start();
@@ -97,7 +99,25 @@ namespace MotionDesk.Containers
 
         private readonly System.Windows.Forms.Timer _look = new() { Interval = 150 };
         private void OnTierChanged(MotionDesk.Services.HardwareTier _) => OnLookChanged();
-        private void OnLookChanged() { if (!_disposed && _ui.IsHandleCreated && !_ui.IsDisposed) try { _ui.BeginInvoke(() => { if (_disposed) return; _look.Stop(); _look.Start(); }); } catch (Exception) { } }
+        private void OnServiceMutated() => QueueUi(PendingSync);
+        private void OnLookChanged() => QueueUi(PendingLook);
+
+        // One queued UI callback for a burst of service/theme/display notifications.
+        private void QueueUi(int flags)
+        {
+            if (_disposed || !_ui.IsHandleCreated || _ui.IsDisposed) return;
+            if (Interlocked.Or(ref _pendingUi, flags) != 0) return;
+            try { _ui.BeginInvoke((Action)DrainUi); }
+            catch (InvalidOperationException) { Interlocked.Exchange(ref _pendingUi, 0); }
+        }
+        private void DrainUi()
+        {
+            int flags = Interlocked.Exchange(ref _pendingUi, 0);
+            if (_disposed) return;
+            if ((flags & PendingSync) != 0) RunTimerAction("sync", Sync);
+            if ((flags & PendingLook) != 0) { _look.Stop(); _look.Start(); }
+            if ((flags & PendingMonitor) != 0) { _monitorTimer.Stop(); _monitorTimer.Start(); }
+        }
 
         /// <summary>Changes one container through the service and shows it at once (flushes pending window changes first so nothing is overwritten).</summary>
         public void Apply(string id, Func<Container, bool> change)
@@ -185,8 +205,13 @@ namespace MotionDesk.Containers
                     case "focus":
                     {
                         var id = args["id"]?.ToString() ?? "";
-                        _h._ui.Invoke(() => { if (_h._windows.TryGetValue(id, out var w)) w.FocusForKeyboard(); });
-                        return new System.Text.Json.Nodes.JsonObject { ["focused"] = _h._windows.ContainsKey(id) };
+                        bool focused = _h._ui.Invoke(() =>
+                        {
+                            if (_h._disposed || !_h._windows.TryGetValue(id, out var w) || w.IsDisposed) return false;
+                            w.FocusForKeyboard();
+                            return true;
+                        });
+                        return new System.Text.Json.Nodes.JsonObject { ["focused"] = focused };
                     }
                     case "toggle-all":
                     {
@@ -377,8 +402,10 @@ namespace MotionDesk.Containers
         public void ReseatZOrder()
         {
             if (KeepOnTopForTests || _peeking) { foreach (var w in _windows.Values) if (w.IsHandleCreated && w.Visible && !w.TopMost) w.TopMost = true; return; }
-            DesktopZOrder.PlaceGroup(_windows.Values.Where(window => window.IsHandleCreated && window.Visible)
-                .Select(window => window.Handle).ToHashSet());
+            if (_windows.Count == 0) return;
+            var visible = _windows.Values.Where(window => window.IsHandleCreated && window.Visible)
+                .Select(window => window.Handle).ToHashSet();
+            if (visible.Count != 0) DesktopZOrder.PlaceGroup(visible);
         }
 
         /// <summary>Phase 5: rules (monitor count, process running, time of day, fullscreen app) are evaluated every 3 s, edge-triggered; cheap when there are none.</summary>
@@ -453,12 +480,7 @@ namespace MotionDesk.Containers
             }
         }
 
-        private void OnDisplayChanged(object? sender, EventArgs args)
-        {
-            if (_disposed || !_ui.IsHandleCreated || _ui.IsDisposed) return;
-            try { _ui.BeginInvoke(() => { if (_disposed) return; _monitorTimer.Stop(); _monitorTimer.Start(); }); }
-            catch (InvalidOperationException) { }
-        }
+        private void OnDisplayChanged(object? sender, EventArgs args) => QueueUi(PendingMonitor);
 
         public void Dispose()
         {
@@ -472,6 +494,8 @@ namespace MotionDesk.Containers
                 finally { MotionDesk.Services.HangTrace.Mark("containers shutdown end: " + name); }
             }
             Step("stop timers", () => { _save.Stop(); _rules.Stop(); _z.Stop(); _look.Stop(); _layoutHistorySave.Stop(); _monitorTimer.Stop(); _peekTimer.Stop(); });
+            Step("unsubscribe mutations", () => _service.Mutated -= OnServiceMutated);
+            Interlocked.Exchange(ref _pendingUi, 0);
             Step("unsubscribe display", () => Microsoft.Win32.SystemEvents.DisplaySettingsChanged -= OnDisplayChanged);
             Step("unsubscribe theme", () => { MotionDesk.UI.ThemeManager.Changed -= OnLookChanged; MotionDesk.UI.ThemeManager.Repainted -= OnLookChanged; });
             Step("unsubscribe settings", () => { MotionDesk.Services.HardwareProfileService.ProfileChanged -= OnTierChanged; MotionDesk.Services.LocalizationManager.Changed -= OnLookChanged; });
