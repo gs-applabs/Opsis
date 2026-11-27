@@ -223,8 +223,12 @@ namespace MotionDesk.Services
         {
             foreach (var p in Snap())
             {
+                if (!p.Started) continue;
+                p.Started = false;
+                Log($"Stopping plugin '{p.Plugin.Name}'");
                 try { p.Plugin.Stop(); }
                 catch (Exception ex) { Log($"Plugin '{p.Plugin.Name}' failed to stop: {ex.Message}"); }
+                finally { Log($"Stop returned for plugin '{p.Plugin.Name}'"); }
             }
         }
 
