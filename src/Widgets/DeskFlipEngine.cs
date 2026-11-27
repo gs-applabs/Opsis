@@ -30,7 +30,8 @@ public sealed class DeskFlipOverlay : Form
 
     internal DeskFlipOverlay(string style)
     {
-        _style = style;
+        _style = SystemInformation.HighContrast ? "Compact list" : style;
+        AccessibleName = "DeskFlip window switcher";
         var foreground = GetForegroundWindow();
         Bounds = Screen.FromHandle(foreground).Bounds;
         FormBorderStyle = FormBorderStyle.None;
@@ -39,8 +40,8 @@ public sealed class DeskFlipOverlay : Form
         TopMost = true;
         DoubleBuffered = true;
         KeyPreview = true;
-        BackColor = Color.FromArgb(20, 35, 49);
-        _desktop = _style == "Compact list" ? null : CaptureDesktop(Bounds);
+        BackColor = SystemInformation.HighContrast ? SystemColors.Window : Color.FromArgb(20, 35, 49);
+        _desktop = _style == "Flip 3D" ? CaptureDesktop(Bounds) : null;
         foreach (var window in CandidateWindows())
             _entries.Add(new Entry(window, GetTitle(window), null));
         int front = _entries.FindIndex(e => e.Handle == foreground);
@@ -133,9 +134,11 @@ public sealed class DeskFlipOverlay : Form
     internal void MoveSelection(int direction)
     {
         if (_entries.Count < 2) return;
-        if (_style != "Flip 3D")
+        if (_style != "Flip 3D" || !Opsis.UI.OpsisMotion.Enabled || SystemInformation.HighContrast)
         {
+            _timer.Stop();
             _selection = Wrap(_selection + direction);
+            _position = _target = _selection;
             Invalidate();
             return;
         }
@@ -150,7 +153,7 @@ public sealed class DeskFlipOverlay : Form
 
     private void Animate()
     {
-        var progress = Math.Clamp((Environment.TickCount64 - _transitionStarted) / 195f, 0, 1);
+        var progress = !Opsis.UI.OpsisMotion.Enabled || SystemInformation.HighContrast ? 1f : Math.Clamp((Environment.TickCount64 - _transitionStarted) / 195f, 0, 1);
         var ease = 1 - MathF.Pow(1 - progress, 3);
         _position = _transitionFrom + (_target - _transitionFrom) * ease;
         if (progress >= 1) { _position = _target = _selection; _timer.Stop(); }
@@ -163,6 +166,7 @@ public sealed class DeskFlipOverlay : Form
         _closing = true;
         var handle = _entries[index].Handle;
         Close();
+        if (!IsWindow(handle)) return;
         if (IsIconic(handle)) ShowWindow(handle, 9);
         SetForegroundWindow(handle);
     }
@@ -205,7 +209,8 @@ public sealed class DeskFlipOverlay : Form
         var graphics = e.Graphics;
         if (_desktop != null) graphics.DrawImage(_desktop, ClientRectangle);
         using var tint = new SolidBrush(Color.FromArgb(70, 5, 19, 30));
-        graphics.FillRectangle(tint, ClientRectangle);
+        if (!SystemInformation.HighContrast) graphics.FillRectangle(tint, ClientRectangle);
+        else graphics.Clear(SystemColors.Window);
         graphics.SmoothingMode = SmoothingMode.AntiAlias;
         graphics.InterpolationMode = InterpolationMode.HighQualityBilinear;
         graphics.PixelOffsetMode = PixelOffsetMode.Half;
@@ -236,8 +241,9 @@ public sealed class DeskFlipOverlay : Form
         var box = FlatBounds(index);
         var entry = _entries[index];
         bool active = index == _selection;
-        using var fill = new SolidBrush(active ? Color.FromArgb(235, 39, 81, 112) : Color.FromArgb(230, 26, 43, 58));
-        using var rim = new Pen(active ? Color.White : Color.FromArgb(130, 170, 195), active ? 2f : 1f);
+        bool hc = SystemInformation.HighContrast;
+        using var fill = new SolidBrush(hc ? (active ? SystemColors.Highlight : SystemColors.Window) : (active ? Color.FromArgb(235, 39, 81, 112) : Color.FromArgb(230, 26, 43, 58)));
+        using var rim = new Pen(hc ? SystemColors.WindowText : (active ? Color.White : Color.FromArgb(130, 170, 195)), active ? 2f : 1f);
         graphics.FillRectangle(fill, box);
         graphics.DrawRectangle(rim, box);
         int labelHeight = Math.Min(32, box.Height);
@@ -248,7 +254,7 @@ public sealed class DeskFlipOverlay : Form
             graphics.DrawImage(image, new Rectangle(box.X + (box.Width - w) / 2, box.Y + 4, w, h));
         }
         var label = _style == "Compact list" ? box : new Rectangle(box.X, box.Bottom - labelHeight, box.Width, labelHeight);
-        TextRenderer.DrawText(graphics, entry.Title, SystemFonts.MessageBoxFont, label, Color.White,
+        TextRenderer.DrawText(graphics, entry.Title, SystemFonts.MessageBoxFont, label, hc ? (active ? SystemColors.HighlightText : SystemColors.WindowText) : Color.White,
             TextFormatFlags.EndEllipsis | TextFormatFlags.NoPrefix | TextFormatFlags.VerticalCenter | TextFormatFlags.HorizontalCenter);
     }
 
@@ -380,6 +386,7 @@ public sealed class DeskFlipOverlay : Form
     [DllImport("user32.dll")] private static extern bool SetForegroundWindow(IntPtr handle);
     [DllImport("user32.dll")] private static extern bool GetWindowRect(IntPtr handle, out WindowRect area);
     [DllImport("dwmapi.dll")] private static extern int DwmGetWindowAttribute(IntPtr handle, int attribute, out int value, int bytes);
+    [DllImport("user32.dll")] private static extern bool IsWindow(IntPtr handle);
     [DllImport("user32.dll")] private static extern bool IsIconic(IntPtr handle);
     [DllImport("user32.dll")] private static extern bool ShowWindow(IntPtr handle, int command);
     [DllImport("user32.dll")] private static extern bool PrintWindow(IntPtr handle, IntPtr dc, uint flags);
