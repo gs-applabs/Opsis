@@ -1361,43 +1361,56 @@ namespace MotionDesk.Widgets
             _ui = SynchronizationContext.Current ?? new WindowsFormsSynchronizationContext();
 
             // Παύση/συνέχιση σε fullscreen εφαρμογή — τώρα από το κοινό AppActivity (ίδιο state με τα widgets).
-            AppActivity.FullscreenChanged += fullscreen =>
-            {
-                if (!Active) return;
-                ApplyHeavyPause();
-                // per monitor: a fullscreen app on one screen does not pause the wallpaper of the others (lock/RDP/battery saver pause all)
-                foreach (var w in _windows) _ = w.SetPausedAsync(AppActivity.IsPausedFor(w.TargetScreen) || UserPaused);
-            };
+            AppActivity.FullscreenChanged += OnActivityChanged;
+            SystemEvents.DisplaySettingsChanged += OnDisplaySettingsChanged;
+            SystemEvents.UserPreferenceChanged += OnUserPreferenceChanged;
+            _explorerWatcher.ExplorerRestarted += OnExplorerRestarted;
+        }
 
-            // Debounce: το DisplaySettingsChanged στέλνεται σε ριπές (πολλά events για μία αλλαγή
-            // ανάλυσης/οθόνης/docking) — κάθε RebuildWindows() καταστρέφει και ξαναφτιάχνει ΟΛΑ τα
-            // WebView2 (αργό, βαρύ σε RAM/GPU). Περιμένουμε να "ησυχάσει" η ριπή και ξαναχτίζουμε ΜΙΑ φορά.
-            SystemEvents.DisplaySettingsChanged += (_, _) =>
+        private System.Windows.Forms.Timer? _explorerRebuildDelay;
+        private void OnActivityChanged(bool fullscreen)
+        {
+            if (!Active) return;
+            ApplyHeavyPause();
+            foreach (var w in _windows.ToArray())
+                if (!w.IsDisposed) _ = w.SetPausedAsync(AppActivity.IsPausedFor(w.TargetScreen) || UserPaused);
+        }
+
+        private void OnDisplaySettingsChanged(object? sender, EventArgs args)
+        {
+            // Marshal once; the UI thread owns both the debounce and the windows.
+            if (_exiting) return;
+            _ui.Post(_ =>
             {
                 if (_exiting) return;
                 _displayDebounce?.Dispose();
-                // Windows often raises DisplaySettingsChanged right after logon/start without any real change; rebuilding then destroyed and
-                // recreated every wallpaper window a second after startup (a visible flicker). Rebuild only if the monitor layout differs.
-                _displayDebounce = new System.Threading.Timer(_ => _ui.Post(__ => { if (Active && LayoutKey() != _layoutKey) RebuildWindows(); }, null),
-                    null, 1200, System.Threading.Timeout.Infinite);
-            };
-            SystemEvents.UserPreferenceChanged += (_, e) =>
-            {
-                if (e.Category == UserPreferenceCategory.General || e.Category == UserPreferenceCategory.Desktop) _ui.Post(__ => { _ = RefreshAllAsync(); }, null);
-            };
+                _displayDebounce = new System.Threading.Timer(__ => _ui.Post(___ =>
+                {
+                    if (Active && LayoutKey() != _layoutKey) RebuildWindows();
+                }, null), null, 1200, System.Threading.Timeout.Infinite);
+            }, null);
+        }
 
-            // Explorer.exe επανεκκινήθηκε -> το παλιό WorkerW (και το wallpaper window που ήταν
-            // child του) καταστράφηκε. Ξαναφτιάξε τα παράθυρα από την αρχή (βλ. σχόλιο στο
-            // ExplorerRestartWatcher). Μικρή καθυστέρηση πριν το rebuild ώστε η καινούρια Explorer
-            // να έχει προλάβει να στήσει το δικό της Progman/WorkerW (one-shot timer· ο ίδιος
-            // WndProc τρέχει ήδη στο UI thread, οπότε δεν χρειάζεται Invoke/marshalling).
-            _explorerWatcher.ExplorerRestarted += () =>
+        private void OnUserPreferenceChanged(object? sender, UserPreferenceChangedEventArgs e)
+        {
+            if (!_exiting && (e.Category == UserPreferenceCategory.General || e.Category == UserPreferenceCategory.Desktop))
+                _ui.Post(_ => { if (!_exiting) _ = RefreshAllAsync(); }, null);
+        }
+
+        private void OnExplorerRestarted()
+        {
+            if (!Active) return;
+            if (_explorerRebuildDelay == null)
             {
-                if (!Active) return;
-                var delay = new System.Windows.Forms.Timer { Interval = 1500 };
-                delay.Tick += (_, _) => { delay.Stop(); delay.Dispose(); if (Active) RebuildWindows(); };
-                delay.Start();
-            };
+                _explorerRebuildDelay = new System.Windows.Forms.Timer { Interval = 1500 };
+                _explorerRebuildDelay.Tick += (_, _) =>
+                {
+                    _explorerRebuildDelay?.Stop();
+                    if (Active) RebuildWindows();
+                };
+            }
+            _explorerRebuildDelay.Stop();
+            _explorerRebuildDelay.Start();
         }
 
         // Ελέγχει κάθε 2 δευτερόλεπτα αν το τρέχον foreground παράθυρο καλύπτει ολόκληρη μια
@@ -1576,6 +1589,11 @@ namespace MotionDesk.Widgets
             Cleanup("thaw WebView2", () => ProcessFreezer.Thaw());
             foreach (var timer in new[] { _fullscreenCheckTimer, _lockScreenSyncTimer, _autoMuteTimer, _heavyTimer, _scheduleTimer, _refreshDebounce })
                 if (timer != null) Cleanup("timer", () => { timer.Stop(); timer.Dispose(); });
+            Cleanup("activity event", () => AppActivity.FullscreenChanged -= OnActivityChanged);
+            Cleanup("display event", () => SystemEvents.DisplaySettingsChanged -= OnDisplaySettingsChanged);
+            Cleanup("preference event", () => SystemEvents.UserPreferenceChanged -= OnUserPreferenceChanged);
+            Cleanup("explorer event", () => _explorerWatcher.ExplorerRestarted -= OnExplorerRestarted);
+            Cleanup("explorer debounce", () => { _explorerRebuildDelay?.Stop(); _explorerRebuildDelay?.Dispose(); _explorerRebuildDelay = null; });
             Cleanup("display debounce", () => _displayDebounce?.Dispose());
             Cleanup("explorer watcher", () => _explorerWatcher.Dispose());
             Cleanup("audio detector", () => { _otherAudio?.Dispose(); _otherAudio = null; });
