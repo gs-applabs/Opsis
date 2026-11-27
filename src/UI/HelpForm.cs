@@ -120,6 +120,16 @@ internal sealed class HelpForm : OpsisWindow
             "Personalization · Εξατομίκευση: lock screen and cursor effects · κλείδωμα και δείκτες.",
             "About · Information / Πληροφορίες: version, licences and updates · εκδόσεις και ενημερώσεις."
         }));
+        // Practical paths use existing page identities and commands, not proposed features.
+        _instructions.AppendText("\n\n" + MainWindow.StudioText(
+            "FIRST STEPS\n1. Open a category in the sidebar. Use Ctrl+K to search functions and settings.\n2. Select a control and press F1 for contextual help.\n3. Read any unavailable-action explanation before enabling an optional feature.\n\n" +
+            "CONTAINERS — DESKTOP FILES\n1. Open DeskContainers, or right-click the Opsis tray icon and open its Containers submenu.\n2. Choose New container, New note or New portal. Drag files into a data container to add references; removing a reference does not delete the file.\n3. Use the container menu for its settings. Ctrl+Alt+Shift+H toggles container visibility; Ctrl+` opens Spot Search if the shortcut is available.\n4. Use Backup now or Snapshots in the tray before major layout changes. Restore icons is available in the same menu.\n\n" +
+            "WINDOW SWITCHING\n1. Open Personalization and locate DeskFlip.\n2. Choose Flip 3D, Thumbnail grid or Compact list.\n3. Ctrl+Alt+F opens the switcher if the shortcut was registered; use Tab and Enter to select a window.\n\n" +
+            "HELP AND HISTORY\nOpen About → Help, then History to read changes by version. Plugin availability and compatibility are shown separately in About. Experimental or planned functions are not presented as available.",
+            "ΠΡΩΤΑ ΒΗΜΑΤΑ\n1. Άνοιξε μια κατηγορία από το πλευρικό μενού. Με Ctrl+K αναζήτησε λειτουργίες και ρυθμίσεις.\n2. Επίλεξε ένα στοιχείο και πάτησε F1 για σχετική βοήθεια.\n3. Διάβασε την αιτία μη διαθεσιμότητας πριν ενεργοποιήσεις προαιρετική λειτουργία.\n\n" +
+            "DESKCONTAINERS — ΑΡΧΕΙΑ ΕΠΙΦΑΝΕΙΑΣ\n1. Άνοιξε την καρτέλα Containers ή το αντίστοιχο υπομενού με δεξί κλικ στο tray.\n2. Δημιούργησε container, σημείωση ή portal φακέλου. Σύρε αρχεία σε container δεδομένων για να προσθέσεις αναφορές. Η αφαίρεση αναφοράς δεν διαγράφει το αρχείο.\n3. Χρησιμοποίησε το μενού του container για τις ρυθμίσεις του. Ctrl+Alt+Shift+H για απόκρυψη/εμφάνιση, Ctrl+` για Spot Search αν είναι διαθέσιμη η συντόμευση.\n4. Χρησιμοποίησε το αντίγραφο ασφαλείας ή τα στιγμιότυπα διάταξης από το tray πριν από μεγάλες αλλαγές. Η επαναφορά εικονιδίων βρίσκεται στο ίδιο μενού.\n\n" +
+            "DESKFLIP — ΕΝΑΛΛΑΓΗ ΠΑΡΑΘΥΡΩΝ\n1. Άνοιξε την Εξατομίκευση και εντόπισε το DeskFlip.\n2. Επίλεξε Flip 3D, Thumbnail grid ή Compact list.\n3. Ctrl+Alt+F για άνοιγμα εφόσον καταχωρήθηκε η συντόμευση· Tab και Enter για επιλογή παραθύρου.\n\n" +
+            "ΒΟΗΘΕΙΑ ΚΑΙ ΙΣΤΟΡΙΚΟ\nΣχετικά → Βοήθεια → Ιστορικό για αλλαγές ανά έκδοση. Η διαθεσιμότητα και συμβατότητα προσθέτων εμφανίζεται χωριστά στα Σχετικά. Οι πειραματικές ή σχεδιαζόμενες λειτουργίες δεν παρουσιάζονται ως διαθέσιμες."));
         _license = CreateReader("HelpLicense");
         _notes = CreateReader("HistoryNotes");
         _notes.AccessibleName = LocalizationManager.T("Help.TabHistory");
