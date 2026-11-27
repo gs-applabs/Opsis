@@ -897,32 +897,12 @@
     },
     {
       "branch": "europe-R26",
-      "path": "src/UI/ThemeManager.cs",
-      "ancestor": "cf906d7840a37af3f1dcaa8977ccaa7a4f3278c3",
-      "head": "e72ee5877526c03ead97ce8bbdd098fe41b49838",
-      "base_blob": "65a1725f5bf32cc77b4da174c8432247602efe3b",
-      "incoming_blob": "ccad9f4050f210b152c4165bc153ab334ed05424",
-      "current_blob": "15f7be6c8d6d76f8d9dbc9be1c18dbbcbaabbc60",
-      "reason": "Git three-way conflict"
-    },
-    {
-      "branch": "europe-R26",
       "path": "src/Widgets/DeskFlipEngine.cs",
       "ancestor": "cf906d7840a37af3f1dcaa8977ccaa7a4f3278c3",
       "head": "e72ee5877526c03ead97ce8bbdd098fe41b49838",
       "base_blob": "ed61a8e217750b55180c60cd72efedfe429e94a0",
       "incoming_blob": "2137b0e3c8073dc08f0b107b97441a0551e91ac4",
       "current_blob": "781ccc6504e2e3392219fa2362de619cf9f970de",
-      "reason": "Git three-way conflict"
-    },
-    {
-      "branch": "europe-R26",
-      "path": "src/Widgets/DesktopLauncher.cs",
-      "ancestor": "cf906d7840a37af3f1dcaa8977ccaa7a4f3278c3",
-      "head": "e72ee5877526c03ead97ce8bbdd098fe41b49838",
-      "base_blob": "e2179b48a48bbb16d04ce83e90fc1cb49dc57a61",
-      "incoming_blob": "c17a93b5c4999005d4a94d07bb244397115871d7",
-      "current_blob": "af665120d51958c37662b4cc92a1133a8b1cb2dc",
       "reason": "Git three-way conflict"
     },
     {
@@ -1241,6 +1221,28 @@
       "current_blob": "3846233faea2c9d58ac52e7b1f78e00498577356",
       "reason": "add/add or missing common base",
       "method": "R31: retain explicit user fixed-white policy over legacy adaptive dark text; R26 atmosphere/card/signature incoming added lines present except obsolete GPU sampling guard; regression coverage added; runtime verification pending"
+    },
+    {
+      "branch": "europe-R26",
+      "path": "src/UI/ThemeManager.cs",
+      "ancestor": "cf906d7840a37af3f1dcaa8977ccaa7a4f3278c3",
+      "head": "e72ee5877526c03ead97ce8bbdd098fe41b49838",
+      "base_blob": "65a1725f5bf32cc77b4da174c8432247602efe3b",
+      "incoming_blob": "ccad9f4050f210b152c4165bc153ab334ed05424",
+      "current_blob": "15f7be6c8d6d76f8d9dbc9be1c18dbbcbaabbc60",
+      "reason": "Git three-way conflict",
+      "method": "R32: targeted incoming palette and launcher styling/search changes; retain current accent, power actions and Quick Look; runtime tests pending"
+    },
+    {
+      "branch": "europe-R26",
+      "path": "src/Widgets/DesktopLauncher.cs",
+      "ancestor": "cf906d7840a37af3f1dcaa8977ccaa7a4f3278c3",
+      "head": "e72ee5877526c03ead97ce8bbdd098fe41b49838",
+      "base_blob": "e2179b48a48bbb16d04ce83e90fc1cb49dc57a61",
+      "incoming_blob": "c17a93b5c4999005d4a94d07bb244397115871d7",
+      "current_blob": "af665120d51958c37662b4cc92a1133a8b1cb2dc",
+      "reason": "Git three-way conflict",
+      "method": "R32: targeted incoming palette and launcher styling/search changes; retain current accent, power actions and Quick Look; runtime tests pending"
     }
   ]
 }
