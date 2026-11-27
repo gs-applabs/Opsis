@@ -41,7 +41,7 @@ namespace MotionDesk.Containers
             if (Current != null) throw new InvalidOperationException("A native container host is already active.");
             _ui = new Control(); _ = _ui.Handle;                        // force the handle on the UI thread
             _service = new ContainersService(store, Monitors);
-            _service.Mutated += () => { if (_ui.IsHandleCreated && !_ui.IsDisposed) try { _ui.BeginInvoke(Sync); } catch (Exception) { } };
+            _service.Mutated += () => { if (!_disposed && _ui.IsHandleCreated && !_ui.IsDisposed) try { _ui.BeginInvoke(Sync); } catch (Exception) { } };
             _save.Tick += (_, _) => FlushFromTimer();
             _layoutHistorySave.Tick += (_, _) => { _layoutHistorySave.Stop(); RunTimerAction("layout history", () => _layoutHistory.Save()); };
             _rules.Tick += (_, _) => RunTimerAction("rules", EvaluateRules); _rules.Start();
@@ -49,7 +49,7 @@ namespace MotionDesk.Containers
             if (pipeName != null) { _pipe = new PipeServer(pipeName, new HostApi(this)); _pipe.Start(); }
             Microsoft.Win32.SystemEvents.DisplaySettingsChanged += OnDisplayChanged;
             // live settings: a change of the global look (theme / tint / glass / performance tier / language) repaints the open windows, debounced into one repaint
-            _look.Tick += (_, _) => { _look.Stop(); foreach (var w in _windows.Values) w.Restyle(); };
+            _look.Tick += (_, _) => { _look.Stop(); RunTimerAction("restyle", () => { foreach (var w in _windows.Values.ToArray()) if (!w.IsDisposed) w.Restyle(); }); };
             MotionDesk.UI.ThemeManager.Changed += OnLookChanged; MotionDesk.UI.ThemeManager.Repainted += OnLookChanged;
             MotionDesk.Services.HardwareProfileService.ProfileChanged += OnTierChanged; MotionDesk.Services.LocalizationManager.Changed += OnLookChanged;
             _peekTimer.Tick += (_, _) => UpdatePeek();
@@ -306,8 +306,11 @@ namespace MotionDesk.Containers
                         }
                         continue;
                     }
-                    var w = new ContainerWindow(model, () => _windows.Where(p => p.Key != id).Select(p => p.Value.Bounds));
-                    w.SetPlacement(Place(model, mons));
+                    // A temporarily hidden window can reopen before its debounced save.
+                    // Reuse pending edits instead of rebuilding from the stale persisted layout.
+                    var liveModel = _dirty.TryGetValue(id, out var pending) ? pending : model;
+                    var w = new ContainerWindow(liveModel, () => _windows.Where(p => p.Key != id).Select(p => p.Value.Bounds));
+                    w.SetPlacement(Place(liveModel, mons));
                     w.Changed += c => { if (_disposed) return; _dirty[c.Id] = c; if (!_save.Enabled) { _saveFailures = 0; _save.Interval = 400; _save.Start(); } };
                     w.Renamed += Rename;
                     w.PreviewContentChanged += () => WorkspacePreviewChanged?.Invoke();
