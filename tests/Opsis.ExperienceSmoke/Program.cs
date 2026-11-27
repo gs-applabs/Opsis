@@ -113,6 +113,37 @@ try
             File.ReadAllBytes(snapshotPath).SequenceEqual(new byte[] { 4, 5, 6 }),
             "R75 valid changed snapshot replaces previous image atomically");
     }
+    var migrationDir = Path.Combine(folder, "migration-fixture");
+    Directory.CreateDirectory(migrationDir);
+    var migrationSource = Path.Combine(migrationDir, "source.json");
+    var migrationTarget = Path.Combine(migrationDir, "target.json");
+    var migrationTemp = Path.Combine(migrationDir, "publish.tmp");
+    File.WriteAllText(migrationSource, "{\"layout\":1}");
+    string migrationHash = MotionDesk.Containers.NativeMigration.Hash(migrationSource);
+    MotionDesk.Containers.NativeMigration.PublishStagedFile(migrationSource, migrationTarget, migrationHash, migrationTemp);
+    Check(File.ReadAllText(migrationTarget) == "{\"layout\":1}" && !File.Exists(migrationTemp),
+        "R76 migration publishes verified payload without leaving temporary file");
+    File.SetLastWriteTimeUtc(migrationTarget, new DateTime(2020,1,1,0,0,0,DateTimeKind.Utc));
+    var migrationStamp = File.GetLastWriteTimeUtc(migrationTarget);
+    MotionDesk.Containers.NativeMigration.PublishStagedFile(migrationSource, migrationTarget, migrationHash, migrationTemp);
+    Check(File.GetLastWriteTimeUtc(migrationTarget) == migrationStamp,
+        "R76 migration retry is idempotent and does not rewrite matching snapshot");
+    File.WriteAllText(migrationTarget, "{\"user\":true}");
+    bool migrationCollision = false;
+    try { MotionDesk.Containers.NativeMigration.PublishStagedFile(migrationSource, migrationTarget, migrationHash, migrationTemp); }
+    catch (IOException) { migrationCollision = true; }
+    Check(migrationCollision && File.ReadAllText(migrationTarget) == "{\"user\":true}",
+        "R76 migration refuses to overwrite a user's existing snapshot");
+    bool migrationTamper = false;
+    File.WriteAllText(migrationSource, "{\"layout\":2}");
+    try { MotionDesk.Containers.NativeMigration.PublishStagedFile(migrationSource, migrationTarget, migrationHash, migrationTemp); }
+    catch (IOException) { migrationTamper = true; }
+    Check(migrationTamper && File.ReadAllText(migrationTarget) == "{\"user\":true}" && !File.Exists(migrationTemp),
+        "R76 corrupted staged payload cannot publish");
+    Check(MotionDesk.Containers.NativeMigration.ValidSnapshotName("Default.json") &&
+        !MotionDesk.Containers.NativeMigration.ValidSnapshotName("../Default.json") &&
+        !MotionDesk.Containers.NativeMigration.ValidSnapshotName("Default.exe"),
+        "R76 migration only accepts safe snapshot filenames");
     var opt = new AppSettings { RestoreWindowsAfterDocking = false, UsageAlertsEnabled = false };
     Check(MotionDesk.Widgets.TrayApplicationContext.SelectOptionalServices(opt, false) == (false, false),
         "R65 disabled optional tray services have no timer demand");

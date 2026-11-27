@@ -29,6 +29,15 @@ namespace MotionDesk.Containers
         internal bool HasActivityRules => !_disposed && _hasEnabledRules;
         private void UpdateActivityRuleDemand(bool enabled)
         {
+            if (enabled && !_disposed)
+            {
+                if (!_rules.Enabled) _rules.Start();
+            }
+            else
+            {
+                _rules.Stop();
+                _activeRules.Clear();
+            }
             if (_hasEnabledRules == enabled) return;
             _hasEnabledRules = enabled;
             MotionDesk.Services.AppActivity.RequestRefresh();
@@ -57,8 +66,8 @@ namespace MotionDesk.Containers
             _service.Mutated += OnServiceMutated;
             _save.Tick += (_, _) => FlushFromTimer();
             _layoutHistorySave.Tick += (_, _) => { _layoutHistorySave.Stop(); RunTimerAction("layout history", () => _layoutHistory.Save()); };
-            _rules.Tick += (_, _) => RunTimerAction("rules", EvaluateRules); _rules.Start();
-            _z.Tick += (_, _) => RunTimerAction("z-order", ReseatZOrder); _z.Start();
+            _rules.Tick += (_, _) => RunTimerAction("rules", EvaluateRules);
+            _z.Tick += (_, _) => RunTimerAction("z-order", ReseatZOrder);
             if (pipeName != null) { _pipe = new PipeServer(pipeName, new HostApi(this)); _pipe.Start(); }
             Microsoft.Win32.SystemEvents.DisplaySettingsChanged += OnDisplayChanged;
             // live settings: a change of the global look (theme / tint / glass / performance tier / language) repaints the open windows, debounced into one repaint
@@ -367,6 +376,8 @@ namespace MotionDesk.Containers
                     _windows[id] = w; w.Show();
                     added = true;
                 }
+                if (_windows.Count == 0) _z.Stop();
+                else if (!_z.Enabled) _z.Start();
                 if (added) ReseatZOrder();
             }
             finally { _syncing = false; }
