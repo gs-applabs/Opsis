@@ -22,6 +22,7 @@ internal sealed class DesktopMusicController : IDisposable
     private long nextRead, previewUntil, nextDisplayLookup;
     private Screen? display;
     private string? displaySetting;
+    private string? monitorId;
 
     public DesktopMusicController()
     {
@@ -93,10 +94,10 @@ internal sealed class DesktopMusicController : IDisposable
         {
             displaySetting = settings.Display;
             display = Screen.AllScreens.FirstOrDefault(s => s.DeviceName == displaySetting) ?? Screen.PrimaryScreen;
+            monitorId = display == null ? null : MonitorTopologyService.ForDevice(display.DeviceName)?.Id;
             nextDisplayLookup = now + 1000;
         }
         // Per-monitor presentation privacy: no title, artwork OR visualizer drawn there.
-        var monitorId = display == null ? null : MonitorTopologyService.ForDevice(display.DeviceName)?.Id;
         var hide = display != null && (MotionDesk.Services.AppSettings.Peek().PresentationMonitorIds?.Any(id =>
             id.Equals(display.DeviceName,StringComparison.OrdinalIgnoreCase) ||
             id.Equals(monitorId,StringComparison.OrdinalIgnoreCase)) ?? false);
@@ -111,10 +112,15 @@ internal sealed class DesktopMusicController : IDisposable
         if (preview || audible || snapshot != null)
         {
             drawing = true;
-            var bands = spectrum?.GetBands() ?? Silence;
-            var analysis = spectrum?.GetVisualizerFrame();
-            _ = surface.RenderAsync(display, settings, snapshot, bands, preview && !audible && snapshot == null,
-                analysis?.Frequency, analysis?.Waveform);
+            // The renderer owns the single outstanding request. Avoid allocating FFT
+            // snapshots and JSON payloads for frames which it would discard.
+            if (surface.CanAcceptFrame)
+            {
+                var bands = spectrum?.GetBands() ?? Silence;
+                var analysis = spectrum?.GetVisualizerFrame();
+                _ = surface.RenderAsync(display, settings, snapshot, bands, preview && !audible && snapshot == null,
+                    analysis?.Frequency, analysis?.Waveform);
+            }
         }
         else if (drawing)
         {
