@@ -1,4 +1,4 @@
-# Shared verification entry point: GitHub, AppVeyor, Azure or an isolated local Windows VM.
+# Canonical Windows RC verification entry point for GitHub Actions.
 [CmdletBinding()]
 param([string]$ReportDirectory = 'ci-results')
 $ErrorActionPreference = 'Stop'
