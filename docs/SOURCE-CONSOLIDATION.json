@@ -897,16 +897,6 @@
     },
     {
       "branch": "europe-R26",
-      "path": "src/Widgets/DeskFlipEngine.cs",
-      "ancestor": "cf906d7840a37af3f1dcaa8977ccaa7a4f3278c3",
-      "head": "e72ee5877526c03ead97ce8bbdd098fe41b49838",
-      "base_blob": "ed61a8e217750b55180c60cd72efedfe429e94a0",
-      "incoming_blob": "2137b0e3c8073dc08f0b107b97441a0551e91ac4",
-      "current_blob": "781ccc6504e2e3392219fa2362de619cf9f970de",
-      "reason": "Git three-way conflict"
-    },
-    {
-      "branch": "europe-R26",
       "path": "src/Widgets/ReplacementTaskbar.cs",
       "ancestor": "cf906d7840a37af3f1dcaa8977ccaa7a4f3278c3",
       "head": "e72ee5877526c03ead97ce8bbdd098fe41b49838",
@@ -1243,6 +1233,17 @@
       "current_blob": "af665120d51958c37662b4cc92a1133a8b1cb2dc",
       "reason": "Git three-way conflict",
       "method": "R32: targeted incoming palette and launcher styling/search changes; retain current accent, power actions and Quick Look; runtime tests pending"
+    },
+    {
+      "branch": "europe-R26",
+      "path": "src/Widgets/DeskFlipEngine.cs",
+      "ancestor": "cf906d7840a37af3f1dcaa8977ccaa7a4f3278c3",
+      "head": "e72ee5877526c03ead97ce8bbdd098fe41b49838",
+      "base_blob": "ed61a8e217750b55180c60cd72efedfe429e94a0",
+      "incoming_blob": "2137b0e3c8073dc08f0b107b97441a0551e91ac4",
+      "current_blob": "781ccc6504e2e3392219fa2362de619cf9f970de",
+      "reason": "Git three-way conflict",
+      "method": "R42: retain current asynchronous capture and three persisted styles; port high contrast, reduced motion, accessibility name and valid HWND check. Windows tests pending."
     }
   ]
 }
