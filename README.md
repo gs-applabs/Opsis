@@ -1,5 +1,9 @@
 <p align="center"><img src="https://raw.githubusercontent.com/gs-applabs/gs-applabs/main/assets/projects/opsis.svg" width="100%" alt="OPSIS — Desktop Customization"/></p>
 
+<p align="center"><a href="https://github.com/gs-applabs/Opsis/releases/latest"><img alt="Latest published release" src="https://img.shields.io/github/v/release/gs-applabs/Opsis?label=release"/></a> <a href="https://github.com/gs-applabs/Opsis/releases"><img alt="All release asset downloads, not unique users" src="https://img.shields.io/github/downloads/gs-applabs/Opsis/total?label=asset%20downloads"/></a> <a href="https://github.com/gs-applabs/Opsis/actions/workflows/windows-audit.yml"><img alt="CI workflow status" src="https://github.com/gs-applabs/Opsis/actions/workflows/windows-audit.yml/badge.svg"/></a> <a href="https://github.com/gs-applabs/Opsis/actions/workflows/product-snapshots.yml"><img alt="Screenshot workflow status" src="https://github.com/gs-applabs/Opsis/actions/workflows/product-snapshots.yml/badge.svg"/></a></p>
+
+<p align="center"><a href="docs/GS-APP-LABS-FAQ.md">FAQ / Συχνές ερωτήσεις</a> · <a href="https://github.com/gs-applabs/Opsis/issues/new/choose">Feedback / Προτάσεις</a></p>
+
 <p align="center"><strong>Make Windows feel like your own.</strong><br/>Μεταμόρφωσε την επιφάνεια εργασίας σου με κινούμενα φόντα, widgets και εργαλεία εξατομίκευσης.</p>
 
 <p align="center"><a href="https://github.com/gs-applabs/Opsis/releases/download/v2.8.0.2511/OpsisSetup.exe"><img alt="Download v2.8.0.2511" src="https://img.shields.io/badge/DOWNLOAD-v2.8.0.2511-087EA4?style=for-the-badge"/></a> <a href="https://github.com/gs-applabs/Opsis/releases/latest"><img alt="Latest release" src="https://img.shields.io/badge/RELEASE-NOTES-334155?style=for-the-badge"/></a></p>
