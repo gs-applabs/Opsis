@@ -221,11 +221,19 @@ namespace MotionDesk.Widgets
                         if (!want.Contains(name) || saved.Any(x => string.Equals(x.Name, name, StringComparison.OrdinalIgnoreCase))) continue;
                         var pos = GetItemPositionRemote(hp, list, i);
                         if (pos.X <= -5000) continue;                                         // already hidden by the quick-hide: do not overwrite its saved place
-                        saved.Add(new SavedIconPos { Index = i, Name = name, X = pos.X, Y = pos.Y });
-                        SetItemPositionRemote(list, i, -10000, -10000); hidden++;
+                        var recovery = new SavedIconPos { Index = i, Name = name, X = pos.X, Y = pos.Y };
+                        saved.Add(recovery);
+                        // Commit recovery coordinates BEFORE moving Explorer icons. A failed write must never hide an icon.
+                        Directory.CreateDirectory(Path.GetDirectoryName(OriginalsStatePath)!);
+                        MotionDesk.Services.AtomicFile.WriteAllText(OriginalsStatePath, JsonSerializer.Serialize(saved));
+                        if (SetItemPositionRemote(list, i, -10000, -10000)) hidden++;
+                        else
+                        {
+                            saved.Remove(recovery);
+                            MotionDesk.Services.AtomicFile.WriteAllText(OriginalsStatePath, JsonSerializer.Serialize(saved));
+                        }
                     }
                 });
-                if (hidden > 0) { Directory.CreateDirectory(Path.GetDirectoryName(OriginalsStatePath)!); MotionDesk.Services.AtomicFile.WriteAllText(OriginalsStatePath, JsonSerializer.Serialize(saved)); }
             }
             catch (Exception) { }
             return hidden;
