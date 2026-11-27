@@ -689,7 +689,7 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
             menu.DropDownItems.Add(new ToolStripSeparator());
             menu.DropDownItems.Add(T("DCM.QuickHide") + " / " + T("DCM.QuickShow"), null, (s, e) => host.ToggleAll());
             menu.DropDownItems.Add(T("DCM.RestoreIcons"), null, (s, e) => { DesktopIconVisibilityEngine.Instance.RestoreIfHidden(); });
-            menu.DropDownItems.Add(T("DCM.OpenSettingsPage"), null, (s, e) => ShowMainWindow("DeskZones"));
+            menu.DropDownItems.Add(T("DCM.OpenSettingsPage"), null, (s, e) => ShowMainWindow("DeskContainers"));
         }
 
         private ToolStripMenuItem BuildContainersTrayMenu()
@@ -710,7 +710,7 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                     }
                 }
                 catch (Exception ex) { RotatingLogger.Write("DeskContainers tray submenu: " + ex.Message); }
-                menu.DropDownItems.Add(T("DCM.OpenSettingsPage"), null, (_, _) => ShowMainWindow("DeskZones"));
+                menu.DropDownItems.Add(T("DCM.OpenSettingsPage"), null, (_, _) => ShowMainWindow("DeskContainers"));
             }
             menu.DropDownOpening += (s, e) => Fill();
             Fill();
