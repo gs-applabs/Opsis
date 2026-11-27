@@ -105,7 +105,8 @@ namespace MotionDesk.UI
         private readonly System.Collections.Generic.Dictionary<string, NavButton> _navButtons = new();
         private readonly System.Collections.Generic.Dictionary<string, Action> _pageBuilders = new();
         private string _currentPageKey = "Dashboard";
-        private readonly HotkeyManager _hotkeys;
+        private readonly HotkeyManager? _hotkeys;
+        private readonly bool _hostedByTray;
 
         private const int DWMWA_USE_IMMERSIVE_DARK_MODE = 20;
         [System.Runtime.InteropServices.DllImport("dwmapi.dll")]
@@ -125,8 +126,11 @@ namespace MotionDesk.UI
             RefreshMainWindowBackdrop();
         }
 
-        public MainWindow()
+        public MainWindow() : this(false) { }
+
+        internal MainWindow(bool hostedByTray)
         {
+            _hostedByTray = hostedByTray;
             // Διορθώνει "λευκά τετραγωνάκια" κατά την αλλαγή σκουρότητας θέματος: η πλήρης
             // ανακατασκευή σελίδας/sidebar σε κάθε ThemeManager.Changed (OnThemeOrLanguageChanged)
             // κάνει Controls.Clear()+Add() σε πολλά containers — χωρίς DoubleBuffered στο ίδιο το
@@ -212,27 +216,15 @@ namespace MotionDesk.UI
             _statusTimer = new System.Windows.Forms.Timer { Interval = 5000 };
             _statusTimer.Tick += (_, _) => UpdateStatus();
             _statusTimer.Enabled = Visible && WindowState != FormWindowState.Minimized;
-            _hotkeys = new HotkeyManager();
-            _hotkeys.RegisterCtrlAlt('G', ToggleGamingMode);
-            _hotkeys.RegisterCtrlAlt('M', ShowAndActivate);
-            // ΝΕΟ, στα πρότυπα του FancyWM (ζητήθηκε ρητά): μετακινεί το τρέχον ενεργό παράθυρο
-            // στη γειτονική DeskZone προς αυτή την κατεύθυνση, χωρίς ποντίκι. Ctrl+Alt+Shift (όχι
-            // απλό Ctrl+Alt) — το απλό Ctrl+Alt+βελάκι βρέθηκε ήδη δεσμευμένο σε αυτό το μηχάνημα
-            // από τον οδηγό γραφικών (περιστροφή οθόνης), επιβεβαιωμένο με αποτυχημένο RegisterHotKey.
-            _hotkeys.RegisterCtrlAltShift(Keys.Left, () => ZoneSnapEngine.MoveForegroundWindowToZone(ZoneSnapEngine.ZoneDirection.Left));
-            _hotkeys.RegisterCtrlAltShift(Keys.Right, () => ZoneSnapEngine.MoveForegroundWindowToZone(ZoneSnapEngine.ZoneDirection.Right));
-            _hotkeys.RegisterCtrlAltShift(Keys.Up, () => ZoneSnapEngine.MoveForegroundWindowToZone(ZoneSnapEngine.ZoneDirection.Up));
-            _hotkeys.RegisterCtrlAltShift(Keys.Down, () => ZoneSnapEngine.MoveForegroundWindowToZone(ZoneSnapEngine.ZoneDirection.Down));
-            // ΝΕΟ ("πλήρες σετ πληκτρολογίου FancyWM", task tracker t27): Ctrl+Shift+βελάκι (χωρίς
-            // Alt) μετακινεί μόνο την ΕΣΤΙΑΣΗ στη γειτονική ζώνη, χωρίς να μετακινήσει κανένα παράθυρο.
-            _hotkeys.RegisterCtrlShift(Keys.Left, () => ZoneSnapEngine.FocusAdjacentZone(ZoneSnapEngine.ZoneDirection.Left));
-            _hotkeys.RegisterCtrlShift(Keys.Right, () => ZoneSnapEngine.FocusAdjacentZone(ZoneSnapEngine.ZoneDirection.Right));
-            _hotkeys.RegisterCtrlShift(Keys.Up, () => ZoneSnapEngine.FocusAdjacentZone(ZoneSnapEngine.ZoneDirection.Up));
-            _hotkeys.RegisterCtrlShift(Keys.Down, () => ZoneSnapEngine.FocusAdjacentZone(ZoneSnapEngine.ZoneDirection.Down));
+            if (!_hostedByTray)
+            {
+                _hotkeys = new HotkeyManager();
+                RegisterDesktopHotkeys(_hotkeys, ToggleGamingMode, ShowAndActivate, !SafeModeService.IsSafeMode);
+            }
 
             ThemeManager.UiContext = System.Threading.SynchronizationContext.Current;
             AnimationsSettingChanged += UpdateAnimationTimers;
-            WorkspaceProfileService.ExitSaveDone = false;
+            if (!_hostedByTray) WorkspaceProfileService.ExitSaveDone = false;
             WorkspaceProfileService.ProfileActivated += AnnounceActiveProfile;
             Controls.Add(_profileLive);
             _profileLive.BringToFront();
@@ -244,12 +236,15 @@ namespace MotionDesk.UI
             // Χαμηλού-κόστους hook, τρέχει σε όλη τη διάρκεια ζωής της εφαρμογής — δεν κάνει
             // τίποτα εκτός αν ο χρήστης κρατάει Shift ενώ σέρνει ένα παράθυρο (βλ. ZoneSnapEngine).
             // After an update, show the Version History once (the first time the window is shown with a new version)
-            ZoneSnapEngine.AllowOwnWindow = h => IsHandleCreated && h == Handle;
-            ZoneSnapEngine.Start();
+            if (!_hostedByTray && !SafeModeService.IsSafeMode)
+            {
+                ZoneSnapEngine.AllowOwnWindow = h => IsHandleCreated && h == Handle;
+                ZoneSnapEngine.Start();
+            }
 
             FormClosed += (_, _) =>
             {
-                if (!WorkspaceProfileService.ExitSaveDone) { try { WorkspaceProfileService.Save("Last Session"); } catch { } }
+                if (!_hostedByTray) { try { WorkspaceProfileService.SaveLastSessionOnce(); } catch { } }
                 AnimationsSettingChanged -= UpdateAnimationTimers;
                 WorkspaceProfileService.ProfileActivated -= AnnounceActiveProfile;
                 _studioNavTips?.Dispose();
@@ -257,27 +252,17 @@ namespace MotionDesk.UI
                 ThemeManager.Repainted -= OnThemeRepainted;
                 LocalizationManager.Changed -= OnThemeOrLanguageChanged;
                 SystemEvents.UserPreferenceChanged -= OnWindowsPreferenceChanged;
-                ZoneSnapEngine.Stop();
+                if (!_hostedByTray) { ZoneSnapEngine.Stop(); ZoneSnapEngine.AllowOwnWindow = null; }
                 _statusTimer.Dispose();
                 _opacitySaveTimer.Dispose();
                 _brandPulseTimer?.Dispose();
                 _sidebarAnimTimer?.Dispose();
                 _headerWaveTimer?.Dispose();
-                _hotkeys.Dispose();
+                _hotkeys?.Dispose();
             };
 
             ShowDashboard();
-            var saved = AppSettings.Load();
-            // Safe mode (v2.0 handoff, Φάση 1 §S): η "Last Session" περιέχει ακριβώς τα widgets/
-            // DeskContainers/wallpaper που ίσως προκάλεσαν τα διαδοχικά crashes — δεν επαναφέρεται.
-            if (!SafeModeService.IsSafeMode && saved.RestoreLastSession && WorkspaceProfileService.ListProfiles().Contains("Last Session", StringComparer.OrdinalIgnoreCase))
-            {
-                try { WorkspaceProfileService.Load("Last Session"); } catch { }
-            }
-            else if (saved.ShowSystemMonitor && !WidgetHostEngine.Instance.GetActiveWidgets().Any(w => w.WidgetId == "sysmon"))
-            {
-                WidgetHostEngine.Instance.SpawnWidget("sysmon", 100, 100, 300, 200);
-            }
+            if (!_hostedByTray) WorkspaceProfileService.RestoreStartupSession();
             // A failed startup profile can offer a known, SHA-256-verified
             // previous installer. It never starts automatically and only after
             // explicit user approval; otherwise the app stays in safe mode.
@@ -526,9 +511,9 @@ namespace MotionDesk.UI
                 return;
             }
             // Πραγματικό κλείσιμο (έξοδος/shutdown): αποθήκευση ΤΩΡΑ, όσο τα widgets ζουν ακόμα.
-            if (!WorkspaceProfileService.ExitSaveDone)
+            if (!_hostedByTray || e.CloseReason != CloseReason.UserClosing)
             {
-                try { WorkspaceProfileService.Save("Last Session"); WorkspaceProfileService.ExitSaveDone = true; } catch { }
+                try { WorkspaceProfileService.SaveLastSessionOnce(); } catch { }
             }
             SaveWindowPlacement();
             base.OnFormClosing(e);
@@ -1191,6 +1176,21 @@ namespace MotionDesk.UI
             _content.ResumeLayout();
             if (samePage && control is ScrollableControl target)
                 BeginInvoke(new Action(() => { if (!target.IsDisposed) target.AutoScrollPosition = new Point(0, keepY); }));
+        }
+
+        internal static void RegisterDesktopHotkeys(HotkeyManager keys, Action toggleGaming, Action showWindow, bool optionalAllowed)
+        {
+            keys.RegisterCtrlAlt('M', showWindow);
+            if (!optionalAllowed) return;
+            keys.RegisterCtrlAlt('G', toggleGaming);
+            keys.RegisterCtrlAltShift(Keys.Left, () => ZoneSnapEngine.MoveForegroundWindowToZone(ZoneSnapEngine.ZoneDirection.Left));
+            keys.RegisterCtrlAltShift(Keys.Right, () => ZoneSnapEngine.MoveForegroundWindowToZone(ZoneSnapEngine.ZoneDirection.Right));
+            keys.RegisterCtrlAltShift(Keys.Up, () => ZoneSnapEngine.MoveForegroundWindowToZone(ZoneSnapEngine.ZoneDirection.Up));
+            keys.RegisterCtrlAltShift(Keys.Down, () => ZoneSnapEngine.MoveForegroundWindowToZone(ZoneSnapEngine.ZoneDirection.Down));
+            keys.RegisterCtrlShift(Keys.Left, () => ZoneSnapEngine.FocusAdjacentZone(ZoneSnapEngine.ZoneDirection.Left));
+            keys.RegisterCtrlShift(Keys.Right, () => ZoneSnapEngine.FocusAdjacentZone(ZoneSnapEngine.ZoneDirection.Right));
+            keys.RegisterCtrlShift(Keys.Up, () => ZoneSnapEngine.FocusAdjacentZone(ZoneSnapEngine.ZoneDirection.Up));
+            keys.RegisterCtrlShift(Keys.Down, () => ZoneSnapEngine.FocusAdjacentZone(ZoneSnapEngine.ZoneDirection.Down));
         }
 
         private void ShowAndActivate()
@@ -4476,8 +4476,12 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
             return true;
         }
 
-        private bool _gamingModeActive;
-        private void ToggleGamingMode() => LoadProfileFromQuickButton(_gamingModeActive ? "Work" : "Gaming", true);
+        private static bool _gamingModeActive;
+        internal void ToggleGamingMode() => LoadProfileFromQuickButton(_gamingModeActive ? "Work" : "Gaming", true);
+        internal static void ToggleGamingWithoutWindow()
+        {
+            if (WorkspaceProfileService.Load(_gamingModeActive ? "Work" : "Gaming")) _gamingModeActive = !_gamingModeActive;
+        }
         private void LoadProfileFromQuickButton(string profile, bool toggle = false)
         {
             if (WorkspaceProfileService.Load(profile)) { if (toggle) _gamingModeActive = !_gamingModeActive; _statusLabel.Text = string.Format(LocalizationManager.T("Automation.ProfileLoadedStatus"), profile); }

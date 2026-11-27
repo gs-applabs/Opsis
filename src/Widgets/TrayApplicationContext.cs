@@ -220,7 +220,15 @@ namespace MotionDesk.Widgets
             AppSettings.SettingsSaved += QueueOptionalRefresh;
             RefreshOptionalServices();
 
-            _hotkeys.RegisterCtrlAlt('F', () => DeskFlipEngine.Show());
+            MainWindow.RegisterDesktopHotkeys(_hotkeys,
+                () => { if (_mainWindow is { IsDisposed: false } window) window.ToggleGamingMode(); else MainWindow.ToggleGamingWithoutWindow(); },
+                () => ShowMainWindow(), !safeMode && !reviewRequired);
+            if (!safeMode && !reviewRequired)
+            {
+                ZoneSnapEngine.AllowOwnWindow = h => _mainWindow is { IsDisposed: false, IsHandleCreated: true } window && window.Handle == h;
+                ZoneSnapEngine.Start();
+                _hotkeys.RegisterCtrlAlt('F', () => DeskFlipEngine.Show());
+            }
             if (!safeMode) _hotkeys.RegisterCtrlAltShift(Keys.K, DesktopLauncher.Open);
             // 2.4.6.1: ενημέρωση χρήστη αν κάποια global συντόμευση ήταν ήδη πιασμένη (δεν θα δουλέψει).
 
@@ -279,13 +287,13 @@ namespace MotionDesk.Widgets
             if (!safeMode) VirtualWorkspaces.Start();
             AutoTileService.RefreshSettings();
             MotionDesk.Services.DiscordPresence.Instance.Apply();
+            RefreshDesktopMenuPipe();
             if (!safeMode)
             {
                 try
                 {
-                    _controlPipe = new Opsis.Containers.PipeServer(DesktopMenu.PipeName, new DesktopMenu.Api());
-                    _controlPipe.Start();
-                    DesktopMenu.Apply(AppSettings.Load().DesktopMenuEnabled);
+                    bool enabled = AppSettings.Peek().DesktopMenuEnabled;
+                    if (enabled != DesktopMenu.IsRegistered()) DesktopMenu.Apply(enabled);
                 }
                 catch (Exception ex) { RotatingLogger.Write("Desktop menu setup failed: " + ex.Message); }
             }
@@ -322,18 +330,17 @@ namespace MotionDesk.Widgets
                 CheckLockScreenFollowsWallpaper();
             }
 
-            // "--background": η αυτόματη εκκίνηση με τα Windows (StartupManager.SetStartup) περνάει
-            // αυτό το flag — ζητήθηκε ρητά ότι όταν υπάρχουν αποθηκευμένα widgets/DeskContainers, η
-            // εφαρμογή πρέπει να ανοίγει στο παρασκήνιο (μόνο tray icon), όχι με το κύριο παράθυρο
-            // διαχείρισης να αναδύεται κάθε φορά. Το MainWindow ΔΗΜΙΟΥΡΓΕΙΤΑΙ κανονικά (ώστε να
-            // τρέξει η επαναφορά του "Last Session" — widgets/DeskContainers/wallpaper μέσα στον
-            // constructor του), απλά δεν καλείται Show() πάνω του.
+            // The tray owns startup restoration and desktop shortcuts. The management
+            // window and its Dashboard are constructed only when explicitly opened.
+            WorkspaceProfileService.ExitSaveDone = false;
+            WorkspaceProfileService.RestoreStartupSession();
+            _wallpaperEnabled = WallpaperHostEngine.Instance.IsEnabled;
+            _wallpaperToggleItem.Checked = _wallpaperEnabled;
+            WallpaperHostEngine.Instance.StateChanged += OnWallpaperStateChanged;
             bool launchedInBackground = desktopAction != null || Environment.GetCommandLineArgs().Any(a => a.Equals("--background", StringComparison.OrdinalIgnoreCase));
             if (launchedInBackground)
             {
-                _mainWindow = new MainWindow();
-                _mainWindow.FormClosed += (s, e) => _mainWindow = null;
-                if (!safeMode && desktopAction != null && AppSettings.Load().DesktopMenuEnabled) DesktopMenu.Run(desktopAction);
+                if (!safeMode && desktopAction != null && AppSettings.Peek().DesktopMenuEnabled) DesktopMenu.Run(desktopAction);
             }
             else
             {
@@ -551,7 +558,7 @@ namespace MotionDesk.Widgets
             if (System.Threading.Volatile.Read(ref _exitStarted) != 0) return;
             if (_mainWindow == null || _mainWindow.IsDisposed)
             {
-                _mainWindow = new MainWindow();
+                _mainWindow = new MainWindow(hostedByTray: true);
                 _mainWindow.FormClosed += (s, e) => _mainWindow = null;
                 _mainWindow.Show();
             }
@@ -608,9 +615,15 @@ namespace MotionDesk.Widgets
             ShowPrivateBalloon(1500, "Opsis", string.Format(LocalizationManager.T("Tray.ProfileAppliedFormat"), name), ToolTipIcon.Info);
         }
 
+        private void OnWallpaperStateChanged()
+        {
+            _wallpaperEnabled = WallpaperHostEngine.Instance.IsEnabled;
+            _wallpaperToggleItem.Checked = _wallpaperEnabled;
+        }
+
         private void ToggleWallpaper()
         {
-            _wallpaperEnabled = !_wallpaperEnabled;
+            _wallpaperEnabled = !WallpaperHostEngine.Instance.IsEnabled;
             _wallpaperToggleItem.Checked = _wallpaperEnabled;
 
             if (_wallpaperEnabled)
@@ -721,6 +734,28 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
             catch (Exception ex) { System.Diagnostics.Debug.WriteLine(ex); }
             BackdropContrast.Refresh();
             WallpaperHostEngine.RefreshOptionalIfCreated();
+            RefreshDesktopMenuPipe();
+        }
+
+        internal static bool NeedsDesktopMenuPipe(bool enabled, bool safeMode) => enabled && !safeMode;
+
+        private void RefreshDesktopMenuPipe()
+        {
+            try
+            {
+                bool desired = NeedsDesktopMenuPipe(AppSettings.Peek().DesktopMenuEnabled, SafeModeService.IsSafeMode);
+                if (desired && _controlPipe == null)
+                {
+                    var pipe = new Opsis.Containers.PipeServer(DesktopMenu.PipeName, new DesktopMenu.Api());
+                    try { pipe.Start(); _controlPipe = pipe; }
+                    catch { pipe.Dispose(); throw; }
+                }
+                else if (!desired && _controlPipe != null)
+                {
+                    var pipe = _controlPipe; _controlPipe = null; pipe.Dispose();
+                }
+            }
+            catch (Exception ex) { RotatingLogger.Write("Desktop menu pipe: " + ex.Message); }
         }
 
         private void UsageAlertTick()
@@ -845,9 +880,11 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
             Step("dock restorer", () => OnApplicationExit(null, EventArgs.Empty));
             Step("experience timer", () => { _experienceTimer.Stop(); _experienceTimer.Dispose(); });
             Step("usage alert timer", () => { _alertTimer?.Stop(); _alertTimer?.Dispose(); _alertTimer = null; });
-            Step("save session", () => { WorkspaceProfileService.Save("Last Session"); WorkspaceProfileService.ExitSaveDone = true; });
+            Step("save session", WorkspaceProfileService.SaveLastSessionOnce);
             Step("appearance restore", () => MotionDesk.Appearance.AppearanceService.Instance.Stop());
             Step("hotkeys", () => _hotkeys.Dispose());
+            Step("zone hooks", () => { ZoneSnapEngine.Stop(); ZoneSnapEngine.AllowOwnWindow = null; });
+            Step("wallpaper event", () => WallpaperHostEngine.Instance.StateChanged -= OnWallpaperStateChanged);
             Step("cursor effects", MotionDesk.UI.OpsisCursorFx.Stop);
             Step("window rules", () => WindowRulesEngine.Instance.Dispose());
             Step("hot corners", () => _hotCorners.Dispose());

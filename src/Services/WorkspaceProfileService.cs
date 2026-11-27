@@ -48,6 +48,31 @@ public static class WorkspaceProfileService
     // "Last Session" του MainWindow.FormClosed ήταν ΑΔΕΙΟ και τα widgets/containers χάνονταν στην επόμενη εκκίνηση.
     public static bool ExitSaveDone { get; set; }
 
+    internal static bool MayRestoreSession(bool safeMode, bool restoreEnabled, bool exists) =>
+        !safeMode && restoreEnabled && exists;
+
+    internal static bool MaySaveLastSession(bool safeMode, bool alreadySaved) =>
+        !safeMode && !alreadySaved;
+
+    internal static void RestoreStartupSession()
+    {
+        if (SafeModeService.IsSafeMode) return;
+        var saved = AppSettings.Load();
+        if (MayRestoreSession(false, saved.RestoreLastSession, File.Exists(Path.Combine(Root, "Last Session.json"))))
+        {
+            try { Load("Last Session"); } catch (Exception ex) { System.Diagnostics.Debug.WriteLine(ex); }
+        }
+        else if (saved.ShowSystemMonitor && !WidgetHostEngine.Instance.GetActiveWidgets().Any(w => w.WidgetId == "sysmon"))
+            WidgetHostEngine.Instance.SpawnWidget("sysmon", 100, 100, 300, 200);
+    }
+
+    internal static void SaveLastSessionOnce()
+    {
+        if (!MaySaveLastSession(SafeModeService.IsSafeMode, ExitSaveDone)) return;
+        Save("Last Session");
+        ExitSaveDone = true;
+    }
+
     public static void Save(string name)
     {
         name = Sanitize(name);

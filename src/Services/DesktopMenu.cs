@@ -159,7 +159,12 @@ public static class DesktopMenu
         public JsonNode? Handle(string cmd, JsonObject args)
         {
             if (!Allowed.Contains(cmd)) throw new PipeException("unknown-command", "not allowed");
-            if (cmd != "ping") _ui.Post(_ => Run(cmd), null);
+            if (SafeModeService.IsSafeMode || !AppSettings.Peek().DesktopMenuEnabled)
+                throw new PipeException("disabled", "desktop menu is disabled");
+            if (cmd != "ping") _ui.Post(_ =>
+            {
+                if (!SafeModeService.IsSafeMode && AppSettings.Peek().DesktopMenuEnabled) Run(cmd);
+            }, null);
             return new JsonObject { ["accepted"] = cmd };
         }
     }

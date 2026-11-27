@@ -13,6 +13,19 @@ void Check(bool condition, string description)
 }
 try
 {
+    Check(!WorkspaceProfileService.MayRestoreSession(true, true, true) &&
+        !WorkspaceProfileService.MayRestoreSession(false, false, true) &&
+        !WorkspaceProfileService.MayRestoreSession(false, true, false) &&
+        WorkspaceProfileService.MayRestoreSession(false, true, true),
+        "R67 startup session restoration respects user preference, existence and safe mode");
+    Check(!WorkspaceProfileService.MaySaveLastSession(true, false) &&
+        !WorkspaceProfileService.MaySaveLastSession(false, true) &&
+        WorkspaceProfileService.MaySaveLastSession(false, false),
+        "R67 safe mode cannot overwrite last good session and exit save is idempotent");
+    Check(!MotionDesk.Widgets.TrayApplicationContext.NeedsDesktopMenuPipe(false, false) &&
+        !MotionDesk.Widgets.TrayApplicationContext.NeedsDesktopMenuPipe(true, true) &&
+        MotionDesk.Widgets.TrayApplicationContext.NeedsDesktopMenuPipe(true, false),
+        "R67 optional desktop menu IPC respects selection and safe mode");
     var opt = new AppSettings { RestoreWindowsAfterDocking = false, UsageAlertsEnabled = false };
     Check(MotionDesk.Widgets.TrayApplicationContext.SelectOptionalServices(opt, false) == (false, false),
         "R65 disabled optional tray services have no timer demand");
