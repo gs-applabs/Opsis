@@ -97,6 +97,8 @@ namespace MotionDesk.Services
         private static int _drop;                    // how many steps below the base tier
         private static DateTime? _pressureSince, _calmSince;
         private static System.Threading.Timer? _timer;
+        private static bool _started;
+        private static int _generation, _sampling;
 
         public static bool IsPressure(LoadSample s) =>
             (s.Cpu ?? 0) > 88 || (s.Gpu ?? 0) > 92 || (s.Ram ?? 0) > 92 || s.LowBattery;
@@ -132,6 +134,9 @@ namespace MotionDesk.Services
 
         public static bool Enabled => HardwareProfileService.GetOverride() == null && AppSettings.Peek().PerfDynamic;
 
+        internal static bool NeedsSampler(bool enabled, HardwareTier tier, bool safeMode) =>
+            enabled && tier != HardwareTier.Low && !safeMode;
+
         /// <summary>Feeds one sample (called by the sampling timer, or by tests through <see cref="Step"/>).</summary>
         public static void Feed(LoadSample s, DateTime now)
         {
@@ -148,25 +153,88 @@ namespace MotionDesk.Services
 
         public static void RaiseChanged() => EffectiveChanged?.Invoke(EffectiveTier);
 
-        /// <summary>Starts the sampler (every 2 s, cheap: CPU and RAM counters Opsis already reads; no GPU query unless a monitor widget uses it).</summary>
+        /// <summary>Maintain one optional, non-overlapping sampler while adaptive scaling can act.</summary>
         public static void Start()
         {
-            if (_timer != null) return;
-            HardwareProfileService.ProfileChanged += _ => { lock (Sync) { _drop = 0; _pressureSince = _calmSince = null; } RaiseChanged(); };
-            _timer = new System.Threading.Timer(_ =>
+            lock (Sync)
             {
-                try
+                if (_started) return;
+                _started = true;
+                HardwareProfileService.ProfileChanged += OnProfileChanged;
+                AppSettings.SettingsSaved += RefreshSampler;
+            }
+            RefreshSampler();
+        }
+
+        public static void Stop()
+        {
+            lock (Sync)
+            {
+                if (!_started) return;
+                _started = false;
+                HardwareProfileService.ProfileChanged -= OnProfileChanged;
+                AppSettings.SettingsSaved -= RefreshSampler;
+                _generation++;
+                _timer?.Dispose(); _timer = null;
+                _drop = 0; _pressureSince = _calmSince = null;
+            }
+        }
+
+        private static void OnProfileChanged(HardwareTier _)
+        {
+            lock (Sync) { _drop = 0; _pressureSince = _calmSince = null; }
+            RefreshSampler();
+            RaiseChanged();
+        }
+
+        private static void RefreshSampler()
+        {
+            bool changed = false;
+            HardwareTier tier;
+            lock (Sync)
+            {
+                if (!_started) return;
+                tier = HardwareProfileService.CurrentTier;
+                if (!NeedsSampler(Enabled, tier, SafeModeService.IsSafeMode))
                 {
-                    if (!Enabled) { Feed(default, DateTime.UtcNow); return; }
-                    var m = SystemMonitorService.Instance.GetSnapshot();
-                    double ram = m.TotalMemoryMb > 0 ? (m.TotalMemoryMb - m.AvailableMemoryMb) / m.TotalMemoryMb * 100.0 : 0;
-                    var p = System.Windows.Forms.SystemInformation.PowerStatus;
-                    bool onBattery = p.PowerLineStatus == System.Windows.Forms.PowerLineStatus.Offline;
-                    bool low = onBattery && p.BatteryLifePercent > 0 && p.BatteryLifePercent < 0.2f;
-                    Feed(new LoadSample(m.CpuPercent, null, ram, onBattery, low), DateTime.UtcNow);
+                    if (_timer != null) { _generation++; _timer.Dispose(); _timer = null; }
+                    changed = _drop != 0;
+                    _drop = 0; _pressureSince = _calmSince = null;
                 }
-                catch (Exception) { }
-            }, null, 2000, 2000);
+                else if (_timer == null)
+                {
+                    int generation = ++_generation;
+                    _timer = new System.Threading.Timer(_ => Sample(generation), null, 2000, 2000);
+                }
+            }
+            if (changed) EffectiveChanged?.Invoke(tier);
+        }
+
+        private static void Sample(int generation)
+        {
+            if (Interlocked.Exchange(ref _sampling, 1) != 0) return;
+            try
+            {
+                lock (Sync) { if (!_started || generation != _generation || !Enabled) return; }
+                var m = SystemMonitorService.Instance.GetSnapshot();
+                double ram = m.TotalMemoryMb > 0 ? (m.TotalMemoryMb - m.AvailableMemoryMb) / m.TotalMemoryMb * 100.0 : 0;
+                var p = System.Windows.Forms.SystemInformation.PowerStatus;
+                bool onBattery = p.PowerLineStatus == System.Windows.Forms.PowerLineStatus.Offline;
+                bool low = onBattery && p.BatteryLifePercent > 0 && p.BatteryLifePercent < 0.2f;
+                HardwareTier before, after;
+                lock (Sync)
+                {
+                    if (!_started || generation != _generation || !Enabled) return;
+                    var tier = HardwareProfileService.CurrentTier;
+                    before = Lower(tier, _drop);
+                    _drop = Step(_drop, tier, new LoadSample(m.CpuPercent, null, ram, onBattery, low),
+                        DateTime.UtcNow, ref _pressureSince, ref _calmSince);
+                    after = Lower(tier, _drop);
+                }
+                if (before != after) EffectiveChanged?.Invoke(after);
+            }
+            catch (Exception ex) { System.Diagnostics.Debug.WriteLine(ex); }
+            finally { Volatile.Write(ref _sampling, 0); }
         }
     }
 }

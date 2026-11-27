@@ -735,6 +735,7 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
             BackdropContrast.Refresh();
             WallpaperHostEngine.RefreshOptionalIfCreated();
             RefreshDesktopMenuPipe();
+            PluginHost.Instance.HoldIfGloballyDisabled();
         }
 
         internal static bool NeedsDesktopMenuPipe(bool enabled, bool safeMode) => enabled && !safeMode;
@@ -893,6 +894,7 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
             Step("music", StudioMusic.Stop);
             Step("wallpaper host", WallpaperHostEngine.StopForExit);
             Step("activity monitor", AppActivity.Stop);
+            Step("performance governor", PerformanceGovernor.Stop);
             Step("Discord presence", () => MotionDesk.Services.DiscordPresence.Instance.Stop());
             Step("desktop toolbar", DesktopToolbar.Stop);
             Step("replacement taskbar", ReplacementTaskbar.Stop);

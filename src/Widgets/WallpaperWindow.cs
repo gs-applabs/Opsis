@@ -1320,6 +1320,25 @@ namespace MotionDesk.Widgets
         internal static bool HasActiveScene => _instance?.Active == true;
         internal static bool IsRunningIfCreated => _instance?.IsRunning == true;
         internal static void RefreshOptionalIfCreated() => _instance?.RefreshOptionalWatchers();
+        private int _perfPushQueued;
+        internal static void QueuePerfIfCreated()
+        {
+            var host = _instance;
+            if (host == null || !host.Active || Interlocked.Exchange(ref host._perfPushQueued, 1) != 0) return;
+            try
+            {
+                host._ui.Post(_ =>
+                {
+                    Interlocked.Exchange(ref host._perfPushQueued, 0);
+                    if (host.Active) host.PushPerf();
+                }, null);
+            }
+            catch (Exception ex)
+            {
+                Interlocked.Exchange(ref host._perfPushQueued, 0);
+                System.Diagnostics.Debug.WriteLine(ex);
+            }
+        }
 
         internal static bool NeedsScene(bool wallpaper, bool weatherOverlay, bool musicOverlay) =>
             wallpaper || weatherOverlay || musicOverlay;

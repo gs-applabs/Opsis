@@ -26,6 +26,17 @@ try
         !MotionDesk.Widgets.TrayApplicationContext.NeedsDesktopMenuPipe(true, true) &&
         MotionDesk.Widgets.TrayApplicationContext.NeedsDesktopMenuPipe(true, false),
         "R67 optional desktop menu IPC respects selection and safe mode");
+    Check(!PerformanceGovernor.NeedsSampler(false, HardwareTier.High, false) &&
+        !PerformanceGovernor.NeedsSampler(true, HardwareTier.Low, false) &&
+        !PerformanceGovernor.NeedsSampler(true, HardwareTier.High, true) &&
+        PerformanceGovernor.NeedsSampler(true, HardwareTier.Balanced, false),
+        "R68 governor only samples if adaptive scaling can lower the active hardware tier");
+    Check(!PluginHost.MayRunPlugin(false, false, false, false) &&
+        !PluginHost.MayRunPlugin(true, true, false, false) &&
+        !PluginHost.MayRunPlugin(true, false, true, false) &&
+        !PluginHost.MayRunPlugin(true, false, false, true) &&
+        PluginHost.MayRunPlugin(true, false, false, false),
+        "R68 plugin activation requires global opt-in, individual selection and safety clearance");
     var opt = new AppSettings { RestoreWindowsAfterDocking = false, UsageAlertsEnabled = false };
     Check(MotionDesk.Widgets.TrayApplicationContext.SelectOptionalServices(opt, false) == (false, false),
         "R65 disabled optional tray services have no timer demand");
