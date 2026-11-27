@@ -17,6 +17,19 @@
     <NoWarn>$(NoWarn);WFO1000</NoWarn>
     <DebugType>none</DebugType>
   </PropertyGroup>
+  <!-- Opt-in preview only: published builds keep their existing DLLs. -->
+  <PropertyGroup Condition="'$(EnableSignatureComposition)' == 'true'">
+    <DefineConstants>$(DefineConstants);SIGNATURE_COMPOSITION_PREVIEW</DefineConstants>
+    <SignatureGlassExcludedReference>lib/Opsis.UI.dll</SignatureGlassExcludedReference>
+  </PropertyGroup>
+  <ItemGroup Condition="'$(EnableSignatureComposition)' == 'true'">
+    <ProjectReference Include="$(SignatureUiRoot)/src/Opsis.UI.Composition/Opsis.UI.Composition.csproj" />
+    <None Include="$(SignatureUiRoot)/artifacts/Opsis.UI.Composition.Native.dll" Link="Opsis.UI.Composition.Native.dll" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+  <Target Name="ValidateSignaturePreview" BeforeTargets="PrepareForBuild" Condition="'$(EnableSignatureComposition)' == 'true'">
+    <Error Condition="'$(SignatureUiRoot)' == '' Or !Exists('$(SignatureUiRoot)/src/Opsis.UI.Composition/Opsis.UI.Composition.csproj')" Text="Provide SignatureUiRoot pointing to the verified Opsis.UI source checkout." />
+    <Error Condition="!Exists('$(SignatureUiRoot)/artifacts/Opsis.UI.Composition.Native.dll')" Text="Build the x64 Signature native DLL first." />
+  </Target>
   <ItemGroup>
     <Using Include="Opsis.UI" />
     <!-- tests\ holds separate projects (e.g. AtomicWriteCrashHarness with top-level statements): they must NEVER be compiled into the app, or their Main replaces the real entry point and Opsis exits with code 2 at start-up -->
@@ -26,7 +39,7 @@
     <Content Remove="_compat/**" />
     <PackageReference Include="SkiaSharp" Version="4.150.7" />
     <PackageReference Include="SkiaSharp.NativeAssets.Win32" Version="4.150.7" />
-    <Reference Include="lib/*.dll" Exclude="lib/WebView2Loader.dll;lib/libMonoPosixHelper.dll;lib/MonoPosixHelper.dll">
+    <Reference Include="lib/*.dll" Exclude="lib/WebView2Loader.dll;lib/libMonoPosixHelper.dll;lib/MonoPosixHelper.dll;$(SignatureGlassExcludedReference)">
       <Private>true</Private>
     </Reference>
     <None Update="lib/WebView2Loader.dll;lib/libMonoPosixHelper.dll;lib/MonoPosixHelper.dll" CopyToOutputDirectory="PreserveNewest" Link="%(Filename)%(Extension)" />
