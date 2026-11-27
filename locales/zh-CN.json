@@ -976,5 +976,6 @@
   "Personalization.LockGifFrame": "Use a frame of a GIF as the lock screen picture…",
   "Personalization.LockGifFrameInfo": "Windows cannot play an animation on the lock screen. Opsis checks the GIF (type, size, frames) and uses its first frame as the picture, through the normal lock-screen setting. Reset restores the original.",
   "Personalization.LockGifWarn": "This changes a Windows setting (the lock screen picture, with an administrator prompt). The original setting can be restored with the Reset button. Continue?",
-  "Win.ImportBackup": "已将旧设置的备份保存到：{0}"
+  "Win.ImportBackup": "已将旧设置的备份保存到：{0}",
+  "VersionNotes.2.8.0.2511": "2.8.0.2511：起始屏幕现在链接所有 Windows 外观页面（个性化、自动化、性能、配置文件、声音），并显示当前运行版本的说明；“关于”页面也显示当前运行版本的说明；14 种语言的文本已更新；移除了旧的 2.6.0 标签。"
 }
