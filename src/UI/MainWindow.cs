@@ -3883,6 +3883,17 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
             string[] labels = { LocalizationManager.T("Settings.ThemeFollow"), LocalizationManager.T("Settings.ThemeLight"), LocalizationManager.T("Settings.ThemeDark"), "Opsis teal", "Midnight", "Forest", "Dawn", "High contrast", "Signature Glass" };
             int idx = Array.IndexOf(modes, AppSettings.Load().ThemeMode); if (idx < 0) idx = 0;
             FxCombo(card, LocalizationManager.T("Settings.Theme"), labels, labels[idx], v => ThemeManager.SetMode(modes[Math.Max(0, Array.IndexOf(labels, v))]));
+            AddText(card, StudioText("Apply a coordinated glass appearance to desktop widgets, DeskStrip and containers. Individual material settings remain available in their respective pages.",
+                "Εφάρμοσε ενιαία εμφάνιση glass σε widgets, DeskStrip και containers. Οι επιμέρους ρυθμίσεις υλικών παραμένουν στις αντίστοιχες καρτέλες."));
+            var signature = AddButton(card, StudioText("Apply Signature Glass to desktop", "Signature Glass στην επιφάνεια"), (_, _) =>
+            {
+                if (MessageBox.Show(this, StudioText("Replace current widget, DeskStrip and container material settings with Signature Glass?",
+                    "Να αντικατασταθούν οι τρέχουσες ρυθμίσεις υλικών των widgets, DeskStrip και containers με Signature Glass;"),
+                    "Signature Glass", MessageBoxButtons.YesNo, MessageBoxIcon.Question, MessageBoxDefaultButton.Button2) == DialogResult.Yes)
+                    DesktopMaterials.ApplySignature();
+            });
+            signature.AccessibleDescription = StudioText("Changes the shared desktop material settings after confirmation.",
+                "Αλλάζει τις κοινές ρυθμίσεις υλικών της επιφάνειας εργασίας μετά από επιβεβαίωση.");
             AddSkinSelector(card, this);
             BuildGearThemeCards(panel);
             _pageTitle.Text = OpsisStrings.T("ui.theme.title");
