@@ -25,7 +25,9 @@ internal sealed class MusicOverlayPage : TableLayoutPanel
     private readonly string defaultDisplay;
     private readonly Button preview;
     private readonly Button reset;
-    private readonly System.Windows.Forms.Timer stateRefresh = new() { Interval = 500 };
+    private readonly System.Windows.Forms.Timer stateRefresh = new() { Interval = 5000 };
+    private long nextDeviceRefresh;
+    private readonly RadioButton[] anchors = new RadioButton[9];
     private bool loading;
 
     public MusicOverlayPage(Func<DesktopMusicController?> getController, bool greek, string[] fonts, Color background, Color surface, Color text)
@@ -135,8 +137,32 @@ internal sealed class MusicOverlayPage : TableLayoutPanel
         Add(new Label { Text = L("Προεπιλογή: έξοδος συστήματος. Επίλεξε ρητά μικρόφωνο για λήψη εισόδου.",
             "Default: system output. Explicitly choose a microphone to capture input."), AutoSize = true });
 
+        Add(new Label { Text = L("Θέση στην επιφάνεια εργασίας", "Desktop placement"), AutoSize = true, Font = MotionDesk.UI.UiTheme.FontHeading });
+        Add(new Label { Text = L("Διάλεξε θέση στο πλέγμα ή ρύθμισε τα ποσοστά. Η ώρα και ο καιρός έχουν προτεραιότητα· η αυτόματη μετατόπιση δεν αλλάζει τη θέση σου.", "Choose an anchor or fine-tune the percentages. Clock and weather take priority; automatic relocation does not change your saved position."), AutoSize = true, MaximumSize = new Size(630, 0) });
         horizontal = Coordinate();
         vertical = Coordinate();
+        horizontal.AccessibleName = L("Οριζόντια θέση (%)", "Horizontal position (%)");
+        vertical.AccessibleName = L("Κατακόρυφη θέση (%)", "Vertical position (%)");
+        var anchorGrid = new TableLayoutPanel { ColumnCount = 3, RowCount = 3, AutoSize = true, Margin = new Padding(3, 5, 3, 10), AccessibleName = L("Επιλογή θέσης", "Position anchors") };
+        string[] columns = [L("Αριστερά", "Left"), L("Κέντρο", "Center"), L("Δεξιά", "Right")];
+        string[] rows = [L("Πάνω", "Top"), L("Μέση", "Middle"), L("Κάτω", "Bottom")];
+        for (int i = 0; i < anchors.Length; i++)
+        {
+            int index = i;
+            var anchor = new RadioButton { Appearance = Appearance.Button, AutoSize = false, Size = new Size(102, 34), TextAlign = ContentAlignment.MiddleCenter,
+                Text = rows[i / 3] + " " + columns[i % 3], AccessibleName = rows[i / 3] + " " + columns[i % 3], FlatStyle = FlatStyle.Flat,
+                Margin = new Padding(3), UseVisualStyleBackColor = true };
+            anchor.CheckedChanged += (_, _) =>
+            {
+                if (loading || !anchor.Checked || display.SelectedIndex < 0) return;
+                double x = index % 3 * .5, y = index / 3 * .5;
+                getController()?.SetPosition(display.SelectedIndex == 0 ? null : display.SelectedItem as string, x, y);
+                UpdateFromSettings();
+            };
+            anchors[i] = anchor;
+            anchorGrid.Controls.Add(anchor, i % 3, i / 3);
+        }
+        Add(anchorGrid);
         var position = new FlowLayoutPanel { Dock = DockStyle.Fill, AutoSize = true };
         position.Controls.Add(new Label { Text = L("Οριζόντια %", "Horizontal %"), AutoSize = true, Margin = new(3, 6, 2, 0) });
         position.Controls.Add(horizontal);
@@ -146,6 +172,8 @@ internal sealed class MusicOverlayPage : TableLayoutPanel
 
         width = Coordinate(MusicOverlaySettings.MinSize, MusicOverlaySettings.MaxSize);
         height = Coordinate(MusicOverlaySettings.MinSize, MusicOverlaySettings.MaxSize);
+        width.AccessibleName = L("Πλάτος (%)", "Width (%)");
+        height.AccessibleName = L("Ύψος (%)", "Height (%)");
         var dimensions = new FlowLayoutPanel { Dock = DockStyle.Fill, AutoSize = true };
         dimensions.Controls.Add(new Label { Text = L("Πλάτος %", "Width %"), AutoSize = true, Margin = new(3, 6, 2, 0) });
         dimensions.Controls.Add(width);
@@ -161,7 +189,7 @@ internal sealed class MusicOverlayPage : TableLayoutPanel
             Margin = new Padding(0, 3, 0, 8)
         };
         preview = Button(L("Προεπισκόπηση στο wallpaper", "Preview on wallpaper"));
-        reset = Button(L("Κεντράρισμα", "Center visualizer"));
+        reset = Button(L("Προεπιλεγμένη θέση", "Default position"));
         actions.Controls.Add(preview);
         actions.Controls.Add(reset);
         Add(actions);
@@ -220,7 +248,8 @@ internal sealed class MusicOverlayPage : TableLayoutPanel
             UpdateFromSettings();
         };
 
-        stateRefresh.Tick += (_, _) => UpdateFromSettings();
+        // Never interrupt an open picker or an in-progress keyboard/numeric edit.
+        stateRefresh.Tick += (_, _) => { if (!ContainsFocus) UpdateFromSettings(); };
         VisibleChanged += (_, _) =>
         {
             if (Visible) { UpdateFromSettings(); stateRefresh.Start(); }
@@ -234,6 +263,7 @@ internal sealed class MusicOverlayPage : TableLayoutPanel
             if (loading || display.SelectedIndex < 0) return;
             getController()?.SetPosition(display.SelectedIndex == 0 ? null : display.SelectedItem as string,
                 (double)horizontal.Value / 100, (double)vertical.Value / 100);
+            RefreshAnchors((double)horizontal.Value / 100, (double)vertical.Value / 100, true);
         }
 
         void SaveSize()
@@ -277,12 +307,30 @@ internal sealed class MusicOverlayPage : TableLayoutPanel
         Button Button(string title) => new()
         {
             Text = title,
+            AccessibleName = title,
+            FlatStyle = FlatStyle.Flat,
+            MinimumSize = new Size(0, 34),
             AutoSize = true,
-            Padding = new Padding(7, 3, 7, 3),
+            Padding = new Padding(12, 4, 12, 4),
             BackColor = background,
             ForeColor = text,
             UseVisualStyleBackColor = false
         };
+    }
+
+    private void RefreshAnchors(double x, double y, bool available)
+    {
+        bool wasLoading = loading;
+        loading = true;
+        try
+        {
+            for (int i = 0; i < anchors.Length; i++)
+            {
+                anchors[i].Enabled = available;
+                anchors[i].Checked = available && Math.Abs(x - i % 3 * .5) < .001 && Math.Abs(y - i / 3 * .5) < .001;
+            }
+        }
+        finally { loading = wasLoading; }
     }
 
     private sealed record InputDeviceItem(string Id, string Name)
@@ -312,10 +360,19 @@ internal sealed class MusicOverlayPage : TableLayoutPanel
             horizontal.Value = (decimal)Math.Round(Math.Clamp(settings?.X ?? 0, 0, 1) * 100);
             vertical.Value = (decimal)Math.Round(Math.Clamp(settings?.Y ?? 0, 0, 1) * 100);
             display.Enabled = horizontal.Enabled = vertical.Enabled = settings != null;
-            var sources = SharedLoopbackCapture.AvailableInputs();
-            audioInput.Items.Clear();
-            audioInput.Items.Add(defaultDisplay + " · output loopback");
-            foreach (var item in sources) audioInput.Items.Add(new InputDeviceItem(item.Id, item.Name));
+            RefreshAnchors(settings?.X ?? MusicOverlaySettings.DefaultX, settings?.Y ?? MusicOverlaySettings.DefaultY, settings != null);
+            if (Environment.TickCount64 >= nextDeviceRefresh && !audioInput.DroppedDown)
+            {
+                nextDeviceRefresh = Environment.TickCount64 + 5000;
+                var sources = SharedLoopbackCapture.AvailableInputs();
+                var items = new List<object> { defaultDisplay + " · output loopback" };
+                items.AddRange(sources.Select(item => new InputDeviceItem(item.Id, item.Name)));
+                if (!audioInput.Items.Cast<object>().SequenceEqual(items))
+                {
+                    audioInput.Items.Clear();
+                    audioInput.Items.AddRange(items.ToArray());
+                }
+            }
             audioInput.SelectedIndex = Math.Max(0, audioInput.Items.Cast<object>().ToList().FindIndex(item =>
                 item is InputDeviceItem device && device.Id == settings?.InputDeviceId));
             audioInput.Enabled = settings != null;
