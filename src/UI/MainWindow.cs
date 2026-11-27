@@ -2093,6 +2093,7 @@ namespace MotionDesk.UI
             // Controls.Clear() αφαιρεί τα child controls από τη συλλογή αλλά ΔΕΝ τα κάνει Dispose —
             // ίδιο bug class με το SetPage() παραπάνω (βλ. σχόλιο εκεί). Χωρίς αυτό, κάθε νέα αναζήτηση
             // τοποθεσίας θα άφηνε πίσω της ορφανά HoverButton handles.
+            int locationRequest = 0;
             void ClearChoices()
             {
                 DisposeChildren(choicesPanel);
@@ -2102,6 +2103,7 @@ namespace MotionDesk.UI
             void ApplyMatch(WeatherService.GeocodeMatch m)
             {
                 if (locLabel.IsDisposed) return;
+                ++locationRequest;
                 WallpaperHostEngine.Instance.SetWeatherLocation(m.Name, m.Lat, m.Lon, m.Source, string.IsNullOrEmpty(m.Country) ? m.Name : $"{m.Name}, {m.Country}", followLocation: true);
                 locLabel.Text = string.Format(LocalizationManager.T("Wallpaper.WeatherLocationCurrent"), m.Name);
                 cityBox.Text = m.Name;
@@ -2113,12 +2115,13 @@ namespace MotionDesk.UI
             {
                 var name = cityBox.Text.Trim();
                 if (name.Length == 0 || !setBtn.Enabled) return;
+                int request = ++locationRequest;
                 setBtn.Enabled = false;
                 ClearChoices();
                 try
                 {
                     var found = await WeatherService.GeocodeMultipleAsync(name, 5);
-                    if (locLabel.IsDisposed || !string.Equals(cityBox.Text.Trim(), name, StringComparison.Ordinal)) return;
+                    if (locLabel.IsDisposed || request != locationRequest || !string.Equals(cityBox.Text.Trim(), name, StringComparison.Ordinal)) return;
                     if (found.Count == 1)
                     {
                         ApplyMatch(found[0]);
@@ -2147,7 +2150,7 @@ namespace MotionDesk.UI
                 }
                 catch (Exception)
                 {
-                    if (!locLabel.IsDisposed && string.Equals(cityBox.Text.Trim(), name, StringComparison.Ordinal))
+                    if (!locLabel.IsDisposed && request == locationRequest && string.Equals(cityBox.Text.Trim(), name, StringComparison.Ordinal))
                         locLabel.Text = LocalizationManager.T("Wallpaper.WeatherLocationNotFound");
                 }
                 finally { if (!setBtn.IsDisposed) setBtn.Enabled = true; }
@@ -2174,10 +2177,13 @@ namespace MotionDesk.UI
             myLocBtn.Click += async (_, _) =>
             {
                 if (MessageBox.Show(this, LocalizationManager.T("Wallpaper.WeatherLocationConsent"), LocalizationManager.T("Wallpaper.WeatherUseMyLocation"), MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes) return;
+                int request = ++locationRequest;
+                ClearChoices();
                 myLocBtn.Enabled = false;
                 try
                 {
                     var here = await DeviceLocation.GetApproximateAsync();
+                    if (locLabel.IsDisposed || request != locationRequest) return;
                     if (here == null)
                     {
                         if (!locLabel.IsDisposed) locLabel.Text = StudioText(
@@ -2190,7 +2196,7 @@ namespace MotionDesk.UI
                     bool greek = LocalizationManager.CurrentLanguage == "el";
                     var placed = await PlaceNaming.ResolveAsync(here.Value.Lat, here.Value.Lon, greek, WallpaperSettings.Load().WeatherReverseGeocode, LocalizationManager.T("Wallpaper.WeatherMyLocation"));
                     string name = placed.Name;
-                    if (locLabel.IsDisposed) return;
+                    if (locLabel.IsDisposed || request != locationRequest) return;
                     WallpaperHostEngine.Instance.SetWeatherLocation(name, here.Value.Lat, here.Value.Lon, placed.Source, placed.Detail, followLocation: true);
                     locLabel.Text = string.Format(LocalizationManager.T("Wallpaper.WeatherLocationCurrent"), name) + PlaceSourceLine(placed.Detail, placed.Source);
                     cityBox.Text = "";
@@ -2200,6 +2206,8 @@ namespace MotionDesk.UI
             };
             var clearLocBtn = NewHoverButton(LocalizationManager.T("Wallpaper.WeatherLocationClear"), () =>
             {
+                ++locationRequest;
+                ClearChoices();
                 WallpaperHostEngine.Instance.SetWeatherLocation("", 37.9838, 23.7275);
                 cityBox.Text = "";
                 locLabel.Text = LocalizationManager.T("Wallpaper.WeatherLocationCleared");
@@ -2223,11 +2231,13 @@ namespace MotionDesk.UI
                     locLabel.Text = StudioText("Enter decimal latitude and longitude.", "Βάλε έγκυρο γεωγραφικό πλάτος και μήκος σε δεκαδική μορφή.");
                     return;
                 }
+                int request = ++locationRequest;
+                ClearChoices();
                 lat = WeatherCoord.Round(lat);
                 lon = WeatherCoord.Round(lon);
                 var place = await PlaceNaming.ResolveAsync(lat, lon, StudioGreek, WallpaperSettings.Load().WeatherReverseGeocode,
                     LocalizationManager.T("Wallpaper.WeatherMyLocation"));
-                if (locLabel.IsDisposed) return;
+                if (locLabel.IsDisposed || request != locationRequest) return;
                 WallpaperHostEngine.Instance.SetWeatherLocation(place.Name, lat, lon, place.Source, place.Detail, followLocation: true);
                 locLabel.Text = string.Format(LocalizationManager.T("Wallpaper.WeatherLocationCurrent"), place.Name) + PlaceSourceLine(place.Detail, place.Source);
                 _ = RefreshLiveWeatherLabelAsync(liveLabel, lat, lon);
