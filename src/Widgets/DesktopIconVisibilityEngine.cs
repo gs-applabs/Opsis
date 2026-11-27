@@ -215,27 +215,42 @@ namespace MotionDesk.Widgets
                 var saved = LoadOriginals();
                 WithDesktopList((hp, list, count) =>
                 {
+                    var batch = new List<SavedIconPos>();
+                    var known = saved.Select(x => x.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
                     for (int i = 0; i < count; i++)
                     {
                         var name = GetItemTextRemote(hp, list, i);
-                        if (!want.Contains(name) || saved.Any(x => string.Equals(x.Name, name, StringComparison.OrdinalIgnoreCase))) continue;
+                        if (!want.Contains(name) || known.Contains(name)) continue;
                         var pos = GetItemPositionRemote(hp, list, i);
-                        if (pos.X <= -5000) continue;                                         // already hidden by the quick-hide: do not overwrite its saved place
-                        var recovery = new SavedIconPos { Index = i, Name = name, X = pos.X, Y = pos.Y };
-                        saved.Add(recovery);
-                        // Commit recovery coordinates BEFORE moving Explorer icons. A failed write must never hide an icon.
-                        Directory.CreateDirectory(Path.GetDirectoryName(OriginalsStatePath)!);
-                        MotionDesk.Services.AtomicFile.WriteAllText(OriginalsStatePath, JsonSerializer.Serialize(saved));
-                        if (SetItemPositionRemote(list, i, -10000, -10000)) hidden++;
-                        else
+                        if (pos.X <= -5000) continue;
+                        batch.Add(new SavedIconPos { Index = i, Name = name, X = pos.X, Y = pos.Y });
+                        known.Add(name);
+                    }
+                    if (batch.Count == 0) return;
+                    // One recovery commit per explicit batch, before any Explorer mutation.
+                    saved.AddRange(batch);
+                    Directory.CreateDirectory(Path.GetDirectoryName(OriginalsStatePath)!);
+                    MotionDesk.Services.AtomicFile.WriteAllText(OriginalsStatePath, JsonSerializer.Serialize(saved));
+                    bool journalChanged = false;
+                    foreach (var recovery in batch)
+                    {
+                        // Explorer can reorder the list between discovery and mutation.
+                        // Never hide a different icon at an outdated index.
+                        if (!string.Equals(GetItemTextRemote(hp, list, recovery.Index), recovery.Name, StringComparison.OrdinalIgnoreCase))
                         {
                             saved.Remove(recovery);
-                            MotionDesk.Services.AtomicFile.WriteAllText(OriginalsStatePath, JsonSerializer.Serialize(saved));
+                            journalChanged = true;
+                            continue;
                         }
+                        if (SetItemPositionRemote(list, recovery.Index, -10000, -10000)) hidden++;
+                        // Keep the journal entry for uncertain native failures; recovery is safer
+                        // than assuming Explorer did not process a timed-out move.
                     }
+                    if (journalChanged)
+                        MotionDesk.Services.AtomicFile.WriteAllText(OriginalsStatePath, JsonSerializer.Serialize(saved));
                 });
             }
-            catch (Exception) { }
+            catch (Exception ex) { try { MotionDesk.Services.RotatingLogger.Write("Desktop icon hide deferred: " + ex.Message); } catch { } }
             return hidden;
         }
 
