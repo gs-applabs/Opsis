@@ -52,3 +52,9 @@ Standalone applications have separate installation requirements. Plugin compatib
 ---
 
 <p align="center"><a href="https://github.com/gs-applabs"><b>GS App Labs</b></a> · Independent software studio · Made in Greece</p>
+
+
+## Current screenshot gallery / Νέα στιγμιότυπα
+
+[Browse application screenshots / Προβολή στιγμιοτύπων](docs/product-snapshots/README.md)
+
