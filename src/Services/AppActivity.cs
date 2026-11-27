@@ -61,11 +61,25 @@ public static class AppActivity
         _timer.Start();
     }
 
+    // Must run on the UI thread, which owns both the timer and the power request.
+    public static void Stop()
+    {
+        if (_timer == null) return;
+        SystemEvents.SessionSwitch -= OnSessionSwitch;
+        _timer.Stop();
+        _timer.Dispose();
+        _timer = null;
+        _ui = null;
+        if (_awake) SetThreadExecutionState(ES_CONTINUOUS);
+        _awake = false;
+    }
+
     private static void OnSessionSwitch(object? sender, SessionSwitchEventArgs e)
     {
         // SystemEvents καλεί από δικό του thread -> Post στο UI thread.
         _ui?.Post(_ =>
         {
+            if (_timer == null) return;
             if (e.Reason == SessionSwitchReason.SessionLock) _locked = AppSettings.Load().PauseOnLock;
             else if (e.Reason == SessionSwitchReason.SessionUnlock) _locked = false;
             Publish();
