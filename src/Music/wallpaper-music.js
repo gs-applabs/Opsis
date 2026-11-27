@@ -254,7 +254,10 @@ function paint(frame) {
     const preferredY = margin + (window.innerHeight - 2 * margin - height * scale) * fraction(frame.y);
     // Read the real transformed bounds, including Signature card and user text scaling.
     const weatherBox = document.getElementById('wxInfo');
-    const weatherBounds = weatherBox && cfg.weatherInfo ? weatherBox.getBoundingClientRect() : null;
+    // The painter can be injected into a page without the normal wallpaper config.
+    // Use the actual DOM visibility/bounds instead of assuming cfg is in scope.
+    const weatherBounds = weatherBox && weatherBox.getClientRects().length &&
+        getComputedStyle(weatherBox).visibility !== 'hidden' ? weatherBox.getBoundingClientRect() : null;
     const weather = weatherBounds && weatherBounds.width > 0 && weatherBounds.height > 0 ? weatherBounds : null;
     const placement = placeMusicOverlay(window.innerWidth, window.innerHeight, width * scale, height * scale,
         preferredX, preferredY, weather, Math.max(12, margin));
@@ -270,10 +273,11 @@ function paint(frame) {
         canvas.width = pixelWidth;
         canvas.height = pixelHeight;
     }
-    canvas.style.left = left + 'px';
-    canvas.style.top = top + 'px';
-    canvas.style.width = width * scale + 'px';
-    canvas.style.height = height * scale + 'px';
+    // Avoid reassigning identical CSS geometry on every audio frame.
+    for (const [key, value] of [['left', left], ['top', top], ['width', width * scale], ['height', height * scale]]) {
+        const px = value + 'px';
+        if (canvas.style[key] !== px) canvas.style[key] = px;
+    }
     ctx.setTransform(pixelWidth / width, 0, 0, pixelHeight / height, 0, 0);
     ctx.clearRect(0, 0, width, height);
 
