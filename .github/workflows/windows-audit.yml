@@ -3,7 +3,7 @@ name: Opsis - Desktop Customization Windows audit
 on:
   workflow_dispatch:
   push:
-    branches: [rc3.0-base, patch/3.0.0.3200-appearance]
+    branches: [rc3.0-base, patch/3.0.0.3200-appearance, integration/opsis-unified-source-r27, release/2.8.0.2510]
 
 permissions:
   contents: read
@@ -88,7 +88,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: Opsis-2.8.0.2500-build-diagnostics
+          name: Opsis-${{ github.run_id }}-build-diagnostics
           path: Output/build-report.json
           if-no-files-found: warn
       # Do not publish a release-candidate installer as a successful artifact before
@@ -96,7 +96,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: success()
         with:
-          name: Opsis-Desktop-Customization-2.8.0.2500-UNRELEASED-validated-build
+          name: Opsis-${{ github.run_id }}-UNRELEASED-audited-build
           path: Output/
           if-no-files-found: error
       - uses: actions/upload-artifact@v4
