@@ -476,7 +476,18 @@ namespace MotionDesk.Containers
         {
             if (_disposed) return;
             try { action(); }
-            catch (Exception ex) { try { MotionDesk.Services.RotatingLogger.Write("Container timer " + name + ": " + ex.Message); } catch { } }
+            catch (Exception ex)
+            {
+                try
+                {
+                    // Preserve sync and persistence failures unthrottled.
+                    if (name is "rules" or "z-order" or "restyle")
+                        MotionDesk.Services.RotatingLogger.WriteRecurring(MotionDesk.Services.RotatingLogger.RecurringSource.ContainerTimer,
+                            "Container timer " + name + ": " + ex.Message);
+                    else MotionDesk.Services.RotatingLogger.Write("Container timer " + name + ": " + ex.Message);
+                }
+                catch { }
+            }
         }
 
         private void FlushFromTimer()

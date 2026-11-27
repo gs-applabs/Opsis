@@ -222,7 +222,7 @@ public static class AppActivity
             Publish();
             UpdateKeepAwake(settings);
         }
-        catch (Exception ex) { RotatingLogger.Write("AppActivity: " + ex.Message); }
+        catch (Exception ex) { RotatingLogger.WriteRecurring(RotatingLogger.RecurringSource.Activity, "AppActivity: " + ex.Message); }
     }
 
     private static string _lastCoveredKey = "";

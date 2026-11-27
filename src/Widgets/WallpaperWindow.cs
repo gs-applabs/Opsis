@@ -1050,10 +1050,11 @@ namespace MotionDesk.Widgets
             catch { crop.Dispose(); return null; }
         }
 #endif
-        public async Task<bool> CapturePngAsync(string filePath)
+        public async Task<bool> CapturePngAsync(string filePath, Func<bool>? canCommit = null)
         {
             var webView = _webView;
-            if (webView?.CoreWebView2 == null) return false;
+            var core = webView?.CoreWebView2;
+            if (core == null || IsDisposed || Disposing) return false;
             try
             {
                 // Η πραγματική οθόνη κλειδώματος των Windows δείχνει ήδη τη δική της ώρα/ημερομηνία —
@@ -1064,11 +1065,9 @@ namespace MotionDesk.Widgets
                 try { await webView.CoreWebView2.ExecuteScriptAsync("(function(){var e=document.getElementById('wxInfo'); if(e) e.style.display='none';})();"); } catch (Exception) { }
 
                 await using var stream = new MemoryStream();
-                await webView.CoreWebView2.CapturePreviewAsync(Microsoft.Web.WebView2.Core.CoreWebView2CapturePreviewImageFormat.Png, stream);
-                stream.Position = 0;
-                await using var file = File.Create(filePath);
-                await stream.CopyToAsync(file);
-                return true;
+                await core.CapturePreviewAsync(Microsoft.Web.WebView2.Core.CoreWebView2CapturePreviewImageFormat.Png, stream);
+                return await PublishSnapshotAsync(stream, filePath, () =>
+                    !IsDisposed && !Disposing && ReferenceEquals(_webView, webView) && (canCommit?.Invoke() ?? true));
             }
             catch (Exception ex)
             {
@@ -1077,7 +1076,60 @@ namespace MotionDesk.Widgets
             }
             finally
             {
-                try { await webView.CoreWebView2.ExecuteScriptAsync("if (typeof updateWeatherInfo === 'function') updateWeatherInfo();"); } catch (Exception) { }
+                try
+                {
+                    if (!IsDisposed && !Disposing && ReferenceEquals(_webView, webView))
+                        await core.ExecuteScriptAsync("if (typeof updateWeatherInfo === 'function') updateWeatherInfo();");
+                }
+                catch (Exception) { }
+            }
+        }
+
+        // Do not truncate the current lock-screen image before a capture succeeds.
+        // Compare equal bytes without allocating a second full-size image.
+        internal static async Task<bool> PublishSnapshotAsync(MemoryStream image, string path, Func<bool> canCommit)
+        {
+            if (image.Length == 0 || !canCommit()) return false;
+            if (image.TryGetBuffer(out var bytes) && File.Exists(path))
+            {
+                try
+                {
+                    await using var existing = new FileStream(path, FileMode.Open, FileAccess.Read,
+                        FileShare.ReadWrite | FileShare.Delete, 65536, useAsync: true);
+                    if (existing.Length == image.Length)
+                    {
+                        var buffer = new byte[65536];
+                        int offset = 0;
+                        bool same = true;
+                        while (offset < bytes.Count)
+                        {
+                            int read = await existing.ReadAsync(buffer.AsMemory(0, Math.Min(buffer.Length, bytes.Count - offset)));
+                            if (read == 0 || !buffer.AsSpan(0, read).SequenceEqual(bytes.AsSpan(offset, read)))
+                            { same = false; break; }
+                            offset += read;
+                        }
+                        if (same) return canCommit();
+                    }
+                }
+                catch (IOException) { /* atomic publication below reports actual failure */ }
+            }
+            if (!canCommit()) return false;
+            string staged = path + "." + Guid.NewGuid().ToString("N") + ".capture";
+            try
+            {
+                image.Position = 0;
+                await using (var file = new FileStream(staged, FileMode.CreateNew, FileAccess.Write, FileShare.None, 65536, useAsync: true))
+                {
+                    await image.CopyToAsync(file);
+                    await file.FlushAsync();
+                }
+                if (!canCommit()) return false;
+                File.Move(staged, path, overwrite: true);
+                return true;
+            }
+            finally
+            {
+                try { File.Delete(staged); } catch (IOException) { } catch (UnauthorizedAccessException) { }
             }
         }
 
@@ -1866,12 +1918,32 @@ namespace MotionDesk.Widgets
             finally { if (!completed) result.Dispose(); }
         }
 #endif
-        public async Task<bool> CaptureSnapshotAsync(string filePath)
+        private int _snapshotBusy;
+        public Task<bool> CaptureSnapshotAsync(string filePath) => CaptureSnapshotCoreAsync(filePath, automatic: false);
+
+        private async Task<bool> CaptureSnapshotCoreAsync(string filePath, bool automatic)
         {
-            var target = _windows.FirstOrDefault(w => !w.IsDisposed && w.Visible && w.TargetScreen.Primary)
-                      ?? _windows.FirstOrDefault(w => !w.IsDisposed && w.Visible);
-            if (target == null) return false;
-            return await target.CapturePngAsync(filePath);
+            // One in-flight capture even if a WebView request never completes.
+            // Never queue a second capture behind a hung renderer.
+            if (!Active || Interlocked.CompareExchange(ref _snapshotBusy, 1, 0) != 0) return false;
+            try
+            {
+                var target = _windows.FirstOrDefault(w => !w.IsDisposed && w.Visible && w.TargetScreen.Primary)
+                          ?? _windows.FirstOrDefault(w => !w.IsDisposed && w.Visible);
+                if (target == null) return false;
+                int generation = _sceneGeneration;
+                bool CanCommit()
+                {
+                    if (!Active || generation != _sceneGeneration) return false;
+                    if (!automatic) return true;
+                    var settings = AppSettings.Peek();
+                    return settings.LockScreenFollowsWallpaper &&
+                        string.Equals(settings.LockScreenSnapshotPath, filePath, StringComparison.OrdinalIgnoreCase);
+                }
+                if (!CanCommit()) return false;
+                return await target.CapturePngAsync(filePath, CanCommit);
+            }
+            finally { Volatile.Write(ref _snapshotBusy, 0); }
         }
 
         // Κρατά την οθόνη κλειδώματος "ταιριαστή" με το ζωντανό wallpaper ΧΩΡΙΣ κανένα νέο UAC
@@ -1883,9 +1955,9 @@ namespace MotionDesk.Widgets
             _lockScreenSyncTimer = new System.Windows.Forms.Timer { Interval = 600_000 }; // 10 λεπτά
             _lockScreenSyncTimer.Tick += async (_, _) =>
             {
-                var s = AppSettings.Load();
+                var s = AppSettings.Peek();
                 if (!s.LockScreenFollowsWallpaper || string.IsNullOrEmpty(s.LockScreenSnapshotPath) || !Active) return;
-                try { await CaptureSnapshotAsync(s.LockScreenSnapshotPath); } catch (Exception) { }
+                try { await CaptureSnapshotCoreAsync(s.LockScreenSnapshotPath, automatic: true); } catch (Exception) { }
             };
             _lockScreenSyncTimer.Start();
         }

@@ -85,6 +85,34 @@ try
         SystemMonitorService.CalculateCpuPercent(100, 200, 300, 90, 190, 290, 75) == 0 &&
         SystemMonitorService.CalculateCpuPercent(100, 200, 300, 100, 200, 300, 42) == 42,
         "R74 CPU counter reset and unchanged samples do not generate false load");
+    var repeatBudget = new RotatingLogger.RepeatBudget();
+    Check(repeatBudget.Accept(0, out var firstSuppressed) && firstSuppressed == 0 &&
+        !repeatBudget.Accept(1, out _) && !repeatBudget.Accept(59999, out _) &&
+        repeatBudget.Accept(60000, out var repeated) && repeated == 2,
+        "R75 recurring log budget records first error and aggregates repeated failures at minute boundary");
+    Check(new RotatingLogger.RepeatBudget().Accept(1, out _),
+        "R75 independent diagnostic sources have independent budgets");
+    var snapshotPath = Path.Combine(folder, "r75-snapshot-test.png");
+    File.WriteAllBytes(snapshotPath, new byte[] { 1, 2, 3 });
+    File.SetLastWriteTimeUtc(snapshotPath, new DateTime(2020, 1, 1, 0, 0, 0, DateTimeKind.Utc));
+    var snapshotStamp = File.GetLastWriteTimeUtc(snapshotPath);
+    using (var image = new MemoryStream())
+    {
+        image.Write(new byte[] { 1, 2, 3 });
+        Check(MotionDesk.Widgets.WallpaperWindow.PublishSnapshotAsync(image, snapshotPath, () => true).GetAwaiter().GetResult() &&
+            File.GetLastWriteTimeUtc(snapshotPath) == snapshotStamp,
+            "R75 unchanged snapshot does not rewrite the existing image");
+        image.Position = 0;
+        image.Write(new byte[] { 4, 5, 6 });
+        int approvals = 0;
+        Check(!MotionDesk.Widgets.WallpaperWindow.PublishSnapshotAsync(image, snapshotPath, () => ++approvals < 3).GetAwaiter().GetResult() &&
+            File.ReadAllBytes(snapshotPath).SequenceEqual(new byte[] { 1, 2, 3 }) &&
+            !Directory.EnumerateFiles(folder, "*.capture").Any(),
+            "R75 invalidated capture preserves previous image and cleans staging");
+        Check(MotionDesk.Widgets.WallpaperWindow.PublishSnapshotAsync(image, snapshotPath, () => true).GetAwaiter().GetResult() &&
+            File.ReadAllBytes(snapshotPath).SequenceEqual(new byte[] { 4, 5, 6 }),
+            "R75 valid changed snapshot replaces previous image atomically");
+    }
     var opt = new AppSettings { RestoreWindowsAfterDocking = false, UsageAlertsEnabled = false };
     Check(MotionDesk.Widgets.TrayApplicationContext.SelectOptionalServices(opt, false) == (false, false),
         "R65 disabled optional tray services have no timer demand");

@@ -113,7 +113,7 @@ namespace MotionDesk.Services
                 if (_last == c) return;
                 _last = c; m.SetConditions(c);
             }
-            catch (Exception ex) { RotatingLogger.Write("GlassService.Refresh: " + ex.Message); }
+            catch (Exception ex) { RotatingLogger.WriteRecurring(RotatingLogger.RecurringSource.Glass, "GlassService.Refresh: " + ex.Message); }
         }
 
         private static bool WallpaperHostEngine_IsLive()
