@@ -94,7 +94,7 @@ public sealed partial class MainWindow
             case RadioButton radio:
                 radio.Font = UiTheme.FontBody;
                 radio.ForeColor = SystemInformation.HighContrast ? SystemColors.ControlText : UiTheme.TextPrimary;
-                if (radio.Appearance == Appearance.Button)
+                if (radio.Appearance == System.Windows.Forms.Appearance.Button)
                 {
                     radio.UseVisualStyleBackColor = false;
                     radio.BackColor = SystemInformation.HighContrast ? SystemColors.Control : UiTheme.Surface;
