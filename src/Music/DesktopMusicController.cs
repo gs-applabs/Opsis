@@ -153,7 +153,7 @@ internal sealed class DesktopMusicController : IDisposable
         previewUntil = Environment.TickCount64 + 15000;
         timer.Start();
     }
-    public void ResetPosition() => SetPosition(settings.Display, 0.5, 0.5);
+    public void ResetPosition() => SetPosition(settings.Display, MusicOverlaySettings.DefaultX, MusicOverlaySettings.DefaultY);
 
     public void SetSize(int width, int height)
     {
@@ -181,7 +181,9 @@ internal sealed class DesktopMusicController : IDisposable
 
     public void SetPosition(string? display, double x, double y)
     {
-        settings = settings with { Display = display, X = Math.Clamp(x, 0, 1), Y = Math.Clamp(y, 0, 1) };
+        x = Math.Clamp(x, 0, 1); y = Math.Clamp(y, 0, 1);
+        if (settings.Display == display && settings.X == x && settings.Y == y) return;
+        settings = settings with { Display = display, X = x, Y = y };
         SaveSettings();
     }
 
