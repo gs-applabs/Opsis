@@ -976,5 +976,6 @@
   "Personalization.LockGifFrame": "Use a frame of a GIF as the lock screen picture…",
   "Personalization.LockGifFrameInfo": "Windows cannot play an animation on the lock screen. Opsis checks the GIF (type, size, frames) and uses its first frame as the picture, through the normal lock-screen setting. Reset restores the original.",
   "Personalization.LockGifWarn": "This changes a Windows setting (the lock screen picture, with an administrator prompt). The original setting can be restored with the Reset button. Continue?",
-  "Win.ImportBackup": "이전 설정의 안전 복사본을 저장했습니다: {0}"
+  "Win.ImportBackup": "이전 설정의 안전 복사본을 저장했습니다: {0}",
+  "VersionNotes.2.8.0.2511": "2.8.0.2511: 시작 화면에서 Windows 모양 관련 모든 페이지(개인 설정, 자동화, 성능, 프로필, 사운드)로 이동할 수 있고 실행 중인 버전의 노트를 표시합니다. 정보 페이지도 실행 중인 버전의 노트를 표시합니다. 14개 언어의 텍스트를 새로 고쳤고 이전 2.6.0 표기를 제거했습니다."
 }
