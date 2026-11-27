@@ -726,11 +726,12 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
             // Keep UI-affine cleanup on its owning thread; do not move WinForms plugin Stop to Task.Run.
             void Step(string name, Action action)
             {
+                HangTrace.Mark("shutdown begin: " + name);
                 System.Diagnostics.Trace.WriteLine("Opsis shutdown begin: " + name);
                 try { RotatingLogger.Write("Shutdown begin: " + name); } catch { }
                 try { action(); }
                 catch (Exception ex) { try { RotatingLogger.Write("Shutdown error: " + name + ": " + ex.Message); } catch { } }
-                finally { try { RotatingLogger.Write("Shutdown end: " + name); } catch { } }
+                finally { HangTrace.Mark("shutdown end: " + name); try { RotatingLogger.Write("Shutdown end: " + name); } catch { } }
             }
             Step("experience timer", () => { _experienceTimer.Stop(); _experienceTimer.Dispose(); });
             Step("save session", () => { WorkspaceProfileService.Save("Last Session"); WorkspaceProfileService.ExitSaveDone = true; });
