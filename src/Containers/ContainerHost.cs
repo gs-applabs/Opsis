@@ -7,7 +7,7 @@ namespace MotionDesk.Containers
     /// <summary>
     /// Phase 5/9: the live set of native container windows. Owns one <see cref="ContainerWindow"/> per visible container of the stored document, keeps them in step with the data
     /// (pipe commands change the file -> <see cref="ContainersService.Mutated"/> -> windows are created / closed / moved on the UI thread) and writes a window's changes back
-    /// (debounced, under the service's lock). Windows are re-seated into the visible area after a monitor change. Not wired into the running product yet (the WPF fork is still the live engine).
+    /// (debounced, under the service's lock). Windows are re-seated into the visible area after a monitor change. This is the native live engine; legacy data is read through the migration path.
     /// </summary>
     internal sealed partial class ContainerHost : IDisposable
     {
@@ -23,7 +23,7 @@ namespace MotionDesk.Containers
         private readonly System.Windows.Forms.Timer _rules = new() { Interval = 3000 };
         private HashSet<string> _activeRules = new();
         private PipeServer? _pipe;
-        private bool _syncing, _quickHidden;
+        private bool _syncing, _quickHidden, _disposed;
         internal event Action<string, string>? ContainerRenamed;
         internal event Action<string>? ContainerDeleted;
         internal event Action? WorkspacePreviewChanged;
@@ -36,6 +36,7 @@ namespace MotionDesk.Containers
 
         public ContainerHost(ContainersStore store, string? pipeName = null)
         {
+            if (Current != null) throw new InvalidOperationException("A native container host is already active.");
             _ui = new Control(); _ = _ui.Handle;                        // force the handle on the UI thread
             _service = new ContainersService(store, Monitors);
             _service.Mutated += () => { if (_ui.IsHandleCreated && !_ui.IsDisposed) try { _ui.BeginInvoke(Sync); } catch (Exception) { } };
@@ -382,6 +383,8 @@ namespace MotionDesk.Containers
 
         public void Dispose()
         {
+            if (_disposed) return;
+            _disposed = true;
             StopPeek();
             _peekTimer.Dispose();
             _monitorTimer.Dispose();
