@@ -13,6 +13,11 @@ void Check(bool condition, string description)
 }
 try
 {
+    Check(OpsisMusicOverlay.DesktopMusicController.SelectTickInterval(false, true, true) == 42 &&
+        OpsisMusicOverlay.DesktopMusicController.SelectTickInterval(false, true, false) == 100 &&
+        OpsisMusicOverlay.DesktopMusicController.SelectTickInterval(false, false, false) == 250 &&
+        OpsisMusicOverlay.DesktopMusicController.SelectTickInterval(true, true, true) == 500,
+        "R63 music cadence throttles idle, backpressure and suspension while preserving active rendering");
     Check(MotionDesk.UI.OpsisStartButtonArt.Styles.Length == 11 &&
         MotionDesk.UI.OpsisStartButtonArt.IsValid("Opsis Glass") &&
         !MotionDesk.UI.OpsisStartButtonArt.IsValid("not-a-design"),
