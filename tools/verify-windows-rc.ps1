@@ -19,13 +19,13 @@ function Invoke-Stage([string]$Name, [scriptblock]$Action) {
     }
 }
 function Invoke-Checked([string]$Exe, [string[]]$Arguments) {
-    $command = (Get-Command $Exe -CommandType Application -ErrorAction Stop).Source
+    $command = (Get-Command $Exe -CommandType Application -ErrorAction Stop | Select-Object -First 1).Source
     & $command @Arguments
     if ($LASTEXITCODE -ne 0) { throw "$Exe failed with exit code $LASTEXITCODE" }
 }
 try {
     if ($env:OS -ne 'Windows_NT') { throw 'Windows is required.' }
-    $gitExe = (Get-Command git.exe -CommandType Application -ErrorAction Stop).Source
+    $gitExe = (Get-Command git.exe -CommandType Application -ErrorAction Stop | Select-Object -First 1).Source
     $state.commit = ([string](& $gitExe rev-parse --verify HEAD)).Trim()
     if ($state.commit -notmatch '^[0-9a-f]{40}$') { throw "Cannot identify checkout commit: $($state.commit)" }
     if ($env:OPSIS_EXPECTED_SHA -and $state.commit -ne $env:OPSIS_EXPECTED_SHA) { throw "Checkout SHA mismatch: $($state.commit)" }
