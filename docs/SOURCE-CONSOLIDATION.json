@@ -876,16 +876,6 @@
   ],
   "unresolved_after_three_way": [
     {
-      "branch": "desktop-materials",
-      "path": ".github/workflows/windows-audit.yml",
-      "ancestor": "fbc81328622ec630f3bbc7171cd72dc8708c1a66",
-      "head": "2d15e7814e7a5e6e0e20eae50d9dd7bbceae501c",
-      "base_blob": "8c7c44169d73d9ae73f216593d715dcfaf4628ef",
-      "incoming_blob": "99d269ba17061cd66a56914fbbd2f34bd7c5caa1",
-      "current_blob": "0f5361c96dec80e937d844de1fb7a67ed60196a8",
-      "reason": "workflow edits require connector review and workflows permission"
-    },
-    {
       "branch": "europe-R26",
       "path": "src/UI/MainWindow.cs",
       "ancestor": "cf906d7840a37af3f1dcaa8977ccaa7a4f3278c3",
@@ -903,16 +893,6 @@
       "base_blob": "9c5ed6756222f4eb9e93ddf48e8f0e222ed5b280",
       "incoming_blob": "211dfb9669c6398c489abca594b8688b4752e922",
       "current_blob": "c1f6be850fb55e5debe078f8ea122795ca869758",
-      "reason": "workflow edits require connector review and workflows permission"
-    },
-    {
-      "branch": "main-2.8-followup",
-      "path": ".github/workflows/windows-audit.yml",
-      "ancestor": "6f8b5da31a5951d9dd467d6ef1250c52f8e8176f",
-      "head": "12018a0b085d52dba96847e552d203787b15ed08",
-      "base_blob": "8c7c44169d73d9ae73f216593d715dcfaf4628ef",
-      "incoming_blob": "987d5f27309301f3abe0e6c2ed65d1c123b484e4",
-      "current_blob": "0f5361c96dec80e937d844de1fb7a67ed60196a8",
       "reason": "workflow edits require connector review and workflows permission"
     }
   ],
@@ -1246,6 +1226,28 @@
       "current_blob": "4d749bed41d34a4e8a53552fde53e60a90814982",
       "reason": "Git three-way conflict",
       "method": "R45: incoming older single-meter Rainmeter rejection is superseded by current composite native widget support. Retain existing tests for both rows, persistence and rejection of executable measures; no regression to single meter. CI execution pending."
+    },
+    {
+      "branch": "desktop-materials",
+      "path": ".github/workflows/windows-audit.yml",
+      "ancestor": "fbc81328622ec630f3bbc7171cd72dc8708c1a66",
+      "head": "2d15e7814e7a5e6e0e20eae50d9dd7bbceae501c",
+      "base_blob": "8c7c44169d73d9ae73f216593d715dcfaf4628ef",
+      "incoming_blob": "99d269ba17061cd66a56914fbbd2f34bd7c5caa1",
+      "current_blob": "0f5361c96dec80e937d844de1fb7a67ed60196a8",
+      "reason": "workflow edits require connector review and workflows permission",
+      "method": "R53: retained incoming legacy release trigger plus current RC branches, added integration branch, preserved existing self-test/audit and version-neutral unreleased artifact names."
+    },
+    {
+      "branch": "main-2.8-followup",
+      "path": ".github/workflows/windows-audit.yml",
+      "ancestor": "6f8b5da31a5951d9dd467d6ef1250c52f8e8176f",
+      "head": "12018a0b085d52dba96847e552d203787b15ed08",
+      "base_blob": "8c7c44169d73d9ae73f216593d715dcfaf4628ef",
+      "incoming_blob": "987d5f27309301f3abe0e6c2ed65d1c123b484e4",
+      "current_blob": "0f5361c96dec80e937d844de1fb7a67ed60196a8",
+      "reason": "workflow edits require connector review and workflows permission",
+      "method": "R53: retained incoming legacy release trigger plus current RC branches, added integration branch, preserved existing self-test/audit and version-neutral unreleased artifact names."
     }
   ]
 }
