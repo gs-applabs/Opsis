@@ -1311,7 +1311,9 @@ namespace MotionDesk.Widgets
         // (the normal Windows wallpaper + the overlay). IsEnabled stays false: the user still sees the wallpaper as switched off.
         private bool _overlayOnly;
         private bool _musicSceneRequested;
-        private bool Active => _enabled || _overlayOnly;
+        private volatile bool _exiting;
+        private bool Active => !_exiting && (_enabled || _overlayOnly);
+        internal static void StopForExit() => _instance?.CloseForExit();
         public string EffectiveMode(WallpaperSettings settings) => !_enabled && _overlayOnly ? "Desktop" : WallpaperSettings.NormalizeMode(settings.Mode);
         private System.Windows.Forms.Timer? _fullscreenCheckTimer;
         private System.Windows.Forms.Timer? _lockScreenSyncTimer;
@@ -1372,6 +1374,7 @@ namespace MotionDesk.Widgets
             // WebView2 (αργό, βαρύ σε RAM/GPU). Περιμένουμε να "ησυχάσει" η ριπή και ξαναχτίζουμε ΜΙΑ φορά.
             SystemEvents.DisplaySettingsChanged += (_, _) =>
             {
+                if (_exiting) return;
                 _displayDebounce?.Dispose();
                 // Windows often raises DisplaySettingsChanged right after logon/start without any real change; rebuilding then destroyed and
                 // recreated every wallpaper window a second after startup (a visible flicker). Rebuild only if the monitor layout differs.
@@ -1402,7 +1405,8 @@ namespace MotionDesk.Widgets
         // rendering αναλόγως. Ζητήθηκε ρητά στο roadmap.
         private void EnsureFullscreenWatcher()
         {
-            if (_fullscreenCheckTimer != null) return;
+            if (_exiting) return;
+            if (_fullscreenCheckTimer != null) { _fullscreenCheckTimer.Start(); return; }
             _fullscreenCheckTimer = new System.Windows.Forms.Timer { Interval = 2000 };
             _fullscreenCheckTimer.Tick += (_, _) =>
             {
@@ -1456,6 +1460,7 @@ namespace MotionDesk.Widgets
 
         public void Enable()
         {
+            if (_exiting) return;
             // Αν υπάρχει ενεργό κινούμενο wallpaper, η εφαρμογή πρέπει να ξαναγυρίζει αυτόματα
             // στην επόμενη εκκίνηση των Windows — ίδια λογική με τα widgets/DeskContainers
             // (ζητήθηκε ρητά "όταν υπάρχει κινούμενο wallpaper όπως και με τα widgets"). Το
@@ -1513,13 +1518,14 @@ namespace MotionDesk.Widgets
 
         internal void SetMusicSceneRequested(bool requested)
         {
-            if (_musicSceneRequested == requested) return;
+            if (_exiting || _musicSceneRequested == requested) return;
             _musicSceneRequested = requested;
             if (!_enabled) UpdateOverlayOnly();
         }
 
         public void UpdateOverlayOnly()
         {
+            if (_exiting) return;
             var s = WallpaperSettings.Load();
             bool want = !_enabled && (_musicSceneRequested || (s.WeatherShowInfo && s.InfoOnAllModes));
             if (want == _overlayOnly) { if (want) _ = RefreshAllAsync(); return; }
@@ -1555,15 +1561,41 @@ namespace MotionDesk.Widgets
             StateChanged?.Invoke();
         }
 
+        // Full process shutdown only: never call Disable(), which intentionally keeps the
+        // overlay-only clock/music scene alive and preserves the user's configuration.
+        private void CloseForExit()
+        {
+            if (_exiting) return;
+            _exiting = true;
+            _enabled = _overlayOnly = _musicSceneRequested = false;
+            void Cleanup(string label, Action action)
+            {
+                try { action(); }
+                catch (Exception ex) { try { MotionDesk.Services.RotatingLogger.Write("Wallpaper exit " + label + ": " + ex.Message); } catch { } }
+            }
+            Cleanup("thaw WebView2", () => ProcessFreezer.Thaw());
+            foreach (var timer in new[] { _fullscreenCheckTimer, _lockScreenSyncTimer, _autoMuteTimer, _heavyTimer, _scheduleTimer, _refreshDebounce })
+                if (timer != null) Cleanup("timer", () => { timer.Stop(); timer.Dispose(); });
+            Cleanup("display debounce", () => _displayDebounce?.Dispose());
+            Cleanup("explorer watcher", () => _explorerWatcher.Dispose());
+            foreach (var window in _windows.Concat(_retiringWindows).Distinct().ToArray())
+                Cleanup("window", () => { if (!window.IsDisposed) window.Dispose(); });
+            _windows.Clear();
+            _retiringWindows.Clear();
+        }
+
         private string _layoutKey = "";
         private static string LayoutKey() => string.Join("|", Screen.AllScreens.Select(sc => $"{sc.DeviceName}:{sc.Bounds}"));
 
         private void RebuildWindows()
         {
+            if (_exiting) return;
             _layoutKey = LayoutKey();
             // The old windows stay on screen until a new one is actually visible (or 10 s pass): disposing them first left the plain
             // desktop wallpaper showing for a moment while the new WebView2 started — a visible flicker on every rebuild.
-            var retiring = _windows.ToList();
+            // A second rebuild can begin before the first replacement is visible.
+            // Retain every still-live retiring window so exit can dispose them all.
+            var retiring = _retiringWindows.Concat(_windows).Where(w => !w.IsDisposed).Distinct().ToList();
             _retiringWindows = retiring;
             _windows.Clear();
             void RetireOld(string? deviceName = null)      // null = all (safety timeout)
@@ -1635,7 +1667,7 @@ namespace MotionDesk.Widgets
             }
         }
         public void PushProperties() { foreach (var w in _windows) _ = w.PushPropertiesAsync(); }
-        public Task RefreshAllAsync() => Task.WhenAll(_windows.Select(w => w.RefreshAsync()));
+        public Task RefreshAllAsync() => _exiting ? Task.CompletedTask : Task.WhenAll(_windows.Where(w => !w.IsDisposed).Select(w => w.RefreshAsync()));
 
         // MD roadmap item: ακριβές στιγμιότυπο του τρέχοντος wallpaper (waves/βίντεο + overlay) για
         // χρήση ως εικόνα οθόνης κλειδώματος — από την οθόνη με το WallpaperWindow που είναι όντως
@@ -1824,6 +1856,7 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Count);
 
         public void EnsureScheduleTimer()
         {
+            if (_exiting) return;
             if (_scheduleTimer != null) return;
             _scheduleTimer = new System.Windows.Forms.Timer { Interval = 60_000 };
             _scheduleTimer.Tick += (_, _) => ScheduleTick();
@@ -1834,6 +1867,7 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Count);
         // the wallpaper on by itself.
         private void ScheduleTick()
         {
+            if (_exiting) return;
             try
             {
                 var settings = WallpaperSettings.Load();
