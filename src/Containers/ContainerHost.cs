@@ -305,7 +305,7 @@ namespace MotionDesk.Containers
                     w.DeleteRequested += () => ConfirmDelete(w, w.Model.Id);
                     w.SettingsRequested += cid => ContainerSettingsForm.Open(this, cid);
                     w.ItemsAdded += paths => { if (MotionDesk.Services.AppSettings.Load().HideOriginalsOnDrop) MotionDesk.Widgets.DesktopIconVisibilityEngine.HideOriginals(paths); };
-                    w.ItemRemoved += p => MotionDesk.Widgets.DesktopIconVisibilityEngine.RestoreOriginals(p);
+                    w.ItemRemoved += p => RestoreReleasedOriginal(w, p);
                     ApplyOrganizationResults(w);
                     _windows[id] = w; w.Show();
                     added = true;
@@ -313,6 +313,29 @@ namespace MotionDesk.Containers
                 if (added) ReseatZOrder();
             }
             finally { _syncing = false; }
+        }
+
+        // ItemRemoved is raised after the live model changes but before Changed queues persistence.
+        // Prefer live windows, then pending edits, then the stored document (including hidden containers).
+        private void RestoreReleasedOriginal(ContainerWindow source, string path)
+        {
+            if (_disposed) return;
+            try
+            {
+                var models = Containers().ToDictionary(c => c.Id);
+                foreach (var (id, model) in _dirty) models[id] = model;
+                foreach (var (id, window) in _windows)
+                    if (!window.IsDisposed) models[id] = window.Model;
+                models[source.Model.Id] = source.Model;
+                bool stillReferenced = models.Values.Any(c => c.Items.Concat(c.Tabs.SelectMany(t => t.Items))
+                    .Any(item => string.Equals(item.Path, path, StringComparison.OrdinalIgnoreCase)));
+                if (!stillReferenced && MotionDesk.Widgets.DesktopIconVisibilityEngine.RestoreOriginalsForPaths(new[] { path }) > 0)
+                    MotionDesk.Widgets.DesktopIconVisibilityEngine.Instance.ApplyKeepSettings();
+            }
+            catch (Exception ex)
+            {
+                MotionDesk.Services.RotatingLogger.Write("Container original recovery deferred: " + ex.Message);
+            }
         }
 
         private static Rectangle Place(Container c, IReadOnlyList<MonitorInfo> mons)
@@ -358,7 +381,7 @@ namespace MotionDesk.Containers
         {
             _save.Stop();
             if (_dirty.Count == 0) return;
-            var changed = _dirty.Values.ToList(); _dirty.Clear();
+            var changed = _dirty.Values.ToList();
             _service.Update(doc =>
             {
                 var any = false;
@@ -372,6 +395,9 @@ namespace MotionDesk.Containers
                 if (any && !_layoutHistorySave.Enabled) _layoutHistorySave.Start();
                 return any;
             });
+            // Clear only after persistence succeeds. On failure retain edits for a later flush.
+            foreach (var c in changed)
+                if (_dirty.TryGetValue(c.Id, out var current) && ReferenceEquals(current, c)) _dirty.Remove(c.Id);
         }
 
         private void OnDisplayChanged(object? sender, EventArgs args)
