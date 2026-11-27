@@ -1,4 +1,4 @@
-name: OPSIS R28 unified build checks
+name: OPSIS unified RC build checks
 on:
   push:
     branches: [integration/opsis-unified-source-r27]
@@ -23,4 +23,5 @@ jobs:
       - name: Experience smoke and SSD read regression
         run: dotnet run --project tests/Opsis.ExperienceSmoke/Opsis.ExperienceSmoke.csproj -c Release
       - run: node --check src/Widgets/wallpaper/weather.js
+      - run: node --check src/Music/wallpaper-music.js
       - run: node --test tests/WallpaperIdle.test.cjs tests/WeatherInfoTone.test.cjs
