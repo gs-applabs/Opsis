@@ -106,8 +106,10 @@ jobs:
       - name: Verify plugin 1.0.0.0 and host ABI identities
         shell: pwsh
         run: |
-          ./tools/check-plugin-dll-versions.ps1 -CrawlerDir plugin-crawler -ChronikologioDir plugin-chronikologio -HostDir publish
-          if ($LASTEXITCODE -ne 0) { throw 'Plugin DLL ABI version gate failed' }
+          # The PowerShell script throws on any incompatible identity. No native command
+          # runs inside it: LASTEXITCODE can be null or stale even on success.
+          $ErrorActionPreference = 'Stop'
+          & ./tools/check-plugin-dll-versions.ps1 -CrawlerDir plugin-crawler -ChronikologioDir plugin-chronikologio -HostDir publish
       - name: Verify exact shared assembly identities and bytes before loading
         shell: pwsh
         run: |

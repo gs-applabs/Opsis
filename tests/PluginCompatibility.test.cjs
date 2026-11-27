@@ -105,3 +105,17 @@ test('compatibility workflow pins reproducible provider commits and exact host s
   assert.match(workflow, /ref: \$\{\{ github\.event\.pull_request\.head\.sha \|\| github\.sha \}\}/);
   assert.match(workflow, /compat-results\/source-identities\.json/);
 });
+
+test('PowerShell ABI gate uses terminating errors rather than stale native exit status', () => {
+  const workflow = source('.github/workflows/plugin-compatibility.yml');
+  const start = workflow.indexOf('name: Verify plugin 1.0.0.0 and host ABI identities');
+  const end = workflow.indexOf('name: Verify exact shared assembly identities', start);
+  assert.ok(start >= 0 && end > start);
+  const step = workflow.slice(start,end);
+  assert.match(step, /\$ErrorActionPreference = 'Stop'/);
+  assert.match(step, /& \.\/tools\/check-plugin-dll-versions\.ps1/);
+  assert.doesNotMatch(step, /if\s*\(\s*\$LASTEXITCODE/);
+  const gate = source('tools/check-plugin-dll-versions.ps1');
+  assert.match(gate, /throw .*incompatible assembly identity/);
+  assert.match(gate, /throw .*FileVersion=/);
+});
