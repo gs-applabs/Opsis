@@ -93,6 +93,22 @@ internal sealed class DesktopLauncher : Form
             layout.Controls.Add(shortcuts, 0, 2);
         }
         Controls.Add(layout);
+        if (_signature && startMenu)
+        {
+            var header = new Panel { Dock = DockStyle.Top, Height = 62, BackColor = UiTheme.Sidebar };
+            header.Paint += (_, e) =>
+            {
+                int size = Math.Min(header.Height - 12, 48);
+                if (size < 12) return;
+                OpsisBrandMark.Draw(e.Graphics, new RectangleF(14, (header.Height-size)/2f, size, size));
+                using var font = new Font("Segoe UI", 17, FontStyle.Bold);
+                TextRenderer.DrawText(e.Graphics, Text, font, new Rectangle(size+25, 0, Math.Max(1, header.Width-size-40), header.Height),
+                    UiTheme.TextPrimary, TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis);
+                using var rim = new Pen(UiTheme.Border);
+                e.Graphics.DrawLine(rim, 0, header.Height-1, header.Width, header.Height-1);
+            };
+            Controls.Add(header);
+        }
         // Quick Look from the launcher: F3/Space shows file contents without executing a handler.
         // Files with reparse points or larger than 64 MiB are not previewed.
         int nextRow = layout.RowCount;
