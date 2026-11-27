@@ -73,3 +73,7 @@ Excluded documentation C# examples from application compilation (duplicate Galle
 ## R29 reconciliation
 
 All 14 locale files retain their existing values and now include the missing localized VersionNotes.2.8.0.2511 entry. Version.props declares 3.0.0.3200 for the integrated RC, not a production release. The JSON ledger records these 15 resolutions; 16 conflict records remain. Windows build and installer verification are pending.
+
+## R30 reconciliation
+
+Ported opt-in Signature Composition project reference, native DLL staging and prerequisite checks while preserving default bundled Opsis.UI, SkiaSharp dependencies, .NET 11 and existing host exclusion globs. Three project-file overlap records resolved; 13 remain. Windows compile and optional Signature build are not yet verified. WeatherInfoTone overlap deliberately remains open: incoming automatic dark-text behavior conflicts with the user's fixed-white desktop text requirement; reconcile HTML and regression tests together.
