@@ -37,6 +37,25 @@ try
         !PluginHost.MayRunPlugin(true, false, false, true) &&
         PluginHost.MayRunPlugin(true, false, false, false),
         "R68 plugin activation requires global opt-in, individual selection and safety clearance");
+    var noDemand = AppActivity.SelectDemand(false,false,false,false,false,false,false,false,false,false);
+    var dockDemand = AppActivity.SelectDemand(false,false,false,false,false,false,false,false,true,false);
+    var widgetDemand = AppActivity.SelectDemand(false,true,false,false,false,false,false,false,false,false);
+    var taskbarDemand = AppActivity.SelectDemand(false,false,true,false,false,false,false,false,false,false);
+    var wallpaperDemand = AppActivity.SelectDemand(true,false,false,false,false,false,false,false,false,false);
+    var rulesDemand = AppActivity.SelectDemand(false,false,false,false,false,true,false,false,false,false);
+    var diagnosticDemand = AppActivity.SelectDemand(false,false,false,false,false,false,false,false,false,true);
+    Check(!noDemand.Any && dockDemand.Any && !dockDemand.Detailed && !dockDemand.Coverage,
+        "R72 activity sampler off without consumers; dock uses fullscreen only");
+    Check(widgetDemand.Detailed && !widgetDemand.Coverage && taskbarDemand.Detailed && taskbarDemand.Coverage &&
+        wallpaperDemand.Detailed && wallpaperDemand.Coverage && rulesDemand.Detailed && diagnosticDemand.Coverage,
+        "R72 detailed monitoring and coverage follow actual consumer requirements");
+    var retained = MotionDesk.Widgets.WallpaperHostEngine.SelectRetainedRenderers(
+        new[] { ("A", false), ("A", true), ("a", true), ("B", true), ("gone", true), ("B", true) },
+        new[] { "A", "B" });
+    Check(retained.SequenceEqual(new[] { 1, 3 }), "R72 renderer retirement keeps one visible attached candidate per connected display");
+    Check(MotionDesk.Widgets.WallpaperHostEngine.SelectRetainedRenderers(
+        new[] { ("A", false), ("gone", true) }, new[] { "A" }).Length == 0,
+        "R72 no hidden or disconnected renderer is retained");
     var opt = new AppSettings { RestoreWindowsAfterDocking = false, UsageAlertsEnabled = false };
     Check(MotionDesk.Widgets.TrayApplicationContext.SelectOptionalServices(opt, false) == (false, false),
         "R65 disabled optional tray services have no timer demand");

@@ -1329,6 +1329,7 @@ namespace MotionDesk.Widgets
     {
         private static DeskStripHostEngine? _instance;
         public static DeskStripHostEngine Instance => _instance ??= new DeskStripHostEngine();
+        internal static bool ActivityDemand => _instance?.IsEnabled == true;
 
         private DeskStripWindow? _window;
         private readonly Dictionary<string, DeskStripWindow> _mirrors = new(StringComparer.OrdinalIgnoreCase);
@@ -1352,6 +1353,7 @@ namespace MotionDesk.Widgets
             _monitorTimer = new System.Windows.Forms.Timer { Interval = 1000 };
             _monitorTimer.Tick += (_, _) => ReconcileMonitors();
             _monitorTimer.Start();
+            AppActivity.RequestRefresh();
             PluginHost.Instance.NotifyCrawlerP0EnvironmentChanged();
         }
 
@@ -1371,6 +1373,7 @@ namespace MotionDesk.Widgets
             foreach (var mirror in _mirrors.Values) mirror.Close();
             _mirrors.Clear();
             if (primary is { IsDisposed: false }) primary.Close();
+            AppActivity.RequestRefresh();
         }
 
         private void ReconcileMonitors()

@@ -2691,6 +2691,7 @@ namespace MotionDesk.Widgets
                 if (!widget.IsDisposed) widget.Close();
             _activeWidgets.Clear();
             BackdropContrast.Refresh();
+            AppActivity.RequestRefresh();
         }
 
         public WidgetWindow SpawnWidget(string widgetId, int x, int y, int width, int height)
@@ -2709,10 +2710,11 @@ namespace MotionDesk.Widgets
 
             var widgetWindow = new WidgetWindow(widgetId, x, y, width, height);
             _activeWidgets.Add(widgetWindow);
-            widgetWindow.VisibleChanged += (_, _) => BackdropContrast.Refresh();
-            widgetWindow.FormClosed += (s, e) => { _activeWidgets.Remove(widgetWindow); BackdropContrast.Refresh(); };
+            widgetWindow.VisibleChanged += (_, _) => { BackdropContrast.Refresh(); AppActivity.RequestRefresh(); };
+            widgetWindow.FormClosed += (s, e) => { _activeWidgets.Remove(widgetWindow); BackdropContrast.Refresh(); AppActivity.RequestRefresh(); };
             widgetWindow.Show();
             BackdropContrast.Refresh();
+            AppActivity.RequestRefresh();
             return widgetWindow;
         }
     }

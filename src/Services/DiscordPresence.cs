@@ -16,6 +16,7 @@ public sealed class DiscordPresence : IDisposable
     private NamedPipeClientStream? _pipe;
     private string _connectedId = "";
     private System.Windows.Forms.Timer? _timer;
+    internal bool ActivityDemand => _timer != null;
     private readonly long _startedAt = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
     private string _lastSent = "";
 
@@ -31,6 +32,7 @@ public sealed class DiscordPresence : IDisposable
             _timer = new System.Windows.Forms.Timer { Interval = 20_000 };      // Discord limits updates to one per 15 s
             _timer.Tick += (_, _) => Push();
             _timer.Start();
+            AppActivity.RequestRefresh();
         }
         Push();
     }
@@ -40,6 +42,7 @@ public sealed class DiscordPresence : IDisposable
     public void Stop()
     {
         _timer?.Stop(); _timer?.Dispose(); _timer = null;
+        AppActivity.RequestRefresh();
         try { if (_pipe is { IsConnected: true }) Send(1, "{\"cmd\":\"SET_ACTIVITY\",\"args\":{\"pid\":" + Environment.ProcessId + "},\"nonce\":\"" + Guid.NewGuid() + "\"}"); } catch (Exception) { }
         Disconnect();
         _lastSent = "";

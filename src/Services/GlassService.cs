@@ -66,6 +66,7 @@ namespace MotionDesk.Services
                             AppActivity.FullscreenChanged += _ => Refresh();
                             PerformanceGovernor.EffectiveChanged += _ => Refresh();
                             _timer = new System.Threading.Timer(_ => Refresh(), null, 2000, 2000);   // wallpaper on/off, mode changes (cheap: pushes only when something changed)
+                            AppActivity.RequestRefresh();
                             Refresh();
                         }
                         catch (Exception ex) { RotatingLogger.Write("GlassService: " + ex.Message); _manager?.Dispose(); _manager = null; _failed = true; _decidedAt = DateTime.MinValue; Decide(); return null; }
@@ -132,6 +133,7 @@ namespace MotionDesk.Services
         public static void Shutdown()
         {
             lock (Gate) { _timer?.Dispose(); _timer = null; _manager?.Dispose(); _manager = null; }
+            AppActivity.RequestRefresh();
         }
     }
 

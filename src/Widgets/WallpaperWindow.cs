@@ -1405,6 +1405,7 @@ namespace MotionDesk.Widgets
             SystemEvents.DisplaySettingsChanged += OnDisplaySettingsChanged;
             SystemEvents.UserPreferenceChanged += OnUserPreferenceChanged;
             _sceneWatchersAttached = true;
+            AppActivity.RequestRefresh();
         }
 
         private void DetachSceneWatchers()
@@ -1424,6 +1425,7 @@ namespace MotionDesk.Widgets
             }
             _displayDebounce?.Dispose(); _displayDebounce = null;
             DisposeTimer(ref _explorerRebuildDelay);
+            AppActivity.RequestRefresh();
         }
 
         private static void DisposeTimer(ref System.Windows.Forms.Timer? timer)
@@ -1478,7 +1480,7 @@ namespace MotionDesk.Widgets
         {
             if (!Active) return;
             ApplyHeavyPause();
-            foreach (var w in _windows.ToArray())
+            foreach (var w in _windows.Concat(_retiringWindows).Distinct().ToArray())
                 if (!w.IsDisposed) _ = w.SetPausedAsync(AppActivity.IsPausedFor(w.TargetScreen) || UserPaused);
         }
 
@@ -1675,6 +1677,9 @@ namespace MotionDesk.Widgets
             if (_exiting) return;
             _enabled = false;
             ProcessFreezer.Thaw();
+            // Old animated generations must not survive the user's OFF action.
+            DisposeTimer(ref _retirementTimer);
+            RetirePreviousWindows();
             // Weather/music may still need the same scene; only release it when all
             // consumers are gone. Do not stop pending attach of a surviving overlay.
             UpdateOverlayOnly();
@@ -1711,39 +1716,69 @@ namespace MotionDesk.Widgets
         private System.Windows.Forms.Timer? _retirementTimer;
         private static string LayoutKey() => string.Join("|", Screen.AllScreens.Select(sc => $"{sc.DeviceName}:{sc.Bounds}"));
 
+        // Prefer the newest visible, attached generation on each still connected
+        // display. Hidden / superseded / removed-display windows never accumulate.
+        internal static int[] SelectRetainedRenderers((string Device, bool Visible)[] candidates, string[] connected)
+        {
+            var displays = new HashSet<string>(connected, StringComparer.OrdinalIgnoreCase);
+            var retained = new List<int>();
+            for (int i = 0; i < candidates.Length; i++)
+                if (candidates[i].Visible && displays.Remove(candidates[i].Device)) retained.Add(i);
+            return retained.ToArray();
+        }
+
+        private static void DisposeRetiredWindow(WallpaperWindow window)
+        {
+            try
+            {
+                if (!window.IsDisposed) { window.HideAndCancelReveal(); window.Dispose(); }
+            }
+            catch (Exception ex) { System.Diagnostics.Debug.WriteLine(ex); }
+        }
+
+        private void RetirePreviousWindows(string? deviceName = null)
+        {
+            foreach (var w in _retiringWindows.ToArray())
+            {
+                if (deviceName != null && !string.Equals(w.TargetScreen.DeviceName, deviceName, StringComparison.OrdinalIgnoreCase)) continue;
+                _retiringWindows.Remove(w);
+                DisposeRetiredWindow(w);
+            }
+            if (_retiringWindows.Count == 0) DisposeTimer(ref _retirementTimer);
+        }
+
         private void RebuildWindows()
         {
             if (!Active) return;
+            var screens = Screen.AllScreens;
             _layoutKey = LayoutKey();
             int generation = ++_sceneGeneration;
-            _retiringWindows = _retiringWindows.Concat(_windows).Where(w => !w.IsDisposed).Distinct().ToList();
+            var old = _windows.Concat(_retiringWindows).Where(w => !w.IsDisposed).Distinct().ToArray();
             _windows.Clear();
-
-            void RetireOld(string? deviceName = null)
+            var retainedIndices = SelectRetainedRenderers(
+                old.Select(w => (w.TargetScreen.DeviceName, w.IsAttached && w.Visible)).ToArray(),
+                screens.Select(s => s.DeviceName).ToArray()).ToHashSet();
+            _retiringWindows = old.Where((w,i) => retainedIndices.Contains(i)).ToList();
+            for (int i = 0; i < old.Length; i++)
             {
-                if (generation != _sceneGeneration) return;
-                foreach (var w in _retiringWindows.ToArray())
-                {
-                    if (deviceName != null && w.TargetScreen.DeviceName != deviceName) continue;
-                    _retiringWindows.Remove(w);
-                    if (!w.IsDisposed) w.Dispose();
-                }
-                if (_retiringWindows.Count == 0) DisposeTimer(ref _retirementTimer);
+                if (retainedIndices.Contains(i)) old[i].AllowReveal = false;
+                else DisposeRetiredWindow(old[i]);
             }
-            // One owned safety timer even if monitor/restart events overlap.
-            // Retire old generations only after the current replacement is visible.
-            DisposeTimer(ref _retirementTimer);
-            if (_retiringWindows.Count > 0)
+
+            // Do not renew the deadline on repeated rebuilds: even continuous
+            // Explorer/display churn cannot preserve an old generation indefinitely.
+            if (_retiringWindows.Count == 0) DisposeTimer(ref _retirementTimer);
+            else if (_retirementTimer == null)
             {
                 _retirementTimer = new System.Windows.Forms.Timer { Interval = 10_000 };
-                _retirementTimer.Tick += (_, _) => { DisposeTimer(ref _retirementTimer); RetireOld(); };
+                _retirementTimer.Tick += (_, _) => { DisposeTimer(ref _retirementTimer); RetirePreviousWindows(); };
                 _retirementTimer.Start();
             }
-            foreach (var screen in Screen.AllScreens)
+            foreach (var screen in screens)
             {
                 var window = new WallpaperWindow(screen);
                 string deviceName = screen.DeviceName;
-                window.Revealed += () => RetireOld(deviceName);
+                window.Revealed += () => { if (generation == _sceneGeneration) RetirePreviousWindows(deviceName); };
                 _windows.Add(window);
                 window.BeginAttach();
             }

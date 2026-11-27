@@ -245,7 +245,7 @@ namespace MotionDesk.Widgets
 
             if (!safeMode && AppSettings.Load().QuickHideDoubleClickEnabled) DesktopIconVisibilityEngine.Instance.Start();
             else DesktopIconVisibilityEngine.Instance.RestoreIfHidden();
-            AppActivity.Start();
+            AppActivity.Start(() => _nativeContainers?.HasActivityRules == true);
             if (!safeMode && !reviewRequired)
             {
                 if (AppSettings.Load().WindowRulesEnabled) WindowRulesEngine.Instance.Start();
@@ -334,6 +334,7 @@ namespace MotionDesk.Widgets
             // window and its Dashboard are constructed only when explicitly opened.
             WorkspaceProfileService.ExitSaveDone = false;
             WorkspaceProfileService.RestoreStartupSession();
+            AppActivity.RequestRefresh();
             _wallpaperEnabled = WallpaperHostEngine.Instance.IsEnabled;
             _wallpaperToggleItem.Checked = _wallpaperEnabled;
             WallpaperHostEngine.Instance.StateChanged += OnWallpaperStateChanged;
@@ -400,7 +401,7 @@ namespace MotionDesk.Widgets
             {
                 _containerHotkeys = null;
                 try { _nativeContainers?.Dispose(); }
-                finally { _nativeContainers = null; }
+                finally { _nativeContainers = null; AppActivity.RequestRefresh(); }
             }
         }
 
@@ -736,6 +737,7 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
             WallpaperHostEngine.RefreshOptionalIfCreated();
             RefreshDesktopMenuPipe();
             PluginHost.Instance.HoldIfGloballyDisabled();
+            AppActivity.RequestRefresh();
         }
 
         internal static bool NeedsDesktopMenuPipe(bool enabled, bool safeMode) => enabled && !safeMode;

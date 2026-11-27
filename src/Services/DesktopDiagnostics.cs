@@ -629,7 +629,7 @@ namespace MotionDesk.Services
             var screens = System.Windows.Forms.Screen.AllScreens;
             var now = DesktopCoverage.Compute();
             lines.Add("covered right now (DesktopCoverage.Compute): " + (now.Count == 0 ? "(none)" : string.Join(", ", now)));
-            AppActivity.Start();
+            AppActivity.Start(diagnostics: true);
             var end = DateTime.UtcNow.AddSeconds(3.5);
             while (DateTime.UtcNow < end) { System.Windows.Forms.Application.DoEvents(); System.Threading.Thread.Sleep(50); }
             foreach (var s in screens)

@@ -25,6 +25,14 @@ namespace MotionDesk.Containers
         private PipeServer? _pipe;
         private bool _syncing, _quickHidden;
         private volatile bool _disposed;
+        private bool _hasEnabledRules;
+        internal bool HasActivityRules => !_disposed && _hasEnabledRules;
+        private void UpdateActivityRuleDemand(bool enabled)
+        {
+            if (_hasEnabledRules == enabled) return;
+            _hasEnabledRules = enabled;
+            MotionDesk.Services.AppActivity.RequestRefresh();
+        }
         private int _saveFailures;
         private const int PendingSync = 1, PendingLook = 2, PendingMonitor = 4;
         private int _pendingUi;
@@ -320,7 +328,9 @@ namespace MotionDesk.Containers
             if (_disposed || _syncing) return; _syncing = true;
             try
             {
-                var doc = _service.Snapshot(); var want = doc.Containers.Where(c => !c.Hidden && (!_quickHidden || c.ExcludeFromQuickHide)).ToDictionary(c => c.Id);
+                var doc = _service.Snapshot();
+                UpdateActivityRuleDemand(doc.Rules.Any(r => r.Enabled));
+                var want = doc.Containers.Where(c => !c.Hidden && (!_quickHidden || c.ExcludeFromQuickHide)).ToDictionary(c => c.Id);
                 // Closing a temporarily hidden window must not discard unsaved geometry/items.
                 var existingIds = doc.Containers.Select(c => c.Id).ToHashSet();
                 foreach (var id in _windows.Keys.Where(k => !want.ContainsKey(k)).ToList())
@@ -412,6 +422,7 @@ namespace MotionDesk.Containers
         public void EvaluateRules()
         {
             var rules = _service.Snapshot().Rules.Where(r => r.Enabled).ToList();
+            UpdateActivityRuleDemand(rules.Count != 0);
             if (rules.Count == 0) { _activeRules.Clear(); return; }
             var procs = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             if (rules.Any(r => r.When == RuleWhen.ProcessRunning))
@@ -486,6 +497,7 @@ namespace MotionDesk.Containers
         {
             if (_disposed) return;
             _disposed = true;
+            MotionDesk.Services.AppActivity.RequestRefresh();
             void Step(string name, Action action)
             {
                 MotionDesk.Services.HangTrace.Mark("containers shutdown begin: " + name);
