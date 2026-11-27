@@ -5,8 +5,10 @@ namespace MotionDesk.UI;
 
 public sealed partial class MainWindow
 {
-    private static readonly string[] DesktopPages = ["Wallpaper", "DeskContainers", "Widgets", "DeskStrip", "DeskZones", "DeskMusicVisualizer"];
-    private static readonly string[] SystemPages = ["Personalization", "Theme", "Automation", "AudioEnhancement", "Performance", "Settings"];
+    private static readonly string[] AppearancePages = ["Theme", "Personalization", "Wallpaper"];
+    private static readonly string[] DesktopPages = ["Widgets", "DeskZones", "DeskContainers", "DeskStrip"];
+    private static readonly string[] MediaPages = ["DeskMusicVisualizer", "AudioEnhancement"];
+    private static readonly string[] SystemPages = ["Performance", "Automation", "Settings"];
     private readonly Dictionary<string, StudioLink> _studioLinks = new(StringComparer.Ordinal);
     private WindowSkin _windowSkin;
     private bool _usesStudio => _windowSkin != WindowSkin.Classic;
@@ -183,6 +185,7 @@ public sealed partial class MainWindow
             }
             void AddGroup(string caption, string[] keys)
             {
+                keys = keys.Where(_navButtons.ContainsKey).ToArray();
                 if (keys.Length == 0) return;
                 nav.Controls.Add(new Label
                 {
@@ -203,13 +206,15 @@ public sealed partial class MainWindow
             }
             if (_iconRail)
             {
-                foreach (var key in DesktopPages.Concat(SystemPages)) AddLink(key);
+                foreach (var key in AppearancePages.Concat(DesktopPages).Concat(MediaPages).Concat(SystemPages)) AddLink(key);
                 AddMoreNavigation(nav);
                 SizeStudioNavigation();
                 UpdateStudioNavigation();
                 return;
             }
+            AddGroup(StudioText("Appearance", "Εξατομίκευση"), AppearancePages);
             AddGroup(StudioText("Desktop", "Επιφάνεια εργασίας"), DesktopPages);
+            AddGroup(StudioText("Media", "Πολυμέσα"), MediaPages);
             AddGroup(StudioText("System", "Σύστημα"), SystemPages);
             AddGroup(StudioText("Add-ons", "Πρόσθετα"), _navButtons.Keys.Where(key => !_studioLinks.ContainsKey(key) && key != "About").ToArray());
             AddLink("About");
