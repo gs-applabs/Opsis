@@ -73,6 +73,9 @@ internal sealed class DesktopMusicController : IDisposable
         }
     }
 
+    internal static int SelectTickInterval(bool suspended, bool visible, bool rendererReady) =>
+        suspended ? SuspendedInterval : !visible ? IdleInterval : rendererReady ? ActiveInterval : BackpressureInterval;
+
     private void SetTickInterval(int interval)
     {
         if (timer.Interval != interval) timer.Interval = interval;
@@ -92,7 +95,7 @@ internal sealed class DesktopMusicController : IDisposable
         if (paused || locked)
         {
             if (drawing || spectrum != null || snapshot != null || previewUntil != 0) StopPlayback();
-            SetTickInterval(SuspendedInterval);
+            SetTickInterval(SelectTickInterval(true, false, false));
             return;
         }
 
@@ -112,7 +115,7 @@ internal sealed class DesktopMusicController : IDisposable
         {
             // Do not reopen an audio endpoint on an excluded or unavailable screen.
             if (drawing || spectrum != null || snapshot != null || previewUntil != 0) StopPlayback();
-            SetTickInterval(SuspendedInterval);
+            SetTickInterval(SelectTickInterval(true, false, false));
             return;
         }
         if (settings.Enabled) spectrum ??= new AudioSpectrumService(BandCount, settings.InputDeviceId);
@@ -123,7 +126,7 @@ internal sealed class DesktopMusicController : IDisposable
             // The renderer owns the single outstanding request. Avoid allocating FFT
             // snapshots and JSON payloads for frames which it would discard.
             bool ready = surface.CanAcceptFrame;
-            SetTickInterval(ready ? ActiveInterval : BackpressureInterval);
+            SetTickInterval(SelectTickInterval(false, true, ready));
             if (ready)
             {
                 var bands = spectrum?.GetBands() ?? Silence;
@@ -134,7 +137,7 @@ internal sealed class DesktopMusicController : IDisposable
         }
         else
         {
-            SetTickInterval(IdleInterval);
+            SetTickInterval(SelectTickInterval(false, false, false));
             if (drawing)
             {
                 drawing = false;
@@ -164,12 +167,12 @@ internal sealed class DesktopMusicController : IDisposable
         if (value)
         {
             StopPlayback();
-            SetTickInterval(SuspendedInterval);
+            SetTickInterval(SelectTickInterval(true, false, false));
         }
         else if (settings.Enabled)
         {
             nextDisplayLookup = 0;
-            SetTickInterval(IdleInterval);
+            SetTickInterval(SelectTickInterval(false, false, false));
         }
     }
 
