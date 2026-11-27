@@ -214,6 +214,11 @@ internal static class UiResourceAudit
                 count = group.Length,
                 medianCpuCorePercent = Median(group.Select(s => s.CpuCorePercent + s.Browsers.Sum(b => b.CpuCorePercent))),
                 medianPrivateBytes = Median(group.Select(s => (double)s.PrivateBytes + s.Browsers.Sum(b => b.PrivateBytes))),
+                medianHostPrivateBytes = Median(group.Select(s => (double)s.PrivateBytes)),
+                medianWebViewPrivateBytes = Median(group.Select(s => (double)s.Browsers.Sum(b => b.PrivateBytes))),
+                medianWebViewCount = Median(group.Select(s => (double)s.Browsers.Count)),
+                medianHostCpuCorePercent = Median(group.Select(s => s.CpuCorePercent)),
+                medianWebViewCpuCorePercent = Median(group.Select(s => s.Browsers.Sum(b => b.CpuCorePercent))),
                 medianManagedBytes = Median(group.Select(s => (double)s.ManagedBytes)),
                 medianHandles = Median(group.Select(s => (double)s.Handles)),
                 medianGdiObjects = Median(group.Select(s => (double)s.GdiObjects)),
@@ -224,7 +229,8 @@ internal static class UiResourceAudit
                 idleBefore = Describe(idleBefore), idleAfter = Describe(idleAfter),
                 firstSettled = Describe(settled.Take(1).ToArray()),
                 lastSettled = Describe(settled.TakeLast(1).ToArray()),
-                soakFirst = Describe(soak.Take(5).ToArray()), soakLast = Describe(soak.TakeLast(5).ToArray()),
+                soakFirst = Describe(soak.Take(Math.Min(5, soak.Length / 2)).ToArray()),
+                soakLast = Describe(soak.TakeLast(Math.Min(5, soak.Length / 2)).ToArray()),
                 soakHostIoWriteBytes = Delta(soak.FirstOrDefault()?.IoWriteBytes, soak.LastOrDefault()?.IoWriteBytes),
                 soakHostIoWriteOperations = Delta(soak.FirstOrDefault()?.IoWriteOperations, soak.LastOrDefault()?.IoWriteOperations)
             };
@@ -233,7 +239,7 @@ internal static class UiResourceAudit
             const string name = "ui-resources.json";
             File.WriteAllText(Path.Combine(folder, name), JsonSerializer.Serialize(new
             {
-                scope = "Main-process CPU is per phase in units of one core. Browser CPU is cumulative milliseconds per PID. Host IO counters include process write IO, not physical SSD writes, and exclude child processes.",
+                scope = "Combined median CPU/private bytes include tracked WebView2 processes. Host and WebView2 medians are also separate; this is not necessarily the complete OS process tree. CPU units are one logical core. Host IO counters are not physical SSD writes and exclude child processes.",
                 hostIoWriteBytesDelta = Delta(first.IoWriteBytes, last.IoWriteBytes),
                 hostIoWriteOperationsDelta = Delta(first.IoWriteOperations, last.IoWriteOperations),
                 navigation,

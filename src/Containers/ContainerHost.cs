@@ -15,6 +15,24 @@ namespace MotionDesk.Containers
         private readonly Control _ui;                                   // a control created on the UI thread, used to marshal pipe-thread events
         private readonly Dictionary<string, ContainerWindow> _windows = new();
         private readonly Dictionary<string, Container> _dirty = new();
+        private HashSet<string>? _persistedReferences;
+
+        private static IEnumerable<string> References(Container c) =>
+            c.Items.Concat(c.Tabs.SelectMany(tab => tab.Items)).Select(item => item.Path);
+
+        // A stored snapshot can change by IPC or rules without an ItemRemoved
+        // event. Release originals only after the durable layout changes.
+        private void ReconcileReleasedOriginals(IEnumerable<Container> stored)
+        {
+            var next = stored.SelectMany(References).ToHashSet(StringComparer.OrdinalIgnoreCase);
+            var previous = _persistedReferences;
+            _persistedReferences = next;
+            if (previous == null || previous.SetEquals(next)) return;
+            var retained = next.Concat(_dirty.Values.SelectMany(References))
+                .Concat(_windows.Values.Where(w => !w.IsDisposed).SelectMany(w => References(w.Model)));
+            if (MotionDesk.Widgets.DesktopIconVisibilityEngine.RestoreOriginalsForPaths(previous.Except(next, StringComparer.OrdinalIgnoreCase), retained) > 0)
+                MotionDesk.Widgets.DesktopIconVisibilityEngine.Instance.ApplyKeepSettings();
+        }
         private readonly ContainerLayoutHistory _layoutHistory = new();
         private readonly System.Windows.Forms.Timer _layoutHistorySave = new() { Interval = 4000 };
         private readonly System.Windows.Forms.Timer _save = new() { Interval = 400 };
@@ -201,10 +219,9 @@ namespace MotionDesk.Containers
             if (remaining.Any(c => c.Id == id)) return false;
             Sync();
 
-            static IEnumerable<string> References(Container c) =>
-                c.Items.Concat(c.Tabs.SelectMany(tab => tab.Items)).Select(item => item.Path);
-            var released = References(container).Except(remaining.SelectMany(References), StringComparer.OrdinalIgnoreCase);
-            if (MotionDesk.Widgets.DesktopIconVisibilityEngine.RestoreOriginalsForPaths(released) > 0)
+            var retained = remaining.SelectMany(References);
+            var released = References(container).Except(retained, StringComparer.OrdinalIgnoreCase);
+            if (MotionDesk.Widgets.DesktopIconVisibilityEngine.RestoreOriginalsForPaths(released, retained) > 0)
                 MotionDesk.Widgets.DesktopIconVisibilityEngine.Instance.ApplyKeepSettings();
             ContainerDeleted?.Invoke(id);
             return true;
@@ -379,6 +396,7 @@ namespace MotionDesk.Containers
                 if (_windows.Count == 0) _z.Stop();
                 else if (!_z.Enabled) _z.Start();
                 if (added) ReseatZOrder();
+                ReconcileReleasedOriginals(doc.Containers);
             }
             finally { _syncing = false; }
         }
@@ -395,9 +413,9 @@ namespace MotionDesk.Containers
                 foreach (var (id, window) in _windows)
                     if (!window.IsDisposed) models[id] = window.Model;
                 models[source.Model.Id] = source.Model;
-                bool stillReferenced = models.Values.Any(c => c.Items.Concat(c.Tabs.SelectMany(t => t.Items))
-                    .Any(item => string.Equals(item.Path, path, StringComparison.OrdinalIgnoreCase)));
-                if (!stillReferenced && MotionDesk.Widgets.DesktopIconVisibilityEngine.RestoreOriginalsForPaths(new[] { path }) > 0)
+                var retained = models.Values.SelectMany(References).ToArray();
+                bool stillReferenced = retained.Contains(path, StringComparer.OrdinalIgnoreCase);
+                if (!stillReferenced && MotionDesk.Widgets.DesktopIconVisibilityEngine.RestoreOriginalsForPaths(new[] { path }, retained) > 0)
                     MotionDesk.Widgets.DesktopIconVisibilityEngine.Instance.ApplyKeepSettings();
             }
             catch (Exception ex)

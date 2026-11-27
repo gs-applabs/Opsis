@@ -74,12 +74,12 @@ jobs:
           $env:OPSIS_E2E = '1'
           $env:OPSIS_AUDIT_TASKBAR = '1'
           $env:OPSIS_AUDIT_RESOURCE_CYCLES = '3'
-          $env:OPSIS_AUDIT_SOAK_MINUTES = '2'
+          $env:OPSIS_AUDIT_SOAK_MINUTES = '10'
           $output = Join-Path $env:GITHUB_WORKSPACE 'audit-result'
           New-Item -ItemType Directory -Force $output | Out-Null
           $env:OPSIS_TRACE = Join-Path $output 'trace.txt'     # hang hunting: the last line shows where the UI thread stopped
           $process = Start-Process .\publish\Opsis.exe -ArgumentList @('--ui-audit', ('"' + $output + '"')) -PassThru
-          if (-not $process.WaitForExit(600000)) {
+          if (-not $process.WaitForExit(1200000)) {
             Stop-Process -Id $process.Id -Force
             throw 'Opsis audit timed out'
           }

@@ -144,6 +144,17 @@ try
         !MotionDesk.Containers.NativeMigration.ValidSnapshotName("../Default.json") &&
         !MotionDesk.Containers.NativeMigration.ValidSnapshotName("Default.exe"),
         "R76 migration only accepts safe snapshot filenames");
+    var iconEntries = new[] { Path.Combine(folder,"user","Shared.txt"), Path.Combine(folder,"public","Shared.lnk"),
+        Path.Combine(folder,"user","Unique.txt") };
+    var uniqueIcons = MotionDesk.Widgets.DesktopIconVisibilityEngine.UniqueIconNames(new[] { iconEntries[0], iconEntries[2] }, iconEntries);
+    Check(!uniqueIcons.Contains("Shared") && uniqueIcons.Contains("Shared.txt") && uniqueIcons.Contains("Unique"),
+        "R77 ambiguous Explorer alias never hides another desktop file");
+    Check(MotionDesk.Widgets.DesktopIconVisibilityEngine.ReleasedIconNames(new[] { iconEntries[0] }, new[] { iconEntries[1] })
+        .SetEquals(new[] { "Shared.txt" }),
+        "R77 shared display alias remains protected while another reference exists");
+    Check(MotionDesk.Widgets.DesktopIconVisibilityEngine.ReleasedIconNames(new[] { iconEntries[0] },
+        new[] { iconEntries[0].ToUpperInvariant() }).Count == 0,
+        "R77 shared references are case insensitive");
     var opt = new AppSettings { RestoreWindowsAfterDocking = false, UsageAlertsEnabled = false };
     Check(MotionDesk.Widgets.TrayApplicationContext.SelectOptionalServices(opt, false) == (false, false),
         "R65 disabled optional tray services have no timer demand");
