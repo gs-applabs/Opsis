@@ -23,7 +23,9 @@ namespace MotionDesk.Containers
         private readonly System.Windows.Forms.Timer _rules = new() { Interval = 3000 };
         private HashSet<string> _activeRules = new();
         private PipeServer? _pipe;
-        private bool _syncing, _quickHidden, _disposed;
+        private bool _syncing, _quickHidden;
+        private volatile bool _disposed;
+        private int _saveFailures;
         internal event Action<string, string>? ContainerRenamed;
         internal event Action<string>? ContainerDeleted;
         internal event Action? WorkspacePreviewChanged;
@@ -40,7 +42,7 @@ namespace MotionDesk.Containers
             _ui = new Control(); _ = _ui.Handle;                        // force the handle on the UI thread
             _service = new ContainersService(store, Monitors);
             _service.Mutated += () => { if (_ui.IsHandleCreated && !_ui.IsDisposed) try { _ui.BeginInvoke(Sync); } catch (Exception) { } };
-            _save.Tick += (_, _) => Flush();
+            _save.Tick += (_, _) => FlushFromTimer();
             _layoutHistorySave.Tick += (_, _) => { _layoutHistorySave.Stop(); _layoutHistory.Save(); };
             _rules.Tick += (_, _) => EvaluateRules(); _rules.Start();
             _z.Tick += (_, _) => ReseatZOrder(); _z.Start();
@@ -167,6 +169,7 @@ namespace MotionDesk.Containers
             private readonly ContainerHost _h; public HostApi(ContainerHost h) { _h = h; }
             public System.Text.Json.Nodes.JsonNode? Handle(string cmd, System.Text.Json.Nodes.JsonObject args)
             {
+                if (_h._disposed) throw new InvalidOperationException("Containers are shutting down.");
                 switch (cmd)
                 {
                     case "focus":
@@ -279,7 +282,7 @@ namespace MotionDesk.Containers
         /// <summary>Makes the windows match the stored data (UI thread).</summary>
         public void Sync()
         {
-            if (_syncing) return; _syncing = true;
+            if (_disposed || _syncing) return; _syncing = true;
             try
             {
                 var doc = _service.Snapshot(); var want = doc.Containers.Where(c => !c.Hidden && (!_quickHidden || c.ExcludeFromQuickHide)).ToDictionary(c => c.Id);
@@ -299,7 +302,7 @@ namespace MotionDesk.Containers
                     }
                     var w = new ContainerWindow(model, () => _windows.Where(p => p.Key != id).Select(p => p.Value.Bounds));
                     w.SetPlacement(Place(model, mons));
-                    w.Changed += c => { _dirty[c.Id] = c; if (!_save.Enabled) _save.Start(); };
+                    w.Changed += c => { if (_disposed) return; _dirty[c.Id] = c; if (!_save.Enabled) { _saveFailures = 0; _save.Interval = 400; _save.Start(); } };
                     w.Renamed += Rename;
                     w.PreviewContentChanged += () => WorkspacePreviewChanged?.Invoke();
                     w.DeleteRequested += () => ConfirmDelete(w, w.Model.Id);
@@ -400,10 +403,22 @@ namespace MotionDesk.Containers
                 if (_dirty.TryGetValue(c.Id, out var current) && ReferenceEquals(current, c)) _dirty.Remove(c.Id);
         }
 
+        private void FlushFromTimer()
+        {
+            if (_disposed) return;
+            try { Flush(); _saveFailures = 0; _save.Interval = 400; }
+            catch (Exception ex)
+            {
+                try { MotionDesk.Services.RotatingLogger.Write("Container save failed: " + ex.Message); } catch { }
+                // Bounded backoff; preserve pending edits for the next user action or exit.
+                if (++_saveFailures <= 3) { _save.Interval = 1000 * (1 << _saveFailures); _save.Start(); }
+            }
+        }
+
         private void OnDisplayChanged(object? sender, EventArgs args)
         {
-            if (!_ui.IsHandleCreated || _ui.IsDisposed) return;
-            try { _ui.BeginInvoke(() => { _monitorTimer.Stop(); _monitorTimer.Start(); }); }
+            if (_disposed || !_ui.IsHandleCreated || _ui.IsDisposed) return;
+            try { _ui.BeginInvoke(() => { if (_disposed) return; _monitorTimer.Stop(); _monitorTimer.Start(); }); }
             catch (InvalidOperationException) { }
         }
 
@@ -411,19 +426,34 @@ namespace MotionDesk.Containers
         {
             if (_disposed) return;
             _disposed = true;
-            StopPeek();
-            _peekTimer.Dispose();
-            _monitorTimer.Dispose();
-            StopOrganization();
+            void Step(string name, Action action)
+            {
+                MotionDesk.Services.HangTrace.Mark("containers shutdown begin: " + name);
+                try { action(); }
+                catch (Exception ex) { try { MotionDesk.Services.RotatingLogger.Write("Container shutdown " + name + ": " + ex.Message); } catch { } }
+                finally { MotionDesk.Services.HangTrace.Mark("containers shutdown end: " + name); }
+            }
+            Step("stop timers", () => { _save.Stop(); _rules.Stop(); _z.Stop(); _look.Stop(); _layoutHistorySave.Stop(); _monitorTimer.Stop(); _peekTimer.Stop(); });
+            Step("unsubscribe display", () => Microsoft.Win32.SystemEvents.DisplaySettingsChanged -= OnDisplayChanged);
+            Step("unsubscribe theme", () => { MotionDesk.UI.ThemeManager.Changed -= OnLookChanged; MotionDesk.UI.ThemeManager.Repainted -= OnLookChanged; });
+            Step("unsubscribe settings", () => { MotionDesk.Services.HardwareProfileService.ProfileChanged -= OnTierChanged; MotionDesk.Services.LocalizationManager.Changed -= OnLookChanged; });
+            Step("stop peek", () => StopPeek());
+            Step("stop organization", () => StopOrganization());
+            Step("selection watcher", () => _selection?.Dispose());
+            Step("restore icons", () => MotionDesk.Widgets.DesktopIconVisibilityEngine.RestoreOriginals());
+            Step("save pending layout", () => Flush());
+            Step("save layout history", () => _layoutHistory.Save());
+            foreach (var timer in new[] { _save, _rules, _z, _look, _layoutHistorySave, _monitorTimer, _peekTimer })
+                Step("dispose timer", () => timer.Dispose());
+            foreach (var w in _windows.Values.ToArray())
+            {
+                Step("close container", () => w.Close());
+                Step("dispose container", () => w.Dispose());
+            }
+            _windows.Clear();
+            Step("dispose dispatcher", () => _ui.Dispose());
+            Step("dispose pipe", () => _pipe?.Dispose());
             if (ReferenceEquals(Current, this)) Current = null;
-            Microsoft.Win32.SystemEvents.DisplaySettingsChanged -= OnDisplayChanged;
-            MotionDesk.UI.ThemeManager.Changed -= OnLookChanged; MotionDesk.UI.ThemeManager.Repainted -= OnLookChanged;
-            MotionDesk.Services.HardwareProfileService.ProfileChanged -= OnTierChanged; MotionDesk.Services.LocalizationManager.Changed -= OnLookChanged; _look.Dispose(); _selection?.Dispose();
-            try { MotionDesk.Widgets.DesktopIconVisibilityEngine.RestoreOriginals(); } catch (Exception) { }          // every exit gives the hidden originals back
-            Flush(); _layoutHistorySave.Stop(); _layoutHistory.Save(); _layoutHistorySave.Dispose();
-            _save.Dispose(); _rules.Dispose(); _z.Dispose(); _pipe?.Dispose();
-            foreach (var w in _windows.Values) { w.Close(); w.Dispose(); }
-            _windows.Clear(); _ui.Dispose();
         }
     }
 }
