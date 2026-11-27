@@ -2,8 +2,16 @@ name: Opsis - Desktop Customization Windows audit
 
 on:
   workflow_dispatch:
+  pull_request:
+    branches: [ci/rc-validation-base]
+    paths:
+      - '.github/workflows/windows-audit.yml'
   push:
     branches: [rc3.0-base, patch/3.0.0.3200-appearance, release/2.8.0.2510]
+
+concurrency:
+  group: opsis-full-audit-${{ github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
@@ -16,6 +24,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
       - uses: actions/setup-dotnet@v4
         with:
           global-json-file: global.json
@@ -49,6 +58,7 @@ jobs:
           $setup = Get-ChildItem Output -File -Filter 'OpsisSetup-*.exe' | Select-Object -First 1
           if (!$setup) { throw 'Installer output missing' }
           [ordered]@{
+            sourceCommit = (git rev-parse HEAD)
             appVersion = (Get-Item .\publish\Opsis.exe).VersionInfo.FileVersion
             dotnetSdk = (dotnet --version)
             node = (node --version)
