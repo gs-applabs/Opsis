@@ -887,16 +887,6 @@
     },
     {
       "branch": "europe-R26",
-      "path": "src/Services/OpsisTaskbarDesigner.cs",
-      "ancestor": "cf906d7840a37af3f1dcaa8977ccaa7a4f3278c3",
-      "head": "e72ee5877526c03ead97ce8bbdd098fe41b49838",
-      "base_blob": "7f073c09d8c85b53837ac7d75dac8b996fa9f822",
-      "incoming_blob": "d64a95fd1542baecaa2331c5fde6fb2cce45ec84",
-      "current_blob": "6b302f23dd144e064d274c1c3330d4ed68e42738",
-      "reason": "Git three-way conflict"
-    },
-    {
-      "branch": "europe-R26",
       "path": "src/UI/MainWindow.cs",
       "ancestor": "cf906d7840a37af3f1dcaa8977ccaa7a4f3278c3",
       "head": "e72ee5877526c03ead97ce8bbdd098fe41b49838",
@@ -947,16 +937,6 @@
     },
     {
       "branch": "europe-R26",
-      "path": "src/Widgets/wallpaper/index.html",
-      "ancestor": "cf906d7840a37af3f1dcaa8977ccaa7a4f3278c3",
-      "head": "e72ee5877526c03ead97ce8bbdd098fe41b49838",
-      "base_blob": "af4858f238d89f1a75b68301f08d39c1fd8e8d97",
-      "incoming_blob": "38746cfb9887f73ca78aaaf0e5ceaedd9bafc6fd",
-      "current_blob": "d1e1162ac57433b6ff5815846712288e91523a8e",
-      "reason": "Git three-way conflict"
-    },
-    {
-      "branch": "europe-R26",
       "path": "tests/Opsis.ExperienceSmoke/Program.cs",
       "ancestor": "cf906d7840a37af3f1dcaa8977ccaa7a4f3278c3",
       "head": "e72ee5877526c03ead97ce8bbdd098fe41b49838",
@@ -984,26 +964,6 @@
       "incoming_blob": "987d5f27309301f3abe0e6c2ed65d1c123b484e4",
       "current_blob": "0f5361c96dec80e937d844de1fb7a67ed60196a8",
       "reason": "workflow edits require connector review and workflows permission"
-    },
-    {
-      "branch": "main-2.8-followup",
-      "path": "src/Widgets/wallpaper/index.html",
-      "ancestor": "6f8b5da31a5951d9dd467d6ef1250c52f8e8176f",
-      "head": "12018a0b085d52dba96847e552d203787b15ed08",
-      "base_blob": "54c8430d04ede33bf10d6c840b1f364e6ec7d2f4",
-      "incoming_blob": "ee975b0dfb1d315acf2a07739aa040e6e2a0f1d0",
-      "current_blob": "d1e1162ac57433b6ff5815846712288e91523a8e",
-      "reason": "Git three-way conflict"
-    },
-    {
-      "branch": "main-2.8-followup",
-      "path": "tests/WeatherInfoTone.test.cjs",
-      "ancestor": "6f8b5da31a5951d9dd467d6ef1250c52f8e8176f",
-      "head": "12018a0b085d52dba96847e552d203787b15ed08",
-      "base_blob": null,
-      "incoming_blob": "7f3550490d383f4df5ade4831b25dfe15c0afdee",
-      "current_blob": "3846233faea2c9d58ac52e7b1f78e00498577356",
-      "reason": "add/add or missing common base"
     }
   ],
   "manual_resolutions": [
@@ -1237,6 +1197,50 @@
       "current_blob": "4c34b27d32e34706f8697174f76e34e06c6df919",
       "reason": "do not downgrade RC; manually port relevant changes",
       "method": "R30: retain current .NET 11, SkiaSharp and exclusion superset; port conditional Signature preview block and reference exclusion; Windows build pending"
+    },
+    {
+      "branch": "europe-R26",
+      "path": "src/Services/OpsisTaskbarDesigner.cs",
+      "ancestor": "cf906d7840a37af3f1dcaa8977ccaa7a4f3278c3",
+      "head": "e72ee5877526c03ead97ce8bbdd098fe41b49838",
+      "base_blob": "7f073c09d8c85b53837ac7d75dac8b996fa9f822",
+      "incoming_blob": "d64a95fd1542baecaa2331c5fde6fb2cce45ec84",
+      "current_blob": "6b302f23dd144e064d274c1c3330d4ed68e42738",
+      "reason": "Git three-way conflict",
+      "method": "R31: existing StartStudioPreferences.StartButtonStyle and OpsisStartButtonArt renderer supersede legacy duplicate StartGlassIcon boolean; retain single preference; runtime verification pending"
+    },
+    {
+      "branch": "europe-R26",
+      "path": "src/Widgets/wallpaper/index.html",
+      "ancestor": "cf906d7840a37af3f1dcaa8977ccaa7a4f3278c3",
+      "head": "e72ee5877526c03ead97ce8bbdd098fe41b49838",
+      "base_blob": "af4858f238d89f1a75b68301f08d39c1fd8e8d97",
+      "incoming_blob": "38746cfb9887f73ca78aaaf0e5ceaedd9bafc6fd",
+      "current_blob": "d1e1162ac57433b6ff5815846712288e91523a8e",
+      "reason": "Git three-way conflict",
+      "method": "R31: retain explicit user fixed-white policy over legacy adaptive dark text; R26 atmosphere/card/signature incoming added lines present except obsolete GPU sampling guard; regression coverage added; runtime verification pending"
+    },
+    {
+      "branch": "main-2.8-followup",
+      "path": "src/Widgets/wallpaper/index.html",
+      "ancestor": "6f8b5da31a5951d9dd467d6ef1250c52f8e8176f",
+      "head": "12018a0b085d52dba96847e552d203787b15ed08",
+      "base_blob": "54c8430d04ede33bf10d6c840b1f364e6ec7d2f4",
+      "incoming_blob": "ee975b0dfb1d315acf2a07739aa040e6e2a0f1d0",
+      "current_blob": "d1e1162ac57433b6ff5815846712288e91523a8e",
+      "reason": "Git three-way conflict",
+      "method": "R31: retain explicit user fixed-white policy over legacy adaptive dark text; R26 atmosphere/card/signature incoming added lines present except obsolete GPU sampling guard; regression coverage added; runtime verification pending"
+    },
+    {
+      "branch": "main-2.8-followup",
+      "path": "tests/WeatherInfoTone.test.cjs",
+      "ancestor": "6f8b5da31a5951d9dd467d6ef1250c52f8e8176f",
+      "head": "12018a0b085d52dba96847e552d203787b15ed08",
+      "base_blob": null,
+      "incoming_blob": "7f3550490d383f4df5ade4831b25dfe15c0afdee",
+      "current_blob": "3846233faea2c9d58ac52e7b1f78e00498577356",
+      "reason": "add/add or missing common base",
+      "method": "R31: retain explicit user fixed-white policy over legacy adaptive dark text; R26 atmosphere/card/signature incoming added lines present except obsolete GPU sampling guard; regression coverage added; runtime verification pending"
     }
   ]
 }
