@@ -8,7 +8,12 @@ namespace OpsisMusicOverlay;
 
 internal sealed record TrackInfo(string Source, string Title, string Artist, string Album, byte[]? Cover)
 {
-    public string Identity => string.Join("\u001f", Source, Title, Artist, Album);
+    public string AlbumArtist { get; init; } = "";
+    public string Subtitle { get; init; } = "";
+    public int TrackNumber { get; init; }
+    public int AlbumTrackCount { get; init; }
+    public string[] Genres { get; init; } = [];
+    public string Identity => string.Join("\u001f", Source, Title, Artist, Album, TrackNumber);
 }
 internal sealed record TrackTimeline(TimeSpan Position, TimeSpan Duration, DateTimeOffset Updated, double Rate)
 {
@@ -61,9 +66,15 @@ internal sealed class MediaSessionReader : IDisposable
                 var props = await session.TryGetMediaPropertiesAsync().AsTask(cancellation);
                 if (disposed || !IsPlaying(session)) return null;
                 var artist = string.IsNullOrWhiteSpace(props?.Artist) ? props?.AlbumArtist : props.Artist;
-                var album = string.IsNullOrWhiteSpace(props?.AlbumTitle) ? props?.Subtitle : props.AlbumTitle;
                 var updated = new TrackInfo(session.SourceAppUserModelId, props?.Title ?? "", artist ?? "",
-                    album ?? "", null);
+                    props?.AlbumTitle ?? "", null)
+                {
+                    AlbumArtist = props?.AlbumArtist ?? "",
+                    Subtitle = props?.Subtitle ?? "",
+                    TrackNumber = Math.Max(0, props?.TrackNumber ?? 0),
+                    AlbumTrackCount = Math.Max(0, props?.AlbumTrackCount ?? 0),
+                    Genres = props?.Genres?.Where(x => !string.IsNullOrWhiteSpace(x)).Take(8).ToArray() ?? []
+                };
                 bool changed = track == null || version != loadedRevision || track.Identity != updated.Identity;
                 if (changed) updated = updated with { Cover = await ReadCoverAsync(props?.Thumbnail, cancellation) };
                 else updated = updated with { Cover = track?.Cover };
