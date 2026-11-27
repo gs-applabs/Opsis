@@ -14,6 +14,7 @@ OMIT = frozenset([
  'wallpapers/samples/opsis-glass-signature/signature-preview-60s.mp4',
  *['wallpapers/samples/opsis-glass-signature/static/OPSIS-Spectrum-%02d-%s-1920x1080.png'%(i+1,c) for i,c in enumerate(('Blue','Violet','Magenta','Amber','Lime','Emerald'))],
 ])
+QA_FOLLOWUP={'tests/WeatherSkyMask.test.cjs': '4318f0176b4f4968d325bb679c6abcec0e9d7d4b', 'tests/opsis-patch-kit/P5/run-windows-gates.py': '408a11da812c187d7dc21ed608ab19e363cea738'}
 OVERLAY_SHA256='8a79978c6d8f0904c1edd6fac16679527d97295cff9567aeafafdd99c3dd03b8'
 
 def git(repo,*args):
@@ -56,8 +57,13 @@ def reconstruct(repo,dest,evidence):
    if proc.wait()!=0:raise ValueError('git cat-file failed')
   for p in names:
    data=z.read(p);verify(data,manifest[p],p);out=dest/p;out.parent.mkdir(parents=True,exist_ok=True);out.write_bytes(data)
+ # Apply only the two audited QA harness revisions, not a runtime code change.
+ for p,h in QA_FOLLOWUP.items():
+  data=git(repo,'show','HEAD:qa/followup/'+p)
+  if blob_id(data)!=h:raise ValueError('QA harness digest mismatch: '+p)
+  (dest/p).write_bytes(data)
  evidence.mkdir(parents=True,exist_ok=True)
- report={'stagingCommit':git(repo,'rev-parse','HEAD').decode().strip(),'expectedFiles':820,'verifiedFiles':804,'fromGitBlobs':630,'fromOverlay':174,'omittedMedia':sorted(OMIT),'overlaySha256':OVERLAY_SHA256,'productionApproved':False}
+ report={'stagingCommit':git(repo,'rev-parse','HEAD').decode().strip(),'expectedFiles':820,'verifiedFiles':804,'fromGitBlobs':630,'fromOverlay':174,'omittedMedia':sorted(OMIT),'overlaySha256':OVERLAY_SHA256,'productionApproved':False,'qaHarnessRevisions':QA_FOLLOWUP}
  (evidence/'source-verification.json').write_text(json.dumps(report,indent=2),encoding='utf-8')
  print(json.dumps(report,indent=2))
 
