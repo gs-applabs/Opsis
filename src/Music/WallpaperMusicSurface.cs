@@ -22,6 +22,7 @@ internal sealed class WallpaperMusicSurface : IDisposable
     private CoreWebView2? current;
     private string? cover;
     private byte[]? coverSource;
+    private string? coverTrackIdentity;
     private bool installed, pending;
     private int revision;
     private long nextAttempt;
@@ -51,10 +52,12 @@ internal sealed class WallpaperMusicSurface : IDisposable
 
             var track = snapshot?.Track;
             var visibleCover = settings.HideTrackMetadata ? null : track?.Cover;
-            bool sendCover = !ReferenceEquals(visibleCover, coverSource);
+            var visibleIdentity = settings.HideTrackMetadata ? null : track?.Identity;
+            bool sendCover = !ReferenceEquals(visibleCover, coverSource) || visibleIdentity != coverTrackIdentity;
             if (sendCover)
             {
                 coverSource = visibleCover;
+                coverTrackIdentity = visibleIdentity;
                 cover = AlbumCoverData(coverSource);
             }
             var elapsed = snapshot?.Timeline?.GetPosition(DateTimeOffset.UtcNow).TotalSeconds ?? 0;
@@ -66,8 +69,17 @@ internal sealed class WallpaperMusicSurface : IDisposable
                 title = settings.HideTrackMetadata ? null : track?.Title,
                 artist = settings.HideTrackMetadata ? null : track?.Artist,
                 album = settings.HideTrackMetadata ? null : track?.Album,
-                duration = snapshot?.Timeline?.Duration.TotalSeconds ?? 0,
-                elapsed, bands, preview, frequency, waveform, preset = VisualPresets.ModeOf(settings.Preset),
+                albumArtist = settings.HideTrackMetadata ? null : track?.AlbumArtist,
+                subtitle = settings.HideTrackMetadata ? null : track?.Subtitle,
+                source = settings.HideTrackMetadata ? null : track?.Source,
+                trackNumber = settings.HideTrackMetadata ? 0 : track?.TrackNumber ?? 0,
+                albumTrackCount = settings.HideTrackMetadata ? 0 : track?.AlbumTrackCount ?? 0,
+                genres = settings.HideTrackMetadata ? null : track?.Genres,
+                trackKey = visibleIdentity,
+                reducedMotion = !MotionDesk.Services.AppSettings.Peek().EnableAnimations || System.Windows.Forms.SystemInformation.HighContrast,
+                duration = settings.HideTrackMetadata ? 0 : snapshot?.Timeline?.Duration.TotalSeconds ?? 0,
+                elapsed = settings.HideTrackMetadata ? 0 : elapsed,
+                bands, preview, frequency, waveform, preset = VisualPresets.ModeOf(settings.Preset),
                 updateCover = sendCover,
                 cover = sendCover ? cover : null
             });
@@ -119,6 +131,7 @@ internal sealed class WallpaperMusicSurface : IDisposable
         current = null;
         installed = false;
         coverSource = null;
+        coverTrackIdentity = null;
         cover = null;
         if (core == null) return;
         try { await ExecuteAsync(core, Guard("window.opsisMusicPainter?.remove(); return true;")); }
