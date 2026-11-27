@@ -16,6 +16,10 @@ namespace MotionDesk.Widgets
         private readonly NotifyIcon _trayIcon = null!;
         private MainWindow? _mainWindow;
         private readonly HotkeyManager _hotkeys = new();
+        private HotkeyManager? _containerHotkeys;
+        private System.Windows.Forms.Timer? _startupHealthyTimer, _pluginApprovalTimer;
+        private DockWindowRestorer? _dockRestorer;
+        private void NavigatePlugin(string key) => ShowMainWindow("plugin:" + key);
         private ToolStripMenuItem _wallpaperToggleItem = null!;
         private bool _wallpaperEnabled;
         // E2 (v2.0 handoff PHASE0_REPORT): η μετάφραση της taskbar (GlassBlur.SetTaskbarTranslucency)
@@ -60,15 +64,21 @@ namespace MotionDesk.Widgets
                 RotatingLogger.Write("Starting in SAFE MODE - plugins/wallpaper/last-session skipped.");
                 new SafeModeBanner().Show();
             }
-            var healthyTimer = new System.Windows.Forms.Timer { Interval = 30000 };
-            healthyTimer.Tick += (_, _) => { SafeModeService.MarkStartupHealthy(); healthyTimer.Stop(); healthyTimer.Dispose(); };
-            healthyTimer.Start();
+            _startupHealthyTimer = new System.Windows.Forms.Timer { Interval = 30000 };
+            _startupHealthyTimer.Tick += (_, _) =>
+            {
+                _startupHealthyTimer?.Stop();
+                _startupHealthyTimer?.Dispose();
+                _startupHealthyTimer = null;
+                if (System.Threading.Volatile.Read(ref _exitStarted) == 0) SafeModeService.MarkStartupHealthy();
+            };
+            _startupHealthyTimer.Start();
 
             // Plugin (π.χ. News Crawler): ξεκινούν πριν χτιστεί το μενού ώστε να προσθέσουν τα δικά τους στοιχεία.
             // Dock monitor fingerprint and window return (opt-in); never captures user files.
-            var dockRestorer = new DockWindowRestorer();
-            Application.ApplicationExit += (_, _) => dockRestorer.Dispose();
-            PluginHost.Instance.NavigationRequested += key => ShowMainWindow("plugin:" + key);
+            _dockRestorer = new DockWindowRestorer();
+            Application.ApplicationExit += OnApplicationExit;
+            PluginHost.Instance.NavigationRequested += NavigatePlugin;
             // Plugins from user-writable folders run code inside Opsis: ask once, show the content hash, remember the approval (plugin-trust.json).
             // (the approval question is NOT asked while starting: see PluginHost.ConsiderFolder / ResolvePending)
             if (!safeMode)
@@ -303,14 +313,15 @@ namespace MotionDesk.Widgets
                         throw;
                     }
                     var host = _nativeContainers = new MotionDesk.Containers.ContainerHost(nativeStore, DesktopMenu.ContainerPipeName);
+                    var containerKeys = _containerHotkeys = new HotkeyManager();
                     // global hotkeys of the native containers: Ctrl+Alt+Shift+H = hide / show all, Ctrl+Alt+Shift+N = new container at the cursor (neither is a Windows default)
-                    _hotkeys.RegisterCtrlAltShift(Keys.H, () => host.ToggleAll());
-                    _hotkeys.RegisterCtrlAltShift(Keys.Space, host.TogglePeek);
-                    _hotkeys.RegisterCtrlAltShift(Keys.N, () => host.NewContainerAtCursor());
-                    _hotkeys.RegisterCtrl(Keys.Oemtilde, () => host.ShowSpotSearch());                              // Spot Search (Ctrl+`), as in the old engine
-                    _hotkeys.RegisterCtrlAltShift(Keys.F, () => host.FocusNext());                                    // focus-container hotkey
-                    _hotkeys.RegisterCtrlAltShift(Keys.OemCloseBrackets, () => host.CycleSnapshot(1));            // next / previous layout snapshot = profile hotkeys
-                    _hotkeys.RegisterCtrlAltShift(Keys.OemOpenBrackets, () => host.CycleSnapshot(-1));
+                    containerKeys.RegisterCtrlAltShift(Keys.H, () => host.ToggleAll());
+                    containerKeys.RegisterCtrlAltShift(Keys.Space, host.TogglePeek);
+                    containerKeys.RegisterCtrlAltShift(Keys.N, () => host.NewContainerAtCursor());
+                    containerKeys.RegisterCtrl(Keys.Oemtilde, () => host.ShowSpotSearch());                              // Spot Search (Ctrl+`), as in the old engine
+                    containerKeys.RegisterCtrlAltShift(Keys.F, () => host.FocusNext());                                    // focus-container hotkey
+                    containerKeys.RegisterCtrlAltShift(Keys.OemCloseBrackets, () => host.CycleSnapshot(1));            // next / previous layout snapshot = profile hotkeys
+                    containerKeys.RegisterCtrlAltShift(Keys.OemOpenBrackets, () => host.CycleSnapshot(-1));
                 }
                 catch (Exception ex) { RotatingLogger.Write("native containers failed to start: " + ex.Message); }
             }
@@ -449,9 +460,16 @@ namespace MotionDesk.Widgets
         private void SchedulePluginApproval()
         {
             if (PluginHost.Instance.PendingApprovals.Count == 0) return;
-            var t = new System.Windows.Forms.Timer { Interval = 4000 };
-            t.Tick += (_, _) => { t.Stop(); t.Dispose(); AskPluginApproval(); };
-            t.Start();
+            if (_pluginApprovalTimer != null || System.Threading.Volatile.Read(ref _exitStarted) != 0) return;
+            _pluginApprovalTimer = new System.Windows.Forms.Timer { Interval = 4000 };
+            _pluginApprovalTimer.Tick += (_, _) =>
+            {
+                _pluginApprovalTimer?.Stop();
+                _pluginApprovalTimer?.Dispose();
+                _pluginApprovalTimer = null;
+                if (System.Threading.Volatile.Read(ref _exitStarted) == 0) AskPluginApproval();
+            };
+            _pluginApprovalTimer.Start();
         }
 
         private void IsolateShellForUpdate()
@@ -717,6 +735,13 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
             return menu;
         }
 
+        private void OnApplicationExit(object? sender, EventArgs e)
+        {
+            Application.ApplicationExit -= OnApplicationExit;
+            _dockRestorer?.Dispose();
+            _dockRestorer = null;
+        }
+
         private void PerformExit()
         {
             if (Environment.CurrentManagedThreadId != _uiThreadId)
@@ -737,10 +762,15 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                 catch (Exception ex) { try { RotatingLogger.Write("Shutdown error: " + name + ": " + ex.Message); } catch { } }
                 finally { HangTrace.Mark("shutdown end: " + name); try { RotatingLogger.Write("Shutdown end: " + name); } catch { } }
             }
+            Step("startup timer", () => { _startupHealthyTimer?.Stop(); _startupHealthyTimer?.Dispose(); _startupHealthyTimer = null; });
+            Step("plugin approval timer", () => { _pluginApprovalTimer?.Stop(); _pluginApprovalTimer?.Dispose(); _pluginApprovalTimer = null; });
+            Step("plugin navigation", () => PluginHost.Instance.NavigationRequested -= NavigatePlugin);
+            Step("dock restorer", () => OnApplicationExit(null, EventArgs.Empty));
             Step("experience timer", () => { _experienceTimer.Stop(); _experienceTimer.Dispose(); });
             Step("save session", () => { WorkspaceProfileService.Save("Last Session"); WorkspaceProfileService.ExitSaveDone = true; });
             Step("appearance restore", () => MotionDesk.Appearance.AppearanceService.Instance.Stop());
             Step("hotkeys", () => _hotkeys.Dispose());
+            Step("container hotkeys", () => { _containerHotkeys?.Dispose(); _containerHotkeys = null; });
             Step("cursor effects", MotionDesk.UI.OpsisCursorFx.Stop);
             Step("window rules", () => WindowRulesEngine.Instance.Dispose());
             Step("hot corners", () => _hotCorners.Dispose());
