@@ -40,7 +40,10 @@ namespace MotionDesk.Containers
         {
             if (Current != null) throw new InvalidOperationException("A native container host is already active.");
             _ui = new Control(); _ = _ui.Handle;                        // force the handle on the UI thread
-            _service = new ContainersService(store, Monitors);
+            try { _service = new ContainersService(store, Monitors); }
+            catch { _ui.Dispose(); throw; }
+            try
+            {
             _service.Mutated += () => { if (!_disposed && _ui.IsHandleCreated && !_ui.IsDisposed) try { _ui.BeginInvoke(Sync); } catch (Exception) { } };
             _save.Tick += (_, _) => FlushFromTimer();
             _layoutHistorySave.Tick += (_, _) => { _layoutHistorySave.Stop(); RunTimerAction("layout history", () => _layoutHistory.Save()); };
@@ -60,6 +63,13 @@ namespace MotionDesk.Containers
             Sync();
             StartOrganization();
             ApplyMonitorLayout();
+            }
+            catch
+            {
+                // A failed startup must not leave a half-initialized owner or live timers.
+                Dispose();
+                throw;
+            }
         }
 
         /// <summary>Daily backup of the containers file (at most one per day, the newest 7 are kept); <paramref name="force"/> makes one more now ("Back up now" in the tray).</summary>
