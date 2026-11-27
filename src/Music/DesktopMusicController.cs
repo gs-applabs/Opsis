@@ -145,8 +145,16 @@ internal sealed class DesktopMusicController : IDisposable
     }
 
     public void Refresh() => nextRead = 0;
-    public void SetPreset(VisualPreset preset) { settings = settings with { Preset = preset }; SaveSettings(); }
-    public void SetTypeface(string? name) { settings = settings with { Typeface = name }; SaveSettings(); }
+    public void SetPreset(VisualPreset preset)
+    {
+        if (!Enum.IsDefined(preset) || settings.Preset == preset) return;
+        settings = settings with { Preset = preset }; SaveSettings();
+    }
+    public void SetTypeface(string? name)
+    {
+        if (settings.Typeface == name) return;
+        settings = settings with { Typeface = name }; SaveSettings();
+    }
     public void Preview()
     {
         if (disposed || paused || locked) return;
@@ -157,18 +165,20 @@ internal sealed class DesktopMusicController : IDisposable
 
     public void SetSize(int width, int height)
     {
-        settings = settings with
-        {
-            WidthPercent = Math.Clamp(width, MusicOverlaySettings.MinSize, MusicOverlaySettings.MaxSize),
-            HeightPercent = Math.Clamp(height, MusicOverlaySettings.MinSize, MusicOverlaySettings.MaxSize)
-        };
+        width = Math.Clamp(width, MusicOverlaySettings.MinSize, MusicOverlaySettings.MaxSize);
+        height = Math.Clamp(height, MusicOverlaySettings.MinSize, MusicOverlaySettings.MaxSize);
+        if (settings.WidthPercent == width && settings.HeightPercent == height) return;
+        settings = settings with { WidthPercent = width, HeightPercent = height };
         SaveSettings();
     }
 
     public void SetColor(int index, Color color)
     {
         var palette = (string[])settings.Palette.Clone();
-        palette[index] = $"#{color.R:x2}{color.G:x2}{color.B:x2}";
+        if (index < 0 || index >= palette.Length) return;
+        var value = $"#{color.R:x2}{color.G:x2}{color.B:x2}";
+        if (string.Equals(palette[index], value, StringComparison.OrdinalIgnoreCase)) return;
+        palette[index] = value;
         settings = settings.WithPalette(palette);
         SaveSettings();
     }
@@ -181,6 +191,7 @@ internal sealed class DesktopMusicController : IDisposable
 
     public void SetPosition(string? display, double x, double y)
     {
+        if (!double.IsFinite(x) || !double.IsFinite(y)) return;
         x = Math.Clamp(x, 0, 1); y = Math.Clamp(y, 0, 1);
         if (settings.Display == display && settings.X == x && settings.Y == y) return;
         settings = settings with { Display = display, X = x, Y = y };
