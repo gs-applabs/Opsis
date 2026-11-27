@@ -887,16 +887,6 @@
     },
     {
       "branch": "europe-R26",
-      "path": "Opsis.csproj",
-      "ancestor": "cf906d7840a37af3f1dcaa8977ccaa7a4f3278c3",
-      "head": "e72ee5877526c03ead97ce8bbdd098fe41b49838",
-      "base_blob": "1f17b31d288ecf513f79e787e42b5e85d6ef6ead",
-      "incoming_blob": "b742226f05b03903964117c7c9b50fa08ea2a145",
-      "current_blob": "4c34b27d32e34706f8697174f76e34e06c6df919",
-      "reason": "Git three-way conflict"
-    },
-    {
-      "branch": "europe-R26",
       "path": "src/Services/OpsisTaskbarDesigner.cs",
       "ancestor": "cf906d7840a37af3f1dcaa8977ccaa7a4f3278c3",
       "head": "e72ee5877526c03ead97ce8bbdd098fe41b49838",
@@ -986,16 +976,6 @@
       "reason": "workflow edits require connector review and workflows permission"
     },
     {
-      "branch": "crawler-bridge",
-      "path": "Opsis.csproj",
-      "ancestor": "6f8b5da31a5951d9dd467d6ef1250c52f8e8176f",
-      "head": "9fa970b8a2f046fa6b8dcddc6acfa7ca62bd4f69",
-      "base_blob": "3abd65bfcf680e4eb33fdcf3d1f9b182c50fdec1",
-      "incoming_blob": "8cdf1a307c5df836e3327b199069ed7d735ad976",
-      "current_blob": "4c34b27d32e34706f8697174f76e34e06c6df919",
-      "reason": "Git three-way conflict"
-    },
-    {
       "branch": "main-2.8-followup",
       "path": ".github/workflows/windows-audit.yml",
       "ancestor": "6f8b5da31a5951d9dd467d6ef1250c52f8e8176f",
@@ -1004,16 +984,6 @@
       "incoming_blob": "987d5f27309301f3abe0e6c2ed65d1c123b484e4",
       "current_blob": "0f5361c96dec80e937d844de1fb7a67ed60196a8",
       "reason": "workflow edits require connector review and workflows permission"
-    },
-    {
-      "branch": "main-2.8-followup",
-      "path": "Opsis.csproj",
-      "ancestor": "6f8b5da31a5951d9dd467d6ef1250c52f8e8176f",
-      "head": "12018a0b085d52dba96847e552d203787b15ed08",
-      "base_blob": "3abd65bfcf680e4eb33fdcf3d1f9b182c50fdec1",
-      "incoming_blob": "f1121e7b46c2d7a0418b94e65a2dd5c0ca21d04d",
-      "current_blob": "4c34b27d32e34706f8697174f76e34e06c6df919",
-      "reason": "do not downgrade RC; manually port relevant changes"
     },
     {
       "branch": "main-2.8-followup",
@@ -1234,6 +1204,39 @@
       "current_blob": "18696ca80b92177f7255798f3619e77288b61441",
       "reason": "Git three-way conflict",
       "method": "R29: preserve current locale strings and append missing VersionNotes.2.8.0.2511; JSON parse and original value preservation validated"
+    },
+    {
+      "branch": "europe-R26",
+      "path": "Opsis.csproj",
+      "ancestor": "cf906d7840a37af3f1dcaa8977ccaa7a4f3278c3",
+      "head": "e72ee5877526c03ead97ce8bbdd098fe41b49838",
+      "base_blob": "1f17b31d288ecf513f79e787e42b5e85d6ef6ead",
+      "incoming_blob": "b742226f05b03903964117c7c9b50fa08ea2a145",
+      "current_blob": "4c34b27d32e34706f8697174f76e34e06c6df919",
+      "reason": "Git three-way conflict",
+      "method": "R30: retain current .NET 11, SkiaSharp and exclusion superset; port conditional Signature preview block and reference exclusion; Windows build pending"
+    },
+    {
+      "branch": "crawler-bridge",
+      "path": "Opsis.csproj",
+      "ancestor": "6f8b5da31a5951d9dd467d6ef1250c52f8e8176f",
+      "head": "9fa970b8a2f046fa6b8dcddc6acfa7ca62bd4f69",
+      "base_blob": "3abd65bfcf680e4eb33fdcf3d1f9b182c50fdec1",
+      "incoming_blob": "8cdf1a307c5df836e3327b199069ed7d735ad976",
+      "current_blob": "4c34b27d32e34706f8697174f76e34e06c6df919",
+      "reason": "Git three-way conflict",
+      "method": "R30: retain current .NET 11, SkiaSharp and exclusion superset; port conditional Signature preview block and reference exclusion; Windows build pending"
+    },
+    {
+      "branch": "main-2.8-followup",
+      "path": "Opsis.csproj",
+      "ancestor": "6f8b5da31a5951d9dd467d6ef1250c52f8e8176f",
+      "head": "12018a0b085d52dba96847e552d203787b15ed08",
+      "base_blob": "3abd65bfcf680e4eb33fdcf3d1f9b182c50fdec1",
+      "incoming_blob": "f1121e7b46c2d7a0418b94e65a2dd5c0ca21d04d",
+      "current_blob": "4c34b27d32e34706f8697174f76e34e06c6df919",
+      "reason": "do not downgrade RC; manually port relevant changes",
+      "method": "R30: retain current .NET 11, SkiaSharp and exclusion superset; port conditional Signature preview block and reference exclusion; Windows build pending"
     }
   ]
 }
