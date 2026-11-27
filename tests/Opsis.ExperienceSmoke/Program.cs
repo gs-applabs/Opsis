@@ -143,9 +143,18 @@ try
     OpsisModCore.SetModule("windows.hot-corners", false, 22631, false);
     Check(!OpsisModCore.Read().Enabled["windows.hot-corners"], "module independently disabled");
     bool rejected = false;
-    try { OpsisModCore.SetModule("wallpaper.scene-composer", true, 22631, false); }
+    try { OpsisModCore.SetModule("start.shell-replacement", true, 22631, false); }
     catch (InvalidOperationException) { rejected = true; }
     Check(rejected, "planned modules cannot be activated as implemented");
+    var weatherPlan = new OpsisModCore.ModuleConfiguration();
+    weatherPlan.Enabled["wallpaper.scene-composer"] = true;
+    Check(OpsisModCore.Validate(weatherPlan, 22631, false).Any(e => e.Contains("requires wallpaper.weather")),
+        "implemented weather composer requires its existing weather engine");
+    weatherPlan.Enabled["wallpaper.weather"] = true;
+    Check(OpsisModCore.Validate(weatherPlan, 22631, false).Count == 0,
+        "implemented weather composer is valid once its prerequisite is enabled");
+    Check(OpsisModCore.Validate(weatherPlan, 22631, true).Count > 0,
+        "safe mode blocks optional module activation");
     OpsisModCore.SetOption("widgets.opsis", "category", "Weather");
     Check(OpsisModCore.Read().Options["widgets.opsis"]["category"] == "Weather", "typed module options persisted");
     OpsisModCore.SetOption("WIDGETS.OPSIS", "CATEGORY", "Weather");
