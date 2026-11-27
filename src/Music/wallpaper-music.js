@@ -202,6 +202,25 @@ function details(frame, x, centerY, available, maxHeight, accent, centered = fal
     ctx.restore();
 }
 
+// The weather block always wins; never persist an automatic placement.
+function placeMusicOverlay(vw, vh, w, h, x, y, weather, gap) {
+    const clamp = (v, min, max) => Math.min(max, Math.max(min, v));
+    const maxX = vw - gap - w, maxY = vh - gap - h;
+    if (maxX < gap || maxY < gap) return null;
+    const candidate = (left, top) => ({left: clamp(left, gap, maxX), top: clamp(top, gap, maxY)});
+    const preferred = candidate(x, y);
+    if (!weather) return preferred;
+    const safe = p => p.left + w <= weather.left - gap || p.left >= weather.right + gap ||
+        p.top + h <= weather.top - gap || p.top >= weather.bottom + gap;
+    if (safe(preferred)) return preferred;
+    const choices = [
+        candidate(x, weather.top - h - gap), candidate(x, weather.bottom + gap),
+        candidate(weather.left - w - gap, y), candidate(weather.right + gap, y)
+    ].filter(safe);
+    choices.sort((a,b) => Math.hypot(a.left-x,a.top-y)-Math.hypot(b.left-x,b.top-y));
+    return choices[0] ?? null;
+}
+
 function paint(frame) {
     const track = frame.trackKey ?? JSON.stringify([frame.title, frame.artist, frame.album]);
     if (lastTrack !== track) {
@@ -231,8 +250,19 @@ function paint(frame) {
     const margin = 12 * scale;
     const width = Math.min(logicalWidth * (frame.width ?? 100) / 100, (window.innerWidth - 2 * margin) / scale);
     const height = Math.min(logicalHeight * (frame.height ?? 100) / 100, (window.innerHeight - 2 * margin) / scale);
-    const left = margin + (window.innerWidth - 2 * margin - width * scale) * fraction(frame.x);
-    const top = margin + (window.innerHeight - 2 * margin - height * scale) * fraction(frame.y);
+    const preferredX = margin + (window.innerWidth - 2 * margin - width * scale) * fraction(frame.x);
+    const preferredY = margin + (window.innerHeight - 2 * margin - height * scale) * fraction(frame.y);
+    // Read the real transformed bounds, including Signature card and user text scaling.
+    const weatherBox = document.getElementById('wxInfo');
+    const weatherBounds = weatherBox && cfg.weatherInfo ? weatherBox.getBoundingClientRect() : null;
+    const weather = weatherBounds && weatherBounds.width > 0 && weatherBounds.height > 0 ? weatherBounds : null;
+    const placement = placeMusicOverlay(window.innerWidth, window.innerHeight, width * scale, height * scale,
+        preferredX, preferredY, weather, Math.max(12, margin));
+    if (!placement || width < 1 || height < 1) {
+        canvas.style.visibility = 'hidden';
+        return true;
+    }
+    const {left, top} = placement;
     const density = Math.min(2.5, (window.devicePixelRatio || 1) * scale);
     const pixelWidth = Math.max(1, Math.round(width * density));
     const pixelHeight = Math.max(1, Math.round(height * density));
