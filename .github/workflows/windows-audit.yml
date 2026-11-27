@@ -3,7 +3,7 @@ name: Opsis - Desktop Customization Windows audit
 on:
   workflow_dispatch:
   push:
-    branches: [rc3.0-base, patch/3.0.0.3200-appearance, integration/opsis-unified-source-r27, release/2.8.0.2510]
+    branches: [rc3.0-base, patch/3.0.0.3200-appearance, release/2.8.0.2510]
 
 permissions:
   contents: read
@@ -18,7 +18,10 @@ jobs:
           persist-credentials: false
       - uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '11.0.x'
+          global-json-file: global.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
       - name: Build installer and matching source archive
         id: installer
         shell: pwsh
