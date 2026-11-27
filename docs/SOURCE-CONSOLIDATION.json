@@ -874,18 +874,7 @@
       "method": "clean Git three-way merge"
     }
   ],
-  "unresolved_after_three_way": [
-    {
-      "branch": "europe-R26",
-      "path": "src/UI/MainWindow.cs",
-      "ancestor": "cf906d7840a37af3f1dcaa8977ccaa7a4f3278c3",
-      "head": "e72ee5877526c03ead97ce8bbdd098fe41b49838",
-      "base_blob": "b897e036615a53443e0e36c4f1f3da0473578eec",
-      "incoming_blob": "d458247701c625bb880d91777e3e4306976b71d3",
-      "current_blob": "7b2bd26bf1d0e5ddbc134dfefeb7f79a21f33567",
-      "reason": "Git three-way conflict"
-    }
-  ],
+  "unresolved_after_three_way": [],
   "manual_resolutions": [
     {
       "branch": "europe-R26",
@@ -1249,6 +1238,17 @@
       "current_blob": "c1f6be850fb55e5debe078f8ea122795ca869758",
       "reason": "workflow edits require connector review and workflows permission",
       "method": "R53: port checked existing provider refs, canonical staged UI, strict ABI SHA256 and UI file version checks; keep current check-plugin-dll-versions.ps1 (plugin assembly/file version, contract identity), runtime smoke and Media Suite tests. Runtime certification pending."
+    },
+    {
+      "branch": "europe-R26",
+      "path": "src/UI/MainWindow.cs",
+      "ancestor": "cf906d7840a37af3f1dcaa8977ccaa7a4f3278c3",
+      "head": "e72ee5877526c03ead97ce8bbdd098fe41b49838",
+      "base_blob": "b897e036615a53443e0e36c4f1f3da0473578eec",
+      "incoming_blob": "d458247701c625bb880d91777e3e4306976b71d3",
+      "current_blob": "7b2bd26bf1d0e5ddbc134dfefeb7f79a21f33567",
+      "reason": "Git three-way conflict",
+      "method": "R53: exposed SignatureGlass in canonical theme selector, existing DesktopMaterials.ApplySignature with default-No confirmation, guarded shared button gradient. Retained existing AppWindowIcon static brand and stopped pulse (user requires exact asset), existing persisted DeskFlip style picker supersedes incoming one-shot layout commands. No duplicate controls. UI runtime certification pending."
     }
   ]
 }
