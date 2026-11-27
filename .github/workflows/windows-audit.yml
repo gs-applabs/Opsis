@@ -74,17 +74,25 @@ jobs:
           $env:OPSIS_E2E = '1'
           $env:OPSIS_AUDIT_TASKBAR = '1'
           $env:OPSIS_AUDIT_RESOURCE_CYCLES = '3'
+          $env:OPSIS_AUDIT_SOAK_MINUTES = '2'
           $output = Join-Path $env:GITHUB_WORKSPACE 'audit-result'
           New-Item -ItemType Directory -Force $output | Out-Null
           $env:OPSIS_TRACE = Join-Path $output 'trace.txt'     # hang hunting: the last line shows where the UI thread stopped
           $process = Start-Process .\publish\Opsis.exe -ArgumentList @('--ui-audit', ('"' + $output + '"')) -PassThru
-          if (-not $process.WaitForExit(480000)) {
+          if (-not $process.WaitForExit(600000)) {
             Stop-Process -Id $process.Id -Force
             throw 'Opsis audit timed out'
           }
           $report = Join-Path $output 'ui-audit.md'
           if (Test-Path $report) { Get-Content $report | Out-File -Append $env:GITHUB_STEP_SUMMARY -Encoding utf8 }
+          $resources = Join-Path $output 'ui-resources.json'
+          if (Test-Path $resources) {
+            $data = Get-Content -LiteralPath $resources -Raw | ConvertFrom-Json
+            if ($data.trend) { Write-Host ('OPSIS_RESOURCE_TREND ' + ($data.trend | ConvertTo-Json -Depth 6 -Compress)) }
+          }
           if ($process.ExitCode -ne 0) { throw "Opsis audit failed with exit code $($process.ExitCode)" }
+          if (!(Test-Path $resources)) { throw 'Required resource audit evidence missing' }
+          if (!$data.trend -or $data.trend.soakLast.count -lt 4) { throw 'Required resource soak evidence missing' }
       # Roadmap #98: record stage outcomes even when the build or tests FAIL.
       # This diagnostic artifact is not a validated release or installer.
       - name: Always record the exact stage and toolchain
