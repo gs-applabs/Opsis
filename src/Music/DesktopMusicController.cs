@@ -88,24 +88,29 @@ internal sealed class DesktopMusicController : IDisposable
             return;
         }
 
+        // Reuse the display selection across visualizer frames, checking for hotplug periodically.
+        if (now >= nextDisplayLookup || displaySetting != settings.Display)
+        {
+            displaySetting = settings.Display;
+            display = Screen.AllScreens.FirstOrDefault(s => s.DeviceName == displaySetting) ?? Screen.PrimaryScreen;
+            nextDisplayLookup = now + 1000;
+        }
+        // Per-monitor presentation privacy: no title, artwork OR visualizer drawn there.
+        var monitorId = display == null ? null : MonitorTopologyService.ForDevice(display.DeviceName)?.Id;
+        var hide = display != null && (MotionDesk.Services.AppSettings.Peek().PresentationMonitorIds?.Any(id =>
+            id.Equals(display.DeviceName,StringComparison.OrdinalIgnoreCase) ||
+            id.Equals(monitorId,StringComparison.OrdinalIgnoreCase)) ?? false);
+        if (hide)
+        {
+            // Do not reopen an audio endpoint every 42 ms on an excluded screen.
+            if (drawing || spectrum != null || snapshot != null || previewUntil != 0) StopPlayback();
+            return;
+        }
         if (settings.Enabled) spectrum ??= new AudioSpectrumService(BandCount, settings.InputDeviceId);
         bool audible = settings.Enabled && (spectrum?.HasRecentSignal ?? false);
         if (preview || audible || snapshot != null)
         {
             drawing = true;
-            // Reuse the display selection across visualizer frames, checking for hotplug periodically.
-            if (now >= nextDisplayLookup || displaySetting != settings.Display)
-            {
-                displaySetting = settings.Display;
-                display = Screen.AllScreens.FirstOrDefault(s => s.DeviceName == displaySetting) ?? Screen.PrimaryScreen;
-                nextDisplayLookup = now + 1000;
-            }
-            // Per-monitor presentation privacy: no title, artwork OR visualizer drawn there.
-            var monitorId = display == null ? null : MonitorTopologyService.ForDevice(display.DeviceName)?.Id;
-            var hide = display != null && (MotionDesk.Services.AppSettings.Peek().PresentationMonitorIds?.Any(id =>
-                id.Equals(display.DeviceName,StringComparison.OrdinalIgnoreCase) ||
-                id.Equals(monitorId,StringComparison.OrdinalIgnoreCase)) ?? false);
-            if (hide) { drawing = false; surface.Clear(); StopAudio(); return; }
             var bands = spectrum?.GetBands() ?? Silence;
             var analysis = spectrum?.GetVisualizerFrame();
             _ = surface.RenderAsync(display, settings, snapshot, bands, preview && !audible && snapshot == null,
