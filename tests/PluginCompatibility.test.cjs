@@ -45,9 +45,9 @@ test('host compatibility diagnostic reports both plugin IDs and registered feeds
   assert.match(d,/PluginFeeds\.All\(\)/);
 });
 
-test('version metadata is 2.8.0.2511 (final build, no preview label)', () => {
+test('version metadata uses the single 3.0.0.3200 release identity', () => {
   assert.match(source('Opsis.csproj'), /<Import Project="Version\.props"/);
-  assert.match(source('Version.props'), /<OpsisAppVersion>2\.8\.0\.2511<\/OpsisAppVersion>/);
+  assert.match(source('Version.props'), /<OpsisAppVersion>3\.0\.0\.3200<\/OpsisAppVersion>/);
   assert.match(source('Version.props'), /<InformationalVersion>\$\(OpsisAppVersion\)<\/InformationalVersion>/);
   assert.doesNotMatch(source('Version.props'), /source-preview/);
   assert.match(source('installer.iss'), /GetFileVersion\(PublishDir/);
@@ -56,11 +56,15 @@ test('version metadata is 2.8.0.2511 (final build, no preview label)', () => {
 
 test('new DLL plugins use 1.0.0.0 while shared host ABI remains versioned independently', () => {
   const workflow = source('.github/workflows/plugin-compatibility.yml');
-  assert.match(workflow, /plugin-crawler\/OpsisNewsCrawler\.OpsisPlugin\.dll/);
-  assert.match(workflow, /plugin-chronikologio\/Chronikologio\.OpsisPlugin\.dll/);
-  assert.match(workflow, /\$asm\.Version\.ToString\(\) -ne '1\.0\.0\.0'/);
-  assert.match(workflow, /contract unexpectedly changed; ABI migration is required/);
-  assert.match(workflow, /0\.8\.0\.0/);
+  const gate = source('tools/check-plugin-dll-versions.ps1');
+  assert.match(workflow, /check-plugin-dll-versions\.ps1 -CrawlerDir plugin-crawler -ChronikologioDir plugin-chronikologio -HostDir publish/);
+  assert.match(gate, /File='OpsisNewsCrawler\.OpsisPlugin\.dll'; Assembly='OpsisNewsCrawler\.OpsisPlugin'; Version='1\.0\.0\.0'/);
+  assert.match(gate, /File='Chronikologio\.OpsisPlugin\.dll'; Assembly='Chronikologio\.OpsisPlugin'; Version='1\.0\.0\.0'/);
+  assert.match(gate, /\$identity\.Version\.ToString\(\) -ne \$spec\.Version/);
+  assert.match(gate, /File='OpsisNewsCrawler\.Plugin\.Abstractions\.dll'; Assembly='OpsisNewsCrawler\.Plugin\.Abstractions'; Version='1\.0\.0\.0'/);
+  assert.match(gate, /File='Opsis\.UI\.dll'; Assembly='Opsis\.UI'; Version='0\.1\.0\.0'/);
+  assert.match(workflow, /Get-FileHash -LiteralPath \$group\.host -Algorithm SHA256/);
+  assert.match(workflow, /Incompatible shared DLL/);
 });
 
 test('runtime plugin diagnostics surface the full four-part DLL version', () => {
