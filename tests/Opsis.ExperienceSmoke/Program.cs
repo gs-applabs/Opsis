@@ -56,6 +56,23 @@ try
     Check(MotionDesk.Widgets.WallpaperHostEngine.SelectRetainedRenderers(
         new[] { ("A", false), ("gone", true) }, new[] { "A" }).Length == 0,
         "R72 no hidden or disconnected renderer is retained");
+    Check(!DiscordPresence.ShouldRun(false, "123456789012345", false) &&
+        !DiscordPresence.ShouldRun(true, "123456789012345", true) &&
+        !DiscordPresence.ShouldRun(true, "invalid", false) &&
+        DiscordPresence.ShouldRun(true, "123456789012345", false),
+        "R73 Discord IPC only runs on explicit selection and valid identity outside safe mode");
+    Check(!DiscordPresence.ValidFrameLength(0) && !DiscordPresence.ValidFrameLength(-1) &&
+        !DiscordPresence.ValidFrameLength((1 << 20) + 1) && DiscordPresence.ValidFrameLength(1 << 20),
+        "R73 IPC frames have a strict allocation bound");
+    using (var ready = JsonDocument.Parse("{\"evt\":\"READY\"}"))
+    using (var reply = JsonDocument.Parse("{\"nonce\":\"a\"}"))
+    {
+        Check(DiscordPresence.MatchesResponse(ready.RootElement, null) &&
+            !DiscordPresence.MatchesResponse(ready.RootElement, "a") &&
+            DiscordPresence.MatchesResponse(reply.RootElement, "a") &&
+            !DiscordPresence.MatchesResponse(reply.RootElement, "b"),
+            "R73 IPC waits for READY or the matching command response");
+    }
     var opt = new AppSettings { RestoreWindowsAfterDocking = false, UsageAlertsEnabled = false };
     Check(MotionDesk.Widgets.TrayApplicationContext.SelectOptionalServices(opt, false) == (false, false),
         "R65 disabled optional tray services have no timer demand");

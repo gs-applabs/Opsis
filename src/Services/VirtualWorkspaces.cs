@@ -49,6 +49,7 @@ internal static class VirtualWorkspaces
         {
             _timer?.Dispose(); _timer = null;
             _knownDesktops = [];
+            ReleaseManagerIfIdle();
             return;
         }
         if (_timer != null) return;
@@ -82,8 +83,20 @@ internal static class VirtualWorkspaces
         _switchTimer = null;
         _applied = Guid.Empty;
         _knownDesktops = [];
-        if (_manager != null) Marshal.FinalReleaseComObject(_manager);
-        _manager = null;
+        ReleaseManager();
+    }
+
+    private static void ReleaseManager()
+    {
+        var manager = _manager; _manager = null;
+        if (manager == null) return;
+        try { Marshal.FinalReleaseComObject(manager); }
+        catch (Exception ex) { System.Diagnostics.Debug.WriteLine(ex); }
+    }
+
+    private static void ReleaseManagerIfIdle()
+    {
+        if (_timer == null && _switchTimer == null) ReleaseManager();
     }
 
     internal static Guid[] DesktopIds()
@@ -117,6 +130,7 @@ internal static class VirtualWorkspaces
                 return id;
         }
         catch (Exception ex) when (ex is COMException or InvalidCastException) { }
+        finally { ReleaseManagerIfIdle(); }
         var desktops = DesktopIds();
         return desktops.Length == 1 ? desktops[0] : Guid.Empty;
     }
@@ -182,6 +196,7 @@ internal static class VirtualWorkspaces
             {
                 timer.Dispose();
                 if (ReferenceEquals(_switchTimer, timer)) _switchTimer = null;
+                ReleaseManagerIfIdle();
                 return;
             }
             previous = current;

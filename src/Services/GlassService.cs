@@ -17,6 +17,8 @@ namespace MotionDesk.Services
         private static System.Threading.Timer? _timer;
         private static OpsisGlass.GlassConditions? _last;
         private static bool _failed;
+        private static SynchronizationContext? _ui;
+        private static int _refreshQueued;
         /// <summary>Diagnostics: while true Refresh() does not touch the conditions (a test holds them).</summary>
         internal static volatile bool Hold;
 
@@ -63,17 +65,35 @@ namespace MotionDesk.Services
                         {
                             _manager = new OpsisGlass.GlassManager();
                             if (!_manager.IsGpuReady) { RotatingLogger.Write("GlassService: GPU glass unavailable, keeping the DWM look"); _manager.Dispose(); _manager = null; _failed = true; _decidedAt = DateTime.MinValue; Decide(); return null; }
-                            AppActivity.FullscreenChanged += _ => Refresh();
-                            PerformanceGovernor.EffectiveChanged += _ => Refresh();
-                            _timer = new System.Threading.Timer(_ => Refresh(), null, 2000, 2000);   // wallpaper on/off, mode changes (cheap: pushes only when something changed)
+                            _ui = SynchronizationContext.Current ?? new WindowsFormsSynchronizationContext();
+                            AppActivity.FullscreenChanged += OnActivityChanged;
+                            PerformanceGovernor.EffectiveChanged += OnTierChanged;
+                            _timer = new System.Threading.Timer(_ => QueueRefresh(), null, 2000, 2000);   // wallpaper on/off, mode changes (cheap: pushes only when something changed)
                             AppActivity.RequestRefresh();
                             Refresh();
                         }
-                        catch (Exception ex) { RotatingLogger.Write("GlassService: " + ex.Message); _manager?.Dispose(); _manager = null; _failed = true; _decidedAt = DateTime.MinValue; Decide(); return null; }
+                        catch (Exception ex) { RotatingLogger.Write("GlassService: " + ex.Message); Shutdown(); _failed = true; _decidedAt = DateTime.MinValue; Decide(); return null; }
                     }
                     return _manager;
                 }
             }
+        }
+
+        private static void OnActivityChanged(bool _) => QueueRefresh();
+        private static void OnTierChanged(HardwareTier _) => QueueRefresh();
+        private static void QueueRefresh()
+        {
+            var ui = _ui;
+            if (ui == null || Interlocked.Exchange(ref _refreshQueued, 1) != 0) return;
+            try
+            {
+                ui.Post(_ =>
+                {
+                    Interlocked.Exchange(ref _refreshQueued, 0);
+                    if (ReferenceEquals(_ui, ui)) Refresh();
+                }, null);
+            }
+            catch (Exception ex) { Interlocked.Exchange(ref _refreshQueued, 0); System.Diagnostics.Debug.WriteLine(ex); }
         }
 
         public static void Refresh()
@@ -100,8 +120,8 @@ namespace MotionDesk.Services
         {
             try
             {
-                var e = MotionDesk.Widgets.WallpaperHostEngine.Instance;
-                return e.IsEnabled && MotionDesk.Widgets.WallpaperSettings.Load().Mode is not ("Desktop" or "Image");
+                return MotionDesk.Widgets.WallpaperHostEngine.IsEnabledIfCreated &&
+                    MotionDesk.Widgets.WallpaperSettings.Load().Mode is not ("Desktop" or "Image");
             }
             catch (Exception) { return false; }
         }
@@ -132,7 +152,15 @@ namespace MotionDesk.Services
 
         public static void Shutdown()
         {
-            lock (Gate) { _timer?.Dispose(); _timer = null; _manager?.Dispose(); _manager = null; }
+            lock (Gate)
+            {
+                AppActivity.FullscreenChanged -= OnActivityChanged;
+                PerformanceGovernor.EffectiveChanged -= OnTierChanged;
+                _ui = null; Interlocked.Exchange(ref _refreshQueued, 0);
+                _timer?.Dispose(); _timer = null;
+                var manager = _manager; _manager = null; _last = null;
+                manager?.Dispose();
+            }
             AppActivity.RequestRefresh();
         }
     }
@@ -290,8 +318,8 @@ namespace MotionDesk.Services
             if (!_f.Visible) { Remove(); return; }
             // Reuse the existing reseat timer for policy and z-order changes;
             // no per-frame timer and no additional legacy pane for this form.
+            if (!_wants()) { Remove(); return; }
             if (!_reseat.Enabled) _reseat.Start();
-            if (!_wants()) { _signature?.Dispose(); _signature = null; return; }
             if (_signature == null)
             {
                 _signature = new Opsis.UI.Composition.CompositionPaneBinding(_f, SignatureRenderer(),
@@ -305,15 +333,9 @@ namespace MotionDesk.Services
             }
             return;
 #else
-            var m = _wants() ? GlassService.Manager : null;
+            if (!_f.Visible || !_wants()) { Remove(); return; }
+            var m = GlassService.Manager;
             if (m == null) { Remove(); return; }
-            if (!_f.Visible)
-            {
-                _reseat.Stop();
-                if (_id >= 0 && _shownVisible) m.SetPaneVisible(_id, false);
-                _shownVisible = false;
-                return;
-            }
             var style = GlassService.Style(_radius, _surface);
             if (_cornerOverride?.Invoke() is int radius) style = style with { CornerRadius = radius };
             if (_tintOverride != null) style = _tintOverride(style);

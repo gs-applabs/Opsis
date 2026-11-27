@@ -245,6 +245,7 @@ namespace MotionDesk.Widgets
 
             if (!safeMode && AppSettings.Load().QuickHideDoubleClickEnabled) DesktopIconVisibilityEngine.Instance.Start();
             else DesktopIconVisibilityEngine.Instance.RestoreIfHidden();
+            ThemeManager.UiContext = _exitUi;
             AppActivity.Start(() => _nativeContainers?.HasActivityRules == true);
             if (!safeMode && !reviewRequired)
             {
@@ -737,6 +738,7 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
             WallpaperHostEngine.RefreshOptionalIfCreated();
             RefreshDesktopMenuPipe();
             PluginHost.Instance.HoldIfGloballyDisabled();
+            DiscordPresence.Instance.Apply();
             AppActivity.RequestRefresh();
         }
 

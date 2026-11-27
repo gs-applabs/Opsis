@@ -1318,6 +1318,7 @@ namespace MotionDesk.Widgets
         private bool Active => !_exiting && (_enabled || _overlayOnly);
         internal static void StopForExit() => _instance?.CloseForExit();
         internal static bool HasActiveScene => _instance?.Active == true;
+        internal static bool IsEnabledIfCreated => _instance?.IsEnabled == true;
         internal static bool IsRunningIfCreated => _instance?.IsRunning == true;
         internal static void RefreshOptionalIfCreated() => _instance?.RefreshOptionalWatchers();
         private int _perfPushQueued;
