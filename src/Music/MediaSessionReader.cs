@@ -84,6 +84,9 @@ internal sealed class MediaSessionReader : IDisposable
                 nextMetadataCheck = now.AddSeconds(8);
             }
 
+            // Metadata and timeline must belong to the same unchanged session revision.
+            if (disposed || cancellation.IsCancellationRequested || version != Volatile.Read(ref revision) ||
+                !IsPlaying(session) || track == null) return null;
             var position = session.GetTimelineProperties();
             var duration = position.EndTime - position.StartTime;
             var rate = session.GetPlaybackInfo()?.PlaybackRate ?? 1;
@@ -91,7 +94,9 @@ internal sealed class MediaSessionReader : IDisposable
             var timeline = duration > TimeSpan.Zero && duration < TimeSpan.FromDays(7)
                 ? new TrackTimeline(position.Position - position.StartTime, duration,
                     position.LastUpdatedTime.Year > 2000 ? position.LastUpdatedTime : now, rate) : null;
-            return new MediaSnapshot(track!, timeline);
+            if (disposed || cancellation.IsCancellationRequested || version != Volatile.Read(ref revision) ||
+                !IsPlaying(session)) return null;
+            return new MediaSnapshot(track, timeline);
         }
         catch (OperationCanceledException) { return null; }
         catch (Exception ex) when (ex is System.Runtime.InteropServices.COMException or InvalidOperationException or UnauthorizedAccessException)
