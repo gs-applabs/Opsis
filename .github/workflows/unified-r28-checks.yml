@@ -27,6 +27,8 @@ jobs:
           node-version: '22'
       - name: Shared Windows RC verification
         shell: pwsh
+        env:
+          OPSIS_EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
         run: ./tools/verify-windows-rc.ps1
       - uses: actions/upload-artifact@v4
         if: always()
