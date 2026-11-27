@@ -382,7 +382,7 @@ namespace MotionDesk.Widgets
                 Text = $"Opsis - Desktop Customization {AppVersion.Label}",
                 StartPosition = FormStartPosition.CenterScreen,
                 FormBorderStyle = FormBorderStyle.FixedToolWindow,
-                ClientSize = new Size(545, 300),
+                ClientSize = new Size(545, 340),
                 ShowInTaskbar = false, ControlBox = false,
                 BackColor = UiTheme.PageBackground
             };
@@ -402,7 +402,10 @@ namespace MotionDesk.Widgets
                     TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis);
             };
             form.Controls.Add(new Label { Dock = DockStyle.Fill, Padding = new Padding(18),
-                Text = LocalizationManager.T("Welcome.Body"), Font = UiTheme.FontBody, ForeColor = UiTheme.TextPrimary });
+                Text = MainWindow.StudioText(
+                    "Opening the Opsis workspace…\n\nFind tools and settings: Ctrl+K.\nHelp for the current page or selected control: F1.\nVersion changes and plugin compatibility: About.\n\nThe tray menu also provides quick access to desktop functions.",
+                    "Άνοιγμα του χώρου εργασίας Opsis…\n\nΕύρεση εργαλείων και ρυθμίσεων: Ctrl+K.\nΒοήθεια για τη σελίδα ή το επιλεγμένο στοιχείο: F1.\nΑλλαγές έκδοσης και συμβατότητα προσθέτων: Σχετικά.\n\nΤο μενού του tray προσφέρει γρήγορη πρόσβαση στις λειτουργίες επιφάνειας εργασίας."),
+                Font = UiTheme.FontBody, ForeColor = UiTheme.TextPrimary });
             form.Controls.Add(brand);
             return form;
         }
