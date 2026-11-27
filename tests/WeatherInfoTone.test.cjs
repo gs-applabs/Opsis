@@ -20,3 +20,26 @@ test('fixed-white policy applies to both Signature card and plain desktop labels
   assert.match(block, /box\.dataset\.contrast = 'white-fixed'/);
   assert.doesNotMatch(block, /getImageData|readPixels|luminosity|useWhite/);
 });
+
+const music = fs.readFileSync(path.join(__dirname, '..', 'src', 'Music', 'wallpaper-music.js'), 'utf8');
+const placementSource = music.slice(music.indexOf('function placeMusicOverlay('), music.indexOf('function paint(frame)'));
+const place = require('node:vm').runInNewContext(placementSource + '\nplaceMusicOverlay');
+test('music keeps preferred position if the weather card does not overlap', () => {
+  const p = place(1920,1080,480,230,60,780,{left:750,top:200,right:1170,bottom:480},12);
+  assert.equal(p.left,60); assert.equal(p.top,780);
+});
+test('music moves to a safe rectangle when clock and weather collide', () => {
+  const weather = {left:550,top:240,right:1370,bottom:710};
+  const p = place(1920,1080,480,230,780,380,weather,12);
+  assert.ok(p);
+  assert.ok(p.left+480 <= weather.left-12 || p.left >= weather.right+12 ||
+    p.top+230 <= weather.top-12 || p.top >= weather.bottom+12);
+  assert.ok(p.left>=12 && p.top>=12 && p.left+480<=1908 && p.top+230<=1068);
+});
+test('music is hidden if no safe space exists, rather than covering weather', () => {
+  assert.equal(place(640,480,440,280,100,100,{left:10,top:10,right:630,bottom:470},12),null);
+});
+test('music placement respects portrait display and changed weather bounds', () => {
+  const p = place(768,1366,420,220,174,500,{left:100,top:300,right:668,bottom:690},12);
+  assert.ok(p && (p.top+220<=288 || p.top>=702));
+});
