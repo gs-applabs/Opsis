@@ -296,35 +296,7 @@ namespace MotionDesk.Widgets
             if (!safeMode) { try { StudioMusic.Start(); } catch (Exception ex) { RotatingLogger.Write("music overlay failed to start: " + ex.Message); } }
             if (!safeMode && DeskStripHostEngine.Instance.GetSettings().StartEnabled)
                 DeskStripHostEngine.Instance.Enable();
-            if (!safeMode && AppSettings.Load().UseNativeContainers)
-            {
-                try
-                {
-                    var nativeStore = new Opsis.Containers.ContainersStore(Path.Combine(AppPaths.AppDataFolder, "containers-native.json"));
-                    try
-                    {
-                        var mons = Screen.AllScreens.Select(sc => new Opsis.Containers.MonitorInfo(sc.DeviceName, sc.Bounds, sc.Primary)).ToList();
-                        var note = MotionDesk.Containers.NativeMigration.ImportIfNeeded(nativeStore, Path.Combine(AppPaths.AppDataFolder, "containers"), mons);
-                        if (note != null) RotatingLogger.Write(note);
-                    }
-                    catch (Exception ex)
-                    {
-                        RotatingLogger.Write("native containers: legacy import failed; host not started: " + ex.Message);
-                        throw;
-                    }
-                    var host = _nativeContainers = new MotionDesk.Containers.ContainerHost(nativeStore, DesktopMenu.ContainerPipeName);
-                    var containerKeys = _containerHotkeys = new HotkeyManager();
-                    // global hotkeys of the native containers: Ctrl+Alt+Shift+H = hide / show all, Ctrl+Alt+Shift+N = new container at the cursor (neither is a Windows default)
-                    containerKeys.RegisterCtrlAltShift(Keys.H, () => host.ToggleAll());
-                    containerKeys.RegisterCtrlAltShift(Keys.Space, host.TogglePeek);
-                    containerKeys.RegisterCtrlAltShift(Keys.N, () => host.NewContainerAtCursor());
-                    containerKeys.RegisterCtrl(Keys.Oemtilde, () => host.ShowSpotSearch());                              // Spot Search (Ctrl+`), as in the old engine
-                    containerKeys.RegisterCtrlAltShift(Keys.F, () => host.FocusNext());                                    // focus-container hotkey
-                    containerKeys.RegisterCtrlAltShift(Keys.OemCloseBrackets, () => host.CycleSnapshot(1));            // next / previous layout snapshot = profile hotkeys
-                    containerKeys.RegisterCtrlAltShift(Keys.OemOpenBrackets, () => host.CycleSnapshot(-1));
-                }
-                catch (Exception ex) { RotatingLogger.Write("native containers failed to start: " + ex.Message); }
-            }
+            if (!safeMode && AppSettings.Load().UseNativeContainers) StartNativeContainers();
 
             // Restore lightweight persistent preferences before showing the manager.
             var appSettings = AppSettings.Load();
@@ -372,6 +344,56 @@ namespace MotionDesk.Widgets
                 intro?.Show();
                 intro?.Refresh();
                 ShowMainWindow(pageArg >= 0 && pageArg + 1 < cmd.Length ? cmd[pageArg + 1] : null);
+            }
+        }
+
+        // One startup path for full and future reduced runtime modes.
+        private void StartNativeContainers()
+        {
+            if (_nativeContainers != null || System.Threading.Volatile.Read(ref _exitStarted) != 0) return;
+            try
+            {
+                var nativeStore = new Opsis.Containers.ContainersStore(Path.Combine(AppPaths.AppDataFolder, "containers-native.json"));
+                try
+                {
+                    var mons = Screen.AllScreens.Select(sc => new Opsis.Containers.MonitorInfo(sc.DeviceName, sc.Bounds, sc.Primary)).ToList();
+                    var note = MotionDesk.Containers.NativeMigration.ImportIfNeeded(nativeStore, Path.Combine(AppPaths.AppDataFolder, "containers"), mons);
+                    if (note != null) RotatingLogger.Write(note);
+                }
+                catch (Exception ex)
+                {
+                    RotatingLogger.Write("native containers: legacy import failed; host not started: " + ex.Message);
+                    throw;
+                }
+                var host = _nativeContainers = new MotionDesk.Containers.ContainerHost(nativeStore, DesktopMenu.ContainerPipeName);
+                var containerKeys = _containerHotkeys = new HotkeyManager();
+                // global hotkeys of the native containers: Ctrl+Alt+Shift+H = hide / show all, Ctrl+Alt+Shift+N = new container at the cursor (neither is a Windows default)
+                containerKeys.RegisterCtrlAltShift(Keys.H, () => host.ToggleAll());
+                containerKeys.RegisterCtrlAltShift(Keys.Space, host.TogglePeek);
+                containerKeys.RegisterCtrlAltShift(Keys.N, () => host.NewContainerAtCursor());
+                containerKeys.RegisterCtrl(Keys.Oemtilde, () => host.ShowSpotSearch());                              // Spot Search (Ctrl+`), as in the old engine
+                containerKeys.RegisterCtrlAltShift(Keys.F, () => host.FocusNext());                                    // focus-container hotkey
+                containerKeys.RegisterCtrlAltShift(Keys.OemCloseBrackets, () => host.CycleSnapshot(1));            // next / previous layout snapshot = profile hotkeys
+                containerKeys.RegisterCtrlAltShift(Keys.OemOpenBrackets, () => host.CycleSnapshot(-1));
+            }
+            catch (Exception ex)
+            {
+                try { _containerHotkeys?.Dispose(); } catch { }
+                _containerHotkeys = null;
+                try { _nativeContainers?.Dispose(); } catch { }
+                _nativeContainers = null;
+                RotatingLogger.Write("native containers failed to start: " + ex.Message);
+            }
+        }
+
+        private void StopNativeContainers()
+        {
+            try { _containerHotkeys?.Dispose(); }
+            finally
+            {
+                _containerHotkeys = null;
+                try { _nativeContainers?.Dispose(); }
+                finally { _nativeContainers = null; }
             }
         }
 
@@ -770,15 +792,15 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
             Step("plugin navigation", () => PluginHost.Instance.NavigationRequested -= NavigatePlugin);
             Step("dock restorer", () => OnApplicationExit(null, EventArgs.Empty));
             Step("experience timer", () => { _experienceTimer.Stop(); _experienceTimer.Dispose(); });
+            Step("usage alert timer", () => { _alertTimer?.Stop(); _alertTimer?.Dispose(); _alertTimer = null; });
             Step("save session", () => { WorkspaceProfileService.Save("Last Session"); WorkspaceProfileService.ExitSaveDone = true; });
             Step("appearance restore", () => MotionDesk.Appearance.AppearanceService.Instance.Stop());
             Step("hotkeys", () => _hotkeys.Dispose());
-            Step("container hotkeys", () => { _containerHotkeys?.Dispose(); _containerHotkeys = null; });
             Step("cursor effects", MotionDesk.UI.OpsisCursorFx.Stop);
             Step("window rules", () => WindowRulesEngine.Instance.Dispose());
             Step("hot corners", () => _hotCorners.Dispose());
             Step("taskbar watcher", () => _taskbarWatcher.Dispose());
-            Step("containers", () => _nativeContainers?.Dispose());
+            Step("containers and hotkeys", StopNativeContainers);
             Step("music", StudioMusic.Stop);
             Step("wallpaper host", WallpaperHostEngine.StopForExit);
             Step("activity monitor", AppActivity.Stop);
