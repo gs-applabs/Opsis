@@ -43,3 +43,20 @@ test('music placement respects portrait display and changed weather bounds', () 
   const p = place(768,1366,420,220,174,500,{left:100,top:300,right:668,bottom:690},12);
   assert.ok(p && (p.top+220<=288 || p.top>=702));
 });
+
+test('music geometry is bounded and non-overlapping across 10800 layouts', () => {
+    let count = 0;
+    for (const [vw,vh] of [[640,480],[768,1366],[1920,1080],[2560,1440],[3840,2160]])
+    for (const w of [120,240,480,720,1200]) for (const h of [100,230,450,700])
+    for (const x of [0,.5,1]) for (const y of [0,.5,.88,1])
+    for (const wx of [0,.3,.8]) for (const wy of [0,.34,.8]) {
+        const weather = {left:wx*vw,top:wy*vh,right:Math.min(vw,(wx+.45)*vw),bottom:Math.min(vh,(wy+.40)*vh)};
+        const p = place(vw,vh,w,h,x*(vw-w),y*(vh-h),weather,12);
+        count++;
+        if (!p) continue;
+        assert.ok(p.left>=12 && p.top>=12 && p.left+w<=vw-12 && p.top+h<=vh-12);
+        assert.ok(p.left+w<=weather.left-12 || p.left>=weather.right+12 ||
+            p.top+h<=weather.top-12 || p.top>=weather.bottom+12);
+    }
+    assert.equal(count,10800);
+});
