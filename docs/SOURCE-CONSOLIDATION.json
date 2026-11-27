@@ -896,16 +896,6 @@
       "reason": "Git three-way conflict"
     },
     {
-      "branch": "europe-R26",
-      "path": "tests/Opsis.ExperienceSmoke/Program.cs",
-      "ancestor": "cf906d7840a37af3f1dcaa8977ccaa7a4f3278c3",
-      "head": "e72ee5877526c03ead97ce8bbdd098fe41b49838",
-      "base_blob": "bd0c7c724ed13323d527fea4bb8d57d2e18f4ecf",
-      "incoming_blob": "903ba3d0c3432d224cbf2c7cbbb46a807c0a824b",
-      "current_blob": "4d749bed41d34a4e8a53552fde53e60a90814982",
-      "reason": "Git three-way conflict"
-    },
-    {
       "branch": "crawler-bridge",
       "path": ".github/workflows/plugin-compatibility.yml",
       "ancestor": "6f8b5da31a5951d9dd467d6ef1250c52f8e8176f",
@@ -1245,6 +1235,17 @@
       "current_blob": "17bb5cde40d305cca7436d25169ef6d077ccafbe",
       "reason": "Git three-way conflict",
       "method": "R44: port Signature/high contrast palette, pause-aware pulse and DPI cache key; preserve per-monitor profiles, segmentation, thumbnail style and existing Start art, no duplicate flag. Windows regression pending."
+    },
+    {
+      "branch": "europe-R26",
+      "path": "tests/Opsis.ExperienceSmoke/Program.cs",
+      "ancestor": "cf906d7840a37af3f1dcaa8977ccaa7a4f3278c3",
+      "head": "e72ee5877526c03ead97ce8bbdd098fe41b49838",
+      "base_blob": "bd0c7c724ed13323d527fea4bb8d57d2e18f4ecf",
+      "incoming_blob": "903ba3d0c3432d224cbf2c7cbbb46a807c0a824b",
+      "current_blob": "4d749bed41d34a4e8a53552fde53e60a90814982",
+      "reason": "Git three-way conflict",
+      "method": "R45: incoming older single-meter Rainmeter rejection is superseded by current composite native widget support. Retain existing tests for both rows, persistence and rejection of executable measures; no regression to single meter. CI execution pending."
     }
   ]
 }
