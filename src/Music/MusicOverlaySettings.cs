@@ -53,8 +53,8 @@ internal sealed record MusicOverlaySettings(
         var useCenter = LayoutVersion == 0 && Display == null && X == 0.96 && Y == 0.87;
         return this with
         {
-            X = useCenter ? 0.5 : Math.Clamp(X, 0, 1),
-            Y = useCenter ? 0.5 : Math.Clamp(Y, 0, 1),
+            X = useCenter ? 0.5 : double.IsFinite(X) ? Math.Clamp(X, 0, 1) : DefaultX,
+            Y = useCenter ? 0.5 : double.IsFinite(Y) ? Math.Clamp(Y, 0, 1) : DefaultY,
             WidthPercent = Math.Clamp(WidthPercent, MinSize, MaxSize),
             HeightPercent = Math.Clamp(HeightPercent, MinSize, MaxSize),
             RadialColors = NormalizePalette(RadialColors),
