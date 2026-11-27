@@ -4794,7 +4794,8 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                 {
                     var captured = info;
                     var capturedId = id;
-                    AddText(pluginCard, $"{captured.Name}  v{captured.Version}\n{(greek ? captured.DescriptionEl : captured.DescriptionEn)}\n{captured.Author} · {captured.License}");
+                    var details = AddCardSection(pluginCard, captured.Name + "  v" + captured.Version, 710);
+                    AddText(details, $"{captured.Name}  v{captured.Version}\n{(greek ? captured.DescriptionEl : captured.DescriptionEn)}\n{captured.Author} · {captured.License}");
 
                     // Ζητήθηκε ρητά: ξεχωριστό κουμπί ενεργοποίησης/απενεργοποίησης ΓΙΑ ΑΥΤΟ το plugin
                     // (όχι μόνο ο γενικός διακόπτης "Φόρτωση plugins" στις Ρυθμίσεις). Αλλαγές στα
@@ -4820,8 +4821,8 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                             MessageBox.Show(this, ex.Message, "Opsis", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                         }
                     };
-                    pluginCard.Controls.Add(enableToggle);
-                    AddText(pluginCard, StudioText("Declared plugin capabilities: ", "Δηλωμένες δυνατότητες plugin: ")
+                    details.Controls.Add(enableToggle);
+                    AddText(details, StudioText("Declared plugin capabilities: ", "Δηλωμένες δυνατότητες plugin: ")
                         + Services.PluginHost.Instance.PluginPermissions(capturedId));
                     var revokeBtn = NewHoverButton(StudioText("Revoke plugin approval", "Ανάκληση έγκρισης plugin"), () =>
                     {
@@ -4832,7 +4833,7 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                         Services.PluginHost.Instance.RevokePluginTrust(capturedId);
                         ShowAbout();
                     });
-                    pluginCard.Controls.Add(revokeBtn);
+                    details.Controls.Add(revokeBtn);
 
                     // Ζητήθηκε (σύγκριση με τον μηχανισμό plugin του Kombos): αφαίρεση plugin από
                     // μέσα στο Opsis, όχι μόνο ενεργό/ανενεργό. Ο φάκελος διαγράφεται αμέσως αν
@@ -4849,16 +4850,16 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                         ShowAbout();
                     });
                     uninstallBtn.Margin = new Padding(0, 0, 0, 6);
-                    pluginCard.Controls.Add(uninstallBtn);
+                    details.Controls.Add(uninstallBtn);
 
-                    var row = new FlowLayoutPanel { AutoSize = true, WrapContents = true, MaximumSize = new Size(710, 0), Margin = new Padding(0, 0, 0, 12) };
+                    var row = new FlowLayoutPanel { AutoSize = true, WrapContents = true, MaximumSize = new Size(660, 0), Margin = new Padding(0, 0, 0, 12) };
                     foreach (var section in captured.Sections)
                     {
                         var s = section;
                         var title = greek ? s.TitleEl : s.TitleEn;
                         row.Controls.Add(NewHoverButton(title, () => ShowTextDialog(captured.Name + " — " + title, captured.Name + " v" + captured.Version, s.Text)));
                     }
-                    pluginCard.Controls.Add(row);
+                    details.Controls.Add(row);
                 }
             }
 
