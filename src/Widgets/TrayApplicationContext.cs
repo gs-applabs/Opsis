@@ -29,6 +29,9 @@ namespace MotionDesk.Widgets
         private int _experienceChecks;
         private bool _compatibilityIsolationApplied;
 
+        private int _exitStarted;
+        private readonly int _uiThreadId = Environment.CurrentManagedThreadId;
+        private readonly System.Threading.SynchronizationContext _exitUi = new WindowsFormsSynchronizationContext();
         public static event Action? ExitRequested;
         public static void RequestExit() => ExitRequested?.Invoke();
 
@@ -170,7 +173,7 @@ namespace MotionDesk.Widgets
             // στη σελίδα About) να ζητήσει τον ΙΔΙΟ, πλήρη καθαρισμό εξόδου αντί για ένα γυμνό
             // Application.Exit() που θα παρέκαμπτε το save session/plugin stop/hotkey dispose — ίδιο
             // μοτίβο με το host.RequestExit()/ExitRequested του ήδη δουλεμένου OpsisNewsCrawler.
-            ExitRequested += () => PerformExit();
+            ExitRequested += PerformExit;
 
             // Αρχικοποίηση NotifyIcon — στατικό εικονίδιο (η "ζωντανή" λάμψη μετακόμισε στο
             // λογότυπο του sidebar μέσα στο κύριο παράθυρο, όχι πλέον στο tray).
@@ -498,6 +501,7 @@ namespace MotionDesk.Widgets
 
         private void ShowMainWindow(string? page = null)
         {
+            if (System.Threading.Volatile.Read(ref _exitStarted) != 0) return;
             if (_mainWindow == null || _mainWindow.IsDisposed)
             {
                 _mainWindow = new MainWindow();
@@ -711,26 +715,44 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
 
         private void PerformExit()
         {
-            try { WorkspaceProfileService.Save("Last Session"); WorkspaceProfileService.ExitSaveDone = true; } catch { }
-            PluginHost.Instance.StopAll();
-            try { MotionDesk.Appearance.AppearanceService.Instance.Stop(); } catch (Exception) { }   // taskbar look and window effects always go back to Windows
-            _hotkeys.Dispose();
-            _experienceTimer.Stop(); _experienceTimer.Dispose();
-            MotionDesk.UI.OpsisCursorFx.Stop();
-            WindowRulesEngine.Instance.Dispose();
-            _hotCorners.Dispose();
-            _taskbarWatcher.Dispose();
-            try { _nativeContainers?.Dispose(); } catch { }
-            try { StudioMusic.Stop(); } catch { }
-            DesktopToolbar.Stop();
-            ReplacementTaskbar.Stop();
-            VirtualWorkspaces.Stop();
-            AutoTileService.Stop();
-            try { DeskStripHostEngine.Instance.CloseForExit(); } catch { }
-            try { _controlPipe?.Dispose(); } catch { }
-            DesktopIconVisibilityEngine.Instance.Stop();
-            _trayIcon.Visible = false;
-            Application.Exit();
+            if (Environment.CurrentManagedThreadId != _uiThreadId)
+            {
+                _exitUi.Post(_ => PerformExit(), null);
+                return;
+            }
+            if (System.Threading.Interlocked.Exchange(ref _exitStarted, 1) != 0) return;
+            ExitRequested -= PerformExit;
+            OpenPage = null;
+            // Keep UI-affine cleanup on its owning thread; do not move WinForms plugin Stop to Task.Run.
+            void Step(string name, Action action)
+            {
+                System.Diagnostics.Trace.WriteLine("Opsis shutdown begin: " + name);
+                try { RotatingLogger.Write("Shutdown begin: " + name); } catch { }
+                try { action(); }
+                catch (Exception ex) { try { RotatingLogger.Write("Shutdown error: " + name + ": " + ex.Message); } catch { } }
+                finally { try { RotatingLogger.Write("Shutdown end: " + name); } catch { } }
+            }
+            Step("experience timer", () => { _experienceTimer.Stop(); _experienceTimer.Dispose(); });
+            Step("save session", () => { WorkspaceProfileService.Save("Last Session"); WorkspaceProfileService.ExitSaveDone = true; });
+            Step("appearance restore", () => MotionDesk.Appearance.AppearanceService.Instance.Stop());
+            Step("hotkeys", () => _hotkeys.Dispose());
+            Step("cursor effects", MotionDesk.UI.OpsisCursorFx.Stop);
+            Step("window rules", () => WindowRulesEngine.Instance.Dispose());
+            Step("hot corners", () => _hotCorners.Dispose());
+            Step("taskbar watcher", () => _taskbarWatcher.Dispose());
+            Step("containers", () => _nativeContainers?.Dispose());
+            Step("music", StudioMusic.Stop);
+            Step("desktop toolbar", DesktopToolbar.Stop);
+            Step("replacement taskbar", ReplacementTaskbar.Stop);
+            Step("virtual workspaces", VirtualWorkspaces.Stop);
+            Step("auto tile", AutoTileService.Stop);
+            Step("desk strip", () => DeskStripHostEngine.Instance.CloseForExit());
+            Step("control pipe", () => _controlPipe?.Dispose());
+            Step("desktop icons restore", () => DesktopIconVisibilityEngine.Instance.Stop());
+            Step("plugins", () => PluginHost.Instance.StopAll());
+            Step("tray icon", () => { _trayIcon.Visible = false; _trayIcon.Dispose(); });
+            Step("application exit", Application.Exit);
+            ExitThread();
         }
 
         private void ApplyTrayIconStyle()
