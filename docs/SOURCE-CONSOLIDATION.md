@@ -85,3 +85,7 @@ Retained fixed-white weather text in plain and Signature card layouts; legacy ad
 ## R32 reconciliation
 
 Ported SignatureGlass named palette and dark-intensity guard; retained accent settings and traced repaint. Integrated Launcher all-term search, high-contrast field colors, Signature shortcut styling and branded Start header while preserving power actions, Quick Look and shortcut diagnostics. Two conflict records resolved; seven remain. Windows compile and UI tests pending.
+
+## R33–R34 reliability and navigation
+
+R33 adds guarded UI-thread shutdown, per-stage exception isolation and diagnostics, stops only started plugins, and routes version recovery through the tray exit path. A hung synchronous stop remains a release blocker. R34 aligns classic navigation ordering and Studio groups (Appearance, Desktop, Media, System, Add-ons); preserves shortcuts and About last. About separates host, plugins, family, dependencies and consolidated guidance. Pending: interactive Windows control checks, hung-stop reproduction and bounded recovery design, per-plugin cards, intra-page duplicate audit, seven unresolved source overlaps and Windows build. No release certification.
