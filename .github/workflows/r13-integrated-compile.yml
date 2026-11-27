@@ -1,0 +1,70 @@
+name: R13 integrated source compile-only QA
+on:
+  push:
+    branches: [test/3.0-r13-consolidated-build]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-2022, windows-2025]
+    timeout-minutes: 60
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '11.0.x'
+      - name: Reconstruct and verify the exact compile source (16 media omitted)
+        run: |
+          python qa/reconstruct.py . "$env:RUNNER_TEMP/opsis-source" "$env:RUNNER_TEMP/opsis-evidence"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Commit isolated reconstructed source for development gate
+        working-directory: ${{ runner.temp }}/opsis-source
+        run: |
+          git init -q
+          git config user.name 'Opsis QA'
+          git config user.email 'qa@opsis.invalid'
+          git config core.autocrlf false
+          git config core.safecrlf false
+          git add -f .
+          git commit -qm 'Verified integrated R13 compile-only snapshot'
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Build candidate without release publication
+        working-directory: ${{ runner.temp }}/opsis-source
+        run: |
+          dotnet --info
+          dotnet build Opsis.csproj -c Release -r win-x64 --nologo -m:1 -p:OpsisAppVersion=3.0.0.3200 -p:UseSharedCompilation=false -nodeReuse:false 2>&1 | Tee-Object -FilePath "$env:RUNNER_TEMP/opsis-evidence/compile.log"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $dll = 'bin/Release/net11.0-windows10.0.19041.0/win-x64/Opsis.dll'
+          if (!(Test-Path $dll)) { throw 'Compiled DLL missing' }
+          Get-FileHash $dll -Algorithm SHA256 | Format-List | Out-File "$env:RUNNER_TEMP/opsis-evidence/compiled-dll-sha256.txt"
+      - name: Full development gate with source-linked C# tests
+        working-directory: ${{ runner.temp }}/opsis-source
+        run: |
+          python tests/opsis-patch-kit/P5/run-windows-gates.py . "$env:RUNNER_TEMP/opsis-development-gate"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: r13-compile-evidence-${{ matrix.os }}
+          path: |
+            ${{ runner.temp }}/opsis-evidence
+            ${{ runner.temp }}/opsis-development-gate
+          if-no-files-found: warn
+          retention-days: 7
