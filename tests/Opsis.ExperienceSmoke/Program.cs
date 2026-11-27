@@ -31,6 +31,25 @@ try
     Check(!VirtualWorkspaces.NeedsPolling(0, 0) && VirtualWorkspaces.NeedsPolling(1, 0) &&
         VirtualWorkspaces.NeedsPolling(0, 1),
         "R65 desktop polling needs a saved assignment or an open observer");
+    Check(!MotionDesk.Widgets.WallpaperHostEngine.NeedsScene(false, false, false) &&
+        MotionDesk.Widgets.WallpaperHostEngine.NeedsScene(true, false, false) &&
+        MotionDesk.Widgets.WallpaperHostEngine.NeedsScene(false, true, false) &&
+        MotionDesk.Widgets.WallpaperHostEngine.NeedsScene(false, false, true),
+        "R66 renderer demand is retained by any selected scene consumer");
+    Check(!MotionDesk.Widgets.WallpaperHostEngine.NeedsAutoMute(false, true, true) &&
+        !MotionDesk.Widgets.WallpaperHostEngine.NeedsAutoMute(true, false, true) &&
+        !MotionDesk.Widgets.WallpaperHostEngine.NeedsAutoMute(true, true, false) &&
+        MotionDesk.Widgets.WallpaperHostEngine.NeedsAutoMute(true, true, true),
+        "R66 audio detector demand requires active audio wallpaper and auto mute");
+    Check(!MotionDesk.Widgets.WallpaperHostEngine.NeedsLockScreenSync(false, true, "snapshot.png") &&
+        !MotionDesk.Widgets.WallpaperHostEngine.NeedsLockScreenSync(true, false, "snapshot.png") &&
+        !MotionDesk.Widgets.WallpaperHostEngine.NeedsLockScreenSync(true, true, null) &&
+        MotionDesk.Widgets.WallpaperHostEngine.NeedsLockScreenSync(true, true, "snapshot.png"),
+        "R66 lock screen timer needs scene, opt-in and snapshot destination");
+    Check(!MotionDesk.Widgets.WallpaperHostEngine.NeedsSchedule(false, true) &&
+        !MotionDesk.Widgets.WallpaperHostEngine.NeedsSchedule(true, false) &&
+        MotionDesk.Widgets.WallpaperHostEngine.NeedsSchedule(true, true),
+        "R66 schedule timer needs enabled schedule and active rules");
     Check(OpsisMusicOverlay.DesktopMusicController.SelectTickInterval(false, true, true) == 42 &&
         OpsisMusicOverlay.DesktopMusicController.SelectTickInterval(false, true, false) == 100 &&
         OpsisMusicOverlay.DesktopMusicController.SelectTickInterval(false, false, false) == 250 &&

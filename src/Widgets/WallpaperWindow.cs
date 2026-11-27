@@ -1231,8 +1231,11 @@ namespace MotionDesk.Widgets
                 // να ζωγραφιστεί το πρώτο πραγματικό frame (prepareFirstFrame στο index.html).
                 _webView = new WebView2 { Dock = DockStyle.Fill, DefaultBackgroundColor = BackColor, Visible = false };
                 Controls.Add(_webView);
-                await _webView.EnsureCoreWebView2Async(await WebView2Support.CreateEnvironmentAsync());
-                if (IsDisposed || _webView.CoreWebView2 == null) return;
+                var webView = _webView;
+                var environment = await WebView2Support.CreateEnvironmentAsync();
+                if (IsDisposed || !ReferenceEquals(_webView, webView)) return;
+                await webView.EnsureCoreWebView2Async(environment);
+                if (IsDisposed || !ReferenceEquals(_webView, webView) || webView.CoreWebView2 == null) return;
                 string htmlPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "widgets", "wallpaper", "index.html");
                 WebView2Support.Harden(_webView.CoreWebView2, htmlPath,
                     address => BrowserNavigationPolicy.IsWallpaperFrame(address, _bridge?.ApiActive == true));
@@ -1314,6 +1317,17 @@ namespace MotionDesk.Widgets
         private volatile bool _exiting;
         private bool Active => !_exiting && (_enabled || _overlayOnly);
         internal static void StopForExit() => _instance?.CloseForExit();
+        internal static bool HasActiveScene => _instance?.Active == true;
+        internal static bool IsRunningIfCreated => _instance?.IsRunning == true;
+        internal static void RefreshOptionalIfCreated() => _instance?.RefreshOptionalWatchers();
+
+        internal static bool NeedsScene(bool wallpaper, bool weatherOverlay, bool musicOverlay) =>
+            wallpaper || weatherOverlay || musicOverlay;
+        internal static bool NeedsAutoMute(bool wallpaper, bool audio, bool autoMute) =>
+            wallpaper && audio && autoMute;
+        internal static bool NeedsLockScreenSync(bool active, bool enabled, string? path) =>
+            active && enabled && !string.IsNullOrEmpty(path);
+        internal static bool NeedsSchedule(bool enabled, bool hasRules) => enabled && hasRules;
         public string EffectiveMode(WallpaperSettings settings) => !_enabled && _overlayOnly ? "Desktop" : WallpaperSettings.NormalizeMode(settings.Mode);
         private System.Windows.Forms.Timer? _fullscreenCheckTimer;
         private System.Windows.Forms.Timer? _lockScreenSyncTimer;
@@ -1341,7 +1355,8 @@ namespace MotionDesk.Widgets
             };
             _autoMuteTimer.Start();
         }
-        private readonly ExplorerRestartWatcher _explorerWatcher = new();
+        private ExplorerRestartWatcher? _explorerWatcher;
+        private bool _sceneWatchersAttached;
         private System.Threading.Timer? _displayDebounce;
         private readonly SynchronizationContext _ui;
 
@@ -1360,11 +1375,83 @@ namespace MotionDesk.Widgets
             // το UI SynchronizationContext εδώ (ο constructor τρέχει στο UI thread) και κάνουμε Post.
             _ui = SynchronizationContext.Current ?? new WindowsFormsSynchronizationContext();
 
-            // Παύση/συνέχιση σε fullscreen εφαρμογή — τώρα από το κοινό AppActivity (ίδιο state με τα widgets).
+        }
+
+        private void AttachSceneWatchers()
+        {
+            if (_sceneWatchersAttached || !Active) return;
+            _explorerWatcher = new ExplorerRestartWatcher();
+            _explorerWatcher.ExplorerRestarted += OnExplorerRestarted;
             AppActivity.FullscreenChanged += OnActivityChanged;
             SystemEvents.DisplaySettingsChanged += OnDisplaySettingsChanged;
             SystemEvents.UserPreferenceChanged += OnUserPreferenceChanged;
-            _explorerWatcher.ExplorerRestarted += OnExplorerRestarted;
+            _sceneWatchersAttached = true;
+        }
+
+        private void DetachSceneWatchers()
+        {
+            if (_sceneWatchersAttached)
+            {
+                AppActivity.FullscreenChanged -= OnActivityChanged;
+                SystemEvents.DisplaySettingsChanged -= OnDisplaySettingsChanged;
+                SystemEvents.UserPreferenceChanged -= OnUserPreferenceChanged;
+                _sceneWatchersAttached = false;
+            }
+            if (_explorerWatcher != null)
+            {
+                _explorerWatcher.ExplorerRestarted -= OnExplorerRestarted;
+                _explorerWatcher.Dispose();
+                _explorerWatcher = null;
+            }
+            _displayDebounce?.Dispose(); _displayDebounce = null;
+            DisposeTimer(ref _explorerRebuildDelay);
+        }
+
+        private static void DisposeTimer(ref System.Windows.Forms.Timer? timer)
+        {
+            timer?.Stop(); timer?.Dispose(); timer = null;
+        }
+
+        private void RefreshOptionalWatchers()
+        {
+            if (_exiting) return;
+            var app = AppSettings.Peek();
+            var settings = WallpaperSettings.Load();
+            if (NeedsAutoMute(_enabled, settings.AudioEnabled, app.AutoMuteWhenOtherAudio)) EnsureAutoMuteWatcher();
+            else
+            {
+                DisposeTimer(ref _autoMuteTimer);
+                _otherAudio?.Dispose(); _otherAudio = null;
+                if (AutoMuted)
+                {
+                    AutoMuted = false;
+                    foreach (var window in _windows)
+                        if (!window.IsDisposed) _ = window.RunScriptAsync("window.opsisAutoMute&&window.opsisAutoMute(false)");
+                }
+            }
+            if (NeedsLockScreenSync(Active, app.LockScreenFollowsWallpaper, app.LockScreenSnapshotPath)) EnsureLockScreenSync();
+            else DisposeTimer(ref _lockScreenSyncTimer);
+        }
+
+        private void ReleaseInactiveScene()
+        {
+            if (Active) return;
+            ProcessFreezer.Thaw();
+            DisposeTimer(ref _fullscreenCheckTimer);
+            DisposeTimer(ref _heavyTimer);
+            DisposeTimer(ref _refreshDebounce);
+            DisposeTimer(ref _retirementTimer);
+            DetachSceneWatchers();
+            // The final consumer has gone: dispose, do not merely suspend hidden renderers.
+            var windows = _windows.Concat(_retiringWindows).Distinct().ToArray();
+            _windows.Clear(); _retiringWindows.Clear();
+            _sceneGeneration++;
+            RefreshOptionalWatchers();
+            foreach (var window in windows)
+            {
+                try { if (!window.IsDisposed) { window.HideAndCancelReveal(); window.Dispose(); } }
+                catch (Exception ex) { System.Diagnostics.Debug.WriteLine(ex); }
+            }
         }
 
         private System.Windows.Forms.Timer? _explorerRebuildDelay;
@@ -1382,7 +1469,7 @@ namespace MotionDesk.Widgets
             if (_exiting) return;
             _ui.Post(_ =>
             {
-                if (_exiting) return;
+                if (!Active) return;
                 _displayDebounce?.Dispose();
                 _displayDebounce = new System.Threading.Timer(__ => _ui.Post(___ =>
                 {
@@ -1393,8 +1480,8 @@ namespace MotionDesk.Widgets
 
         private void OnUserPreferenceChanged(object? sender, UserPreferenceChangedEventArgs e)
         {
-            if (!_exiting && (e.Category == UserPreferenceCategory.General || e.Category == UserPreferenceCategory.Desktop))
-                _ui.Post(_ => { if (!_exiting) _ = RefreshAllAsync(); }, null);
+            if (Active && (e.Category == UserPreferenceCategory.General || e.Category == UserPreferenceCategory.Desktop))
+                _ui.Post(_ => { if (Active) _ = RefreshAllAsync(); }, null);
         }
 
         private void OnExplorerRestarted()
@@ -1493,6 +1580,7 @@ namespace MotionDesk.Widgets
             bool wasOverlayOnly = _overlayOnly;
             _overlayOnly = false;
             _enabled = true;
+            AttachSceneWatchers();
             foreach (var w in _windows) w.AllowReveal = true;
             bool freshlyBuilt = _windows.Count == 0;
             if (freshlyBuilt)
@@ -1519,8 +1607,7 @@ namespace MotionDesk.Widgets
                 }
             }
             EnsureFullscreenWatcher();
-            EnsureAutoMuteWatcher();
-            EnsureLockScreenSync();
+            RefreshOptionalWatchers();
             if (wasOverlayOnly && !freshlyBuilt) _ = RefreshAllAsync();   // switch the running windows from "Desktop" to the real mode
             StateChanged?.Invoke();
         }
@@ -1540,37 +1627,38 @@ namespace MotionDesk.Widgets
         {
             if (_exiting) return;
             var s = WallpaperSettings.Load();
-            bool want = !_enabled && (_musicSceneRequested || (s.WeatherShowInfo && s.InfoOnAllModes));
-            if (want == _overlayOnly) { if (want) _ = RefreshAllAsync(); return; }
+            bool want = !_enabled && NeedsScene(false, s.WeatherShowInfo && s.InfoOnAllModes, _musicSceneRequested);
+            bool changed = want != _overlayOnly;
             _overlayOnly = want;
+            if (!Active)
+            {
+                ReleaseInactiveScene();
+                return;
+            }
             if (want)
             {
+                AttachSceneWatchers();
                 foreach (var w in _windows) w.AllowReveal = true;
                 if (_windows.Count == 0) RebuildWindows();
-                else foreach (var w in _windows) { if (w.IsAttached) { if (!w.Visible) w.Show(); w.EnsureBehindIcons(); _ = w.SetPausedAsync(AppActivity.IsPausedFor(w.TargetScreen) || UserPaused); } }
+                else if (changed) foreach (var w in _windows)
+                {
+                    if (w.IsDisposed) continue;
+                    if (w.IsAttached) { if (!w.Visible) w.Show(); w.EnsureBehindIcons(); _ = w.SetPausedAsync(AppActivity.IsPausedFor(w.TargetScreen) || UserPaused); }
+                }
                 EnsureFullscreenWatcher();
                 _ = RefreshAllAsync();
             }
-            else if (!_enabled)
-            {
-                foreach (var w in _windows) { w.HideAndCancelReveal(); _ = w.SetPausedAsync(true); }
-            }
+            RefreshOptionalWatchers();
         }
 
         public void Disable()
         {
+            if (_exiting) return;
             _enabled = false;
             ProcessFreezer.Thaw();
-            // ΔΙΟΡΘΩΣΗ "το disable θέλει 2-3 φορές": (1) τα παλιά παράθυρα ενός rebuild που ΑΚΟΜΑ περίμεναν τον αντικαταστάτη τους δεν
-            // κρύβονταν ποτέ από εδώ, (2) ένα παράθυρο με attach σε εξέλιξη εμφανιζόταν ΜΟΝΟ ΤΟΥ όταν τελείωνε το attach, αφού είχε γίνει Disable.
-            foreach (var old in _retiringWindows.ToList()) { try { if (!old.IsDisposed) old.Dispose(); } catch (Exception) { } }
-            _retiringWindows.Clear();
-            // Ρητή παύση ΠΡΙΝ το Hide — ένα κρυμμένο WebView2 συνεχίζει αλλιώς να αποκωδικοποιεί
-            // video/τρέχει canvas σε χαμηλότερο ρυθμό, καταναλώνοντας CPU/GPU για κάτι αόρατο.
-            foreach (var w in _windows) { w.HideAndCancelReveal(); _ = w.SetPausedAsync(true); }
-            _fullscreenCheckTimer?.Stop();
-            _overlayOnly = false;
-            UpdateOverlayOnly();   // the overlay keeps running over the normal Windows wallpaper when it is switched on
+            // Weather/music may still need the same scene; only release it when all
+            // consumers are gone. Do not stop pending attach of a surviving overlay.
+            UpdateOverlayOnly();
             StateChanged?.Invoke();
         }
 
@@ -1589,13 +1677,9 @@ namespace MotionDesk.Widgets
             Cleanup("thaw WebView2", () => ProcessFreezer.Thaw());
             foreach (var timer in new[] { _fullscreenCheckTimer, _lockScreenSyncTimer, _autoMuteTimer, _heavyTimer, _scheduleTimer, _refreshDebounce })
                 if (timer != null) Cleanup("timer", () => { timer.Stop(); timer.Dispose(); });
-            Cleanup("activity event", () => AppActivity.FullscreenChanged -= OnActivityChanged);
-            Cleanup("display event", () => SystemEvents.DisplaySettingsChanged -= OnDisplaySettingsChanged);
-            Cleanup("preference event", () => SystemEvents.UserPreferenceChanged -= OnUserPreferenceChanged);
-            Cleanup("explorer event", () => _explorerWatcher.ExplorerRestarted -= OnExplorerRestarted);
-            Cleanup("explorer debounce", () => { _explorerRebuildDelay?.Stop(); _explorerRebuildDelay?.Dispose(); _explorerRebuildDelay = null; });
-            Cleanup("display debounce", () => _displayDebounce?.Dispose());
-            Cleanup("explorer watcher", () => _explorerWatcher.Dispose());
+            Cleanup("scene watchers", DetachSceneWatchers);
+            Cleanup("retirement timer", () => DisposeTimer(ref _retirementTimer));
+            _sceneGeneration++;
             Cleanup("audio detector", () => { _otherAudio?.Dispose(); _otherAudio = null; });
             foreach (var window in _windows.Concat(_retiringWindows).Distinct().ToArray())
                 Cleanup("window", () => { if (!window.IsDisposed) window.Dispose(); });
@@ -1604,44 +1688,45 @@ namespace MotionDesk.Widgets
         }
 
         private string _layoutKey = "";
+        private int _sceneGeneration;
+        private System.Windows.Forms.Timer? _retirementTimer;
         private static string LayoutKey() => string.Join("|", Screen.AllScreens.Select(sc => $"{sc.DeviceName}:{sc.Bounds}"));
 
         private void RebuildWindows()
         {
-            if (_exiting) return;
+            if (!Active) return;
             _layoutKey = LayoutKey();
-            // The old windows stay on screen until a new one is actually visible (or 10 s pass): disposing them first left the plain
-            // desktop wallpaper showing for a moment while the new WebView2 started — a visible flicker on every rebuild.
-            // A second rebuild can begin before the first replacement is visible.
-            // Retain every still-live retiring window so exit can dispose them all.
-            var retiring = _retiringWindows.Concat(_windows).Where(w => !w.IsDisposed).Distinct().ToList();
-            _retiringWindows = retiring;
+            int generation = ++_sceneGeneration;
+            _retiringWindows = _retiringWindows.Concat(_windows).Where(w => !w.IsDisposed).Distinct().ToList();
             _windows.Clear();
-            void RetireOld(string? deviceName = null)      // null = all (safety timeout)
-            {
-                foreach (var w in retiring.ToList())
-                {
-                    if (deviceName != null && w.TargetScreen.DeviceName != deviceName) continue;   // per screen: keep the others until THEIR replacement is up
-                    if (!w.IsDisposed) w.Dispose();
-                    retiring.Remove(w);
-                }
-            }
-            if (retiring.Count > 0)
-            {
-                var safety = new System.Windows.Forms.Timer { Interval = 10_000 };
-                safety.Tick += (_, _) => { safety.Stop(); safety.Dispose(); RetireOld(null); };
-                safety.Start();
-            }
 
+            void RetireOld(string? deviceName = null)
+            {
+                if (generation != _sceneGeneration) return;
+                foreach (var w in _retiringWindows.ToArray())
+                {
+                    if (deviceName != null && w.TargetScreen.DeviceName != deviceName) continue;
+                    _retiringWindows.Remove(w);
+                    if (!w.IsDisposed) w.Dispose();
+                }
+                if (_retiringWindows.Count == 0) DisposeTimer(ref _retirementTimer);
+            }
+            // One owned safety timer even if monitor/restart events overlap.
+            // Retire old generations only after the current replacement is visible.
+            DisposeTimer(ref _retirementTimer);
+            if (_retiringWindows.Count > 0)
+            {
+                _retirementTimer = new System.Windows.Forms.Timer { Interval = 10_000 };
+                _retirementTimer.Tick += (_, _) => { DisposeTimer(ref _retirementTimer); RetireOld(); };
+                _retirementTimer.Start();
+            }
             foreach (var screen in Screen.AllScreens)
             {
                 var window = new WallpaperWindow(screen);
                 string deviceName = screen.DeviceName;
                 window.Revealed += () => RetireOld(deviceName);
                 _windows.Add(window);
-                // BeginAttach (ΟΧΙ Show) — το παράθυρο γίνεται ορατό ΜΟΝΟ αφού πρώτα επιβεβαιωθεί
-                // ότι μπήκε πίσω από τα εικονίδια, βλ. σχόλιο στο WallpaperWindow.BeginAttach.
-                if (Active) window.BeginAttach();
+                window.BeginAttach();
             }
         }
 
@@ -1876,6 +1961,13 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Count);
         public void EnsureScheduleTimer()
         {
             if (_exiting) return;
+            var settings = WallpaperSettings.Load();
+            if (!NeedsSchedule(settings.ScheduleEnabled, settings.Schedule.Any(r => r.Enabled)))
+            {
+                DisposeTimer(ref _scheduleTimer);
+                _lastScheduleRule = -2;
+                return;
+            }
             if (_scheduleTimer != null) return;
             _scheduleTimer = new System.Windows.Forms.Timer { Interval = 60_000 };
             _scheduleTimer.Tick += (_, _) => ScheduleTick();
@@ -2082,6 +2174,7 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Count);
             settings.AudioMidGain = Math.Clamp(mid, -12, 12);
             settings.AudioTrebleGain = Math.Clamp(treble, -12, 12);
             settings.Save();
+            RefreshOptionalWatchers();
             RefreshAllDebounced();
         }
 
@@ -2229,6 +2322,7 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Count);
 
         private void RefreshAllDebounced()
         {
+            if (!Active) return;
             if (_refreshDebounce == null)
             {
                 _refreshDebounce = new System.Windows.Forms.Timer { Interval = 150 };

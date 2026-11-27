@@ -720,6 +720,7 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
             }
             catch (Exception ex) { System.Diagnostics.Debug.WriteLine(ex); }
             BackdropContrast.Refresh();
+            WallpaperHostEngine.RefreshOptionalIfCreated();
         }
 
         private void UsageAlertTick()

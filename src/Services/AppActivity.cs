@@ -119,7 +119,7 @@ public static class AppActivity
     // 2.6.0: needs two equal samples (2 s) to START pausing a covered monitor and one sample to resume (the desktop shows again at once).
     private static void UpdateCovered(AppSettings settings)
     {
-        var now = settings.PauseWhenDesktopCovered && !(_locked || _remote || _screensaver || _batterySaver || _highLoad)
+        var now = MotionDesk.Widgets.WallpaperHostEngine.HasActiveScene && settings.PauseWhenDesktopCovered && !(_locked || _remote || _screensaver || _batterySaver || _highLoad)
             ? DesktopCoverage.Compute() : new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         _covered.IntersectWith(now);
         foreach (var device in now)
@@ -166,7 +166,7 @@ public static class AppActivity
     // (SetThreadExecutionState belongs to the calling thread).
     private static void UpdateKeepAwake(AppSettings s)
     {
-        bool want = s.KeepPcAwake && !IsFullscreenAppActive && MotionDesk.Widgets.WallpaperHostEngine.Instance.IsRunning;
+        bool want = s.KeepPcAwake && !IsFullscreenAppActive && MotionDesk.Widgets.WallpaperHostEngine.IsRunningIfCreated;
         if (want == _awake) return;
         _awake = want;
         SetThreadExecutionState(want ? (ES_CONTINUOUS | ES_SYSTEM_REQUIRED | ES_DISPLAY_REQUIRED) : ES_CONTINUOUS);
