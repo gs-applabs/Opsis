@@ -1578,6 +1578,7 @@ namespace MotionDesk.Widgets
                 if (timer != null) Cleanup("timer", () => { timer.Stop(); timer.Dispose(); });
             Cleanup("display debounce", () => _displayDebounce?.Dispose());
             Cleanup("explorer watcher", () => _explorerWatcher.Dispose());
+            Cleanup("audio detector", () => { _otherAudio?.Dispose(); _otherAudio = null; });
             foreach (var window in _windows.Concat(_retiringWindows).Distinct().ToArray())
                 Cleanup("window", () => { if (!window.IsDisposed) window.Dispose(); });
             _windows.Clear();
