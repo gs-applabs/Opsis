@@ -560,22 +560,19 @@ namespace MotionDesk.UI
             _navButtons.Clear();
             _activeButton = null;
             AddNavButton(_nav, LocalizationManager.T("Nav.Dashboard"), "Dashboard", ShowDashboard, 1);
+            AddNavButton(_nav, OpsisStrings.T("ui.theme.title"), "Theme", ShowTheme, (string?)null);
+            AddNavButton(_nav, LocalizationManager.T("Nav.Personalization"), "Personalization", ShowPersonalization, 0);
+            AddNavButton(_nav, LocalizationManager.T("Nav.Wallpaper"), "Wallpaper", ShowWallpaper, 4);
             AddNavButton(_nav, LocalizationManager.T("Nav.Widgets"), "Widgets", ShowWidgets, 2);
             AddNavButton(_nav, LocalizationManager.T("Nav.DeskZones"), "DeskZones", ShowDeskZones, 3);
             AddNavButton(_nav, LocalizationManager.T("DeskZones.SectionContainers"), "DeskContainers", ShowDeskContainers, (string?)null);
             AddNavButton(_nav, LocalizationManager.T("Personalization.SectionDeskStrip"), "DeskStrip", ShowDeskStrip, (string?)null);
-            AddNavButton(_nav, LocalizationManager.T("Nav.Wallpaper"), "Wallpaper", ShowWallpaper, 4);
             AddNavButton(_nav, "Desk Music Visualizer", "DeskMusicVisualizer", ShowDeskMusicVisualizer, (string?)null);
-            AddNavButton(_nav, LocalizationManager.T("Nav.Performance"), "Performance", ShowPerformance, 5);
-            AddNavButton(_nav, LocalizationManager.T("Nav.Settings"), "Settings", ShowSettings, 6);
-            AddNavButton(_nav, LocalizationManager.T("Nav.Automation"), "Automation", ShowAutomation, 8);
-            AddNavButton(_nav, LocalizationManager.T("Nav.Personalization"), "Personalization", ShowPersonalization, 0);
-            AddNavButton(_nav, OpsisStrings.T("ui.theme.title"), "Theme", ShowTheme, (string?)null);
-            // Ζητήθηκε ρητά: αντί για απλό "Audio Visualizer", νέα καρτέλα "Διαχείριση Ήχου" με
-            // presets ενίσχυσης + ζωντανό visualizer, εμπνευσμένη από τη λογική του FXSound.
-            // "Audio management" (equalizer for all system audio) is an extra feature: offered only when Opsis Media Suite (the former Waveframe) is installed
             if (Services.MediaSuiteDetector.IsInstalled())
                 AddNavButton(_nav, LocalizationManager.T("Nav.AudioEnhancement"), "AudioEnhancement", ShowAudioEnhancement, (string?)null);
+            AddNavButton(_nav, LocalizationManager.T("Nav.Performance"), "Performance", ShowPerformance, 5);
+            AddNavButton(_nav, LocalizationManager.T("Nav.Automation"), "Automation", ShowAutomation, 8);
+            AddNavButton(_nav, LocalizationManager.T("Nav.Settings"), "Settings", ShowSettings, 6);
             // Σελίδες των plugin (π.χ. News Crawler) — μπαίνουν πριν το "Σχετικά" που μένει τελευταίο.
             foreach (var pluginItem in Services.PluginHost.Instance.GetNavigationItems())
             {
@@ -4766,28 +4763,6 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
             AddText(appCard, string.Format(LocalizationManager.T("About.RuntimeLine"), WidgetHostEngine.Instance.GetActiveWidgets().Count));
             AddButton(appCard, LocalizationManager.T("Help.Button"), (_, _) => HelpForm.ShowSingle(this, VersionHistory)).Name = "open-opsis-help";
 
-            // Κάρτες ανά θέμα (πρώην ξεχωριστή σελίδα "Βοήθεια") — ζητήθηκε ρητά να ενσωματωθεί
-            // εδώ αφού είχαν ίδιες πληροφορίες με τη σελίδα Σχετικά (About.InstructionsList/
-            // ShortcutsList παρακάτω ήδη καλύπτουν τα ίδια, αναλυτικά, με βήματα).
-            Panel BuildTopicCard(string titleKey, string bodyKey)
-            {
-                string body = LocalizationManager.T(bodyKey);
-                var font = UiTheme.FontBody;
-                var bodySize = TextRenderer.MeasureText(body, font, new Size(650, int.MaxValue), TextFormatFlags.WordBreak);
-                var card = new Panel { Width = 700, Height = 34 + bodySize.Height + 20, BackColor = UiTheme.Surface, Padding = new Padding(16, 12, 16, 12), Margin = new Padding(0, 0, 0, 10) };
-                UiTheme.ApplyRoundedRegion(card, 8);
-                card.Controls.Add(new Label { Text = LocalizationManager.T(titleKey), Font = new Font("Segoe UI", 11f, FontStyle.Bold), ForeColor = UiTheme.AccentCyan, AutoSize = true, Location = new Point(16, 10) });
-                card.Controls.Add(new Label { Text = body, Font = font, ForeColor = UiTheme.TextSecondary, MaximumSize = new Size(650, 0), AutoSize = true, Location = new Point(16, 34) });
-                return card;
-            }
-            panel.Controls.Add(BuildTopicCard("Nav.Widgets", "Widgets.Intro"));
-            panel.Controls.Add(BuildTopicCard("Nav.DeskZones", "DeskZones.Intro"));
-            panel.Controls.Add(BuildTopicCard("DeskZones.SectionContainers", "DeskZones.ContainersIntro"));
-            panel.Controls.Add(BuildTopicCard("About.DeskContainersGuideTitle", "About.DeskContainersGuide"));
-            panel.Controls.Add(BuildTopicCard("Nav.Wallpaper", "Wallpaper.Intro"));
-            panel.Controls.Add(BuildTopicCard("Nav.Personalization", "Personalization.Intro"));
-            panel.Controls.Add(BuildTopicCard("Nav.Automation", "Automation.Intro"));
-
             // the Opsis family: only the apps of the shared catalogue (suite/apps.json), with their state
             var familyCard = AddCardSection(panel, LocalizationManager.T("Tray.Family"));
             foreach (var app in FamilyApp.Load().Where(a => a.Id != "opsis"))
@@ -4905,15 +4880,29 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                     missingDependencies.Text = string.Format(LocalizationManager.T("About.UpdateDependenciesMissing"), string.Join(", ", names));
             };
 
-            AddSection(panel, LocalizationManager.T("About.SectionInstructions"));
-            AddText(panel, LocalizationManager.T("About.InstructionsList"));
+            var guideCard = AddCardSection(panel, LocalizationManager.T("About.SectionInstructions"));
+            AddText(guideCard, LocalizationManager.T("About.InstructionsList"));
+            AddSection(guideCard, LocalizationManager.T("Nav.Widgets"));
+            AddText(guideCard, LocalizationManager.T("Widgets.Intro"));
+            AddSection(guideCard, LocalizationManager.T("Nav.DeskZones"));
+            AddText(guideCard, LocalizationManager.T("DeskZones.Intro"));
+            AddSection(guideCard, LocalizationManager.T("DeskZones.SectionContainers"));
+            AddText(guideCard, LocalizationManager.T("DeskZones.ContainersIntro"));
+            AddSection(guideCard, LocalizationManager.T("About.DeskContainersGuideTitle"));
+            AddText(guideCard, LocalizationManager.T("About.DeskContainersGuide"));
+            AddSection(guideCard, LocalizationManager.T("Nav.Wallpaper"));
+            AddText(guideCard, LocalizationManager.T("Wallpaper.Intro"));
+            AddSection(guideCard, LocalizationManager.T("Nav.Personalization"));
+            AddText(guideCard, LocalizationManager.T("Personalization.Intro"));
+            AddSection(guideCard, LocalizationManager.T("Nav.Automation"));
+            AddText(guideCard, LocalizationManager.T("Automation.Intro"));
 
-            AddSection(panel, LocalizationManager.T("About.SectionShortcuts"));
-            panel.Controls.Add(new ShortcutsCard(LocalizationManager.T("About.ShortcutsList")) { Margin = new Padding(0, 0, 0, 14) });
+            AddSection(guideCard, LocalizationManager.T("About.SectionShortcuts"));
+            guideCard.Controls.Add(new ShortcutsCard(LocalizationManager.T("About.ShortcutsList")) { Margin = new Padding(0, 0, 0, 14) });
 
-            AddSection(panel, LocalizationManager.T("About.SectionLicense"));
-            AddText(panel, LocalizationManager.T("About.LicenseSummary"));
-            AddText(panel, LocalizationManager.T("About.LandmarkCredits"));
+            AddSection(appCard, LocalizationManager.T("About.SectionLicense"));
+            AddText(appCard, LocalizationManager.T("About.LicenseSummary"));
+            AddText(appCard, LocalizationManager.T("About.LandmarkCredits"));
             SetPage("Page.About.Title", panel);
         }
 
