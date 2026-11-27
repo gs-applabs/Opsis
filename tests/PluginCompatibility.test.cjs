@@ -93,3 +93,15 @@ test('Media Suite family card reflects the actual converter/player/photo capabil
   assert.ok(media.capabilities.el.some(v => v.includes('υπότιτλους')));
   assert.ok(media.capabilities.en.some(v => v.includes('20 languages')));
 });
+
+test('compatibility workflow pins reproducible provider commits and exact host source', () => {
+  const workflow = source('.github/workflows/plugin-compatibility.yml');
+  for (const provider of ['crawler', 'chronikologio']) {
+    const input = workflow.match(new RegExp("inputs\\." + provider + "_ref \\|\\| '([a-f0-9]{40})'"));
+    assert.ok(input, provider + ' must pin a full SHA');
+    assert.ok(workflow.includes("default: '" + input[1] + "'"), provider + ' dispatch default must match PR pin');
+  }
+  assert.match(workflow, /repository: gs-applabs\/OpsisMediaSuite\s+ref: '[a-f0-9]{40}'/);
+  assert.match(workflow, /ref: \$\{\{ github\.event\.pull_request\.head\.sha \|\| github\.sha \}\}/);
+  assert.match(workflow, /compat-results\/source-identities\.json/);
+});
