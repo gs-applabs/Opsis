@@ -897,16 +897,6 @@
     },
     {
       "branch": "europe-R26",
-      "path": "src/Widgets/ReplacementTaskbar.cs",
-      "ancestor": "cf906d7840a37af3f1dcaa8977ccaa7a4f3278c3",
-      "head": "e72ee5877526c03ead97ce8bbdd098fe41b49838",
-      "base_blob": "7968197a4e1d886a928df606273baa992d5fa67a",
-      "incoming_blob": "1e0a0d108e5b9f7c997d7b492029043944b45d17",
-      "current_blob": "17bb5cde40d305cca7436d25169ef6d077ccafbe",
-      "reason": "Git three-way conflict"
-    },
-    {
-      "branch": "europe-R26",
       "path": "tests/Opsis.ExperienceSmoke/Program.cs",
       "ancestor": "cf906d7840a37af3f1dcaa8977ccaa7a4f3278c3",
       "head": "e72ee5877526c03ead97ce8bbdd098fe41b49838",
@@ -1244,6 +1234,17 @@
       "current_blob": "781ccc6504e2e3392219fa2362de619cf9f970de",
       "reason": "Git three-way conflict",
       "method": "R42: retain current asynchronous capture and three persisted styles; port high contrast, reduced motion, accessibility name and valid HWND check. Windows tests pending."
+    },
+    {
+      "branch": "europe-R26",
+      "path": "src/Widgets/ReplacementTaskbar.cs",
+      "ancestor": "cf906d7840a37af3f1dcaa8977ccaa7a4f3278c3",
+      "head": "e72ee5877526c03ead97ce8bbdd098fe41b49838",
+      "base_blob": "7968197a4e1d886a928df606273baa992d5fa67a",
+      "incoming_blob": "1e0a0d108e5b9f7c997d7b492029043944b45d17",
+      "current_blob": "17bb5cde40d305cca7436d25169ef6d077ccafbe",
+      "reason": "Git three-way conflict",
+      "method": "R44: port Signature/high contrast palette, pause-aware pulse and DPI cache key; preserve per-monitor profiles, segmentation, thumbnail style and existing Start art, no duplicate flag. Windows regression pending."
     }
   ]
 }
