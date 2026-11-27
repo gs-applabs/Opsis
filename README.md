@@ -6,27 +6,22 @@
 
 <p align="center"><strong>Make Windows feel like your own.</strong><br/>Μεταμόρφωσε την επιφάνεια εργασίας σου με κινούμενα φόντα, widgets και εργαλεία εξατομίκευσης.</p>
 
-<p align="center"><a href="https://github.com/gs-applabs/Opsis/releases/download/v2.8.0.2511/OpsisSetup.exe"><img alt="Download v2.8.0.2511" src="https://img.shields.io/badge/DOWNLOAD-v2.8.0.2511-087EA4?style=for-the-badge"/></a> <a href="https://github.com/gs-applabs/Opsis/releases/latest"><img alt="Latest release" src="https://img.shields.io/badge/RELEASE-NOTES-334155?style=for-the-badge"/></a></p>
+<p align="center"><a href="https://github.com/gs-applabs/Opsis/releases/latest"><img alt="Download latest published release" src="https://img.shields.io/badge/DOWNLOAD-LATEST%20RELEASE-087EA4?style=for-the-badge"/></a> <a href="docs/SHOWCASE.md"><img alt="Explore screenshots" src="https://img.shields.io/badge/EXPLORE-SCREENSHOTS-334155?style=for-the-badge"/></a></p>
 
 <p align="center"><a href="#at-a-glance--με-μια-ματιά">Overview / Επισκόπηση</a> · <a href="README-EL.md">Full documentation / Τεκμηρίωση</a> · <a href="https://github.com/gs-applabs/Opsis/issues">Support / Υποστήριξη</a> · <a href="https://github.com/gs-applabs">GS App Labs</a></p>
 
-## Current screenshot gallery / Νέα στιγμιότυπα
+## Visual showcase / Οπτική παρουσίαση
 
 <table>
 <tr>
-<td width="50%" valign="top"><a href="docs/product-snapshots/page-Wallpaper.png"><img src="docs/product-snapshots/page-Wallpaper.png" width="100%" alt="Wallpaper gallery / Συλλογή φόντων"/></a><br/><sub>Wallpaper gallery / Συλλογή φόντων</sub></td>
-<td width="50%" valign="top"><a href="docs/product-snapshots/page-Personalization.png"><img src="docs/product-snapshots/page-Personalization.png" width="100%" alt="Windows personalization / Εξατομίκευση"/></a><br/><sub>Windows personalization / Εξατομίκευση</sub></td>
+<td width="50%" valign="top"><a href="docs/SHOWCASE.md"><img src="docs/product-snapshots/page-Wallpaper.png" alt="Wallpapers / Φόντα" width="100%"/></a><br/><sub>Wallpapers / Φόντα</sub></td>
+<td width="50%" valign="top"><a href="docs/SHOWCASE.md"><img src="docs/product-snapshots/page-Personalization.png" alt="Personalization / Εξατομίκευση" width="100%"/></a><br/><sub>Personalization / Εξατομίκευση</sub></td>
 </tr>
 </table>
 
-**[Browse application screenshots / Προβολή στιγμιοτύπων](docs/product-snapshots/README.md)** · [Capture workflow / Μηχανισμός λήψης](../../actions/workflows/product-snapshots.yml)
+**[Explore 13 screenshots / Εξερεύνηση στιγμιοτύπων](docs/SHOWCASE.md)** · [Original capture index](docs/product-snapshots/README.md) · [Media kit](https://github.com/gs-applabs/gs-applabs/tree/main/assets/showcase)
 
-**[30-second video tour](https://github.com/gs-applabs/gs-applabs/blob/main/assets/showcase/opsis.mp4) · [Animated screenshot preview](https://github.com/gs-applabs/gs-applabs/blob/main/assets/showcase/opsis.gif) · [Social preview](https://github.com/gs-applabs/gs-applabs/blob/main/assets/showcase/opsis-social.png)**
-
-<sub>Real screenshot slideshows, not live recordings. / Παρουσιάσεις πραγματικών στιγμιοτύπων, όχι ζωντανή καταγραφή.</sub>
-
-
-<sub>Actual application rendering on Windows CI. / Πραγματική απεικόνιση σε Windows CI.</sub>
+<sub>Actual UI previews from development commit `e1031e5c4646`; may differ from the latest published installer. / Πραγματικές εικόνες συγκεκριμένου build ανάπτυξης, ενδέχεται να διαφέρουν από τη δημοσιευμένη έκδοση.</sub>
 
 ## At a glance / Με μια ματιά
 
@@ -39,6 +34,8 @@
 | Extensions / Πρόσθετα | Plugin contract 1.0.0.0; optional family integrations / Προαιρετικές επεκτάσεις της οικογένειας |
 
 ## Get started / Ξεκίνημα
+
+For the newest installer always use [latest published release](https://github.com/gs-applabs/Opsis/releases/latest). Version-specific links below are retained as reference. / Για τη νεότερη έκδοση χρησιμοποίησε τον σύνδεσμο τελευταίας δημοσιευμένης έκδοσης.
 
 1. Download [OpsisSetup.exe](https://github.com/gs-applabs/Opsis/releases/download/v2.8.0.2511/OpsisSetup.exe) and its [SHA-256 checksum](https://github.com/gs-applabs/Opsis/releases/download/v2.8.0.2511/OpsisSetup.exe.sha256).
 2. Compare the checksum using `Get-FileHash .\OpsisSetup.exe -Algorithm SHA256`.
