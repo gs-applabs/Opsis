@@ -297,7 +297,11 @@ namespace MotionDesk.Widgets
                         var note = MotionDesk.Containers.NativeMigration.ImportIfNeeded(nativeStore, Path.Combine(AppPaths.AppDataFolder, "containers"), mons);
                         if (note != null) RotatingLogger.Write(note);
                     }
-                    catch (Exception ex) { RotatingLogger.Write("native containers: legacy import failed: " + ex.Message); }
+                    catch (Exception ex)
+                    {
+                        RotatingLogger.Write("native containers: legacy import failed; host not started: " + ex.Message);
+                        throw;
+                    }
                     var host = _nativeContainers = new MotionDesk.Containers.ContainerHost(nativeStore, DesktopMenu.ContainerPipeName);
                     // global hotkeys of the native containers: Ctrl+Alt+Shift+H = hide / show all, Ctrl+Alt+Shift+N = new container at the cursor (neither is a Windows default)
                     _hotkeys.RegisterCtrlAltShift(Keys.H, () => host.ToggleAll());
