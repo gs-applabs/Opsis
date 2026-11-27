@@ -26,22 +26,41 @@ namespace MotionDesk.UI
         private static System.Windows.Forms.Timer? _timer;
         private static double _smoothed = 0.2;
 
-        public static void EnsureStarted()
+        internal static bool NeedsSampling(bool transparent, bool enabled, bool visibleWidgets) =>
+            transparent && enabled && visibleWidgets;
+
+        public static void Refresh()
         {
+            var settings = AppSettings.Peek();
+            if (!NeedsSampling(settings.WidgetsThemeMode == "Transparent",
+                settings.WidgetsAutoContrast, WidgetHostEngine.HasVisibleWidgets))
+            {
+                Stop();
+                return;
+            }
             if (_timer != null) return;
             _timer = new System.Windows.Forms.Timer { Interval = 3000 };
             _timer.Tick += (_, _) => Tick();
             _timer.Start();
         }
 
+        public static void Stop()
+        {
+            _timer?.Dispose();
+            _timer = null;
+            _smoothed = 0.2;
+            Set(false);
+        }
+
         private static void Tick()
         {
             try
             {
-                var settings = AppSettings.Load();
-                if (settings.WidgetsThemeMode != "Transparent" || !settings.WidgetsAutoContrast) { Set(false); return; }
+                var settings = AppSettings.Peek();
+                if (!NeedsSampling(settings.WidgetsThemeMode == "Transparent",
+                    settings.WidgetsAutoContrast, WidgetHostEngine.HasVisibleWidgets)) { Stop(); return; }
                 var widgets = WidgetHostEngine.Instance.GetActiveWidgets().Where(w => !w.IsDisposed && w.Visible && w.IsHandleCreated).ToList();
-                if (widgets.Count == 0) return;
+                if (widgets.Count == 0) { Stop(); return; }
 
                 double? lum = SampleLuminance(widgets);
                 if (lum == null) return;

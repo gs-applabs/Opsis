@@ -13,6 +13,24 @@ void Check(bool condition, string description)
 }
 try
 {
+    var opt = new AppSettings { RestoreWindowsAfterDocking = false, UsageAlertsEnabled = false };
+    Check(MotionDesk.Widgets.TrayApplicationContext.SelectOptionalServices(opt, false) == (false, false),
+        "R65 disabled optional tray services have no timer demand");
+    opt.RestoreWindowsAfterDocking = true;
+    Check(MotionDesk.Widgets.TrayApplicationContext.SelectOptionalServices(opt, false) == (true, false),
+        "R65 docking restore selection does not enable usage alerts");
+    opt.UsageAlertsEnabled = true;
+    Check(MotionDesk.Widgets.TrayApplicationContext.SelectOptionalServices(opt, false) == (true, true) &&
+        MotionDesk.Widgets.TrayApplicationContext.SelectOptionalServices(opt, true) == (false, false),
+        "R65 explicit selections are held in safe mode");
+    Check(!MotionDesk.UI.BackdropContrast.NeedsSampling(true, true, false) &&
+        !MotionDesk.UI.BackdropContrast.NeedsSampling(false, true, true) &&
+        !MotionDesk.UI.BackdropContrast.NeedsSampling(true, false, true) &&
+        MotionDesk.UI.BackdropContrast.NeedsSampling(true, true, true),
+        "R65 backdrop sampler needs transparent visible widgets and user opt-in");
+    Check(!VirtualWorkspaces.NeedsPolling(0, 0) && VirtualWorkspaces.NeedsPolling(1, 0) &&
+        VirtualWorkspaces.NeedsPolling(0, 1),
+        "R65 desktop polling needs a saved assignment or an open observer");
     Check(OpsisMusicOverlay.DesktopMusicController.SelectTickInterval(false, true, true) == 42 &&
         OpsisMusicOverlay.DesktopMusicController.SelectTickInterval(false, true, false) == 100 &&
         OpsisMusicOverlay.DesktopMusicController.SelectTickInterval(false, false, false) == 250 &&

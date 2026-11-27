@@ -19,6 +19,7 @@ namespace MotionDesk.Widgets
         private HotkeyManager? _containerHotkeys;
         private System.Windows.Forms.Timer? _startupHealthyTimer, _pluginApprovalTimer;
         private DockWindowRestorer? _dockRestorer;
+        private int _optionalRefreshQueued;
         private void NavigatePlugin(string key) => ShowMainWindow("plugin:" + key);
         private ToolStripMenuItem _wallpaperToggleItem = null!;
         private bool _wallpaperEnabled;
@@ -76,7 +77,6 @@ namespace MotionDesk.Widgets
 
             // Plugin (π.χ. News Crawler): ξεκινούν πριν χτιστεί το μενού ώστε να προσθέσουν τα δικά τους στοιχεία.
             // Dock monitor fingerprint and window return (opt-in); never captures user files.
-            _dockRestorer = new DockWindowRestorer();
             Application.ApplicationExit += OnApplicationExit;
             PluginHost.Instance.NavigationRequested += NavigatePlugin;
             // Plugins from user-writable folders run code inside Opsis: ask once, show the content hash, remember the approval (plugin-trust.json).
@@ -217,9 +217,8 @@ namespace MotionDesk.Widgets
             _pluginMenuIndex++; // preserve insertion point after adding the icon studio
             ApplyTrayIconStyle();
 
-            _alertTimer = new System.Windows.Forms.Timer { Interval = 5000 };
-            _alertTimer.Tick += (_, _) => UsageAlertTick();
-            _alertTimer.Start();
+            AppSettings.SettingsSaved += QueueOptionalRefresh;
+            RefreshOptionalServices();
 
             _hotkeys.RegisterCtrlAlt('F', () => DeskFlipEngine.Show());
             if (!safeMode) _hotkeys.RegisterCtrlAltShift(Keys.K, DesktopLauncher.Open);
@@ -280,7 +279,6 @@ namespace MotionDesk.Widgets
             if (!safeMode) VirtualWorkspaces.Start();
             AutoTileService.RefreshSettings();
             MotionDesk.Services.DiscordPresence.Instance.Apply();
-            BackdropContrast.EnsureStarted();
             if (!safeMode)
             {
                 try
@@ -675,6 +673,55 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
         private DateTime _lastAlertUtc = DateTime.MinValue;
 
         // Called every 5 s: CPU or memory >= 90% for 12 consecutive ticks (one minute) -> one tray balloon, then a 10-minute pause
+        internal static (bool DockRestore, bool UsageAlerts) SelectOptionalServices(AppSettings settings, bool safeMode) =>
+            (!safeMode && settings.RestoreWindowsAfterDocking, !safeMode && settings.UsageAlertsEnabled);
+
+        private void QueueOptionalRefresh()
+        {
+            if (System.Threading.Volatile.Read(ref _exitStarted) != 0 ||
+                System.Threading.Interlocked.Exchange(ref _optionalRefreshQueued, 1) != 0) return;
+            try
+            {
+                _exitUi.Post(_ =>
+                {
+                    System.Threading.Interlocked.Exchange(ref _optionalRefreshQueued, 0);
+                    if (System.Threading.Volatile.Read(ref _exitStarted) == 0) RefreshOptionalServices();
+                }, null);
+            }
+            catch (Exception ex)
+            {
+                System.Threading.Interlocked.Exchange(ref _optionalRefreshQueued, 0);
+                System.Diagnostics.Debug.WriteLine(ex);
+            }
+        }
+
+        private void RefreshOptionalServices()
+        {
+            var desired = SelectOptionalServices(AppSettings.Peek(), SafeModeService.IsSafeMode);
+            try
+            {
+                if (desired.DockRestore) _dockRestorer ??= new DockWindowRestorer();
+                else { _dockRestorer?.Dispose(); _dockRestorer = null; }
+            }
+            catch (Exception ex) { System.Diagnostics.Debug.WriteLine(ex); }
+            try
+            {
+                if (desired.UsageAlerts && _alertTimer == null)
+                {
+                    _alertTimer = new System.Windows.Forms.Timer { Interval = 5000 };
+                    _alertTimer.Tick += (_, _) => UsageAlertTick();
+                    _alertTimer.Start();
+                }
+                else if (!desired.UsageAlerts && _alertTimer != null)
+                {
+                    _alertTimer.Dispose(); _alertTimer = null;
+                    _cpuHighTicks = _ramHighTicks = 0;
+                }
+            }
+            catch (Exception ex) { System.Diagnostics.Debug.WriteLine(ex); }
+            BackdropContrast.Refresh();
+        }
+
         private void UsageAlertTick()
         {
             try
@@ -765,6 +812,8 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
         private void OnApplicationExit(object? sender, EventArgs e)
         {
             Application.ApplicationExit -= OnApplicationExit;
+            AppSettings.SettingsSaved -= QueueOptionalRefresh;
+            BackdropContrast.Stop();
             _dockRestorer?.Dispose();
             _dockRestorer = null;
         }

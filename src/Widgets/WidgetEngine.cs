@@ -2637,6 +2637,7 @@ namespace MotionDesk.Widgets
         public static WidgetHostEngine Instance => _instance ??= new WidgetHostEngine();
 
         private readonly List<WidgetWindow> _activeWidgets = new();
+        internal static bool HasVisibleWidgets => _instance?._activeWidgets.Any(w => !w.IsDisposed && w.Visible && w.IsHandleCreated) == true;
         private DateTime _temporaryUnlockUntilUtc;
         public bool TemporarilyUnlocked => DateTime.UtcNow < _temporaryUnlockUntilUtc;
         public TimeSpan RemainingTemporaryUnlock => _temporaryUnlockUntilUtc > DateTime.UtcNow
@@ -2689,6 +2690,7 @@ namespace MotionDesk.Widgets
             foreach (var widget in new List<WidgetWindow>(_activeWidgets))
                 if (!widget.IsDisposed) widget.Close();
             _activeWidgets.Clear();
+            BackdropContrast.Refresh();
         }
 
         public WidgetWindow SpawnWidget(string widgetId, int x, int y, int width, int height)
@@ -2707,8 +2709,10 @@ namespace MotionDesk.Widgets
 
             var widgetWindow = new WidgetWindow(widgetId, x, y, width, height);
             _activeWidgets.Add(widgetWindow);
-            widgetWindow.FormClosed += (s, e) => _activeWidgets.Remove(widgetWindow);
+            widgetWindow.VisibleChanged += (_, _) => BackdropContrast.Refresh();
+            widgetWindow.FormClosed += (s, e) => { _activeWidgets.Remove(widgetWindow); BackdropContrast.Refresh(); };
             widgetWindow.Show();
+            BackdropContrast.Refresh();
             return widgetWindow;
         }
     }
