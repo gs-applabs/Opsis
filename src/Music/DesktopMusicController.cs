@@ -9,7 +9,8 @@ internal sealed class DesktopMusicController : IDisposable
     private static string SettingsPath => Path.Combine(MotionDesk.Services.AppPaths.AppDataFolder, "music-overlay.json");
     private readonly MediaSessionReader media = new();
     private readonly CancellationTokenSource shutdown = new();
-    private readonly System.Windows.Forms.Timer timer = new() { Interval = 42 };
+    private const int ActiveInterval = 42, IdleInterval = 250, SuspendedInterval = 500, BackpressureInterval = 100;
+    private readonly System.Windows.Forms.Timer timer = new() { Interval = IdleInterval };
     private readonly WallpaperMusicSurface surface = new();
     private const int BandCount = 64;
     private static readonly float[] Silence = new float[BandCount];
@@ -72,6 +73,11 @@ internal sealed class DesktopMusicController : IDisposable
         }
     }
 
+    private void SetTickInterval(int interval)
+    {
+        if (timer.Interval != interval) timer.Interval = interval;
+    }
+
     private async void Tick(object? sender, EventArgs e)
     {
         if (disposed) return;
@@ -86,6 +92,7 @@ internal sealed class DesktopMusicController : IDisposable
         if (paused || locked)
         {
             if (drawing || spectrum != null || snapshot != null || previewUntil != 0) StopPlayback();
+            SetTickInterval(SuspendedInterval);
             return;
         }
 
@@ -101,10 +108,11 @@ internal sealed class DesktopMusicController : IDisposable
         var hide = display != null && (MotionDesk.Services.AppSettings.Peek().PresentationMonitorIds?.Any(id =>
             id.Equals(display.DeviceName,StringComparison.OrdinalIgnoreCase) ||
             id.Equals(monitorId,StringComparison.OrdinalIgnoreCase)) ?? false);
-        if (hide)
+        if (hide || display == null)
         {
-            // Do not reopen an audio endpoint every 42 ms on an excluded screen.
+            // Do not reopen an audio endpoint on an excluded or unavailable screen.
             if (drawing || spectrum != null || snapshot != null || previewUntil != 0) StopPlayback();
+            SetTickInterval(SuspendedInterval);
             return;
         }
         if (settings.Enabled) spectrum ??= new AudioSpectrumService(BandCount, settings.InputDeviceId);
@@ -114,7 +122,9 @@ internal sealed class DesktopMusicController : IDisposable
             drawing = true;
             // The renderer owns the single outstanding request. Avoid allocating FFT
             // snapshots and JSON payloads for frames which it would discard.
-            if (surface.CanAcceptFrame)
+            bool ready = surface.CanAcceptFrame;
+            SetTickInterval(ready ? ActiveInterval : BackpressureInterval);
+            if (ready)
             {
                 var bands = spectrum?.GetBands() ?? Silence;
                 var analysis = spectrum?.GetVisualizerFrame();
@@ -122,10 +132,14 @@ internal sealed class DesktopMusicController : IDisposable
                     analysis?.Frequency, analysis?.Waveform);
             }
         }
-        else if (drawing)
+        else
         {
-            drawing = false;
-            surface.Clear();
+            SetTickInterval(IdleInterval);
+            if (drawing)
+            {
+                drawing = false;
+                surface.Clear();
+            }
         }
 
         if (!settings.Enabled || reading || now < nextRead) return;
@@ -145,8 +159,18 @@ internal sealed class DesktopMusicController : IDisposable
 
     public void SetHostPaused(bool value)
     {
+        if (disposed || paused == value) return;
         paused = value;
-        if (value) StopPlayback();
+        if (value)
+        {
+            StopPlayback();
+            SetTickInterval(SuspendedInterval);
+        }
+        else if (settings.Enabled)
+        {
+            nextDisplayLookup = 0;
+            SetTickInterval(IdleInterval);
+        }
     }
 
     private void SessionSwitched(object sender, SessionSwitchEventArgs e)
@@ -170,6 +194,7 @@ internal sealed class DesktopMusicController : IDisposable
     {
         if (disposed || paused || locked) return;
         previewUntil = Environment.TickCount64 + 15000;
+        SetTickInterval(ActiveInterval);
         timer.Start();
     }
     public void ResetPosition() => SetPosition(settings.Display, MusicOverlaySettings.DefaultX, MusicOverlaySettings.DefaultY);
@@ -196,7 +221,9 @@ internal sealed class DesktopMusicController : IDisposable
 
     public void ResetPalette()
     {
-        settings = settings.WithPalette(null);
+        var reset = settings.WithPalette(null);
+        if (settings.Palette.SequenceEqual(reset.Palette, StringComparer.OrdinalIgnoreCase)) return;
+        settings = reset;
         SaveSettings();
     }
 
