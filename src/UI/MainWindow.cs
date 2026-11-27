@@ -151,7 +151,7 @@ namespace MotionDesk.UI
             string currentVersion = Services.AppVersion.Short;
             bool announceUpgrade = !string.IsNullOrWhiteSpace(previousVersion) &&
                 !string.Equals(previousVersion, currentVersion, StringComparison.Ordinal);
-            if (!string.Equals(previousVersion, currentVersion, StringComparison.Ordinal))
+            if (!announceUpgrade && !string.Equals(previousVersion, currentVersion, StringComparison.Ordinal))
             {
                 appSettings.LastSeenAppVersion = currentVersion;
                 appSettings.Save();
@@ -167,6 +167,10 @@ namespace MotionDesk.UI
                     string intro = StudioText($"Opsis upgraded to {currentVersion}.", $"Το Opsis αναβαθμίστηκε στην {currentVersion}.");
                     MessageBox.Show(this, intro + Environment.NewLine + Environment.NewLine + notes,
                         "Opsis · " + currentVersion, MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    // Do not mark the update read during a background-only start.
+                    var seen = AppSettings.Load();
+                    seen.LastSeenAppVersion = currentVersion;
+                    seen.Save();
                 }));
             }
             UiTheme.ApplyScale(appSettings.UiScalePercent);
@@ -4488,6 +4492,7 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
         // έπιασε ζωντανά ("το ιστορικό μένει στην 1.9.0"). Πρόσθεσε ΚΑΙ εδώ τη νέα έκδοση.
         private static readonly (string Version, string Date)[] HistoricalVersions =
         {
+            ("2.8.0.2511", "2026-11"), ("2.8.0.2510", "2026-11"), ("2.8.0.2500", "2026-11"),
             ("2.7.7.2402", "2026-11"), ("2.7.6.2401", "2026-11"), ("2.7.5.2400", "2026-11"), ("2.6.0-studio.23", "2026-11"), ("2.6.0-studio.22", "2026-11"), ("2.6.0-studio.21", "2026-11"), ("2.6.0-studio.20", "2026-11"), ("2.6.0-studio.19", "2026-11"), ("2.6.0", "2026-11"), ("2.4.6.1", "2026-11"), ("2.4.6", "2026-11"), ("2.4.5", "2026-11"), ("2.4.4", "2026-11"), ("2.4.3", "2026-11"), ("2.4.2", "2026-11"), ("2.4.1", "2026-11"), ("2.4.0", "2026-11"), ("2.3.1", "2026-10"), ("2.3.0", "2026-10"), ("2.2.6", "2026-10"), ("2.2.5", "2026-10"), ("2.2.0", "2026-10"), ("2.1.3", "2026-10"), ("2.1.2", "2026-10"), ("2.1.1", "2026-10"), ("2.1.0", "2026-10"), ("2.0.0", "2026-10"), ("1.9.12", "2026-10"), ("1.9.11", "2026-10"), ("1.9.10", "2026-10"), ("1.9.9", "2026-10"), ("1.9.8", "2026-10"), ("1.9.7", "2026-10"), ("1.9.6", "2026-10"), ("1.9.5", "2026-10"), ("1.9.4", "2026-10"), ("1.9.3", "2026-10"), ("1.9.2", "2026-10"), ("1.9.1", "2026-10"), ("1.9.0", "2026-10"), ("1.8.9", "2026-10"), ("1.8.8", "2026-10"), ("1.8.7", "2026-10"), ("1.8.6", "2026-10"), ("1.8.5", "2026-10"), ("1.7.8", "2026-10"), ("1.7.6", "2026-10"), ("1.7.5", "2026-10"), ("1.6.8", "2026-10"), ("1.6.2", "2026-10"), ("1.6.1", "2026-10"), ("1.6.0", "2026-09"), ("1.5.0", "2026-09"), ("1.4.1", "2026-09"), ("1.4.0", "2026-09"), ("1.3.0", "2026-09"), ("1.2.9", "2026-09"), ("1.2.8", "2026-09"), ("1.2.7", "2026-09"), ("1.2.6", "2026-09"), ("1.2.5", "2026-09"), ("1.2.4", "2026-09"), ("1.2.3", "2026-09"), ("1.2.2", "2026-09"), ("1.2.1", "2026-09"), ("1.2.0", "2026-09"), ("1.1.2", "2026-09"), ("1.1.1", "2026-09"), ("1.1.0", "2026-09"), ("1.0.0", "2026-09")
         };
 
@@ -4495,7 +4500,7 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
         // VersionHistory follows the compiled version automatically; no separate
         // manually maintained current-version entry or beta label is required.
         private static IReadOnlyList<(string Version, string Date)> VersionHistory =>
-            new[] { (Services.AppVersion.Short, DateTime.UtcNow.ToString("yyyy-MM", System.Globalization.CultureInfo.InvariantCulture)) }
+            new[] { (Services.AppVersion.Short, "") }
             .Concat(HistoricalVersions.Where(v => v.Version != Services.AppVersion.Short)).ToArray();
 
         // "Audio Enhancement" — ζητήθηκε ρητά, εμπνευσμένο από τη ΛΟΓΙΚΗ του FXSound (github.com/
