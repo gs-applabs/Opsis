@@ -14,9 +14,10 @@ namespace MotionDesk.Containers
             if (!Directory.Exists(Path.Combine(legacyRoot, "Profiles"))) return null;
             var (docs, report) = LegacyImporter.Import(legacyRoot, monitors);
             if (docs.Count == 0) return "legacy import: nothing importable (" + string.Join("; ", report.Warnings) + ")";
-            store.Save(docs[0]);
             var snapDir = Path.Combine(Path.GetDirectoryName(Path.GetFullPath(store.Path)) ?? ".", "container-snapshots");
             for (int i = 1; i < docs.Count; i++) ContainerSnapshots.Save(docs[i], snapDir, docs[i].Profile);
+            // Commit the live layout last: if a snapshot write fails, migration can retry on next launch.
+            store.Save(docs[0]);
             return $"legacy import: {report.Containers} containers, {report.Items} items, {report.Profiles} profile(s) ({docs.Count - 1} as snapshots), {report.NotImported.Count} not carried";
         }
     }
