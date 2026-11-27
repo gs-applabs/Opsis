@@ -14,7 +14,7 @@ OMIT = frozenset([
  'wallpapers/samples/opsis-glass-signature/signature-preview-60s.mp4',
  *['wallpapers/samples/opsis-glass-signature/static/OPSIS-Spectrum-%02d-%s-1920x1080.png'%(i+1,c) for i,c in enumerate(('Blue','Violet','Magenta','Amber','Lime','Emerald'))],
 ])
-QA_FOLLOWUP={'tests/WeatherSkyMask.test.cjs': '4318f0176b4f4968d325bb679c6abcec0e9d7d4b', 'tests/opsis-patch-kit/P5/run-windows-gates.py': '408a11da812c187d7dc21ed608ab19e363cea738'}
+QA_FOLLOWUP={'tests/WeatherSkyMask.test.cjs': '4318f0176b4f4968d325bb679c6abcec0e9d7d4b', 'tests/opsis-patch-kit/P5/run-windows-gates.py': '408a11da812c187d7dc21ed608ab19e363cea738', 'tools/plugin_package_maintenance.py': 'df04081a25ca9e12e6e5d404c1d528d13cf71bf5', 'tests/integration/test_plugin_package_maintenance.py': '6f725f4515543b2865978d593544b9d2478dabe7', 'tests/Opsis.ExperienceSmoke/Program.cs': '89d35aa5214e8e7c45e689828639e80e41af5eb8'}
 OVERLAY_SHA256='8a79978c6d8f0904c1edd6fac16679527d97295cff9567aeafafdd99c3dd03b8'
 
 def git(repo,*args):
@@ -57,7 +57,7 @@ def reconstruct(repo,dest,evidence):
    if proc.wait()!=0:raise ValueError('git cat-file failed')
   for p in names:
    data=z.read(p);verify(data,manifest[p],p);out=dest/p;out.parent.mkdir(parents=True,exist_ok=True);out.write_bytes(data)
- # Apply only the two audited QA harness revisions, not a runtime code change.
+ # Apply only the audited followup revisions, including the ZIP raw-name security fix.
  for p,h in QA_FOLLOWUP.items():
   data=git(repo,'show','HEAD:qa/followup/'+p)
   if blob_id(data)!=h:raise ValueError('QA harness digest mismatch: '+p)
