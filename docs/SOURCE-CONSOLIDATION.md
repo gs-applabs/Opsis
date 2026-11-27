@@ -77,3 +77,7 @@ All 14 locale files retain their existing values and now include the missing loc
 ## R30 reconciliation
 
 Ported opt-in Signature Composition project reference, native DLL staging and prerequisite checks while preserving default bundled Opsis.UI, SkiaSharp dependencies, .NET 11 and existing host exclusion globs. Three project-file overlap records resolved; 13 remain. Windows compile and optional Signature build are not yet verified. WeatherInfoTone overlap deliberately remains open: incoming automatic dark-text behavior conflicts with the user's fixed-white desktop text requirement; reconcile HTML and regression tests together.
+
+## R31 reconciliation
+
+Retained fixed-white weather text in plain and Signature card layouts; legacy adaptive black text is intentionally superseded. R26 additions already present except the obsolete contrast sampling guard. Added regression assertions for both layouts. Existing StartStudioPreferences.StartButtonStyle and OpsisStartButtonArt supersede the proposed duplicate StartGlassIcon boolean. Four records resolved by policy/source comparison; nine remain. Runtime tests pending. ReplacementTaskbar styling and animation overlap remains open.
