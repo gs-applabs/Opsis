@@ -28,6 +28,9 @@ namespace MotionDesk.Services
     {
         public static GpuMonitorService Instance { get; } = new();
         private const int RefreshIntervalMs = 1500;
+        private const int IdleReleaseMs = 30_000;
+        private long _lastDemand;
+        private System.Threading.Timer? _idleTimer;
         private readonly object _hardwareLock = new();
         private readonly UpdateVisitor _visitor = new();
         private Computer? _computer;
@@ -60,8 +63,11 @@ namespace MotionDesk.Services
 
         // UI, wallpaper and widgets can request readings at once. Only the background sampler
         // touches drivers, and it updates every adapter in a single pass.
+        internal static bool ShouldReleaseIdle(long elapsedMs, bool sampling) => elapsedMs >= IdleReleaseMs && !sampling;
+
         private GpuSnapshot[] RequestSample()
         {
+            Volatile.Write(ref _lastDemand, Environment.TickCount64);
             if (!Volatile.Read(ref _disposed) && Environment.TickCount64 >= Volatile.Read(ref _nextSample) &&
                 Interlocked.CompareExchange(ref _sampling, 1, 0) == 0)
                 _ = Task.Run(ReadSensors);
@@ -102,8 +108,19 @@ namespace MotionDesk.Services
             }
             finally
             {
-                Volatile.Write(ref _nextSample, Environment.TickCount64 + RefreshIntervalMs);
-                Volatile.Write(ref _sampling, 0);
+                lock (_hardwareLock)
+                {
+                    Volatile.Write(ref _nextSample, Environment.TickCount64 + RefreshIntervalMs);
+                    Volatile.Write(ref _sampling, 0);
+                    if (!_disposed)
+                    {
+                        // One deadline, owned by the sensor service. No sampling
+                        // timer: only actual snapshot requests touch drivers.
+                        _idleTimer ??= new System.Threading.Timer(_ => ReleaseIdle(), null,
+                            System.Threading.Timeout.Infinite, System.Threading.Timeout.Infinite);
+                        _idleTimer.Change(IdleReleaseMs, System.Threading.Timeout.Infinite);
+                    }
+                }
             }
         }
 
@@ -134,13 +151,40 @@ namespace MotionDesk.Services
             CoreVoltage = value.CoreVoltage, TemperatureC = value.TemperatureC, MemoryUsedMb = value.MemoryUsedMb
         };
 
+        private void ReleaseIdle()
+        {
+            lock (_hardwareLock)
+            {
+                if (_disposed || _idleTimer == null) return;
+                long elapsed = Environment.TickCount64 - Volatile.Read(ref _lastDemand);
+                if (!ShouldReleaseIdle(elapsed, Volatile.Read(ref _sampling) != 0))
+                {
+                    _idleTimer.Change((int)Math.Clamp(IdleReleaseMs - elapsed, 1000L, IdleReleaseMs),
+                        System.Threading.Timeout.Infinite);
+                    return;
+                }
+                _idleTimer.Dispose(); _idleTimer = null;
+                CloseSensors();
+                // Reopen on a subsequent request, including after device changes.
+                _initializationAttempted = false;
+                Volatile.Write(ref _nextSample, 0);
+                Volatile.Write(ref _readings, null);
+            }
+        }
+
+        private void CloseSensors()
+        {
+            try { _computer?.Close(); } catch (Exception) { }
+            _computer = null;
+        }
+
         public void Dispose()
         {
             lock (_hardwareLock)
             {
                 Volatile.Write(ref _disposed, true);
-                try { _computer?.Close(); } catch (Exception) { }
-                _computer = null;
+                _idleTimer?.Dispose(); _idleTimer = null;
+                CloseSensors();
                 Volatile.Write(ref _readings, []);
             }
         }

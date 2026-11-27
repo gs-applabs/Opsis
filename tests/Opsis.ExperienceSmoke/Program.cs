@@ -73,6 +73,18 @@ try
             !DiscordPresence.MatchesResponse(reply.RootElement, "b"),
             "R73 IPC waits for READY or the matching command response");
     }
+    Check(!GpuMonitorService.ShouldReleaseIdle(29999, false) &&
+        !GpuMonitorService.ShouldReleaseIdle(30000, true) &&
+        GpuMonitorService.ShouldReleaseIdle(30000, false),
+        "R74 GPU resources retire only after idle deadline and no in-flight sample");
+    Check(AtomicFile.LockStripe(Path.Combine(folder, "A.json")) ==
+        AtomicFile.LockStripe(Path.Combine(folder, "a.json")) &&
+        Enumerable.Range(0, 4096).Select(i => AtomicFile.LockStripe(Path.Combine(folder, i + ".json"))).All(i => i >= 0 && i < 128),
+        "R74 atomic settings lock table stays bounded and case-insensitive");
+    Check(SystemMonitorService.CalculateCpuPercent(100, 200, 300, 150, 300, 400, 0) == 75 &&
+        SystemMonitorService.CalculateCpuPercent(100, 200, 300, 90, 190, 290, 75) == 0 &&
+        SystemMonitorService.CalculateCpuPercent(100, 200, 300, 100, 200, 300, 42) == 42,
+        "R74 CPU counter reset and unchanged samples do not generate false load");
     var opt = new AppSettings { RestoreWindowsAfterDocking = false, UsageAlertsEnabled = false };
     Check(MotionDesk.Widgets.TrayApplicationContext.SelectOptionalServices(opt, false) == (false, false),
         "R65 disabled optional tray services have no timer demand");
