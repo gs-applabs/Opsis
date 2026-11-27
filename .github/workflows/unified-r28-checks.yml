@@ -19,9 +19,15 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '11.0.x'
-      - run: dotnet build Opsis.csproj -c Release -p:Platform=x64
-      - name: Experience smoke and SSD read regression
-        run: dotnet run --project tests/Opsis.ExperienceSmoke/Opsis.ExperienceSmoke.csproj -c Release
-      - run: node --check src/Widgets/wallpaper/weather.js
-      - run: node --check src/Music/wallpaper-music.js
-      - run: node --test tests/WallpaperIdle.test.cjs tests/WeatherInfoTone.test.cjs
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Shared Windows RC verification
+        shell: pwsh
+        run: ./tools/verify-windows-rc.ps1
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: Opsis-RC-verification
+          path: ci-results/verification.json
+          if-no-files-found: warn
