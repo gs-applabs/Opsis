@@ -39,7 +39,7 @@ try {
     Invoke-Stage 'javascript' {
         Invoke-Checked node.exe @('--check','src/Widgets/wallpaper/weather.js')
         Invoke-Checked node.exe @('--check','src/Music/wallpaper-music.js')
-        Invoke-Checked node.exe @('--test','tests/WallpaperIdle.test.cjs','tests/WeatherInfoTone.test.cjs')
+        Invoke-Checked node.exe @('--test')
     }
     Invoke-Stage 'build' {
         Invoke-Checked dotnet.exe @('build','Opsis.csproj','-c','Release','-p:Platform=x64','--nologo')
