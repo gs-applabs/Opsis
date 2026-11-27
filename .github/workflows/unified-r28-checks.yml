@@ -2,7 +2,6 @@ name: OPSIS R28 unified build checks
 on:
   push:
     branches: [integration/opsis-unified-source-r27]
-    paths: ['.github/workflows/unified-r28-checks.yml']
   workflow_dispatch:
 permissions:
   contents: read
