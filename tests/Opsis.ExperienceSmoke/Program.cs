@@ -70,6 +70,10 @@ try
     bool workerDenied = false;
     try { PluginCapabilityManifest.RequireCompatibleApi(sdkFixture); } catch (InvalidDataException) { workerDenied = true; }
     Check(workerDenied, "P0 unsupported isolated execution must not fall back to in-process loading");
+    Check(PluginPackageMaintenance.ValidName("Opsis Crawler-1.0") &&
+        !PluginPackageMaintenance.ValidName("..") && !PluginPackageMaintenance.ValidName("../outside") &&
+        !PluginPackageMaintenance.ValidName("bad.") && !PluginPackageMaintenance.ValidName("bad "),
+        "R119 maintenance restricts transaction package names");
     Check(PluginCapabilityManifest.HostVersionAllowed(new Version(3,0,0,3200), new Version(3,0), new Version(3,1)) &&
         !PluginCapabilityManifest.HostVersionAllowed(new Version(3,0,0,3200), new Version(3,1), null) &&
         !PluginCapabilityManifest.HostVersionAllowed(new Version(3,0,0,3200), null, new Version(2,8)),

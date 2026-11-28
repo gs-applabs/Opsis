@@ -18,8 +18,12 @@ internal sealed class ContainerLayoutHistory
         try
         {
             if (File.Exists(path) && new FileInfo(path).Length <= MaxFileBytes)
-                entries = JsonSerializer.Deserialize<Dictionary<string, List<string>>>(AtomicFile.ReadAllText(path))
-                    ?? new(StringComparer.OrdinalIgnoreCase);
+            {
+                var loaded = JsonSerializer.Deserialize<Dictionary<string, List<string>>>(AtomicFile.ReadAllText(path));
+                if (loaded != null)
+                    foreach (var pair in loaded)
+                        if (pair.Value is { Count: > 0 }) entries.TryAdd(pair.Key, pair.Value.TakeLast(EntriesPerContainer).ToList());
+            }
         }
         catch (Exception ex) when (ex is JsonException or IOException or UnauthorizedAccessException) { }
     }
@@ -31,10 +35,14 @@ internal sealed class ContainerLayoutHistory
         var json = JsonSerializer.Serialize(model);
         if (json.Length > 64_000) return;
         if (!entries.TryGetValue(model.Id, out var states) || states == null) states = [];
-        // Reinsert to maintain oldest-to-newest dictionary order for eviction.
-        entries.Remove(model.Id);
-        entries[model.Id] = states;
         if (states.Count > 0 && states[^1] == json) return;
+        // Rebuild rather than remove/reinsert: Dictionary can reuse the old slot.
+        // Serialized enumeration order stays oldest-to-newest with a fresh map.
+        var ordered = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
+        foreach (var pair in entries)
+            if (!string.Equals(pair.Key, model.Id, StringComparison.OrdinalIgnoreCase)) ordered.Add(pair.Key, pair.Value);
+        ordered.Add(model.Id, states);
+        entries = ordered;
         states.Add(json);
         while (states.Count > EntriesPerContainer) states.RemoveAt(0);
         dirty = true;

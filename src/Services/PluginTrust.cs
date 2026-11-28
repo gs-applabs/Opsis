@@ -111,7 +111,7 @@ namespace MotionDesk.Services
             { return false; }
         }
 
-        private static IEnumerable<string> PluginFiles(string folder)
+        internal static IEnumerable<string> PluginFiles(string folder)
         {
             var directories = new Stack<string>();
             directories.Push(folder);

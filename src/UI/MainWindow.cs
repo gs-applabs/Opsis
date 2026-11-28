@@ -4975,9 +4975,13 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                             string.Format(LocalizationManager.T("About.PluginUninstallConfirmBody"), captured.Name),
                             LocalizationManager.T("About.PluginUninstallConfirmTitle"), MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
                         if (choice != DialogResult.Yes) return;
-                        bool removedNow = Services.PluginHost.Instance.UninstallPlugin(capturedId);
-                        _statusLabel.Text = LocalizationManager.T(removedNow ? "About.PluginUninstalledNow" : "About.PluginUninstallQueued");
-                        ShowAbout();
+                        try
+                        {
+                            bool removedNow = Services.PluginHost.Instance.UninstallPlugin(capturedId);
+                            _statusLabel.Text = LocalizationManager.T(removedNow ? "About.PluginUninstalledNow" : "About.PluginUninstallQueued");
+                            ShowAbout();
+                        }
+                        catch (Exception ex) { MessageBox.Show(this, ex.Message, "Opsis", MessageBoxButtons.OK, MessageBoxIcon.Warning); }
                     });
                     uninstallBtn.Margin = new Padding(0, 0, 0, 6);
                     details.Controls.Add(uninstallBtn);
@@ -6186,6 +6190,61 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                     dialog.ShowDialog(this);
                 });
                 integrations.Controls.Add(packageSelection);
+                var maintenance = NewHoverButton(StudioText("Local plugin update / rollback", "Τοπική ενημέρωση / επαναφορά plugin"), () =>
+                {
+                    using var dialog = new Form { Text = StudioText("Plugin package maintenance", "Συντήρηση πακέτων plugin"),
+                        StartPosition = FormStartPosition.CenterParent, ClientSize = new Size(660, 300) };
+                    var body = new FlowLayoutPanel { Dock = DockStyle.Fill, FlowDirection = FlowDirection.TopDown, WrapContents = false, Padding = new Padding(12), AutoScroll = true };
+                    var info = new Label { Width = 610, Height = 115, AutoEllipsis = true };
+                    var update = new Button { AutoSize = true, Text = StudioText("Stage local replacement", "Προετοιμασία τοπικής αντικατάστασης") };
+                    var rollback = new Button { AutoSize = true, Text = StudioText("Schedule previous package", "Επαναφορά προηγούμενου πακέτου") };
+                    var forget = new Button { AutoSize = true, Text = StudioText("Delete verified rollback archive", "Διαγραφή επαληθευμένου αντιγράφου") };
+                    bool busy = false;
+                    void RefreshStatus()
+                    {
+                        try
+                        {
+                            var state = PluginPackageMaintenance.Status();
+                            info.Text = state == null
+                                ? StudioText("Select an existing Opsis user-owned plugin folder and a separate extracted replacement. Changes occur on a later startup; approval remains required.", "Επιλέξτε υπάρχον πακέτο στον φάκελο plugins του χρήστη και ξεχωριστό αποσυμπιεσμένο πακέτο. Αλλαγές σε επόμενη εκκίνηση με κανονική έγκριση.")
+                                : state.Name + " · " + (state.Pending ? StudioText("Pending restart", "Αναμονή επανεκκίνησης") : StudioText("Verified rollback available", "Διαθέσιμο επαληθευμένο αντίγραφο"));
+                            update.Enabled = !busy && state == null;
+                            rollback.Enabled = forget.Enabled = !busy && state is { Pending: false };
+                        }
+                        catch (Exception ex) { info.Text = ex.Message; update.Enabled = rollback.Enabled = forget.Enabled = false; }
+                    }
+                    async Task RunMaintenance(Action operation)
+                    {
+                        busy = true; update.Enabled = rollback.Enabled = forget.Enabled = false;
+                        try { await Task.Run(operation); }
+                        catch (Exception ex) { if (!dialog.IsDisposed && !dialog.Disposing) MessageBox.Show(dialog, ex.Message, "Opsis"); }
+                        finally { busy = false; if (!dialog.IsDisposed && !dialog.Disposing) RefreshStatus(); }
+                    }
+                    update.Click += async (_, _) =>
+                    {
+                        using var target = new FolderBrowserDialog { Description = "Existing user-owned Opsis plugin package", SelectedPath = Path.Combine(AppPaths.AppDataFolder, "plugins") };
+                        if (target.ShowDialog(dialog) != DialogResult.OK) return;
+                        using var source = new FolderBrowserDialog { Description = "Separate extracted replacement package" };
+                        if (source.ShowDialog(dialog) != DialogResult.OK) return;
+                        string oldFolder = target.SelectedPath, newFolder = source.SelectedPath;
+                        if (MessageBox.Show(dialog, oldFolder + "\n← " + newFolder + "\nStage for next startup? Existing trust is not transferred.", "Opsis", MessageBoxButtons.YesNo, MessageBoxIcon.Warning, MessageBoxDefaultButton.Button2) != DialogResult.Yes) return;
+                        await RunMaintenance(() => PluginPackageMaintenance.Stage(oldFolder, newFolder));
+                    };
+                    rollback.Click += async (_, _) =>
+                    {
+                        if (MessageBox.Show(dialog, "Restore the archived package on next startup?", "Opsis", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) == DialogResult.Yes)
+                            await RunMaintenance(PluginPackageMaintenance.ScheduleRollback);
+                    };
+                    forget.Click += async (_, _) =>
+                    {
+                        if (MessageBox.Show(dialog, "Permanently delete the verified rollback copy? Current plugin is retained.", "Opsis", MessageBoxButtons.YesNo, MessageBoxIcon.Warning, MessageBoxDefaultButton.Button2) == DialogResult.Yes)
+                            await RunMaintenance(PluginPackageMaintenance.ForgetArchive);
+                    };
+                    dialog.FormClosing += (_, e) => { if (busy && e.CloseReason == CloseReason.UserClosing) e.Cancel = true; };
+                    body.Controls.Add(info); body.Controls.Add(update); body.Controls.Add(rollback); body.Controls.Add(forget);
+                    dialog.Controls.Add(body); RefreshStatus(); dialog.ShowDialog(this);
+                });
+                integrations.Controls.Add(maintenance);
                 var integrationsAdvanced = new StudioAdvancedSection();
                 {
                     // (plan 2.1.1: the "default look of plugins" setting was removed - plugins always follow the Opsis theme; the Crawler bars follow Windows by their own rule)

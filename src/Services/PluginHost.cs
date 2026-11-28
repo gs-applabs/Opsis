@@ -297,6 +297,8 @@ namespace MotionDesk.Services
         {
             var p = Snap().FirstOrDefault(x => x.Plugin.Id == id);
             if (p == null) return false;
+            if (PluginPackageMaintenance.OwnsTransaction(p.Folder))
+                throw new InvalidOperationException("Resolve the package maintenance archive before uninstalling.");
 
             // Registry discovery is not authority to delete someone else's directory.
             // Never remove a folder shared by another loaded plugin.
@@ -357,8 +359,16 @@ namespace MotionDesk.Services
         {
             if (_started || _globalHoldUntilRestart || _compatibilitySuspended || WindowsUpdateGuard.RequiresReview || WindowsUpdateGuard.RuntimeHold) return;
             _started = true;
-            SweepPendingRemovals();
             if (!AppSettings.Peek().PluginsEnabled || SafeModeService.IsSafeMode) { _globalHoldUntilRestart = true; return; }
+            try { PluginPackageMaintenance.ApplyPending(); }
+            catch (Exception ex)
+            {
+                Log("Plugin maintenance requires recovery; plugin loading held until restart: " + ex);
+                _globalHoldUntilRestart = true;
+                Changed?.Invoke();
+                return;
+            }
+            SweepPendingRemovals();
 
             foreach (var (folder, trustedRoot) in EnumerateCandidateFolders())
             {
