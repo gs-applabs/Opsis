@@ -77,7 +77,7 @@ namespace MotionDesk.Services
                 {
                     var name = a.GetProperty("name").GetString();
                     var url = a.TryGetProperty("browser_download_url", out var du) ? du.GetString() : null;
-                    if (!IsTrustedDownloadUrl(url)) continue;
+                    if (name == null || !IsReleaseAssetUrl(url, tag, name)) continue;
                     if (name == SetupName)
                     {
                         setup = url;
@@ -93,6 +93,15 @@ namespace MotionDesk.Services
         public static bool IsTrustedDownloadUrl(string? url) =>
             Uri.TryCreate(url, UriKind.Absolute, out var u) && u.Scheme == Uri.UriSchemeHttps && u.Host == "github.com"
             && string.IsNullOrEmpty(u.UserInfo) && (url!.StartsWith(DownloadPrefix, StringComparison.Ordinal) || url.StartsWith(OldDownloadPrefix, StringComparison.Ordinal));
+
+        internal static bool IsReleaseAssetUrl(string? url, string tag, string asset)
+        {
+            if (!IsTrustedDownloadUrl(url) || string.IsNullOrWhiteSpace(tag) || tag.Contains('/') || tag.Contains('\\') ||
+                (asset != SetupName && asset != SetupName + ".sha256")) return false;
+            string suffix = Uri.EscapeDataString(tag) + "/" + asset;
+            return string.Equals(url, DownloadPrefix + suffix, StringComparison.Ordinal) ||
+                string.Equals(url, OldDownloadPrefix + suffix, StringComparison.Ordinal);
+        }
 
         // "sha256:ABC..." -> "abc..." (64 hex digits), οτιδήποτε άλλο null.
         public static string? ParseDigest(string? digest)

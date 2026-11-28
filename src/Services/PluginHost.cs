@@ -570,6 +570,8 @@ namespace MotionDesk.Services
         /// <summary>Loads a folder if its root is trusted or its exact content is approved; otherwise remembers it as pending. Returns true when it was loaded.</summary>
         internal bool ConsiderFolder(string folder, bool trustedRoot)
         {
+            PluginCapabilityManifest.RequireCompatibleApi(folder);
+            _ = PluginCapabilityManifest.Read(folder); // malformed declaration fails before assembly loading
             if (!trustedRoot)
             {
                 string name = Path.GetFileName(folder), hash;
@@ -577,14 +579,20 @@ namespace MotionDesk.Services
                 catch (Exception ex) { Log($"Plugin '{folder}' skipped: trust check failed: {ex.Message}"); return false; }
                 if (!TrustStore.IsApproved(name, hash))
                 {
-                    var (publisher, signature) = PluginPublisherInfo.Inspect(folder);
-                    lock (_pending) { _pending.RemoveAll(p => string.Equals(p.Folder, folder, StringComparison.OrdinalIgnoreCase)); _pending.Add(new PluginTrustRequest(name, folder, hash, publisher, signature, PluginCapabilityManifest.Summary(folder))); }
+                    RefreshPending(folder, name, hash);
                     Log($"Plugin '{name}' in '{folder}' is waiting for approval (sha256 {hash}); it is not loaded until the user approves it.");
                     return false;
                 }
             }
             (FolderLoader ?? LoadFolder)(folder);
             return true;
+        }
+
+        private void RefreshPending(string folder, string name, string hash)
+        {
+            var (publisher, signature) = PluginPublisherInfo.Inspect(folder);
+            var request = new PluginTrustRequest(name, folder, hash, publisher, signature, PluginCapabilityManifest.Summary(folder));
+            lock (_pending) { _pending.RemoveAll(p => string.Equals(p.Folder, folder, StringComparison.OrdinalIgnoreCase)); _pending.Add(request); }
         }
 
         /// <summary>Asks about every pending plugin (on the UI thread, after start-up); the approved ones are loaded and started at once. Returns how many were approved.</summary>
@@ -594,6 +602,15 @@ namespace MotionDesk.Services
             int approved = 0;
             foreach (var req in PendingApprovals)
             {
+                try
+                {
+                    PluginCapabilityManifest.RequireCompatibleApi(req.Folder);
+                    _ = PluginCapabilityManifest.Read(req.Folder);
+                    string beforePrompt = PluginTrust.HashFolder(req.Folder);
+                    if (!string.Equals(beforePrompt, req.Sha256, StringComparison.OrdinalIgnoreCase))
+                    { RefreshPending(req.Folder, req.Name, beforePrompt); continue; }
+                }
+                catch (Exception ex) { Log($"Plugin '{req.Name}' preapproval validation failed: {ex.Message}"); continue; }
                 bool yes;
                 try { yes = ask(req); } catch (Exception ex) { Log($"Plugin '{req.Name}' approval prompt failed: {ex.Message}"); yes = false; }
                 if (!yes) { Log($"Plugin '{req.Name}' not approved by the user (sha256 {req.Sha256})."); continue; }
@@ -603,15 +620,13 @@ namespace MotionDesk.Services
                     string currentHash = PluginTrust.HashFolder(req.Folder);
                     if (!string.Equals(currentHash, req.Sha256, StringComparison.OrdinalIgnoreCase))
                     {
-                        lock (_pending)
-                        {
-                            _pending.RemoveAll(p => string.Equals(p.Folder, req.Folder, StringComparison.OrdinalIgnoreCase));
-                            _pending.Add(req with { Sha256 = currentHash });
-                        }
+                        RefreshPending(req.Folder, req.Name, currentHash);
                         Log($"Plugin '{req.Name}' changed before approval completed; it requires a new approval.");
                         continue;
                     }
                     if (_globalHoldUntilRestart || _compatibilitySuspended || WindowsUpdateGuard.RequiresReview || SafeModeService.IsSafeMode || !AppSettings.Peek().PluginsEnabled || WindowsUpdateGuard.RuntimeHold) break;
+                    PluginCapabilityManifest.RequireCompatibleApi(req.Folder);
+                    _ = PluginCapabilityManifest.Read(req.Folder);
                     TrustStore.Approve(req.Name, req.Sha256);
                     Log($"Plugin '{req.Name}' approved by the user (sha256 {req.Sha256}).");
                     var before = Snap().ToHashSet();
@@ -703,6 +718,8 @@ namespace MotionDesk.Services
 
         internal void LoadFolder(string folder)
         {
+            PluginCapabilityManifest.RequireCompatibleApi(folder);
+            _ = PluginCapabilityManifest.Read(folder);
             if (IsReplacedByBuiltIn(folder)) { Log($"Plugin folder '{Path.GetFileName(folder)}' skipped: its features are built into Opsis 2.6.0"); return; }
             foreach (var dll in Directory.EnumerateFiles(folder, "*Plugin.dll"))
             {

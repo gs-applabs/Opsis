@@ -37,6 +37,25 @@ try
         !PluginHost.MayRunPlugin(true, false, false, true) &&
         PluginHost.MayRunPlugin(true, false, false, false),
         "R68 plugin activation requires global opt-in, individual selection and safety clearance");
+    Check(PluginCapabilityManifest.SupportsApi(1,1) && PluginCapabilityManifest.SupportsApi(1,2) &&
+        !PluginCapabilityManifest.SupportsApi(2,2) && !PluginCapabilityManifest.SupportsApi(0,1) && !PluginCapabilityManifest.SupportsApi(1,0),
+        "P0 SDK negotiation retains legacy API and rejects unsupported ranges");
+    var sdkFixture = Path.Combine(folder, "sdk-fixture"); Directory.CreateDirectory(sdkFixture);
+    PluginCapabilityManifest.RequireCompatibleApi(sdkFixture);
+    var sdkHashBefore = PluginTrust.HashFolder(sdkFixture);
+    File.WriteAllText(Path.Combine(sdkFixture, "opsis-sdk.json"), "{\"schemaVersion\":1,\"minApi\":1,\"maxApi\":1,\"execution\":\"trusted-in-process\"}");
+    PluginCapabilityManifest.RequireCompatibleApi(sdkFixture);
+    Check(PluginTrust.HashFolder(sdkFixture) != sdkHashBefore, "P0 SDK declaration bound to plugin trust hash");
+    File.WriteAllText(Path.Combine(sdkFixture, "opsis-sdk.json"), "{\"schemaVersion\":1,\"minApi\":1,\"maxApi\":1,\"execution\":\"isolated-worker\"}");
+    bool workerDenied = false;
+    try { PluginCapabilityManifest.RequireCompatibleApi(sdkFixture); } catch (InvalidDataException) { workerDenied = true; }
+    Check(workerDenied, "P0 unsupported isolated execution must not fall back to in-process loading");
+    const string releaseAsset = "https://github.com/gs-applabs/Opsis/releases/download/v3.0.0.3200/OpsisSetup.exe";
+    Check(UpdateCheckService.IsReleaseAssetUrl(releaseAsset,"v3.0.0.3200","OpsisSetup.exe") &&
+        !UpdateCheckService.IsReleaseAssetUrl(releaseAsset,"v3.0.0.3201","OpsisSetup.exe") &&
+        !UpdateCheckService.IsReleaseAssetUrl(releaseAsset+"?other=1","v3.0.0.3200","OpsisSetup.exe") &&
+        !UpdateCheckService.IsReleaseAssetUrl(releaseAsset,"v3.0.0.3200","OpsisSetup.exe.sha256"),
+        "P0 update assets bound to exact release tag and filename");
     var noDemand = AppActivity.SelectDemand(false,false,false,false,false,false,false,false,false,false);
     var dockDemand = AppActivity.SelectDemand(false,false,false,false,false,false,false,false,true,false);
     var widgetDemand = AppActivity.SelectDemand(false,true,false,false,false,false,false,false,false,false);

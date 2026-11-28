@@ -38,12 +38,12 @@ namespace MotionDesk.Services
 
         private static string Normalize(string p) => Path.GetFullPath(p).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
 
-        /// <summary>SHA-256 (hex) over the relative names and contents of all .dll and .deps.json files below the folder, in a stable order.</summary>
+        /// <summary>SHA-256 over relative names and executable/dependency/SDK declarations, in stable order. Not a complete package sandbox or immutable copy.</summary>
         public static string HashFolder(string folder)
         {
             using var total = SHA256.Create();
             var files = PluginFiles(folder)
-                .Where(f => f.EndsWith(".dll", StringComparison.OrdinalIgnoreCase) || (f.EndsWith(".deps.json", StringComparison.OrdinalIgnoreCase) || f.EndsWith("opsis-permissions.json", StringComparison.OrdinalIgnoreCase)))
+                .Where(f => f.EndsWith(".dll", StringComparison.OrdinalIgnoreCase) || (f.EndsWith(".deps.json", StringComparison.OrdinalIgnoreCase) || f.EndsWith("opsis-permissions.json", StringComparison.OrdinalIgnoreCase) || f.EndsWith("opsis-sdk.json", StringComparison.OrdinalIgnoreCase) || f.EndsWith(".runtimeconfig.json", StringComparison.OrdinalIgnoreCase) || f.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) || f.EndsWith(".ps1", StringComparison.OrdinalIgnoreCase) || f.EndsWith(".cmd", StringComparison.OrdinalIgnoreCase) || f.EndsWith(".bat", StringComparison.OrdinalIgnoreCase) || f.EndsWith(".js", StringComparison.OrdinalIgnoreCase)))
                 .OrderBy(f => f, StringComparer.OrdinalIgnoreCase).ToList();
             var sb = new StringBuilder();
             foreach (var f in files)
