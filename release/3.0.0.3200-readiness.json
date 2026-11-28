@@ -2,71 +2,73 @@
   "schema": 1,
   "baseline": "2.8.0.2510",
   "targetVersion": "3.0.0.3200",
-  "currentPublishedVersion": "2.8.0.2510",
-  "state": "development",
-  "branch": "feat/p0-p1-unified-capability-switcher",
+  "currentPublishedVersion": "2.8.0.2511",
+  "state": "rc-validation",
+  "branch": "release/3.0.0.3200-rc2",
   "releaseBlocked": true,
   "requireAllGatesPassed": true,
   "gates": [
     {
       "id": "baseline-source-settings-inventory",
-      "status": "passed",
-      "evidence": "docs/OPSIS-2.8.0.2510-SETTINGS-BASELINE.json; 205 source-scanned properties"
+      "status": "pending",
+      "evidence": "RC2 exact-SHA certification pending; older evidence retained in SOURCE-CONSOLIDATION history."
     },
     {
       "id": "source-setting-schema-preservation",
-      "status": "passed",
-      "evidence": "docs/OPSIS-3.0.0.3200-SETTINGS-DELTA.json; 0 removed or type-changed in 205 keys"
+      "status": "pending",
+      "evidence": "RC2 exact-SHA certification pending; older evidence retained in SOURCE-CONSOLIDATION history."
     },
     {
       "id": "p0-p1-p2-p3-p5-code-stacked",
-      "status": "passed",
-      "evidence": "Integration branch based on feat/p3-p5-unified-experience (which includes P0/P1/P2)"
+      "status": "pending",
+      "evidence": "RC2 exact-SHA certification pending; older evidence retained in SOURCE-CONSOLIDATION history."
     },
     {
       "id": "weather-pr8-code-stacked",
-      "status": "passed",
-      "evidence": "Spatial Weather PR #8 files integrated without replacing updated MainWindow"
+      "status": "pending",
+      "evidence": "RC2 exact-SHA certification pending; older evidence retained in SOURCE-CONSOLIDATION history."
     },
     {
       "id": "plugin-runtime-and-gallery-collision-audit",
-      "status": "in-review",
-      "evidence": "src/Services/OpsisIntegrationAudit.cs, src/Services/OpsisEcosystemGallery.cs"
+      "status": "pending",
+      "evidence": "RC2 exact-SHA certification pending; older evidence retained in SOURCE-CONSOLIDATION history."
     },
     {
       "id": "unified-win2022-win2025-build-tests",
-      "status": "in-review",
-      "evidence": "aee7f57 audit 45467808321 failed CS0165; c5345d9 fixed; 9f97858 integrates PR12 Athens. Latest CI pending; prior 5b4d25d passes only prior SHA."
+      "status": "pending",
+      "evidence": "RC2 exact-SHA certification pending; older evidence retained in SOURCE-CONSOLIDATION history."
     },
     {
       "id": "webview2-gpu-weather-renderer-captures",
-      "status": "in-review",
-      "evidence": "aee7f57 audit 45467808321 failed CS0165; c5345d9 fixed; 9f97858 integrates PR12 Athens. Latest CI pending; prior 5b4d25d passes only prior SHA."
+      "status": "pending",
+      "evidence": "RC2 exact-SHA certification pending; older evidence retained in SOURCE-CONSOLIDATION history."
     },
     {
       "id": "installer-install-reinstall-uninstall-windows-vm",
-      "status": "in-review",
-      "evidence": "aee7f57 audit 45467808321 failed CS0165; c5345d9 fixed; 9f97858 integrates PR12 Athens. Latest CI pending; prior 5b4d25d passes only prior SHA."
+      "status": "pending",
+      "evidence": "RC2 exact-SHA certification pending; older evidence retained in SOURCE-CONSOLIDATION history."
     },
     {
       "id": "integrated-plugins-e2e",
       "status": "pending",
-      "evidence": "Crawler, Chronikologio, Media Suite and other installed plugins must pass live host validation"
+      "evidence": "RC2 exact-SHA certification pending; older evidence retained in SOURCE-CONSOLIDATION history."
     },
     {
       "id": "windows11-visual-dpi-multimonitor-performance",
       "status": "pending",
-      "evidence": "Interactive Windows 11 with graphics/display/session edge cases"
+      "evidence": "RC2 exact-SHA certification pending; older evidence retained in SOURCE-CONSOLIDATION history."
     },
     {
       "id": "complete-original-feature-list",
-      "status": "incomplete",
-      "evidence": "Native Shell XAML engine, guaranteed native Explorer tab grouping, Rainmeter full runtime, HDR, verified geographical assets and all final tests remain incomplete; photo-first and composite widget increments, actual 200-image abstract pack delivered; see canonical progress log."
+      "status": "pending",
+      "evidence": "RC2 exact-SHA certification pending; older evidence retained in SOURCE-CONSOLIDATION history."
     },
     {
       "id": "approved-version-bump-and-production-release",
-      "status": "incomplete",
-      "evidence": "Keep Version.props at 2.8.0.2510 until other mandatory gates passed"
+      "status": "pending",
+      "evidence": "RC2 exact-SHA certification pending; older evidence retained in SOURCE-CONSOLIDATION history."
     }
-  ]
+  ],
+  "channel": "RC2",
+  "candidateSourceBase": "c25d9c5720de2266b8552e730143ada7376e915a"
 }

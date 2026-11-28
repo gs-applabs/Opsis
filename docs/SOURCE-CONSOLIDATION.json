@@ -3024,5 +3024,40 @@
         "release_certified": false
       }
     }
+  },
+  "rc2": {
+    "channel": "RC2",
+    "branch": "release/3.0.0.3200-rc2",
+    "source_base": "c25d9c5720de2266b8552e730143ada7376e915a",
+    "expected_workflows": [
+      "3.0-rc-vm-audit",
+      "3.0-rc-installer-e2e",
+      "3.0-rc-performance-compare",
+      "3.0-source-handoff",
+      "unified-r28-checks",
+      "windows-audit",
+      "plugin-compatibility",
+      "3.0-integration",
+      "3.0-plugins-e2e"
+    ],
+    "sibling_refs": {
+      "crawler": "f35d5c02ff66e625a9071830b960f24f0384ea89",
+      "chronikologio": "e100ed17a55839d42a9f10efd5196209c878a1e6",
+      "media": "a1562d77c11021cd5f576814397a7e0c5cb9ce1f"
+    },
+    "release_blocked": true,
+    "state": "preparing-ci",
+    "findings": [
+      "Settings schema inventory stale (222 vs actual 226); regenerated against exact audited base: 205 retained, 21 additive, zero removed/retyped.",
+      "Version.props already 3.0.0.3200 but production gate incompatible with prerelease test; explicit RC2 validation environment gate, not production release. Default gate remains fail-closed.",
+      "All 23 global packages and original 100 IDs retained; 73 engineering/investigation entries, 8 asset/package entries and 19 QA/delivery groups from prior review remain open. Every observed failure must be added to canonical roadmap with workflow/job/SHA, symptom, fix and retest."
+    ],
+    "manual_gates": [
+      "real Windows 11 interactive 24H2/25H2 and second provider",
+      "mixed DPI and physical GPU/HDR",
+      "1h/24h stress, all controls, upgrade from older versions and add-on playback",
+      "full SDK and native shell feature gaps",
+      "exact approved assets and final release"
+    ]
   }
 }

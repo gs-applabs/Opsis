@@ -6,6 +6,7 @@ with the current source. Does not modify files, registry, Windows or SSD config.
 """
 from __future__ import annotations
 import json
+import os
 import pathlib
 import re
 import sys
@@ -76,7 +77,14 @@ def check() -> None:
         raise ValueError(f"Unsupported version stamp: {current_version}")
     if current_version == "3.0.0.3200":
         incomplete = [p["id"] for p in readiness["gates"] if p["status"] != "passed"]
-        if readiness["releaseBlocked"] or readiness["state"] != "ready" or incomplete:
+        rc2 = (os.environ.get("OPSIS_RC_VALIDATION") == "RC2"
+               and readiness.get("channel") == "RC2"
+               and readiness.get("state") == "rc-validation"
+               and readiness.get("releaseBlocked") is True
+               and readiness.get("requireAllGatesPassed") is True)
+        if rc2:
+            print("RC2 validation only; production release remains blocked")
+        elif readiness["releaseBlocked"] or readiness["state"] != "ready" or incomplete:
             raise ValueError(f"3.0 release stamp blocked until all gates pass: {incomplete}")
     elif readiness["state"] == "ready" and not readiness["releaseBlocked"]:
         raise ValueError("Ready release must use 3.0.0.3200 canonical version")

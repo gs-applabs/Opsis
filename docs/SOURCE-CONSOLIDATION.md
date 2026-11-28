@@ -857,3 +857,11 @@ Reviewed exact `a174170059830e60f90947e147c26814d2975948` method bodies, UI call
 - **G21**: R126 tree has no .webm/.mp4/.wav/.mp3/.ogg; tray startup intro is a native Form, not proof of requested video. Add-on 1.3.0 release declares both Spectrum MP4 but exact bytes not audited. Original approved intro/logo/audio/generator/rails need provenance and packaging review.
 - **G22**: Actions exact R126 SHA query returned zero runs; historical R80 evidence not certification. Core source review does not certify runtime; tests consolidated later.
 - **G23**: GitHub releases show latest main app v2.8.0.2511 and add-on v1.3.0. R126 Version.props is 3.0.0.3200 RC while readiness JSON is stale; reconcile before release, do not publish now.
+
+
+## RC2 freeze — 2026-11-28
+
+- Settings schema inventory stale (222 vs actual 226); regenerated against exact audited base: 205 retained, 21 additive, zero removed/retyped.
+- Version.props already 3.0.0.3200 but production gate incompatible with prerelease test; explicit RC2 validation environment gate, not production release. Default gate remains fail-closed.
+- All 23 global packages and original 100 IDs retained; 73 engineering/investigation entries, 8 asset/package entries and 19 QA/delivery groups from prior review remain open. Every observed failure must be added to canonical roadmap with workflow/job/SHA, symptom, fix and retest.
+Candidate branch `release/3.0.0.3200-rc2`; base `c25d9c5720de2266b8552e730143ada7376e915a`. Expected workflows: 3.0-rc-vm-audit, 3.0-rc-installer-e2e, 3.0-rc-performance-compare, 3.0-source-handoff, unified-r28-checks, windows-audit, plugin-compatibility, 3.0-integration, 3.0-plugins-e2e. No PASS until logs.

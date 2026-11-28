@@ -2,128 +2,156 @@
   "schema": 1,
   "baseline": "2.8.0.2510",
   "target": "3.0.0.3200",
-  "branch": "feat/3.0.0.3200-integration",
+  "branch": "release/3.0.0.3200-rc2",
   "baseline_properties": 205,
-  "current_properties": 222,
+  "current_properties": 226,
   "additions": [
+    {
+      "owner": "AppSettings",
+      "name": "ReducedStartup",
+      "type": "bool",
+      "source": "src/Services/AppSettings.cs",
+      "line": 44
+    },
     {
       "owner": "AppSettings",
       "name": "WallpaperAccentEnabled",
       "type": "bool",
       "source": "src/Services/AppSettings.cs",
-      "line": 64
+      "line": 66
     },
     {
       "owner": "AppSettings",
       "name": "WallpaperAccentHex",
       "type": "string",
       "source": "src/Services/AppSettings.cs",
-      "line": 65
+      "line": 67
+    },
+    {
+      "owner": "AppSettings",
+      "name": "DeferPluginsUntilRequested",
+      "type": "bool",
+      "source": "src/Services/AppSettings.cs",
+      "line": 86
+    },
+    {
+      "owner": "AppSettings",
+      "name": "ExcludedPluginFolders",
+      "type": "HashSet<string>",
+      "source": "src/Services/AppSettings.cs",
+      "line": 87
+    },
+    {
+      "owner": "AppSettings",
+      "name": "PendingPluginRemovalHashes",
+      "type": "Dictionary<string, string>",
+      "source": "src/Services/AppSettings.cs",
+      "line": 99
     },
     {
       "owner": "AppSettings",
       "name": "OpsisAutomationsEnabled",
       "type": "bool",
       "source": "src/Services/AppSettings.cs",
-      "line": 194
+      "line": 200
     },
     {
       "owner": "AppSettings",
       "name": "WindowRulesEnabled",
       "type": "bool",
       "source": "src/Services/AppSettings.cs",
-      "line": 195
+      "line": 201
     },
     {
       "owner": "AppSettings",
       "name": "CursorFxEnabled",
       "type": "bool",
       "source": "src/Services/AppSettings.cs",
-      "line": 197
+      "line": 203
     },
     {
       "owner": "AppSettings",
       "name": "CursorFxStyle",
       "type": "string",
       "source": "src/Services/AppSettings.cs",
-      "line": 198
+      "line": 204
     },
     {
       "owner": "AppSettings",
       "name": "CursorFxIntensity",
       "type": "int",
       "source": "src/Services/AppSettings.cs",
-      "line": 199
+      "line": 205
     },
     {
       "owner": "AppSettings",
       "name": "HotCornersEnabled",
       "type": "bool",
       "source": "src/Services/AppSettings.cs",
-      "line": 201
+      "line": 207
     },
     {
       "owner": "AppSettings",
       "name": "HotCornerTopLeft",
       "type": "string",
       "source": "src/Services/AppSettings.cs",
-      "line": 202
+      "line": 208
     },
     {
       "owner": "AppSettings",
       "name": "HotCornerTopRight",
       "type": "string",
       "source": "src/Services/AppSettings.cs",
-      "line": 203
+      "line": 209
     },
     {
       "owner": "AppSettings",
       "name": "HotCornerBottomLeft",
       "type": "string",
       "source": "src/Services/AppSettings.cs",
-      "line": 204
+      "line": 210
     },
     {
       "owner": "AppSettings",
       "name": "HotCornerBottomRight",
       "type": "string",
       "source": "src/Services/AppSettings.cs",
-      "line": 205
+      "line": 211
     },
     {
       "owner": "AppSettings",
       "name": "HotCornerDwellMilliseconds",
       "type": "int",
       "source": "src/Services/AppSettings.cs",
-      "line": 207
+      "line": 213
     },
     {
       "owner": "AppSettings",
       "name": "HotCornerEdgePixels",
       "type": "int",
       "source": "src/Services/AppSettings.cs",
-      "line": 208
+      "line": 214
     },
     {
       "owner": "AppSettings",
       "name": "HotCornersPauseOnFullscreen",
       "type": "bool",
       "source": "src/Services/AppSettings.cs",
-      "line": 209
+      "line": 215
     },
     {
       "owner": "AppSettings",
       "name": "MouseTrailsOriginalCount",
       "type": "int?",
       "source": "src/Services/AppSettings.cs",
-      "line": 212
+      "line": 218
     },
     {
       "owner": "WallpaperSettings",
       "name": "WeatherSpatialMode",
       "type": "string",
       "source": "src/Widgets/WallpaperWindow.cs",
-      "line": 530
+      "line": 543
     }
   ],
   "missing": [],
