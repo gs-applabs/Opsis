@@ -270,6 +270,8 @@ namespace MotionDesk.Services
                 var sw = System.Diagnostics.Stopwatch.StartNew();
                 try { win.NavigateTo(key); Pump(1200); }
                 catch (Exception ex) { problems.Add($"[{key}] navigation failed: {ex.Message}"); }
+                if (win.Controls.Find("opsis-page-build-error", true).Length != 0)
+                    problems.Add($"[{key}] navigation rendered an error fallback");
                 long load = sw.ElapsedMilliseconds - 1200;
                 if (load > 3000) problems.Add($"[{key}] page took {load} ms to open");
 
@@ -453,7 +455,7 @@ namespace MotionDesk.Services
             if (allSkipped.Count > 0) report.Append("Listed but not flipped on purpose (they change Windows itself or other programs):" + nl + string.Join(nl, allSkipped.Select(s => "- " + s)) + nl + nl);
             report.Append(problems.Count == 0 ? "No problems found." + nl : "## Problems" + nl + nl + string.Join(nl, problems.Select(p => "- " + p)) + nl);
             File.WriteAllText(Path.Combine(folder, "ui-audit.md"), report.ToString());
-            File.WriteAllText(Path.Combine(folder, "ui-audit.json"), System.Text.Json.JsonSerializer.Serialize(new { clicked = totalClicked, problems, captionReview = layoutReview.Order(), pages }));
+            File.WriteAllText(Path.Combine(folder, "ui-audit.json"), System.Text.Json.JsonSerializer.Serialize(new { clicked = totalClicked, problems, captionReview = layoutReview.Order(), skipped = allSkipped, pages, coverage = "Reversible controls and explicit feature probes only; inventory is not functional verification." }));
             try { win.Close(); } catch (Exception) { }
             auditHost?.Dispose();
             auditHost = null;

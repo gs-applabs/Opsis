@@ -253,10 +253,10 @@ internal sealed class ReplacementTaskbar : Form
         Disposed += (_, _) => { _pulse.Stop(); _pulse.Dispose(); menu.Dispose(); _opsisIcon?.Dispose(); };
         _pulse.Tick += (_, _) =>
         {
-            if (!CanPulse) { SyncPulse(); return; }
+            if (!CanPulse || _activeItem is not { IsDisposed: false } active) { SyncPulse(); return; }
             _pulseBright = !_pulseBright;
-            _activeItem.FlatAppearance.BorderSize = _pulseBright ? 2 : 1;
-            _activeItem.FlatAppearance.BorderColor = _pulseBright
+            active.FlatAppearance.BorderSize = _pulseBright ? 2 : 1;
+            active.FlatAppearance.BorderColor = _pulseBright
                 ? UiTheme.AccentCyan : UiTheme.TextSecondary;
         };
         VisibleChanged += (_, _) =>

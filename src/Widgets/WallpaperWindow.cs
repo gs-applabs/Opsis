@@ -1062,7 +1062,7 @@ namespace MotionDesk.Widgets
                 // στιγμιότυπο. Κρύβεται ΜΟΝΟ για τη λήψη και ξαναεμφανίζεται αμέσως μετά μέσω της
                 // ίδιας της λογικής της σελίδας (updateWeatherInfo), ώστε να μην αλλάξει τίποτα στο
                 // ζωντανό wallpaper που βλέπει ο χρήστης.
-                try { await webView.CoreWebView2.ExecuteScriptAsync("(function(){var e=document.getElementById('wxInfo'); if(e) e.style.display='none';})();"); } catch (Exception) { }
+                try { await core.ExecuteScriptAsync("(function(){var e=document.getElementById('wxInfo'); if(e) e.style.display='none';})();"); } catch (Exception) { }
 
                 await using var stream = new MemoryStream();
                 await core.CapturePreviewAsync(Microsoft.Web.WebView2.Core.CoreWebView2CapturePreviewImageFormat.Png, stream);

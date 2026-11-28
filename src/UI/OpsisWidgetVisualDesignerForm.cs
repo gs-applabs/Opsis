@@ -186,7 +186,7 @@ public sealed class OpsisWidgetVisualDesignerForm : Form
             if (grid.SelectedRows.Count != 1) return;
             int index = grid.SelectedRows[0].Index, next = index + direction;
             if (next < 0 || next >= grid.Rows.Count) return;
-            var values = grid.Rows[index].Cells.Cast<DataGridViewCell>().Select(c => c.Value).ToArray();
+            var values = grid.Rows[index].Cells.Cast<DataGridViewCell>().Select(c => c.Value!).ToArray();
             grid.Rows.RemoveAt(index); grid.Rows.Insert(next, values);
             grid.ClearSelection(); grid.Rows[next].Selected = true;
         }

@@ -95,10 +95,10 @@ internal static class Program
                 foreach (var key in pageKeys)
                 {
                     var elapsed = Stopwatch.StartNew();
-                    Verify(navButtons[key] is Button { Visible: true, Enabled: true }, "visible enabled sidebar button: " + key);
-                    var navButton = (Button)navButtons[key]!;
+                    Verify(navButtons[key] is Control { Visible: true, Enabled: true }, "visible enabled sidebar button: " + key);
+                    var navButton = (Control)navButtons[key]!;
                     if (navButton.Parent is ScrollableControl navScroll) navScroll.ScrollControlIntoView(navButton);
-                    navButton.PerformClick();
+                    shell.NavigateTo(key); // executes the same NavButton.Click delegate as a mouse click
                     for (int tick = 0; tick < 6; tick++)
                     {
                         Application.DoEvents();

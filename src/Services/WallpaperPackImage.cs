@@ -48,7 +48,7 @@ public static class WallpaperPackImage
         using (var canvas = new SKCanvas(thumb))
         {
             canvas.Clear(SKColors.Transparent);
-            canvas.DrawBitmap(bitmap, new SKRect(0, 0, w, h));
+            canvas.DrawBitmap(bitmap, new SKRect(0, 0, w, h), new SKSamplingOptions(SKFilterMode.Linear));
         }
         using var image = SKImage.FromBitmap(thumb);
         using var encoded = image.Encode(SKEncodedImageFormat.Png, 100) ?? throw new InvalidDataException("Thumbnail encoding failed.");

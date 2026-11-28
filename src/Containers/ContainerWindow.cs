@@ -421,7 +421,7 @@ namespace MotionDesk.Containers
                 _repaint.Stop();
                 if (Visible && IsHandleCreated && Width > 0 && Height > 0) PresentFrame(Bounds);
             };
-            _pane = new GlassPaneBinder(this, 14, () => DesktopMaterials.Get(DesktopSurface.Containers).Mode != "Solid", DesktopSurface.Containers, cornerOverride: () => (int)Math.Round(DesktopMaterials.Get(DesktopSurface.Containers).EffectiveRadius(14) * Scale));
+            _pane = new GlassPaneBinder(this, 14, () => DesktopMaterials.Get(DesktopSurface.Containers).Mode != "Solid", DesktopSurface.Containers, cornerOverride: () => (int)Math.Round(DesktopMaterials.Get(DesktopSurface.Containers).EffectiveRadius(14) * DpiScale));
             _pane.PaneChanged += Dirty;
             _icons.Loaded += Dirty;
             _portalTimer.Tick += (_, _) => { _portalTimer.Stop(); RefreshPortal(); };
@@ -449,7 +449,7 @@ namespace MotionDesk.Containers
         protected override CreateParams CreateParams { get { var cp = base.CreateParams; cp.ExStyle |= 0x00080000 | 0x08000000 | 0x80; return cp; } }
         protected override bool ShowWithoutActivation => true;
 
-        private float Scale => DeviceDpi / 96f;
+        private float DpiScale => DeviceDpi / 96f;
         private bool TabsOn => Model.Kind == ContainerKind.Data && Model.TabsEnabled && Model.Tabs.Count > 0;
         private bool UsesRows => ContainerItemLayout.ViewOf(Model) is "list" or "details" ||
             (ContainerItemLayout.ViewOf(Model) == "grid" &&
@@ -457,7 +457,7 @@ namespace MotionDesk.Containers
              monitorBounds.Height > monitorBounds.Width * 1.15 &&
              Bounds.Width < 420); // portrait secondary displays: readable single-column density
         private ContainerItemLayout ItemLayout => new(Client, Metrics, UsesRows);
-        private ContainerMetrics Metrics => ContainerMetrics.Default(Scale, Model.TitleBar.Height, UsesRows ? 20 : Model.Appearance.IconSize > 0 ? Model.Appearance.IconSize : 48) with { TopInset = TabsOn ? (int)(26 * Scale) : 0 };
+        private ContainerMetrics Metrics => ContainerMetrics.Default(DpiScale, Model.TitleBar.Height, UsesRows ? 20 : Model.Appearance.IconSize > 0 ? Model.Appearance.IconSize : 48) with { TopInset = TabsOn ? (int)(26 * DpiScale) : 0 };
 
         // The items shown now: the container's own list, the list of the current tab, or - for a portal - a LIVE listing of its folder (never stored). A note has none.
         private readonly List<ContainerItem> _portalItems = new(); private static readonly List<ContainerItem> NoItems = new();
@@ -616,8 +616,8 @@ namespace MotionDesk.Containers
         private List<Rectangle> TabRects()
         {
             if (!TabsOn || IsCollapsed) return [];
-            using var font = new Font("Segoe UI", 9f * Scale, FontStyle.Regular, GraphicsUnit.Point);
-            int[] sizes = Model.Tabs.Select(tab => TextRenderer.MeasureText(tab.Name, font).Width + (int)(16 * Scale)).ToArray();
+            using var font = new Font("Segoe UI", 9f * DpiScale, FontStyle.Regular, GraphicsUnit.Point);
+            int[] sizes = Model.Tabs.Select(tab => TextRenderer.MeasureText(tab.Name, font).Width + (int)(16 * DpiScale)).ToArray();
             return ContainerTabStrip.Arrange(Width, Metrics.TitleBarHeight, Metrics.TopInset, Metrics.Margin / 2,
                 Model.CurrentTab, sizes).ToList();
         }
@@ -688,7 +688,7 @@ namespace MotionDesk.Containers
         private void PaintFrame(Graphics g, Size size, bool? highContrast = null)
         {
             var pulse = PulseProgress();
-            ContainerRenderer.Paint(g, size, Model, Items, Metrics, _scroll, _hover, _selected, _icons, GlassOn, Scale, highContrast, _pulseIndex, pulse, _selection, titleOnly: IsCollapsed, rowsOverride: UsesRows);
+            ContainerRenderer.Paint(g, size, Model, Items, Metrics, _scroll, _hover, _selected, _icons, GlassOn, DpiScale, highContrast, _pulseIndex, pulse, _selection, titleOnly: IsCollapsed, rowsOverride: UsesRows);
             if (!IsCollapsed) PaintTabIndicator(g);
         }
 
@@ -718,7 +718,7 @@ namespace MotionDesk.Containers
         }
 
         // ---- interaction ---------------------------------------------------------------------------------------------
-        private Rectangle Grip => new(Width - (int)(18 * Scale), Height - (int)(18 * Scale), (int)(18 * Scale), (int)(18 * Scale));
+        private Rectangle Grip => new(Width - (int)(18 * DpiScale), Height - (int)(18 * DpiScale), (int)(18 * DpiScale), (int)(18 * DpiScale));
         private Rectangle WorkArea => Screen.FromControl(this).WorkingArea;
 
         protected override void OnMouseDown(MouseEventArgs e)
@@ -775,7 +775,7 @@ namespace MotionDesk.Containers
             }
             var d = new Size(Cursor.Position.X - _dragStart.X, Cursor.Position.Y - _dragStart.Y);
             Rectangle wanted = _drag == Drag.Move ? new Rectangle(_boundsAtDragStart.Location + d, _boundsAtDragStart.Size) : ContainerBehavior.Resize(_boundsAtDragStart, _boundsAtDragStart.Size + d, WorkArea);
-            if (_drag == Drag.Move) wanted = ContainerBehavior.Snap(wanted, _others(), WorkArea, (int)(12 * Scale));
+            if (_drag == Drag.Move) wanted = ContainerBehavior.Snap(wanted, _others(), WorkArea, (int)(12 * DpiScale));
             wanted = ContainerBehavior.ApplyLock(Model.Locked, Bounds, wanted);
             SetFrameBounds(wanted);
         }

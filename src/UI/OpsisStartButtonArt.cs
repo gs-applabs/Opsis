@@ -14,7 +14,7 @@ public static class OpsisStartButtonArt
     public static void Draw(Graphics graphics, Rectangle bounds, string? style, Icon? applicationIcon = null)
     {
         if (bounds.Width < 8 || bounds.Height < 8) return;
-        style = IsValid(style) ? style : Styles[0];
+        style = style != null && IsValid(style) ? style : Styles[0];
         var g = graphics;
         var state = g.Save();
         try

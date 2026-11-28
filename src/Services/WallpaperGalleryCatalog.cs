@@ -61,7 +61,7 @@ public static class WallpaperGalleryCatalog
                         if (manifest is null ||
                             !string.Equals(manifest.Collection, "OPSIS 100 3D Wallpapers", StringComparison.OrdinalIgnoreCase) ||
                             !ValidId.IsMatch(manifest.WallpaperId ?? "")) continue;
-                        string id = manifest.WallpaperId.ToLowerInvariant();
+                        string id = (manifest.WallpaperId ?? "").ToLowerInvariant();
                         // Built-in Ancient Athens is never installed a second time as an addon.
                         string normalized = id.Replace("-", "").Replace("_", "");
                         if (normalized is "ancientathens" or "athens" or "ancientathenscore") continue;

@@ -100,7 +100,6 @@ namespace MotionDesk.UI
         }
         private readonly System.Windows.Forms.Timer _statusTimer;
         private System.Windows.Forms.Timer? _brandPulseTimer;
-        private double _brandPulseT;
         private NavButton? _activeButton;
         private readonly System.Collections.Generic.Dictionary<string, NavButton> _navButtons = new();
         private readonly System.Collections.Generic.Dictionary<string, Action> _pageBuilders = new();
