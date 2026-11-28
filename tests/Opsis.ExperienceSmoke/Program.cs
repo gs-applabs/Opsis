@@ -87,6 +87,17 @@ try
         !WindowRulesEngine.MayRun(true,true,false,true,false) && !WindowRulesEngine.MayRun(true,false,false,false,false), "P0 automatic placement owners mutually exclusive");
     Check(RuntimeSessionPolicy.Allows(SessionBackgroundService.DesktopHotkeys,SessionBackgroundService.DesktopHotkeys,true,false) &&
         !RuntimeSessionPolicy.Allows(SessionBackgroundService.ZoneSnap,SessionBackgroundService.DesktopHotkeys,true,false), "P0 optional hotkeys separately admitted");
+    Check(AutomationService.HasTrigger(new AutomationRule { Profile = "Gaming", TriggerProcess = "game" }) &&
+        AutomationService.HasTrigger(new AutomationRule { Profile = "Battery", PowerCondition = "Battery" }) &&
+        !AutomationService.HasTrigger(new AutomationRule { Profile = "Gaming", Enabled = false }) &&
+        !AutomationService.HasTrigger(new AutomationRule { Profile = "Gaming" }),
+        "P0 profile automation requires an enabled actionable rule");
+    Check(AutomationService.MayRun(true,true,true,false,false) &&
+        !AutomationService.MayRun(false,true,true,false,false) &&
+        !AutomationService.MayRun(true,false,true,false,false) &&
+        !AutomationService.MayRun(true,true,false,false,false) &&
+        !AutomationService.MayRun(true,true,true,false,true),
+        "P0 profile automation is demand-driven and honors shared session and safety admission");
     var noDemand = AppActivity.SelectDemand(false,false,false,false,false,false,false,false,false,false);
     var dockDemand = AppActivity.SelectDemand(false,false,false,false,false,false,false,false,true,false);
     var widgetDemand = AppActivity.SelectDemand(false,true,false,false,false,false,false,false,false,false);

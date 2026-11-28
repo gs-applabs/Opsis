@@ -53,10 +53,24 @@ public sealed class WindowRulesEngine : IDisposable
     internal static bool MayRun(bool saved, bool permitted, bool review, bool hold, bool autoTile) => saved && permitted && !review && !hold && !autoTile;
     private static bool Admission => MayRun(AppSettings.Peek().WindowRulesEnabled,
         RuntimeSessionPolicy.IsPermitted(SessionBackgroundService.WindowRules), WindowsUpdateGuard.RequiresReview, WindowsUpdateGuard.RuntimeHold,
-        RuntimeSessionPolicy.Allows(SessionBackgroundService.AutoTile, AppSettings.Peek().AutoTileEnabled, SafeModeService.IsSafeMode));
+        AutoTileService.AutomaticAllowed);
     public void Start() { if (Admission) _timer.Start(); else Stop(); }
     public void Stop() => _timer.Stop();
     internal void ReconcileSession() { if (Admission) Start(); else Stop(); }
+
+    // One saved-setting transition for the dedicated page and module adapter.
+    internal void SetEnabled(bool enabled)
+    {
+        if (enabled && (SafeModeService.IsSafeMode || WindowsUpdateGuard.RequiresReview || WindowsUpdateGuard.RuntimeHold))
+            throw new InvalidOperationException("Windows compatibility review is required.");
+        if (enabled && AutoTileService.AutomaticAllowed)
+            throw new InvalidOperationException("Suspend AutoTile first: it already owns automatic window placement.");
+        var settings = AppSettings.Load();
+        settings.WindowRulesEnabled = enabled;
+        settings.Save();
+        if (enabled) ReconcileSession();
+        else { Stop(); Restore(); }
+    }
 
     private static void Validate(Rule? rule)
     {

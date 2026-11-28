@@ -597,28 +597,18 @@ public sealed partial class MainWindow
         var windowEnabled = new CheckBox { AutoSize = true, ForeColor = UiTheme.TextPrimary,
             Text = StudioText("Enable Window Rules", "Ενεργοποίηση κανόνων παραθύρων"),
             Checked = AppSettings.Load().WindowRulesEnabled };
+        bool syncingWindowRules = false;
         windowEnabled.CheckedChanged += (_, _) =>
         {
-            try
+            if (syncingWindowRules) return;
+            try { WindowRulesEngine.Instance.SetEnabled(windowEnabled.Checked); }
+            catch (Exception ex)
             {
-                if (windowEnabled.Checked && AppSettings.Load().AutoTileEnabled)
-                {
-                    windowEnabled.Checked = false;
-                    throw new InvalidOperationException("Disable AutoTile first: it already owns window placement.");
-                }
-                if (windowEnabled.Checked && (SafeModeService.IsSafeMode || WindowsUpdateGuard.RequiresReview))
-                {
-                    windowEnabled.Checked = false;
-                    throw new InvalidOperationException("Windows compatibility review is required.");
-                }
-                var s = AppSettings.Load(); s.WindowRulesEnabled = windowEnabled.Checked; s.Save();
-                if (windowEnabled.Checked)
-                {
-                    WindowRulesEngine.Instance.Start();
-                }
-                else { WindowRulesEngine.Instance.Stop(); WindowRulesEngine.Instance.Restore(); }
+                syncingWindowRules = true;
+                try { windowEnabled.Checked = AppSettings.Peek().WindowRulesEnabled; }
+                finally { syncingWindowRules = false; }
+                MessageBox.Show(this, ex.Message, "Window Rules", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
-            catch (Exception ex) { MessageBox.Show(this, ex.Message, "Window Rules", MessageBoxButtons.OK, MessageBoxIcon.Error); }
         };
         windowCard.Controls.Add(windowEnabled);
         var appName = new TextBox { Width = 145, PlaceholderText = "notepad" };

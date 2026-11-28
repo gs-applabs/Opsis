@@ -364,6 +364,11 @@ namespace MotionDesk.Widgets
             // window and its Dashboard are constructed only when explicitly opened.
             WorkspaceProfileService.ExitSaveDone = false;
             WorkspaceProfileService.RestoreStartupSession();
+            if (!safeMode && !reviewRequired)
+            {
+                try { AutomationService.StartForHost(); }
+                catch (Exception ex) { RotatingLogger.Write("Profile automation startup: " + ex.GetType().Name); }
+            }
             AppActivity.RequestRefresh();
             _wallpaperEnabled = WallpaperHostEngine.Instance.IsEnabled;
             _wallpaperToggleItem.Checked = _wallpaperEnabled;
@@ -547,6 +552,7 @@ namespace MotionDesk.Widgets
             Hold(ReplacementTaskbar.Stop, "taskbar");
             Hold(WindowRulesEngine.Instance.Stop, "window rules");
             Hold(AutoTileService.Stop, "auto tile");
+            Hold(AutomationService.SuspendIfCreated, "profile automations");
             Hold(ZoneSnapEngine.Stop, "zone hooks");
             Hold(StopOptionalHotkeys, "optional hotkeys");
             Hold(_hotCorners.Stop, "hot corners");
@@ -751,7 +757,7 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                 (SessionBackgroundService.DockRestore, T("Restore windows after docking", "Επαναφορά παραθύρων μετά από σύνδεση οθόνης"), s => s.RestoreWindowsAfterDocking),
                 (SessionBackgroundService.UsageAlerts, T("CPU/RAM alerts", "Ειδοποιήσεις CPU/RAM"), s => s.UsageAlertsEnabled),
                 (SessionBackgroundService.DiscordPresence, T("Discord presence", "Παρουσία Discord"), s => s.DiscordPresenceEnabled),
-                (SessionBackgroundService.ScheduledAutomations, T("Scheduled automations", "Προγραμματισμένοι αυτοματισμοί"), s => s.OpsisAutomationsEnabled),
+                (SessionBackgroundService.ScheduledAutomations, T("Automations (scheduled and profile rules)", "Αυτοματισμοί (χρονοπρόγραμμα και κανόνες προφίλ)"), s => s.OpsisAutomationsEnabled || AutomationService.HasEnabledRules),
                 (SessionBackgroundService.PeriodicWallpaperAccent, T("Periodic wallpaper accent", "Περιοδική ανανέωση χρώματος φόντου"), s => s.WallpaperAccentEnabled)
             };
             var items = new List<(ToolStripMenuItem Item, SessionBackgroundService Flag, Func<AppSettings, bool> Saved)>();
@@ -988,6 +994,8 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
             }
             catch (Exception ex) { System.Diagnostics.Debug.WriteLine(ex); }
             DiscordPresence.Instance.Apply();
+            if (_compatibilityIsolationApplied) AutomationService.SuspendIfCreated();
+            else AutomationService.ReconcileIfCreated();
             RefreshExperienceCadence();
             AppActivity.RequestRefresh();
         }
@@ -1135,6 +1143,7 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
             Step("plugin navigation", () => PluginHost.Instance.NavigationRequested -= NavigatePlugin);
             Step("dock restorer", () => OnApplicationExit(null, EventArgs.Empty));
             Step("experience timer", () => { _experienceTimer.Stop(); _experienceTimer.Dispose(); });
+            Step("profile automation", AutomationService.StopForHost);
             Step("usage alert timer", () => { _alertTimer?.Stop(); _alertTimer?.Dispose(); _alertTimer = null; });
             Step("save session", WorkspaceProfileService.SaveLastSessionOnce);
             Step("appearance restore", () => MotionDesk.Appearance.AppearanceService.Instance.Stop());

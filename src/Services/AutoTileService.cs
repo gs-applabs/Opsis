@@ -181,7 +181,7 @@ internal static class AutoTileService
 
     internal static bool AllowsAutomatic(bool saved, bool permitted, bool review, bool hold) => saved && permitted && !review && !hold;
 
-    private static bool AutomaticAllowed => AllowsAutomatic(AppSettings.Peek().AutoTileEnabled,
+    internal static bool AutomaticAllowed => AllowsAutomatic(AppSettings.Peek().AutoTileEnabled,
         RuntimeSessionPolicy.IsPermitted(SessionBackgroundService.AutoTile), WindowsUpdateGuard.RequiresReview, WindowsUpdateGuard.RuntimeHold);
 
     internal static void RefreshSettings()

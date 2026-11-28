@@ -103,8 +103,9 @@ public static class OpsisAutomationStudio
     /// <summary>Called only when enabled in Opsis. Each rule runs once per startup/day.</summary>
     public static int ExecuteDue(bool startup)
     {
-        if (SafeModeService.IsSafeMode || WindowsUpdateGuard.RequiresReview ||
-            !AppSettings.Load().OpsisAutomationsEnabled) return 0;
+        if (!RuntimeSessionPolicy.Allows(SessionBackgroundService.ScheduledAutomations,
+            AppSettings.Peek().OpsisAutomationsEnabled, SafeModeService.IsSafeMode) ||
+            WindowsUpdateGuard.RequiresReview || WindowsUpdateGuard.RuntimeHold) return 0;
         var now = DateTime.Now;
         int count = 0;
         lock (Gate)
