@@ -31,7 +31,22 @@ namespace MotionDesk.Widgets
         private readonly ExplorerRestartWatcher _taskbarWatcher = new();
         private readonly HotCornersService _hotCorners;
         private readonly System.Windows.Forms.Timer _experienceTimer = new() { Interval = 60_000 };
-        private int _experienceChecks;
+        private long _lastExperienceSafetyCheck = Environment.TickCount64;
+        private const int ExperienceSafetyIntervalMs = 15 * 60_000;
+        internal static int ExperienceCadenceMs(bool automations, bool taskbar, bool reviewPending) =>
+            automations || taskbar || reviewPending ? 60_000 : ExperienceSafetyIntervalMs;
+
+        private void RefreshExperienceCadence()
+        {
+            if (SafeModeService.IsSafeMode || !_experienceTimer.Enabled) return;
+            var settings = AppSettings.Peek();
+            // The Windows-update safety check remains unconditional and is
+            // never postponed by a settings change. Optional work has demand.
+            long untilSafety = ExperienceSafetyIntervalMs - (Environment.TickCount64 - _lastExperienceSafetyCheck);
+            int next = (int)Math.Clamp(untilSafety, 1000L,
+                ExperienceCadenceMs(settings.OpsisAutomationsEnabled, settings.ReplaceWindowsTaskbar, WindowsUpdateGuard.RequiresReview));
+            if (_experienceTimer.Interval != next) _experienceTimer.Interval = next;
+        }
         private bool _compatibilityIsolationApplied;
 
         private int _exitStarted;
@@ -260,27 +275,37 @@ namespace MotionDesk.Widgets
             // Build fingerprint is read only every 15 minutes; no Windows file hashing in the timer.
             if (!safeMode)
             {
-                try { if (!reviewRequired) OpsisAutomationStudio.ExecuteDue(true); }
+                try { if (!reviewRequired && AppSettings.Peek().OpsisAutomationsEnabled) OpsisAutomationStudio.ExecuteDue(true); }
                 catch (Exception e) { RotatingLogger.Write("Automation startup: " + e.Message); }
                 _experienceTimer.Tick += (_, _) =>
                 {
                     try
                     {
-                        if ((++_experienceChecks % 15) == 0)
+                        var settings = AppSettings.Peek();
+                        long now = Environment.TickCount64;
+                        if (now - _lastExperienceSafetyCheck >= ExperienceSafetyIntervalMs)
                         {
+                            _lastExperienceSafetyCheck = now;
                             if (WindowsUpdateGuard.EvaluateStartup()) IsolateShellForUpdate();
-                            // Opsis-only accent; no Windows registry writes and only
-                            // one settings save when the actual color changes.
-                            try { WallpaperAccentEngine.RefreshIfChanged(); }
-                            catch (Exception e) { RotatingLogger.WriteRecurring(RotatingLogger.RecurringSource.WallpaperAccent, "Wallpaper accent refresh: " + e.Message); }
+                            // Opsis-only accent; no work for disabled accent extraction.
+                            if (settings.WallpaperAccentEnabled)
+                            {
+                                try { WallpaperAccentEngine.RefreshIfChanged(); }
+                                catch (Exception e) { RotatingLogger.WriteRecurring(RotatingLogger.RecurringSource.WallpaperAccent, "Wallpaper accent refresh: " + e.Message); }
+                            }
                         }
                         if (WindowsUpdateGuard.RequiresReview) IsolateShellForUpdate();
-                        else if (!_compatibilityIsolationApplied && AppSettings.Peek().ReplaceWindowsTaskbar) ReplacementTaskbar.RefreshSettings();
-                        OpsisAutomationStudio.ExecuteDue(false);
+                        else if (!_compatibilityIsolationApplied)
+                        {
+                            if (settings.ReplaceWindowsTaskbar) ReplacementTaskbar.RefreshSettings();
+                            if (settings.OpsisAutomationsEnabled) OpsisAutomationStudio.ExecuteDue(false);
+                        }
                     }
                     catch (Exception e) { RotatingLogger.WriteRecurring(RotatingLogger.RecurringSource.Experience, "Opsis experience check: " + e.Message); }
+                    finally { RefreshExperienceCadence(); }
                 };
                 _experienceTimer.Start();
+                RefreshExperienceCadence();
             }
             if (!safeMode && !reviewRequired) _hotCorners.Start();
             DesktopToolbar.RefreshSettings();
@@ -739,6 +764,7 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
             RefreshDesktopMenuPipe();
             PluginHost.Instance.HoldIfGloballyDisabled();
             DiscordPresence.Instance.Apply();
+            RefreshExperienceCadence();
             AppActivity.RequestRefresh();
         }
 
