@@ -73,27 +73,70 @@ namespace MotionDesk.UI
                     if (answer == DialogResult.Yes) DiagnosticSessionService.Cancel();
                     return;
                 }
-                using var save = new SaveFileDialog
+                var owner = this;
+                void Preview(string json)
                 {
-                    Filter = "JSON (*.json)|*.json", DefaultExt = "json", AddExtension = true,
-                    FileName = "opsis-resources-redacted.json",
-                    Title = MainWindow.StudioText("Save private diagnostic report", "Αποθήκευση ιδιωτικής διαγνωστικής αναφοράς")
-                };
-                if (save.ShowDialog(panel.FindForm()) != DialogResult.OK) return;
+                    if (owner.IsDisposed || !owner.IsHandleCreated) return;
+                    try { owner.BeginInvoke((Action)(() =>
+                    {
+                        if (owner.IsDisposed) return;
+                        using var dialog = new Form
+                        {
+                            Text = StudioText("Private diagnostic preview", "Προεπισκόπηση ιδιωτικών διαγνωστικών"),
+                            StartPosition = FormStartPosition.CenterParent, Width = 850, Height = 620,
+                            MinimumSize = new Size(480, 340), BackColor = UiTheme.PageBackground
+                        };
+                        var tabs = new TabControl { Dock = DockStyle.Fill };
+                        var reportTab = new TabPage("JSON");
+                        reportTab.Controls.Add(new TextBox { Multiline = true, ReadOnly = true, WordWrap = false, ScrollBars = ScrollBars.Both,
+                            Dock = DockStyle.Fill, Text = json, BackColor = UiTheme.PageBackground, ForeColor = UiTheme.TextPrimary });
+                        tabs.TabPages.Add(reportTab);
+                        var timelineTab = new TabPage(StudioText("CPU timeline", "Χρονογραμμή CPU"));
+                        var timeline = new ListBox { Dock = DockStyle.Fill, HorizontalScrollbar = true };
+                        using (var doc = System.Text.Json.JsonDocument.Parse(json))
+                        {
+                            var rows = new System.Collections.Generic.List<(double Time, string Text)>();
+                            foreach (var e in doc.RootElement.GetProperty("activityCategories").EnumerateArray())
+                                rows.Add((e.GetProperty("ElapsedSeconds").GetDouble(), e.GetProperty("Kind").GetString() ?? ""));
+                            foreach (var spike in doc.RootElement.GetProperty("cpuSpikes").EnumerateArray())
+                            {
+                                string related = spike.GetProperty("RelatedCategory").GetString() ?? "—";
+                                rows.Add((spike.GetProperty("ElapsedSeconds").GetDouble(),
+                                    $"CPU: {spike.GetProperty("MainCpuCorePercent").GetDouble():0.0}% · WebView2: {spike.GetProperty("WebViewCpuCorePercent").GetDouble():0.0}% · {related}"));
+                            }
+                            foreach (var row in rows.OrderBy(x => x.Time)) timeline.Items.Add($"{row.Time:0.0}s  {row.Text}");
+                        }
+                        timelineTab.Controls.Add(timeline); tabs.TabPages.Add(timelineTab);
+                        var buttons = new FlowLayoutPanel { Dock = DockStyle.Bottom, Height = 48, FlowDirection = FlowDirection.RightToLeft };
+                        var discard = new Button { Text = StudioText("Discard", "Απόρριψη"), AutoSize = true, DialogResult = DialogResult.Cancel };
+                        var export = new Button { Text = StudioText("Export reviewed JSON…", "Εξαγωγή ελεγμένου JSON…"), AutoSize = true };
+                        export.Click += (_, _) =>
+                        {
+                            using var save = new SaveFileDialog { Filter = "JSON (*.json)|*.json", DefaultExt = "json", AddExtension = true,
+                                FileName = "opsis-resources-redacted.json" };
+                            if (save.ShowDialog(dialog) != DialogResult.OK) return;
+                            try { AtomicFile.WriteAllText(save.FileName, json); dialog.DialogResult = DialogResult.OK; }
+                            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException)
+                            { MessageBox.Show(dialog, ex.Message, "Opsis", MessageBoxButtons.OK, MessageBoxIcon.Warning); }
+                        };
+                        buttons.Controls.Add(discard); buttons.Controls.Add(export);
+                        dialog.Controls.Add(tabs); dialog.Controls.Add(buttons); dialog.CancelButton = discard;
+                        dialog.ShowDialog(owner);
+                    })); } catch (InvalidOperationException) { }
+                }
                 Action<string?, string?>? onFinished = null;
                 onFinished = (result, error) =>
                 {
                     DiagnosticSessionService.Finished -= onFinished;
-                    if (panel.IsDisposed || !panel.IsHandleCreated) return;
+                    if (error == null || owner.IsDisposed || !owner.IsHandleCreated) return;
                     try
                     {
-                        panel.BeginInvoke((Action)(() =>
+                        owner.BeginInvoke((Action)(() =>
                         {
-                            if (panel.IsDisposed) return;
-                            MessageBox.Show(panel.FindForm(), error == "cancelled"
+                            if (owner.IsDisposed) return;
+                            MessageBox.Show(owner, error == "cancelled"
                                 ? MainWindow.StudioText("Diagnostic recording cancelled.", "Η καταγραφή ακυρώθηκε.")
-                                : error != null ? error
-                                : MainWindow.StudioText("Diagnostics saved locally. Review the JSON before sharing it.", "Τα διαγνωστικά αποθηκεύτηκαν τοπικά. Έλεγξε το JSON πριν το μοιραστείς."),
+                                : error,
                                 "Opsis", MessageBoxButtons.OK,
                                 error != null && error != "cancelled" ? MessageBoxIcon.Warning : MessageBoxIcon.Information);
                         }));
@@ -103,14 +146,14 @@ namespace MotionDesk.UI
                 DiagnosticSessionService.Finished += onFinished;
                 try
                 {
-                    if (!DiagnosticSessionService.Start(save.FileName, TimeSpan.FromSeconds(60)))
+                    if (!DiagnosticSessionService.StartPreview(TimeSpan.FromSeconds(60), Preview))
                     {
                         DiagnosticSessionService.Finished -= onFinished;
                         return;
                     }
                     MessageBox.Show(panel.FindForm(), MainWindow.StudioText(
-                        "Recording started for one minute. Data stays on this computer, with a single file write at the end.",
-                        "Η καταγραφή ξεκίνησε για ένα λεπτό. Τα δεδομένα παραμένουν στον υπολογιστή, με μία εγγραφή αρχείου στο τέλος."),
+                        "Recording started for one minute. Review the report before deciding whether to save it.",
+                        "Η καταγραφή ξεκίνησε για ένα λεπτό. Εξέτασε την αναφορά πριν επιλέξεις αν θα την αποθηκεύσεις."),
                         "Opsis", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
                 catch (Exception ex) when (ex is ArgumentException or IOException or UnauthorizedAccessException)

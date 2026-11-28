@@ -287,15 +287,27 @@ internal sealed partial class ContainerWindow
     // A display-only filter: it never removes items from the underlying container or portal.
     // The cached snapshot avoids filesystem I/O on the render/animation hot path.
     private const string FilterKey = "opsisContainerViewFilter";
-    private string ItemFilter => Model.Extra?.TryGetValue(FilterKey, out var value) == true &&
-        value.ValueKind == System.Text.Json.JsonValueKind.String ? value.GetString() ?? "all" : "all";
+    private string ItemFilter
+    {
+        get
+        {
+            if (TabsOn && Model.Tabs[Math.Clamp(Model.CurrentTab, 0, Model.Tabs.Count - 1)].Extra?.TryGetValue(FilterKey, out var tabValue) == true &&
+                tabValue.ValueKind == System.Text.Json.JsonValueKind.String)
+                return tabValue.GetString() ?? "all";
+            return Model.Extra?.TryGetValue(FilterKey, out var value) == true &&
+                value.ValueKind == System.Text.Json.JsonValueKind.String ? value.GetString() ?? "all" : "all";
+        }
+    }
     private List<ContainerItem>? _filteredInput, _filteredItems;
     private int _filterCount;
     private string? _cachedFilter;
 
     private void ChooseFilter(string mode)
     {
-        (Model.Extra ??= new())[FilterKey] = System.Text.Json.JsonSerializer.SerializeToElement(mode);
+        var value = System.Text.Json.JsonSerializer.SerializeToElement(mode);
+        if (TabsOn)
+            (Model.Tabs[Math.Clamp(Model.CurrentTab, 0, Model.Tabs.Count - 1)].Extra ??= new())[FilterKey] = value;
+        else (Model.Extra ??= new())[FilterKey] = value;
         _filteredInput = _filteredItems = null;
         _filterCount = 0;
         _scroll = 0;
@@ -311,7 +323,7 @@ internal sealed partial class ContainerWindow
         _filteredInput = source;
         _filterCount = source.Count;
         _cachedFilter = mode;
-        var cutoff = DateTime.UtcNow.AddDays(-7);
+        var cutoff = DateTime.UtcNow.AddDays(mode == "recent30" ? -30 : -7);
         _filteredItems = source.Where(item => mode switch
         {
             "folders" => item.IsFolder,
@@ -320,7 +332,9 @@ internal sealed partial class ContainerWindow
             "documents" => !item.IsFolder && new[] { ".pdf", ".doc", ".docx", ".txt", ".odt", ".rtf", ".xls", ".xlsx" }
                 .Contains(Path.GetExtension(item.Path), StringComparer.OrdinalIgnoreCase),
             "tag" => (item.DisplayName ?? Path.GetFileName(item.Path)).Contains('#'),
-            "recent" => SafeRecentlyModified(item.Path, cutoff),
+            "recent" or "recent30" => SafeRecentlyModified(item.Path, cutoff),
+            _ when mode.StartsWith("tag:", StringComparison.Ordinal) =>
+                (item.DisplayName ?? Path.GetFileName(item.Path)).Contains("#" + mode[4..], StringComparison.OrdinalIgnoreCase),
             _ => true
         }).ToList();
         return _filteredItems;

@@ -1172,10 +1172,24 @@ namespace MotionDesk.Containers
                     ("images", Local("Images", "Εικόνες")),
                     ("documents", Local("Documents", "Έγγραφα")),
                     ("recent", Local("Modified in last 7 days", "Τροποποίηση τελευταίων 7 ημερών")),
+                    ("recent30", Local("Modified in last 30 days", "Τροποποίηση τελευταίων 30 ημερών")),
                     ("tag", Local("Tagged (# in name)", "Ετικέτα (# στο όνομα"))
                 })
                     filter.DropDownItems.Add(new ToolStripMenuItem(title, null, (_, _) => ChooseFilter(key))
                     { Checked = ItemFilter == key });
+                filter.DropDownItems.Add(new ToolStripMenuItem(Local("Specific #tag…", "Συγκεκριμένη #ετικέτα…"), null, (_, _) =>
+                {
+                    using var prompt = new Form { Text = Local("Filter by tag", "Φίλτρο ετικέτας"), Width = 380, Height = 150,
+                        StartPosition = FormStartPosition.CenterParent, FormBorderStyle = FormBorderStyle.FixedDialog };
+                    var input = new TextBox { Dock = DockStyle.Top, MaxLength = 64, Text = ItemFilter.StartsWith("tag:") ? ItemFilter[4..] : "" };
+                    var ok = new Button { Text = "OK", Dock = DockStyle.Bottom, DialogResult = DialogResult.OK };
+                    prompt.Controls.Add(input); prompt.Controls.Add(ok); prompt.AcceptButton = ok;
+                    if (prompt.ShowDialog(this) == DialogResult.OK)
+                    {
+                        string tag = input.Text.Trim().TrimStart('#');
+                        if (tag.Length > 0) ChooseFilter("tag:" + tag);
+                    }
+                }) { Checked = ItemFilter.StartsWith("tag:") });
                 menu.Items.Add(filter);
             }
             if (ContainerHost.Current is { } localHost)

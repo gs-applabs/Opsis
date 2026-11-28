@@ -1260,10 +1260,10 @@
     "canonical_history": "docs/SOURCE-CONSOLIDATION.md",
     "classification": "Source present = named source anchor, not complete feature; partial = related code/history; review = no sufficient evidence. No item release-certified by this audit.",
     "counts": {
-      "PARTIAL_OR_RELATED_EVIDENCE": 17,
-      "SOURCE_PRESENT_RUNTIME_GATE_OPEN": 76,
-      "QA_ONLY": 5,
-      "REVIEW_REQUIRED": 2
+      "PARTIAL_OR_RELATED_EVIDENCE": 11,
+      "REVIEW_REQUIRED": 2,
+      "SOURCE_PRESENT_RUNTIME_GATE_OPEN": 82,
+      "QA_ONLY": 5
     },
     "proposals": [
       {
@@ -1282,28 +1282,8 @@
         "pass": "MP02/03",
         "status": "PARTIAL_OR_RELATED_EVIDENCE",
         "evidencePath": "src/Services/AppActivity.cs",
-        "evidence": "remote pause state; verify last-frame freeze and override",
+        "evidence": "remote pause state; verify last-frame freeze and override R99 preserves loaded still image on pause; exact retained last-frame screenshot for arbitrary pages missing.",
         "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
-        "releaseCertified": false
-      },
-      {
-        "id": 10,
-        "requirement": "Προβολή χρονογραμμής που συσχετίζει αιχμές CPU με αλλαγή σκηνής ή φόρτωση πρόσθετου.",
-        "pass": "MP02/03",
-        "status": "PARTIAL_OR_RELATED_EVIDENCE",
-        "evidencePath": "src/Services/UiResourceAudit.cs",
-        "evidence": "Activity/Mark, cpuSpikes, relatedEvent; verify visual timeline and provider events",
-        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
-        "releaseCertified": false
-      },
-      {
-        "id": 12,
-        "requirement": "Δήλωση δικαιωμάτων ανά πρόσθετο για δίκτυο, ήχο και πρόσβαση σε τοπικά αρχεία.",
-        "pass": "MP01/04/06/09",
-        "status": "PARTIAL_OR_RELATED_EVIDENCE",
-        "evidencePath": "src/Services/PluginCapabilityManifest.cs",
-        "evidence": "Existing declaration + SHA-bound trust store extended with exact declared capability consent, all-or-nothing admission, protected declared packages also require approval, revocation latches resident instance. No OS-level restriction of legacy in-process DLLs; SDK2 isolation and real tests open.",
-        "sourceReviewedAt": "16d7873a2f616dd8f00335ce8b49445d3de4fca2",
         "releaseCertified": false
       },
       {
@@ -1324,16 +1304,6 @@
         "evidencePath": "tests/Opsis.ExperienceSmoke/Program.cs",
         "evidence": "failed recovery cannot modify live settings; real rollback test pending",
         "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
-        "releaseCertified": false
-      },
-      {
-        "id": 19,
-        "requirement": "Εξαγωγή διαγνωστικών με προεπισκόπηση και απόκρυψη ονομάτων αρχείων και τοποθεσίας.",
-        "pass": "MP01/04/06/09",
-        "status": "PARTIAL_OR_RELATED_EVIDENCE",
-        "evidencePath": "src/Services/DiagnosticSessionService.cs; src/UI/MainWindow.Performance.cs",
-        "evidence": "Local redacted counters only, 60s recording and save dialog; post-save review requested, no pre-export preview verified. Add only preview if required.",
-        "sourceReviewedAt": "2d812cbc0970767c9aac7b991ede10c9a7218787",
         "releaseCertified": false
       },
       {
@@ -1387,32 +1357,12 @@
         "releaseCertified": false
       },
       {
-        "id": 54,
-        "requirement": "Φίλτρο καρτέλας κατά τύπο, ημερομηνία ή ετικέτα.",
-        "pass": "MP04",
-        "status": "PARTIAL_OR_RELATED_EVIDENCE",
-        "evidencePath": "src/Containers/ContainerWindow.Interaction.cs; src/Containers/ContainerWindow.cs",
-        "evidence": "FilterItems supports folder/image/document, recent modification, '#' display-name tag; filter stored on container Model.Extra, not independent per-tab state or arbitrary tag/date range.",
-        "sourceReviewedAt": "2d812cbc0970767c9aac7b991ede10c9a7218787",
-        "releaseCertified": false
-      },
-      {
         "id": 60,
         "requirement": "Ένδειξη διαδρομής πριν από σύρσιμο μεταξύ τοπικού και δικτυακού φακέλου.",
         "pass": "MP04",
         "status": "PARTIAL_OR_RELATED_EVIDENCE",
         "evidencePath": "src/Containers/ContainerWindow.Interaction.cs",
         "evidence": "TransferFiles checks local/network boundary and confirms source/destination before writing, not proven before drag begins. Reuse existing path prompt.",
-        "sourceReviewedAt": "2d812cbc0970767c9aac7b991ede10c9a7218787",
-        "releaseCertified": false
-      },
-      {
-        "id": 62,
-        "requirement": "Εμφάνιση της συντόμευσης δίπλα σε κάθε αποτέλεσμα εντολής.",
-        "pass": "MP05/07",
-        "status": "PARTIAL_OR_RELATED_EVIDENCE",
-        "evidencePath": "src/UI/MainWindow.cs",
-        "evidence": "Command palette appends shortcutHints to matching command IDs; not universal coverage or live conflict-aware labels.",
         "sourceReviewedAt": "2d812cbc0970767c9aac7b991ede10c9a7218787",
         "releaseCertified": false
       },
@@ -1427,22 +1377,12 @@
         "releaseCertified": false
       },
       {
-        "id": 86,
-        "requirement": "Εφαρμογή της ρύθμισης μειωμένης κίνησης και στα web wallpapers.",
-        "pass": "MP07",
-        "status": "PARTIAL_OR_RELATED_EVIDENCE",
-        "evidencePath": "docs/SOURCE-CONSOLIDATION.md",
-        "evidence": "R49 reduced motion music and Athens gate; general web wallpapers verify",
-        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
-        "releaseCertified": false
-      },
-      {
         "id": 90,
         "requirement": "Επεξήγηση του λόγου που ένα κουμπί είναι ανενεργό μέσα στην ίδια σελίδα.",
         "pass": "MP07",
         "status": "PARTIAL_OR_RELATED_EVIDENCE",
         "evidencePath": "src/UI/MainWindow.cs; src/UI/MainWindow.Organization.cs",
-        "evidence": "WireDisabledActionReasons creates in-page explanation for disabled buttons; generic fallback and some precise per-action reasons, no complete reason coverage.",
+        "evidence": "WireDisabledActionReasons creates in-page explanation for disabled buttons; generic fallback and some precise per-action reasons, no complete reason coverage. R99 removes arbitrary 12-button cutoff for visible disabled actions; exact per-action reasons remain partial.",
         "sourceReviewedAt": "2d812cbc0970767c9aac7b991ede10c9a7218787",
         "releaseCertified": false
       },
@@ -1467,7 +1407,7 @@
       "latest_certified": "5ad65d13c11262ff9a75b4a5c387bbeb50e40c59",
       "latest_audit_run": 46103939134,
       "latest_artifact": 15247381558,
-      "next": "Continue only active 19 requirements and distinct legacy backlog after checking actual owners; 81 archived rows are final QA only. No intermediate CI.",
+      "next": "Continue only active 13 and distinct legacy backlog. Review source gaps for 1,9,14,16,24,38,40,41,50,60,83,90,95. SDK2 isolation remains separate legacy requirement. Final cumulative tests only.",
       "parent_R79": "835b784e5cdce8fb8eb2134df79c1632366b82a0",
       "parent_R80": "5ad65d13c11262ff9a75b4a5c387bbeb50e40c59",
       "parent_R81": "cae751ab4b21d69996bbacd11bed9a3ae715b3ec",
@@ -1513,7 +1453,9 @@
       "parent_R97": "fcfc69bd8a4cfaf61ec3cd7c46566e70bf940ddc",
       "R98": "R98: user requests keep only incomplete requirements. Active proposal array now 19 rows; 81 removed from active implementation queue, preserved in archived_qa for final testing/history. 15 newly confirmed/completed-in-source rows plus 5 explicit test-only rows moved; 61 prior source-present rows moved. No release certification. Native weather source/age/staleness now visible from existing shared payload; weather refresh uses existing MonitorTimer multiplier and adaptive cadence instead of hardcoded independent timer, including failure retries. Hotkey warning now routed through existing presentation privacy balloon helper. One assertion prepared. No build or runtime tests. Remaining legacy B01–B14 separate, not deleted. Earlier 57-source evidence crosscheck remains incomplete; active rows can be narrowed further using actual method bodies, archive can be reopened on concrete missing implementation. No intermediate CI, main merge or release.",
       "parent_R98": "35c4e660f17eb45f5ba408b653f5a383fba682af",
-      "R98a": "R98a static namespace reconciliation: WeatherPayload is declared in MotionDesk.Services, not MotionDesk.Widgets; corrected two assertion references before final QA. Active 19 / archive 81 unchanged. No compile or runtime test. Legacy backlog has 34 records including B01–B14; it is separate from original 100."
+      "R98a": "R98a static namespace reconciliation: WeatherPayload is declared in MotionDesk.Services, not MotionDesk.Widgets; corrected two assertion references before final QA. Active 19 / archive 81 unchanged. No compile or runtime test. Legacy backlog has 34 records including B01–B14; it is separate from original 100.",
+      "parent_R98a": "ff72eb8ce07139e93ea5bd3ab08625c7ce440e0c",
+      "R99": "R99 gap-only partial requirements: 6 IDs moved from active to source-present QA (10,12,19,54,62,86); #12 original declaration/consent scope, actual SDK2 isolation still separate legacy P0. Existing diagnostic service now supports memory-only preview and chronological redacted CPU/activity timeline before optional explicit export. Tab Extra persists per-tab filters and recent 30-day/specific tag option; old filter inherited. Palette all entries have real assigned keyboard shortcut or explicit Enter in palette. Reduced motion stops arbitrary uncooperative iframe; static fallback, no claims of capturing last frame. #9 retains static image on pause but actual last-frame freeze for arbitrary pages missing; #90 visible disabled buttons no artificial 12 limit, exact reasons still partial. Six source-present rows not certified; 13 active remain (11 partial,2 review). No compilation or tests, no intermediate CI. Native presentation privacy, diagnostic UI export, scene rendering and tab preservation need final tests or additional work. All 100 IDs and distinct legacy backlog preserved."
     },
     "last_source_crosscheck": {
       "base_reviewed": "2d812cbc0970767c9aac7b991ede10c9a7218787",
@@ -2438,10 +2380,70 @@
         "evidence": "Start(destination,duration), Cancel, Finished; verify bounded local recording",
         "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
         "releaseCertified": false
+      },
+      {
+        "id": 10,
+        "requirement": "Προβολή χρονογραμμής που συσχετίζει αιχμές CPU με αλλαγή σκηνής ή φόρτωση πρόσθετου.",
+        "pass": "MP02/03",
+        "status": "SOURCE_PRESENT_RUNTIME_GATE_OPEN",
+        "evidencePath": "src/Services/DiagnosticSessionService.cs; src/UI/MainWindow.Performance.cs",
+        "evidence": "Chronological local CPU timeline combines activity categories and host/WebView CPU spikes with preceding category within 10 seconds, shown in preview; privacy-safe categories only, no causal claim.",
+        "sourceReviewedAt": "ff72eb8ce07139e93ea5bd3ab08625c7ce440e0c",
+        "releaseCertified": false
+      },
+      {
+        "id": 12,
+        "requirement": "Δήλωση δικαιωμάτων ανά πρόσθετο για δίκτυο, ήχο και πρόσβαση σε τοπικά αρχεία.",
+        "pass": "MP01/04/06/09",
+        "status": "SOURCE_PRESENT_RUNTIME_GATE_OPEN",
+        "evidencePath": "src/Services/PluginCapabilityManifest.cs; src/Services/PluginTrust.cs; src/Services/PluginHost.cs",
+        "evidence": "Original declaration/explicit consent requirement implemented R94. Actual isolated SDK2 execution remains distinct legacy backlog; in-process DLLs have full host privileges.",
+        "sourceReviewedAt": "ff72eb8ce07139e93ea5bd3ab08625c7ce440e0c",
+        "releaseCertified": false
+      },
+      {
+        "id": 19,
+        "requirement": "Εξαγωγή διαγνωστικών με προεπισκόπηση και απόκρυψη ονομάτων αρχείων και τοποθεσίας.",
+        "pass": "MP01/04/06/09",
+        "status": "SOURCE_PRESENT_RUNTIME_GATE_OPEN",
+        "evidencePath": "src/Services/DiagnosticSessionService.cs; src/UI/MainWindow.Performance.cs",
+        "evidence": "Recording retained in memory; preview JSON and CPU timeline before optional explicit export, discard without file write. Existing automatic bounded recording reused.",
+        "sourceReviewedAt": "ff72eb8ce07139e93ea5bd3ab08625c7ce440e0c",
+        "releaseCertified": false
+      },
+      {
+        "id": 54,
+        "requirement": "Φίλτρο καρτέλας κατά τύπο, ημερομηνία ή ετικέτα.",
+        "pass": "MP04",
+        "status": "SOURCE_PRESENT_RUNTIME_GATE_OPEN",
+        "evidencePath": "src/Containers/ContainerWindow.Interaction.cs; src/Containers/ContainerWindow.cs",
+        "evidence": "Per-tab persisted Extra filter (legacy container filter inherited until changed), type, 7/30-day date and specific #tag, follows tab on reorder. Runtime and filtering correctness pending.",
+        "sourceReviewedAt": "ff72eb8ce07139e93ea5bd3ab08625c7ce440e0c",
+        "releaseCertified": false
+      },
+      {
+        "id": 62,
+        "requirement": "Εμφάνιση της συντόμευσης δίπλα σε κάθε αποτέλεσμα εντολής.",
+        "pass": "MP05/07",
+        "status": "SOURCE_PRESENT_RUNTIME_GATE_OPEN",
+        "evidencePath": "src/UI/MainWindow.cs",
+        "evidence": "Existing actual dedicated shortcut labels and explicit Enter (palette) for every command with no separate hotkey. No invented hotkey mappings.",
+        "sourceReviewedAt": "ff72eb8ce07139e93ea5bd3ab08625c7ce440e0c",
+        "releaseCertified": false
+      },
+      {
+        "id": 86,
+        "requirement": "Εφαρμογή της ρύθμισης μειωμένης κίνησης και στα web wallpapers.",
+        "pass": "MP07",
+        "status": "SOURCE_PRESENT_RUNTIME_GATE_OPEN",
+        "evidencePath": "src/Widgets/wallpaper/index.html",
+        "evidence": "Existing reduced-motion policy for waves/video/atmosphere; arbitrary iframe stopped rather than claiming CSS controls its contents. Static fallback under reduced motion. Signature frame may also be stopped if not ready; resume restores selected page. Real WebView test pending.",
+        "sourceReviewedAt": "ff72eb8ce07139e93ea5bd3ab08625c7ce440e0c",
+        "releaseCertified": false
       }
     ],
     "active_counts": {
-      "PARTIAL_OR_RELATED_EVIDENCE": 17,
+      "PARTIAL_OR_RELATED_EVIDENCE": 11,
       "REVIEW_REQUIRED": 2
     },
     "active_backlog_policy": "Only incomplete or unresolved implementation requirements in proposals. Source-present and test-only rows in archived_qa, not active development. Archive is not release certification. All 100 IDs remain unique across both arrays. Reopen archived row only on concrete missing source or failed test."

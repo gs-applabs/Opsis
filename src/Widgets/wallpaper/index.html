@@ -83,6 +83,11 @@ function applyReducedMotion() {
     const reduced = reduceWallpaperMotion();
     document.body.classList.toggle('reduced-motion', reduced);
     if (reduced) videoLayers.forEach(v => { if (!v.paused) v.pause(); });
+    // Uncooperative iframe scripts cannot be stopped through parent CSS.
+    if (cfg.mode === 'Page' && !isPaused) {
+        if (reduced && !isSignatureFrame()) hideMedia();
+        else if (!reduced && mediaSrc !== cfg.pageUri) void startMedia();
+    }
 }
 reducedMotionQuery.addEventListener?.('change', () => { applyReducedMotion(); sendSignaturePolicy(); cancelWaveLoop(); if (!isPaused && canvas.style.display !== 'none') waveLoopHandle = requestAnimationFrame(waveLoop); });
 videoLayers.forEach(v => v.addEventListener('play', () => { if (reduceWallpaperMotion()) v.pause(); }));
@@ -865,7 +870,11 @@ async function startMedia() {
     const src = isImg ? cfg.imageUri : cfg.pageUri;
     if (!src) { startWaves(); return; }
     if (isPaused) {
+        if (isImg && mediaSrc === src) return;
         if (isSignatureFrame() && signatureReady && mediaSrc === src) return;
+        hideMedia(); return;
+    }
+    if (!isImg && reduceWallpaperMotion() && !(isSignatureFrame() && signatureReady)) {
         hideMedia(); return;
     }
     if (isImg) {
@@ -1206,10 +1215,10 @@ window.motionDeskSetPaused = (paused) => {
     if (paused) {
         cancelWaveLoop();
         activeVideo().pause();
-        if (cfg.mode === 'Image' || (cfg.mode === 'Page' && !pauseSignatureFrame())) hideMedia();
+        if (cfg.mode === 'Page' && !pauseSignatureFrame()) hideMedia();
         stopPolling();
     } else {
-        if (cfg.mode === 'Video') { activeVideo().play().catch(() => {}); }
+        if (cfg.mode === 'Video') { if (!reduceWallpaperMotion()) activeVideo().play().catch(() => {}); }
         else if (cfg.mode === 'Image' || cfg.mode === 'Page') { startMedia(); resumeSignatureFrame(); }
         else if (cfg.mode === 'Desktop') { /* static picture, nothing to restart */ }
         else if (!waveLoopHandle && !waveWakeTimer) { waveLoopHandle = requestAnimationFrame(waveLoop); }

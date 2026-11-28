@@ -26,7 +26,8 @@ internal sealed class DiagnosticSessionService : IDisposable
     private readonly object _gate = new();
     private readonly Stopwatch _clock = Stopwatch.StartNew();
     private readonly Process _process = Process.GetCurrentProcess();
-    private readonly string _destination;
+    private readonly string? _destination;
+    private readonly Action<string>? _preview;
     private readonly TimeSpan _duration;
     private readonly List<Sample> _samples = new();
     private readonly List<Activity> _events = new();
@@ -39,15 +40,30 @@ internal sealed class DiagnosticSessionService : IDisposable
     public static bool Recording { get { lock (StaticGate) return _active != null; } }
     public static event Action<string?, string?>? Finished;
 
-    private DiagnosticSessionService(string destination, TimeSpan duration)
+    private DiagnosticSessionService(string? destination, TimeSpan duration, Action<string>? preview = null)
     {
         _destination = destination;
         _duration = duration;
+        _preview = preview;
         _previousCpu = _process.TotalProcessorTime;
         _previousMs = _clock.ElapsedMilliseconds;
         UiResourceAudit.Activity += OnActivity;
         // A bounded session never creates screenshots and requires no elevation.
-        _timer = new System.Threading.Timer(_ => Tick(), null, 0, 5000);
+    }
+
+    private void Begin() => _timer = new System.Threading.Timer(_ => Tick(), null, 0, 5000);
+
+    internal static bool StartPreview(TimeSpan duration, Action<string> preview)
+    {
+        ArgumentNullException.ThrowIfNull(preview);
+        duration = TimeSpan.FromSeconds(Math.Clamp(duration.TotalSeconds, 20, 600));
+        lock (StaticGate)
+        {
+            if (_active != null) return false;
+            _active = new DiagnosticSessionService(null, duration, preview);
+            _active.Begin();
+            return true;
+        }
     }
 
     public static bool Start(string destination, TimeSpan duration)
@@ -59,6 +75,7 @@ internal sealed class DiagnosticSessionService : IDisposable
         {
             if (_active != null) return false;
             _active = new DiagnosticSessionService(destination, duration);
+            _active.Begin();
             return true;
         }
     }
@@ -156,10 +173,19 @@ internal sealed class DiagnosticSessionService : IDisposable
                     sampleIntervalSeconds = 5,
                     privacy = "Only local resource counters, no names, paths, addresses, locations, screenshots or telemetry.",
                     samples,
-                    activityCategories = events
+                    activityCategories = events,
+                    cpuSpikes = samples.Where(s => s.MainCpuCorePercent >= 35 || s.WebView2.CpuCorePercent >= 35).Select(s => new
+                    {
+                        s.ElapsedSeconds, s.MainCpuCorePercent, WebViewCpuCorePercent = s.WebView2.CpuCorePercent,
+                        RelatedCategory = events.LastOrDefault(e => e.ElapsedSeconds <= s.ElapsedSeconds && s.ElapsedSeconds - e.ElapsedSeconds <= 10)?.Kind
+                    }).ToArray()
                 }, new JsonSerializerOptions { WriteIndented = true });
-                AtomicFile.WriteAllText(_destination, json);
-                saved = _destination;
+                if (_preview != null) _preview(json);
+                else if (_destination != null)
+                {
+                    AtomicFile.WriteAllText(_destination, json);
+                    saved = _destination;
+                }
             }
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException) { error = ex.Message; }

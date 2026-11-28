@@ -1133,7 +1133,7 @@ namespace MotionDesk.UI
             void Refresh()
             {
                 if (explanation.IsDisposed) return;
-                var disabled = actions.Where(x => !x.IsDisposed && !x.Enabled).Take(12).ToArray();
+                var disabled = actions.Where(x => !x.IsDisposed && x.Visible && !x.Enabled).ToArray();
                 explanation.Visible = disabled.Length != 0;
                 explanation.Text = string.Join(Environment.NewLine, disabled.Select(button =>
                 {
@@ -1145,7 +1145,11 @@ namespace MotionDesk.UI
                     return caption + ": " + reason;
                 }));
             }
-            foreach (var button in actions) button.EnabledChanged += (_, _) => Refresh();
+            foreach (var button in actions)
+            {
+                button.EnabledChanged += (_, _) => Refresh();
+                button.VisibleChanged += (_, _) => Refresh();
+            }
             flow.Controls.Add(explanation);
             Refresh();
         }
@@ -4062,7 +4066,8 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                 ["About"] = "Ctrl+9", ["Personalization"] = "Ctrl+0"
             };
             var displayCommands = commandList.Select(c => (c.Id,
-                Label: c.Label + (shortcutHints.TryGetValue(c.Id, out string? hint) ? "    ·    " + hint : ""))).ToArray();
+                Label: c.Label + "    ·    " + (shortcutHints.TryGetValue(c.Id, out string? hint) ? hint :
+                    StudioText("Enter (palette)", "Enter (παλέτα)")))).ToArray();
             var idByLabel = displayCommands.GroupBy(c => c.Label, StringComparer.OrdinalIgnoreCase)
                 .ToDictionary(g => g.Key, g => g.First().Id, StringComparer.OrdinalIgnoreCase);
             var recentIds = CommandHistoryStore.RecentIds();
