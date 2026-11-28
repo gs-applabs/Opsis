@@ -4186,7 +4186,7 @@
     "base_rc2_sha": "0e6264ca7c55f8313381c626f3c5407137f0710a",
     "source_preparation": "a5d96568c9eb79ec11875cfa882397f3a5e5385e",
     "release_blocked": true,
-    "state": "candidate-prepared-awaiting-validation",
+    "state": "validation-running",
     "source_corrections": [
       {
         "id": "RC2-F01",
@@ -4251,6 +4251,33 @@
       "RC2-F17"
     ],
     "coverage": "Actual sidebar click and error fallback detection, actual Start Studio event and persistence probes, existing taskbar/native opacity/Help checks. Others not certified; manual matrix mandatory.",
-    "handoff": "CLAUDE_CODE_HANDOFF/RC2-R1-START-HERE-EL.md"
+    "handoff": "CLAUDE_CODE_HANDOFF/RC2-R1-START-HERE-EL.md",
+    "frozen_sha": "c958144601fd7caaf57ffab93061853f532ec01f",
+    "observed": {
+      "js_total": 59,
+      "js_pass": 59,
+      "js_fail": 0,
+      "main_publish_windows_2022": "PASS",
+      "source_handoff": "PASS",
+      "atomic_recovery": "PASS",
+      "nuget": "PASS",
+      "assets_source": "PASS; production Europe gate OPEN",
+      "resource_compare": "PASS job",
+      "installer": "PENDING"
+    },
+    "new_findings": [
+      {
+        "id": "RC2R1-F01",
+        "priority": "P0",
+        "type": "SHELL_SMOKE",
+        "path": "src/Services/ExplorerViewProfiles.cs / tests/Opsis.ShellSmoke/Program.cs:25",
+        "symptom": "R1 ShellSmoke stopped: ApplyOption(NonWhitelisted,1) threw ArgumentException rather than legacy ArgumentOutOfRangeException.",
+        "fix": "Restore single-option name/value prevalidation; keep batch whitelist and transactional write intact. Add invalid-value/no registry write regression test.",
+        "status": "SOURCE_CHANGED_RETEST_REQUIRED",
+        "run": 46161238005,
+        "job": 141028799638,
+        "tested_sha": "c958144601fd7caaf57ffab93061853f532ec01f"
+      }
+    ]
   }
 }

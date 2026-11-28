@@ -1159,7 +1159,7 @@
     "base_rc2_sha": "0e6264ca7c55f8313381c626f3c5407137f0710a",
     "source_preparation": "a5d96568c9eb79ec11875cfa882397f3a5e5385e",
     "release_blocked": true,
-    "state": "candidate-prepared-awaiting-validation",
+    "state": "validation-running",
     "source_corrections": [
       {
         "id": "RC2-F01",
@@ -1224,7 +1224,34 @@
       "RC2-F17"
     ],
     "coverage": "Actual sidebar click and error fallback detection, actual Start Studio event and persistence probes, existing taskbar/native opacity/Help checks. Others not certified; manual matrix mandatory.",
-    "handoff": "CLAUDE_CODE_HANDOFF/RC2-R1-START-HERE-EL.md"
+    "handoff": "CLAUDE_CODE_HANDOFF/RC2-R1-START-HERE-EL.md",
+    "frozen_sha": "c958144601fd7caaf57ffab93061853f532ec01f",
+    "observed": {
+      "js_total": 59,
+      "js_pass": 59,
+      "js_fail": 0,
+      "main_publish_windows_2022": "PASS",
+      "source_handoff": "PASS",
+      "atomic_recovery": "PASS",
+      "nuget": "PASS",
+      "assets_source": "PASS; production Europe gate OPEN",
+      "resource_compare": "PASS job",
+      "installer": "PENDING"
+    },
+    "new_findings": [
+      {
+        "id": "RC2R1-F01",
+        "priority": "P0",
+        "type": "SHELL_SMOKE",
+        "path": "src/Services/ExplorerViewProfiles.cs / tests/Opsis.ShellSmoke/Program.cs:25",
+        "symptom": "R1 ShellSmoke stopped: ApplyOption(NonWhitelisted,1) threw ArgumentException rather than legacy ArgumentOutOfRangeException.",
+        "fix": "Restore single-option name/value prevalidation; keep batch whitelist and transactional write intact. Add invalid-value/no registry write regression test.",
+        "status": "SOURCE_CHANGED_RETEST_REQUIRED",
+        "run": 46161238005,
+        "job": 141028799638,
+        "tested_sha": "c958144601fd7caaf57ffab93061853f532ec01f"
+      }
+    ]
   },
   "global_scope": {
     "rule": "## ΜΟΝΙΜΟΣ ΚΑΝΟΝΑΣ — ΠΑΝΤΑ ΟΛΕΣ ΟΙ ΕΚΚΡΕΜΟΤΗΤΕΣ, ΟΧΙ ΜΟΝΟ ΟΙ 100\n\nΚάθε ερώτηση του χρήστη για «εκκρεμότητες», «συνέχισε», «τι μένει» αφορά **ολόκληρο το OPSIS Desktop Customization 3.0.0.3200**: αρχικές 100, παλαιότερο roadmap/διορθώσεις, P0–P6, B01–B14, UI/Glass, Shell, Containers, SDK/plugins/companion compatibility, wallpapers/εικόνες/intro/ήχο, ανεξάρτητο add-on, installers, migration/rollback, διανομή, τελικές δοκιμές. Ποτέ μόνο ένα υποσύνολο χωρίς ρητό αίτημα. Το σύνολο παραμένει ενιαίο με σταθερά IDs, alias προς παλιά IDs, συγκεκριμένο owner/κενό και κατάσταση. **Εφαρμογή από τις ευκολότερες προς τις δυσκολότερες**, με ασφάλεια ως προϋπόθεση και χωρίς να ξαναγράφεται έτοιμη λειτουργία. Αρχείο ιστορικού/QA δεν αποτελεί ενεργό backlog. Ελέγχεται κάθε φορά ο τελευταίος ακριβής σωρευτικός SHA και η διασταύρωση με ιστορικές συνομιλίες, handoffs, πραγματικούς callers/UI/ρυθμίσεις, plugins και αρχεία. Ανεπαρκή ή μη προσβάσιμα τεκμήρια καταγράφονται ως blockers, όχι ως ολοκληρωμένα. Ο χρήστης δεν πρέπει να ξαναρωτήσει για ξεχασμένα υποσύνολα. Χρήση συνδεδεμένου GitHub για πραγματικές αλλαγές· πρόσθετα μόνο αν καλύπτουν πραγματική δυνατότητα που λείπει. Όλα τα tests στο τέλος, Inno Setup, καμία πρόωρη έκδοση. PERMANENT SELF-CONTAINED CORE REQUIREMENT (user, 2026-11-28): all Opsis capabilities and prerequisites must ship inside the core/installer except explicitly approved dependencies. Windhawk, Rainmeter, StartAllBack and other separately installed customization applications are reference/interoperability only, never prerequisites for claiming a feature complete. Optional feature parity must be implemented in existing Opsis owners or a justified internal owner, demand-loaded, reversible, no duplicate host. Native shell surface parity remains open when only a companion/overlay or Windows Settings shortcut exists. Legacy external CLI bridge retained as dormant source for historical compatibility/recovery and schema tests, not exposed by normal personalization UI; not counted as implementation. No automatic third-party installation, no unsupported native injection. DeskStrip remains the dock/pin owner; Taskbar shares pins and must yield to dock geometry, never implement a second independent dock or overwrite its settings.",

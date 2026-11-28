@@ -48,3 +48,8 @@ RC2: 10 workflows, 18 jobs, 4 PASS / 14 FAIL. JS 57/59, 7 C# errors σε 5 αρ�
 
 ## Παραδοτέα Claude Code
 Ενημέρωσε canonical branch και μητρώο με ID, source evidence, test, result, artifact SHA, blocker, fix/retest. Διατήρησε ένα ενιαίο source ZIP, installer και addon (χωρίς παλαιά προσωρινά διπλότυπα). Ενημέρωσε Help/History/MIT και μην κάνεις merge/release main πριν περάσουν όλα τα gates. Αρχεία: `RC2-R1-UI-ACCEPTANCE.json`, `RC2-R1-OPEN-WORK.json`, canonical docs. Καμία απαίτηση δεν διαγράφεται χωρίς απόδειξη.
+
+
+## RC2-R1 first results and ShellSmoke correction
+
+59/59 JS PASS; Windows-2022 publish PASS; source archive, isolated atomic crash recovery, configured NuGet audit, resource compare job PASS. Europe production asset gate remains open. RC2R1-F01: [ShellSmoke failure](https://github.com/gs-applabs/Opsis/actions/runs/46161238005/job/141028799638) due to single-option exception contract regression. Fixed on integration by restoring name/value prevalidation (no registry write for invalid input), regression added. Exact frozen R1 unchanged; retest necessary. Remaining UI/installer/other jobs pending or blocked; no release.

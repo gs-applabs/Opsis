@@ -1079,3 +1079,8 @@ The 73 engineering/investigation, 8 asset, 19 QA items remain tracked; F17 is a 
 ## RC2-R1 corrections and functional UI acceptance
 
 Source corrections RC2-F01, RC2-F02, RC2-F03, RC2-F04, RC2-F05, RC2-F06, RC2-F09, RC2-F10, RC2-F11, RC2-F12, RC2-F13, RC2-F14, RC2-F15, RC2-F16 prepared; retest required. Prior frozen RC2 stays immutable. New candidate branch release/3.0.0.3200-rc2-r1. Actual Start Studio UI selection verifies persisted style/layout and reopen; sidebar click checks selected identity and error fallback. Per-control acceptance and all remaining scopes in CLAUDE_CODE_HANDOFF/RC2-R1-START-HERE-EL.md and JSON files. No production release.
+
+
+## RC2-R1 first results and ShellSmoke correction
+
+59/59 JS PASS; Windows-2022 publish PASS; source archive, isolated atomic crash recovery, configured NuGet audit, resource compare job PASS. Europe production asset gate remains open. RC2R1-F01: [ShellSmoke failure](https://github.com/gs-applabs/Opsis/actions/runs/46161238005/job/141028799638) due to single-option exception contract regression. Fixed on integration by restoring name/value prevalidation (no registry write for invalid input), regression added. Exact frozen R1 unchanged; retest necessary. Remaining UI/installer/other jobs pending or blocked; no release.

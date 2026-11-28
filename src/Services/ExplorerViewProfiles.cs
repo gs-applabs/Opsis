@@ -101,6 +101,9 @@ namespace MotionDesk.Services
 
         public static void ApplyOption(string name, int value)
         {
+            // Preserve the single-option API contract used by legacy callers and ShellSmoke.
+            if (Array.FindIndex(Entries, e => e.Name == name) < 0) throw new ArgumentOutOfRangeException(nameof(name));
+            if (!IsValid(name, value)) throw new ArgumentOutOfRangeException(nameof(value));
             ApplyOptions(new Dictionary<string, int> { [name] = value });
         }
 

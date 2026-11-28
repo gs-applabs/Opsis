@@ -26,6 +26,10 @@ try
     catch (ArgumentOutOfRangeException) { rejected = true; }
     Check(rejected, "Explorer whitelist");
     rejected = false;
+    try { ExplorerViewProfiles.ApplyOption("HideFileExt", 9); }
+    catch (ArgumentOutOfRangeException ex) { rejected = ex.ParamName == "value"; }
+    Check(rejected && ExplorerViewProfiles.ReadOption("HideFileExt") == originalExtensions, "Explorer invalid value denied before registry write");
+    rejected = false;
     try { AppearancePresets.SaveCurrent("../bad"); }
     catch (ArgumentException) { rejected = true; }
     Check(rejected, "preset name traversal rejected");
