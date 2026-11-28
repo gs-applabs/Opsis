@@ -65,6 +65,79 @@ internal static class ShellAssetPack
         return true;
     }
 
+    // Bounded standard RIFF ACON icon-frame format; structural validation only.
+    internal static bool ValidAnimatedCursor(ReadOnlySpan<byte> data)
+    {
+        if (data.Length < 12 || data.Length > FileLimit ||
+            !data[..4].SequenceEqual("RIFF"u8) || !data.Slice(8, 4).SequenceEqual("ACON"u8) ||
+            (ulong)BinaryPrimitives.ReadUInt32LittleEndian(data[4..]) + 8 != (ulong)data.Length) return false;
+        int offset = 12, chunks = 0, frames = 0;
+        uint declaredFrames = 0, steps = 0, flags = 0;
+        bool header = false, frameList = false, sequence = false, rate = false;
+        ReadOnlySpan<byte> sequenceData = default, rateData = default;
+        while (offset < data.Length)
+        {
+            if (++chunks > 256 || !TryChunk(data, ref offset, out var id, out var payload)) return false;
+            if (id.SequenceEqual("anih"u8))
+            {
+                if (header || payload.Length != 36 || BinaryPrimitives.ReadUInt32LittleEndian(payload) != 36) return false;
+                header = true;
+                declaredFrames = BinaryPrimitives.ReadUInt32LittleEndian(payload[4..]);
+                steps = BinaryPrimitives.ReadUInt32LittleEndian(payload[8..]);
+                flags = BinaryPrimitives.ReadUInt32LittleEndian(payload[32..]);
+                if (declaredFrames is < 1 or > 128 || steps is < 1 or > 1024 ||
+                    (flags & 1) == 0 || (flags & ~3u) != 0 ||
+                    BinaryPrimitives.ReadUInt32LittleEndian(payload[28..]) is < 1 or > 3600) return false;
+            }
+            else if (id.SequenceEqual("seq "u8))
+            {
+                if (sequence || payload.Length == 0 || payload.Length > 4096 || payload.Length % 4 != 0) return false;
+                sequence = true; sequenceData = payload;
+            }
+            else if (id.SequenceEqual("rate"u8))
+            {
+                if (rate || payload.Length == 0 || payload.Length > 4096 || payload.Length % 4 != 0) return false;
+                rate = true; rateData = payload;
+            }
+            else if (id.SequenceEqual("LIST"u8))
+            {
+                if (payload.Length < 4) return false;
+                if (payload[..4].SequenceEqual("INFO"u8)) continue;
+                if (!payload[..4].SequenceEqual("fram"u8) || frameList) return false;
+                frameList = true;
+                int inner = 4;
+                while (inner < payload.Length)
+                {
+                    if (++frames > 128 || !TryChunk(payload, ref inner, out var frameId, out var frame) ||
+                        !frameId.SequenceEqual("icon"u8) ||
+                        (!ValidImageDirectory(frame, true) && !ValidImageDirectory(frame, false))) return false;
+                }
+            }
+            else return false;
+        }
+        if (!header || !frameList || frames != declaredFrames ||
+            sequence != ((flags & 2) != 0) || (!sequence && steps != declaredFrames) ||
+            (sequence && sequenceData.Length != steps * 4) || (rate && rateData.Length != steps * 4)) return false;
+        for (int i = 0; i < sequenceData.Length; i += 4)
+            if (BinaryPrimitives.ReadUInt32LittleEndian(sequenceData[i..]) >= declaredFrames) return false;
+        for (int i = 0; i < rateData.Length; i += 4)
+            if (BinaryPrimitives.ReadUInt32LittleEndian(rateData[i..]) is < 1 or > 3600) return false;
+        return true;
+    }
+
+    private static bool TryChunk(ReadOnlySpan<byte> data, ref int offset,
+        out ReadOnlySpan<byte> id, out ReadOnlySpan<byte> payload)
+    {
+        id = default; payload = default;
+        if (offset < 0 || data.Length - offset < 8) return false;
+        uint length = BinaryPrimitives.ReadUInt32LittleEndian(data[(offset + 4)..]);
+        if ((ulong)length + (length & 1u) > (ulong)(data.Length - offset - 8)) return false;
+        id = data.Slice(offset, 4);
+        payload = data.Slice(offset + 8, (int)length);
+        offset += 8 + (int)length + (int)(length & 1u);
+        return true;
+    }
+
     private static byte[] ReadAsset(string path, bool cursor, bool allowAnimated = false)
     {
         string extension = Path.GetExtension(path).ToLowerInvariant();
@@ -78,9 +151,7 @@ internal static class ShellAssetPack
         if (data.Length is <= 0 or > FileLimit) throw new InvalidDataException("Asset size exceeds quota.");
         if (cursor && allowAnimated && extension == ".ani")
         {
-            if (data.Length < 12 || !data.AsSpan(0,4).SequenceEqual("RIFF"u8) ||
-                !data.AsSpan(8,4).SequenceEqual("ACON"u8) ||
-                (ulong)BinaryPrimitives.ReadUInt32LittleEndian(data.AsSpan(4,4)) + 8 != (ulong)data.Length)
+            if (!ValidAnimatedCursor(data))
                 throw new InvalidDataException("Invalid animated cursor.");
             return;
         }
@@ -122,7 +193,8 @@ internal static class ShellAssetPack
             string stem = name.Split('.')[0].TrimEnd().ToUpperInvariant();
             if (stem is "CON" or "PRN" or "AUX" or "NUL" ||
                 stem.Length == 4 && (stem.StartsWith("COM") || stem.StartsWith("LPT")) && char.IsAsciiDigit(stem[3]) ||
-                !Path.GetExtension(name).Equals(cursor ? ".cur" : ".ico", StringComparison.OrdinalIgnoreCase))
+                (cursor ? Path.GetExtension(name).ToLowerInvariant() is not (".cur" or ".ani") :
+                    !Path.GetExtension(name).Equals(".ico", StringComparison.OrdinalIgnoreCase)))
                 throw new InvalidDataException("Unsupported or reserved asset filename.");
             items.Add(role.Name, name);
         }
@@ -139,7 +211,7 @@ internal static class ShellAssetPack
         return roles.Select(role =>
         {
             string path = Path.Combine(folder, role.Value);
-            return new Asset(role.Key, path, Convert.ToHexString(SHA256.HashData(ReadAsset(path, cursor))));
+            return new Asset(role.Key, path, Convert.ToHexString(SHA256.HashData(ReadAsset(path, cursor, allowAnimated: cursor))));
         }).ToArray();
     }
 
@@ -161,9 +233,9 @@ internal static class ShellAssetPack
         if (Read(slot) != value) throw new IOException("Registry readback failed.");
     }
 
-    private static string Store(byte[] data, bool cursor)
+    private static string Store(byte[] data, string extension)
     {
-        string path = Path.Combine(Root, Convert.ToHexString(SHA256.HashData(data)).ToLowerInvariant() + (cursor ? ".cur" : ".ico"));
+        string path = Path.Combine(Root, Convert.ToHexString(SHA256.HashData(data)).ToLowerInvariant() + extension);
         if (!File.Exists(path))
         {
             if (Directory.EnumerateFiles(Root).Take(256).Count() >= 256)
@@ -192,9 +264,9 @@ internal static class ShellAssetPack
             foreach (var item in items)
             {
                 var slot = Resolve(item.Role, cursor);
-                var data = ReadAsset(item.Source, cursor);
+                var data = ReadAsset(item.Source, cursor, allowAnimated: cursor);
                 if (Convert.ToHexString(SHA256.HashData(data)) != item.Sha256) throw new InvalidDataException("Pack asset changed after preview.");
-                string stored = Store(data, cursor);
+                string stored = Store(data, Path.GetExtension(item.Source).ToLowerInvariant());
                 var next = new Value(true, stored + slot.Suffix, (int)RegistryValueKind.ExpandString);
                 var prior = Read(slot);
                 if (prior != next) changes.Add(new(item.Role, prior, next));

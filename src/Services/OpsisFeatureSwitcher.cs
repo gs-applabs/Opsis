@@ -39,7 +39,7 @@ public static class OpsisFeatureSwitcher
     public static void Set(string id, bool enabled)
     {
         if (!CanSwitch(id)) throw new NotSupportedException("No operational adapter is registered for: " + id);
-        if (enabled && (SafeModeService.IsSafeMode || WindowsUpdateGuard.RequiresReview))
+        if (enabled && (SafeModeService.IsSafeMode || WindowsUpdateGuard.RequiresReview || WindowsUpdateGuard.RuntimeHold))
             throw new InvalidOperationException("This Windows session requires a Safe Mode/compatibility review.");
         bool previous = IsEnabled(id);
         if (previous == enabled) return;

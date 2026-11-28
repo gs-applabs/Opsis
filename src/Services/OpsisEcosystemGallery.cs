@@ -311,8 +311,9 @@ public static class OpsisEcosystemGallery
                             if (!copied.TryGetValue(role.Value, out string? name))
                             {
                                 byte[] image = ReadEntry(entries[prefix + role.Value]);
-                                ShellAssetPack.ValidateAssetBytes(image, Path.GetExtension(role.Value).ToLowerInvariant(), cursor);
-                                name = "asset-" + (copied.Count + 1).ToString("D2") + (cursor ? ".cur" : ".ico");
+                                string roleExtension = Path.GetExtension(role.Value).ToLowerInvariant();
+                                ShellAssetPack.ValidateAssetBytes(image, roleExtension, cursor, allowAnimated: cursor);
+                                name = "asset-" + (copied.Count + 1).ToString("D2") + roleExtension;
                                 File.WriteAllBytes(Path.Combine(target, name), image);
                                 copied.Add(role.Value, name);
                             }

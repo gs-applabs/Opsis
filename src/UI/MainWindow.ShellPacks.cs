@@ -39,7 +39,7 @@ public sealed partial class MainWindow
             (StudioText("Manifest format", "Μορφή manifest"), (_, _) =>
             {
                 string sample = cursor
-                    ? """{"schema":1,"kind":"cursor-pack","roles":{"Arrow":"arrow.cur","Hand":"hand.cur"}}"""
+                    ? """{"schema":1,"kind":"cursor-pack","roles":{"Arrow":"arrow.cur","Hand":"hand.ani"}}"""
                     : """{"schema":1,"kind":"icon-pack","roles":{"ThisPC":"computer.ico","RecycleBinEmpty":"empty.ico","RecycleBinFull":"full.ico"}}""";
                 ShowTextDialog("Opsis", StudioText("Local pack manifest", "Τοπικό manifest πακέτου"), sample +
                     Environment.NewLine + StudioText("Save as JSON beside the image files; only supported roles are accepted.", "Αποθήκευση ως JSON δίπλα στα αρχεία εικόνας· γίνονται δεκτοί μόνο οι υποστηριζόμενοι ρόλοι."));

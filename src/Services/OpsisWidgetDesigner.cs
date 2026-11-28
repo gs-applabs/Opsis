@@ -40,7 +40,14 @@ public static class OpsisWidgetDesigner
         if (string.IsNullOrWhiteSpace(name) || name.Length > 60 ||
             name.Any(x => !char.IsLetterOrDigit(x) && x is not (' ' or '_' or '-')))
             throw new ArgumentException("Widget name must be 1–60 letters, digits, spaces, '_' or '-'.");
-        return Path.Combine(Folder, name.Trim() + ".json");
+        if (name != name.Trim()) throw new ArgumentException("Widget name cannot start or end with spaces.");
+        string stem = name.ToUpperInvariant();
+        if (stem is "CON" or "PRN" or "AUX" or "NUL" ||
+            stem.Length == 4 && (stem.StartsWith("COM", StringComparison.Ordinal) ||
+                stem.StartsWith("LPT", StringComparison.Ordinal)) &&
+                (char.IsAsciiDigit(stem[3]) || stem[3] is '¹' or '²' or '³'))
+            throw new ArgumentException("Reserved Windows widget name.");
+        return Path.Combine(Folder, name + ".json");
     }
 
     public static Layout Copy(Layout layout)
@@ -100,13 +107,23 @@ public static class OpsisWidgetDesigner
             throw new InvalidDataException("Unsupported composite widget row.");
     }
 
-    public static IReadOnlyList<string> List() =>
-        Directory.Exists(Folder)
-            ? Directory.EnumerateFiles(Folder, "*.json", SearchOption.TopDirectoryOnly)
-                .Select(Path.GetFileNameWithoutExtension)
-                .Where(x => !string.IsNullOrWhiteSpace(x)).Cast<string>()
-                .OrderBy(x => x).Take(250).ToArray()
-            : Array.Empty<string>();
+    public static IReadOnlyList<string> List()
+    {
+        if (!Directory.Exists(Folder) || !PackagePaths.IsExistingUnlinkedPath(AppPaths.AppDataFolder, Folder))
+            return Array.Empty<string>();
+        var names = new List<string>();
+        foreach (var file in Directory.EnumerateFiles(Folder, "*.json", SearchOption.TopDirectoryOnly).Take(250))
+        {
+            try
+            {
+                string name = Path.GetFileNameWithoutExtension(file);
+                _ = FileFor(name);
+                if (PackagePaths.IsExistingUnlinkedPath(AppPaths.AppDataFolder, file)) names.Add(name);
+            }
+            catch (ArgumentException) { }
+        }
+        return names.OrderBy(x => x, StringComparer.CurrentCultureIgnoreCase).ToArray();
+    }
 
     public static void Save(Layout layout)
     {

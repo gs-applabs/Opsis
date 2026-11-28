@@ -859,6 +859,16 @@ try
     try { ShellAssetPack.ParseRoles(System.Text.Encoding.UTF8.GetBytes("""{"schema":1,"kind":"cursor-pack","roles":{"Arrow":"CON.cur"}}"""), true); }
     catch (InvalidDataException) { reservedNameDenied = true; }
     Check(reservedNameDenied, "R124 reserved Windows device filenames refused");
+    Check(ShellAssetPack.ParseRoles(System.Text.Encoding.UTF8.GetBytes("""{"schema":1,"kind":"cursor-pack","roles":{"Arrow":"arrow.ani"}}"""), true)["Arrow"] == "arrow.ani",
+        "R125 animated cursor extension admitted in declarative pack");
+    Check(!ShellAssetPack.ValidAnimatedCursor("RIFF\0\0\0\0ACON"u8.ToArray()), "R125 rejects RIFF header without animation frames");
+    foreach (string invalidName in new[] { "CON", "LPT1", " Clock" })
+    {
+        bool denied = false;
+        try { OpsisWidgetDesigner.Validate(new OpsisWidgetDesigner.Layout { Name = invalidName }); }
+        catch (ArgumentException) { denied = true; }
+        Check(denied, "R125 rejects invalid or reserved widget name: " + invalidName);
+    }
     // optional: the real 200-image static pack (OPSIS_TEST_WEBP200=<path of Opsis-Abstract-Horizons-200-WebP.zip>)
     var webp200 = Environment.GetEnvironmentVariable("OPSIS_TEST_WEBP200");
     if (!string.IsNullOrEmpty(webp200) && File.Exists(webp200))
