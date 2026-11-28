@@ -1,7 +1,7 @@
-name: OPSIS RC2-R1 supplemental recovery, security, assets and one-hour stress
+name: OPSIS RC2-R2 supplemental recovery, security, assets and one-hour stress
 on:
   push:
-    branches: [release/3.0.0.3200-rc2-r1]
+    branches: [release/3.0.0.3200-rc2-r2]
 permissions:
   contents: read
 env:

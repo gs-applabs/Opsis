@@ -7,7 +7,7 @@ on:
     paths:
       - '.github/workflows/windows-audit.yml'
   push:
-    branches: [rc3.0-base, patch/3.0.0.3200-appearance, release/2.8.0.2510, release/3.0.0.3200-rc2-r1]
+    branches: [rc3.0-base, patch/3.0.0.3200-appearance, release/2.8.0.2510, release/3.0.0.3200-rc2-r2]
 
 concurrency:
   group: opsis-full-audit-${{ github.ref }}

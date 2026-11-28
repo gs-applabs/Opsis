@@ -1,7 +1,7 @@
 name: Opsis 3.0 plugin ABI and ecosystem compatibility
 on:
   push:
-    branches: [feat/3.0.0.3200-integration, release/3.0.0.3200-rc2-r1]
+    branches: [feat/3.0.0.3200-integration, release/3.0.0.3200-rc2-r2]
   pull_request:
     branches: [feat/p3-p5-unified-experience]
   workflow_dispatch:

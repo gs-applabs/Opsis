@@ -1,7 +1,7 @@
 name: OPSIS unified RC build checks
 on:
   push:
-    branches: [integration/opsis-unified-source-r27, release/3.0.0.3200-rc2-r1]
+    branches: [integration/opsis-unified-source-r27, release/3.0.0.3200-rc2-r2]
   pull_request:
     branches: [main, ci/rc-validation-base]
   workflow_dispatch:
