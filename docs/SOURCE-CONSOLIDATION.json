@@ -2864,7 +2864,8 @@
           "status": "PARTIAL",
           "aliases": "SDK2; B08; X13",
           "requirement": "Actual restricted out-of-process SDK2 worker, authenticated bounded IPC, cancellation and ownership",
-          "evidence": "Current consent controls admission only, not Windows permission sandbox; isolated ABI negotiation still denied until implemented. R117 explicit pre-load package exclusions and settings selection; isolation, SDK2 and runtime pending. R118 pre-load declared dependency metadata and host range, resolver identity validation and per-entrypoint failure handling; isolated worker/full graph/update tests pending. R119 local verified plugin transaction/rollback and container history recency; real crash/installer tests pending."
+          "evidence": "Current consent controls admission only, not Windows permission sandbox; isolated ABI negotiation still denied until implemented. R117 explicit pre-load package exclusions and settings selection; isolation, SDK2 and runtime pending. R118 pre-load declared dependency metadata and host range, resolver identity validation and per-entrypoint failure handling; isolated worker/full graph/update tests pending. R119 local verified plugin transaction/rollback and container history recency; real crash/installer tests pending.",
+          "latest_direct_audit": "PluginCapabilityManifest requires trusted-in-process, supports API1 only, explicitly rejects isolated-worker. Host has identity/trust checks, no OS sandbox."
         },
         {
           "id": "G19",
@@ -3046,7 +3047,7 @@
       "media": "a1562d77c11021cd5f576814397a7e0c5cb9ce1f"
     },
     "release_blocked": true,
-    "state": "preparing-ci",
+    "state": "validation-in-progress",
     "findings": [
       "Settings schema inventory stale (222 vs actual 226); regenerated against exact audited base: 205 retained, 21 additive, zero removed/retyped.",
       "Version.props already 3.0.0.3200 but production gate incompatible with prerelease test; explicit RC2 validation environment gate, not production release. Default gate remains fail-closed.",
@@ -3058,6 +3059,980 @@
       "1h/24h stress, all controls, upgrade from older versions and add-on playback",
       "full SDK and native shell feature gaps",
       "exact approved assets and final release"
-    ]
+    ],
+    "frozen_sha": "0e6264ca7c55f8313381c626f3c5407137f0710a",
+    "supplemental_workflow_sha": "163c4ea5242f428d268e9f5206cca7195b2a9ead",
+    "runs": [
+      {
+        "id": 46136458533,
+        "name": "Opsis RC source-only Claude handoff",
+        "head_sha": "0e6264ca7c55f8313381c626f3c5407137f0710a",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/gs-applabs/Opsis/actions/runs/46136458533"
+      },
+      {
+        "id": 46136458563,
+        "name": "OPSIS unified RC build checks",
+        "head_sha": "0e6264ca7c55f8313381c626f3c5407137f0710a",
+        "status": "completed",
+        "conclusion": "failure",
+        "url": "https://github.com/gs-applabs/Opsis/actions/runs/46136458563"
+      },
+      {
+        "id": 46136458539,
+        "name": "Opsis 3.0 plugin ABI and ecosystem compatibility",
+        "head_sha": "0e6264ca7c55f8313381c626f3c5407137f0710a",
+        "status": "in_progress",
+        "conclusion": null,
+        "url": "https://github.com/gs-applabs/Opsis/actions/runs/46136458539"
+      },
+      {
+        "id": 46136458616,
+        "name": "Opsis 2.8 versus 3.0 RC resource comparison",
+        "head_sha": "0e6264ca7c55f8313381c626f3c5407137f0710a",
+        "status": "completed",
+        "conclusion": "failure",
+        "url": "https://github.com/gs-applabs/Opsis/actions/runs/46136458616"
+      },
+      {
+        "id": 46136458561,
+        "name": "Opsis 3.0 RC exhaustive Windows VM audit",
+        "head_sha": "0e6264ca7c55f8313381c626f3c5407137f0710a",
+        "status": "in_progress",
+        "conclusion": null,
+        "url": "https://github.com/gs-applabs/Opsis/actions/runs/46136458561"
+      },
+      {
+        "id": 46136458534,
+        "name": "Opsis - Desktop Customization Windows audit",
+        "head_sha": "0e6264ca7c55f8313381c626f3c5407137f0710a",
+        "status": "completed",
+        "conclusion": "failure",
+        "url": "https://github.com/gs-applabs/Opsis/actions/runs/46136458534"
+      },
+      {
+        "id": 46136458544,
+        "name": "Opsis 3.0 RC installer Windows VM E2E",
+        "head_sha": "0e6264ca7c55f8313381c626f3c5407137f0710a",
+        "status": "in_progress",
+        "conclusion": null,
+        "url": "https://github.com/gs-applabs/Opsis/actions/runs/46136458544"
+      },
+      {
+        "id": 46136458609,
+        "name": "Opsis 3.0.0.3200 pre-release full integration validation",
+        "head_sha": "0e6264ca7c55f8313381c626f3c5407137f0710a",
+        "status": "in_progress",
+        "conclusion": null,
+        "url": "https://github.com/gs-applabs/Opsis/actions/runs/46136458609"
+      },
+      {
+        "id": 46136458537,
+        "name": "Opsis RC plugin compatibility",
+        "head_sha": "0e6264ca7c55f8313381c626f3c5407137f0710a",
+        "status": "completed",
+        "conclusion": "failure",
+        "url": "https://github.com/gs-applabs/Opsis/actions/runs/46136458537"
+      },
+      {
+        "id": 46136539625,
+        "name": "OPSIS RC2 supplemental recovery, security, assets and one-hour stress",
+        "head_sha": "163c4ea5242f428d268e9f5206cca7195b2a9ead",
+        "status": "queued",
+        "conclusion": null,
+        "url": "https://github.com/gs-applabs/Opsis/actions/runs/46136539625"
+      }
+    ],
+    "checks": [
+      {
+        "id": 140952740611,
+        "name": "experience-windows (windows-2022)",
+        "status": "in_progress",
+        "conclusion": null,
+        "url": "https://github.com/gs-applabs/Opsis/actions/runs/46136458609/job/140952740611"
+      },
+      {
+        "id": 140952740430,
+        "name": "experience-windows (windows-2025)",
+        "status": "in_progress",
+        "conclusion": null,
+        "url": "https://github.com/gs-applabs/Opsis/actions/runs/46136458609/job/140952740430"
+      },
+      {
+        "id": 140952740429,
+        "name": "Build 3.0 RC, shell/navigation UI and stability / windows-2022",
+        "status": "in_progress",
+        "conclusion": null,
+        "url": "https://github.com/gs-applabs/Opsis/actions/runs/46136458561/job/140952740429"
+      },
+      {
+        "id": 140952740300,
+        "name": "plugin-build-matrix (windows-2025)",
+        "status": "in_progress",
+        "conclusion": null,
+        "url": "https://github.com/gs-applabs/Opsis/actions/runs/46136458539/job/140952740300"
+      },
+      {
+        "id": 140952740287,
+        "name": "desktop",
+        "status": "completed",
+        "conclusion": "failure",
+        "url": "https://github.com/gs-applabs/Opsis/actions/runs/46136458534/job/140952740287"
+      },
+      {
+        "id": 140952740249,
+        "name": "Build 3.0 RC, shell/navigation UI and stability / windows-2025",
+        "status": "completed",
+        "conclusion": "failure",
+        "url": "https://github.com/gs-applabs/Opsis/actions/runs/46136458561/job/140952740249"
+      },
+      {
+        "id": 140952740207,
+        "name": "windows",
+        "status": "completed",
+        "conclusion": "failure",
+        "url": "https://github.com/gs-applabs/Opsis/actions/runs/46136458563/job/140952740207"
+      },
+      {
+        "id": 140952740185,
+        "name": "Crawler + Chronikologio in .NET 11 host",
+        "status": "completed",
+        "conclusion": "failure",
+        "url": "https://github.com/gs-applabs/Opsis/actions/runs/46136458537/job/140952740185"
+      },
+      {
+        "id": 140952740150,
+        "name": "rc-installer (windows-2025)",
+        "status": "completed",
+        "conclusion": "failure",
+        "url": "https://github.com/gs-applabs/Opsis/actions/runs/46136458544/job/140952740150"
+      },
+      {
+        "id": 140952740142,
+        "name": "resource-compare",
+        "status": "completed",
+        "conclusion": "failure",
+        "url": "https://github.com/gs-applabs/Opsis/actions/runs/46136458616/job/140952740142"
+      },
+      {
+        "id": 140952740106,
+        "name": "plugin-build-matrix (windows-2022)",
+        "status": "completed",
+        "conclusion": "failure",
+        "url": "https://github.com/gs-applabs/Opsis/actions/runs/46136458539/job/140952740106"
+      },
+      {
+        "id": 140952740047,
+        "name": "archive",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/gs-applabs/Opsis/actions/runs/46136458533/job/140952740047"
+      },
+      {
+        "id": 140952740021,
+        "name": "rc-installer (windows-2022)",
+        "status": "in_progress",
+        "conclusion": null,
+        "url": "https://github.com/gs-applabs/Opsis/actions/runs/46136458544/job/140952740021"
+      },
+      {
+        "id": 140952739971,
+        "name": "Electron Media Suite integration",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/gs-applabs/Opsis/actions/runs/46136458537/job/140952739971"
+      },
+      {
+        "id": 140952995427,
+        "name": "one-hour-resource-audit",
+        "status": "queued",
+        "conclusion": null,
+        "url": "https://github.com/gs-applabs/Opsis/actions/runs/46136539625/job/140952995427"
+      },
+      {
+        "id": 140952995373,
+        "name": "assets-and-source",
+        "status": "completed",
+        "conclusion": "failure",
+        "url": "https://github.com/gs-applabs/Opsis/actions/runs/46136539625/job/140952995373"
+      },
+      {
+        "id": 140952995345,
+        "name": "dependency-audit",
+        "status": "queued",
+        "conclusion": null,
+        "url": "https://github.com/gs-applabs/Opsis/actions/runs/46136539625/job/140952995345"
+      },
+      {
+        "id": 140952995108,
+        "name": "atomic-recovery",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/gs-applabs/Opsis/actions/runs/46136539625/job/140952995108"
+      }
+    ],
+    "defects": [
+      {
+        "id": "RC2-F01",
+        "priority": "P0",
+        "type": "BUILD",
+        "path": "src/Music/MusicOverlayPage.cs:350–351",
+        "symptom": "CS0103 ×2: L local to constructor, UpdateFromSettings calls it outside scope.",
+        "fix": "Use existing localization selection in accessible helper; preserve Greek/English and session suspension text.",
+        "run": 46136458534,
+        "job": 140952740287,
+        "status": "OPEN",
+        "tested_sha": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "RC2-F02",
+        "priority": "P0",
+        "type": "BUILD",
+        "path": "src/Services/ShellAssetPack.cs:95,100",
+        "symptom": "CS8352 ×2: payload ref-span escapes scope via sequenceData/rateData.",
+        "fix": "Use bounded chunk offset/length or scoped ref offset; preserve structural validation and add valid ANI fixture, no removal of checks.",
+        "run": 46136458534,
+        "job": 140952740287,
+        "status": "OPEN",
+        "tested_sha": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "RC2-F03",
+        "priority": "P0",
+        "type": "BUILD",
+        "path": "src/Services/PluginCapabilityManifest.cs:27; src/Services/OpsisWidgetDesigner.cs:68",
+        "symptom": "CS1739 ×2: ReadAtLeast parameter throwIfEndOfStream does not exist.",
+        "fix": "Use the actual Stream.ReadAtLeast overload with positional false; retain read quotas and EOF checks.",
+        "run": 46136458534,
+        "job": 140952740287,
+        "status": "OPEN",
+        "tested_sha": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "RC2-F04",
+        "priority": "P0",
+        "type": "BUILD",
+        "path": "src/UI/MainWindow.Performance.cs:76",
+        "symptom": "CS0026: this referenced inside static method.",
+        "fix": "Use panel.FindForm() or explicit passed owner, verify null/disposal/handle and cancellation; preserve diagnostics preview.",
+        "run": 46136458534,
+        "job": 140952740287,
+        "status": "OPEN",
+        "tested_sha": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "RC2-F05",
+        "priority": "P0",
+        "type": "TEST",
+        "path": "tests/PluginCompatibility.test.cjs:34",
+        "symptom": "JS source assertion expects requested.Version > available.Version; actual shared resolver uses available.Version >= requested.Version plus identity checks.",
+        "fix": "Reconcile assertion with actual RequireDependencyIdentity and retain behavioral tests for older/newer/identity mismatches; no weaker admission.",
+        "run": 46136458563,
+        "job": 140952740207,
+        "status": "OPEN",
+        "tested_sha": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "RC2-F06",
+        "priority": "P0",
+        "type": "TEST",
+        "path": "tests/Session4.test.cjs:9",
+        "symptom": "JS source assertion expects Pascal-case capability tokens; manifest now parses case-insensitively and normalizes network/audio/local-files.",
+        "fix": "Verify actual parsing, hash binding and deny/revoke; update stale assertion only with equivalent behavioral coverage.",
+        "run": 46136458563,
+        "job": 140952740207,
+        "status": "OPEN",
+        "tested_sha": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "RC2-F07",
+        "priority": "P1",
+        "type": "CI",
+        "path": "GitHub Actions runtime",
+        "symptom": "Node 20 action deprecation warning (checkout/setup-dotnet/setup-node/upload-artifact).",
+        "fix": "Review current action versions/pins, upgrade compatibly after build corrections, rerun exact candidate.",
+        "run": 46136458563,
+        "job": 140952740207,
+        "status": "OPEN",
+        "tested_sha": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "RC2-F08",
+        "priority": "P1",
+        "type": "CI",
+        "path": "tools/qa-r9-windows.ps1",
+        "symptom": "Historical R9 QA script still hardcodes version 2.8.0.2500; not a valid RC2 upgrade gate.",
+        "fix": "Parameterize verified version and SHA-pinned upgrade/side-by-side/clean runtime matrix; use existing installer owner. Not a reported runtime failure.",
+        "run": null,
+        "job": null,
+        "status": "OPEN",
+        "tested_sha": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      }
+    ],
+    "active_development": [
+      {
+        "id": "DEV-A01",
+        "category": "UI, accessibility, persistence",
+        "requirement": "Remaining custom color contrast",
+        "status": "OPEN_OR_REVIEW",
+        "source": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "DEV-A02",
+        "category": "UI, accessibility, persistence",
+        "requirement": "Exact disabled-control reasons",
+        "status": "OPEN_OR_REVIEW",
+        "source": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "DEV-A03",
+        "category": "UI, accessibility, persistence",
+        "requirement": "Per-control F1 help",
+        "status": "OPEN_OR_REVIEW",
+        "source": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "DEV-A04",
+        "category": "UI, accessibility, persistence",
+        "requirement": "Remaining localization/shortcuts",
+        "status": "OPEN_OR_REVIEW",
+        "source": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "DEV-A05",
+        "category": "UI, accessibility, persistence",
+        "requirement": "Publisher/signature on separate plugin installer",
+        "status": "OPEN_OR_REVIEW",
+        "source": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "DEV-A06",
+        "category": "UI, accessibility, persistence",
+        "requirement": "Additional icon/cursor roles",
+        "status": "OPEN_OR_REVIEW",
+        "source": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "DEV-A07",
+        "category": "UI, accessibility, persistence",
+        "requirement": "Reopen active custom widgets after restart",
+        "status": "OPEN_OR_REVIEW",
+        "source": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "DEV-A08",
+        "category": "UI, accessibility, persistence",
+        "requirement": "Portrait display density",
+        "status": "OPEN_OR_REVIEW",
+        "source": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "DEV-A09",
+        "category": "UI, accessibility, persistence",
+        "requirement": "Remaining plugin/widget privacy paths",
+        "status": "OPEN_OR_REVIEW",
+        "source": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "DEV-A10",
+        "category": "UI, accessibility, persistence",
+        "requirement": "Release/readiness metadata consistency (RC2 preflight corrected; final update pending)",
+        "status": "OPEN_OR_REVIEW",
+        "source": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "DEV-B01",
+        "category": "Existing functional extensions",
+        "requirement": "Opt-in DeskFlip Alt+Tab",
+        "status": "OPEN_OR_REVIEW",
+        "source": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "DEV-B02",
+        "category": "Existing functional extensions",
+        "requirement": "Select on Alt release",
+        "status": "OPEN_OR_REVIEW",
+        "source": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "DEV-B03",
+        "category": "Existing functional extensions",
+        "requirement": "Native fallback",
+        "status": "OPEN_OR_REVIEW",
+        "source": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "DEV-B04",
+        "category": "Existing functional extensions",
+        "requirement": "Keyboard zone preview before move",
+        "status": "OPEN_OR_REVIEW",
+        "source": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "DEV-B05",
+        "category": "Existing functional extensions",
+        "requirement": "External-window profile preview/owner",
+        "status": "OPEN_OR_REVIEW",
+        "source": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "DEV-B06",
+        "category": "Existing functional extensions",
+        "requirement": "Actual Explorer tab grouping/order restore",
+        "status": "OPEN_OR_REVIEW",
+        "source": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "DEV-B07",
+        "category": "Existing functional extensions",
+        "requirement": "Per-app appearance",
+        "status": "OPEN_OR_REVIEW",
+        "source": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "DEV-B08",
+        "category": "Existing functional extensions",
+        "requirement": "Advanced window grouping",
+        "status": "OPEN_OR_REVIEW",
+        "source": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "DEV-B09",
+        "category": "Existing functional extensions",
+        "requirement": "Native tray icons depth",
+        "status": "OPEN_OR_REVIEW",
+        "source": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "DEV-B10",
+        "category": "Existing functional extensions",
+        "requirement": "Taskbar calendar",
+        "status": "OPEN_OR_REVIEW",
+        "source": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "DEV-B11",
+        "category": "Existing functional extensions",
+        "requirement": "Additional widget sources",
+        "status": "OPEN_OR_REVIEW",
+        "source": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "DEV-B12",
+        "category": "Existing functional extensions",
+        "requirement": "Gallery package management",
+        "status": "OPEN_OR_REVIEW",
+        "source": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "DEV-C01",
+        "category": "Core and Containers",
+        "requirement": "True minimal Containers-only startup",
+        "status": "OPEN_OR_REVIEW",
+        "source": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "DEV-C02",
+        "category": "Core and Containers",
+        "requirement": "Audit ungated services",
+        "status": "OPEN_OR_REVIEW",
+        "source": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "DEV-C03",
+        "category": "Core and Containers",
+        "requirement": "Further startup cost reduction",
+        "status": "OPEN_OR_REVIEW",
+        "source": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "DEV-C04",
+        "category": "Core and Containers",
+        "requirement": "Per-feature CPU attribution",
+        "status": "OPEN_OR_REVIEW",
+        "source": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "DEV-C05",
+        "category": "Core and Containers",
+        "requirement": "Persistent dirty-layout recovery",
+        "status": "OPEN_OR_REVIEW",
+        "source": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "DEV-C06",
+        "category": "Core and Containers",
+        "requirement": "Complete legacy Containers migration",
+        "status": "OPEN_OR_REVIEW",
+        "source": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "DEV-C07",
+        "category": "Core and Containers",
+        "requirement": "Inspect spacer support in Core DLL before implementation",
+        "status": "OPEN_OR_REVIEW",
+        "source": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "DEV-D01",
+        "category": "Rainmeter/Windhawk",
+        "requirement": "Rainmeter image meters",
+        "status": "OPEN_OR_REVIEW",
+        "source": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "DEV-D02",
+        "category": "Rainmeter/Windhawk",
+        "requirement": "More declarative measures",
+        "status": "OPEN_OR_REVIEW",
+        "source": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "DEV-D03",
+        "category": "Rainmeter/Windhawk",
+        "requirement": "Math expressions",
+        "status": "OPEN_OR_REVIEW",
+        "source": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "DEV-D04",
+        "category": "Rainmeter/Windhawk",
+        "requirement": "Complex layouts",
+        "status": "OPEN_OR_REVIEW",
+        "source": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "DEV-D05",
+        "category": "Rainmeter/Windhawk",
+        "requirement": "Font support",
+        "status": "OPEN_OR_REVIEW",
+        "source": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "DEV-D06",
+        "category": "Rainmeter/Windhawk",
+        "requirement": "Mod-by-mod compatibility audit",
+        "status": "OPEN_OR_REVIEW",
+        "source": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "DEV-D07",
+        "category": "Rainmeter/Windhawk",
+        "requirement": "Native equivalents only for actual gaps",
+        "status": "OPEN_OR_REVIEW",
+        "source": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "DEV-E01",
+        "category": "Native Shell",
+        "requirement": "Full native Start replacement",
+        "status": "OPEN_OR_REVIEW",
+        "source": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "DEV-E02",
+        "category": "Native Shell",
+        "requirement": "Native taskbar advanced styling beyond companion",
+        "status": "OPEN_OR_REVIEW",
+        "source": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "DEV-E03",
+        "category": "Native Shell",
+        "requirement": "Native Explorer command bar",
+        "status": "OPEN_OR_REVIEW",
+        "source": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "DEV-E04",
+        "category": "Native Shell",
+        "requirement": "Advanced Explorer appearance",
+        "status": "OPEN_OR_REVIEW",
+        "source": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "DEV-E05",
+        "category": "Native Shell",
+        "requirement": "Notification Center",
+        "status": "OPEN_OR_REVIEW",
+        "source": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "DEV-E06",
+        "category": "Native Shell",
+        "requirement": "Quick Settings",
+        "status": "OPEN_OR_REVIEW",
+        "source": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "DEV-E07",
+        "category": "Native Shell",
+        "requirement": "Native Volume Flyout beyond companion",
+        "status": "OPEN_OR_REVIEW",
+        "source": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "DEV-E08",
+        "category": "Native Shell",
+        "requirement": "Spotlight/lockscreen advanced",
+        "status": "OPEN_OR_REVIEW",
+        "source": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "DEV-F01",
+        "category": "SDK2",
+        "requirement": "API2 negotiation",
+        "status": "OPEN_OR_REVIEW",
+        "source": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "DEV-F02",
+        "category": "SDK2",
+        "requirement": "Isolated worker",
+        "status": "OPEN_OR_REVIEW",
+        "source": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "DEV-F03",
+        "category": "SDK2",
+        "requirement": "Authenticated bounded IPC",
+        "status": "OPEN_OR_REVIEW",
+        "source": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "DEV-F04",
+        "category": "SDK2",
+        "requirement": "OS-enforced capabilities",
+        "status": "OPEN_OR_REVIEW",
+        "source": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "DEV-F05",
+        "category": "SDK2",
+        "requirement": "Dependency graph",
+        "status": "OPEN_OR_REVIEW",
+        "source": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "DEV-F06",
+        "category": "SDK2",
+        "requirement": "Cycle detection",
+        "status": "OPEN_OR_REVIEW",
+        "source": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "DEV-F07",
+        "category": "SDK2",
+        "requirement": "Event bus/contracts",
+        "status": "OPEN_OR_REVIEW",
+        "source": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "DEV-F08",
+        "category": "SDK2",
+        "requirement": "SDK examples/validator",
+        "status": "OPEN_OR_REVIEW",
+        "source": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "DEV-F09",
+        "category": "SDK2",
+        "requirement": "Sibling interoperability",
+        "status": "OPEN_OR_REVIEW",
+        "source": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "DEV-Z01",
+        "category": "Multimedia/Automation",
+        "requirement": "Unified Now Playing broker",
+        "status": "OPEN_OR_REVIEW",
+        "source": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "DEV-Z02",
+        "category": "Multimedia/Automation",
+        "requirement": "DSP Media Suite contract",
+        "status": "OPEN_OR_REVIEW",
+        "source": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "DEV-Z03",
+        "category": "Multimedia/Automation",
+        "requirement": "Codec benchmark",
+        "status": "OPEN_OR_REVIEW",
+        "source": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "DEV-Z04",
+        "category": "Multimedia/Automation",
+        "requirement": "General automation undo",
+        "status": "OPEN_OR_REVIEW",
+        "source": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "DEV-Z05",
+        "category": "Multimedia/Automation",
+        "requirement": "Unified command registry",
+        "status": "OPEN_OR_REVIEW",
+        "source": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "DEV-H01",
+        "category": "Opsis.UI6/Glass",
+        "requirement": "Shared Opsis.UI6 integration",
+        "status": "OPEN_OR_REVIEW",
+        "source": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "DEV-H02",
+        "category": "Opsis.UI6/Glass",
+        "requirement": "Production Signature Composition",
+        "status": "OPEN_OR_REVIEW",
+        "source": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "DEV-H03",
+        "category": "Opsis.UI6/Glass",
+        "requirement": "Remaining Glass surfaces",
+        "status": "OPEN_OR_REVIEW",
+        "source": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "DEV-H04",
+        "category": "Opsis.UI6/Glass",
+        "requirement": "Real HDR/SDR",
+        "status": "OPEN_OR_REVIEW",
+        "source": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "DEV-H05",
+        "category": "Opsis.UI6/Glass",
+        "requirement": "SettingsEditSession/EffectsPolicy",
+        "status": "OPEN_OR_REVIEW",
+        "source": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "DEV-TH01",
+        "category": "Weather",
+        "requirement": "Three actual live render previews",
+        "status": "OPEN_OR_REVIEW",
+        "source": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "DEV-TH02",
+        "category": "Weather",
+        "requirement": "RDP last frame",
+        "status": "OPEN_OR_REVIEW",
+        "source": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "DEV-TH03",
+        "category": "Weather",
+        "requirement": "Photo occlusion quality gaps",
+        "status": "OPEN_OR_REVIEW",
+        "source": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "DEV-TH04",
+        "category": "Weather",
+        "requirement": "HDR/GPU renderer",
+        "status": "OPEN_OR_REVIEW",
+        "source": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "DEV-I01",
+        "category": "Marketplace/security",
+        "requirement": "Online marketplace",
+        "status": "OPEN_OR_REVIEW",
+        "source": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "DEV-I02",
+        "category": "Marketplace/security",
+        "requirement": "Online version management",
+        "status": "OPEN_OR_REVIEW",
+        "source": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "DEV-I03",
+        "category": "Marketplace/security",
+        "requirement": "Safe online distribution",
+        "status": "OPEN_OR_REVIEW",
+        "source": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "DEV-I04",
+        "category": "Marketplace/security",
+        "requirement": "Rollback provenance",
+        "status": "OPEN_OR_REVIEW",
+        "source": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "DEV-I05",
+        "category": "Marketplace/security",
+        "requirement": "Transitive/bundled dependency review",
+        "status": "OPEN_OR_REVIEW",
+        "source": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "DEV-I06",
+        "category": "Marketplace/security",
+        "requirement": "Complex transaction crash recovery",
+        "status": "OPEN_OR_REVIEW",
+        "source": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      }
+    ],
+    "assets": [
+      {
+        "id": "ASSET-01",
+        "requirement": "Remaining European capitals",
+        "status": "OPEN_OR_REVIEW"
+      },
+      {
+        "id": "ASSET-02",
+        "requirement": "Verify existing originals and quality",
+        "status": "OPEN_OR_REVIEW"
+      },
+      {
+        "id": "ASSET-03",
+        "requirement": "200 static wallpaper payload",
+        "status": "OPEN_OR_REVIEW"
+      },
+      {
+        "id": "ASSET-04",
+        "requirement": "Approved intro WebM",
+        "status": "OPEN_OR_REVIEW"
+      },
+      {
+        "id": "ASSET-05",
+        "requirement": "Intro audio/generator",
+        "status": "OPEN_OR_REVIEW"
+      },
+      {
+        "id": "ASSET-06",
+        "requirement": "Approved logo identity",
+        "status": "OPEN_OR_REVIEW"
+      },
+      {
+        "id": "ASSET-07",
+        "requirement": "Steel Oval Rails originals",
+        "status": "OPEN_OR_REVIEW"
+      },
+      {
+        "id": "ASSET-08",
+        "requirement": "Updated single add-on installer",
+        "status": "OPEN_OR_REVIEW"
+      }
+    ],
+    "qa": [
+      {
+        "id": "QA-01",
+        "requirement": "Final .NET 11 build",
+        "status": "OPEN"
+      },
+      {
+        "id": "QA-02",
+        "requirement": "All automated checks",
+        "status": "OPEN"
+      },
+      {
+        "id": "QA-03",
+        "requirement": "GitHub Windows runner",
+        "status": "OPEN"
+      },
+      {
+        "id": "QA-04",
+        "requirement": "Independent second Windows VM",
+        "status": "OPEN"
+      },
+      {
+        "id": "QA-05",
+        "requirement": "All buttons/settings",
+        "status": "OPEN"
+      },
+      {
+        "id": "QA-06",
+        "requirement": "Visual audit",
+        "status": "OPEN"
+      },
+      {
+        "id": "QA-07",
+        "requirement": "RAM/CPU/GPU/VRAM stress",
+        "status": "OPEN"
+      },
+      {
+        "id": "QA-08",
+        "requirement": "24h continuous operation",
+        "status": "OPEN"
+      },
+      {
+        "id": "QA-09",
+        "requirement": "Multiple screens/DPI",
+        "status": "OPEN"
+      },
+      {
+        "id": "QA-10",
+        "requirement": "Real plugins/sibling integration",
+        "status": "OPEN"
+      },
+      {
+        "id": "QA-11",
+        "requirement": "Legacy Containers/profile migration",
+        "status": "OPEN"
+      },
+      {
+        "id": "QA-12",
+        "requirement": "Fences comparison",
+        "status": "OPEN"
+      },
+      {
+        "id": "QA-13",
+        "requirement": "Installer/upgrade/uninstall/rollback",
+        "status": "OPEN"
+      },
+      {
+        "id": "QA-14",
+        "requirement": "Wallpaper quality/playback",
+        "status": "OPEN"
+      },
+      {
+        "id": "QA-15",
+        "requirement": "Security/dependencies",
+        "status": "OPEN"
+      },
+      {
+        "id": "QA-16",
+        "requirement": "Help/History/About/MIT",
+        "status": "OPEN"
+      },
+      {
+        "id": "QA-17",
+        "requirement": "Free signing if feasible",
+        "status": "OPEN"
+      },
+      {
+        "id": "QA-18",
+        "requirement": "Canonical source and Inno",
+        "status": "OPEN"
+      },
+      {
+        "id": "QA-19",
+        "requirement": "Production release approval",
+        "status": "OPEN"
+      }
+    ],
+    "observed": {
+      "js_total": 59,
+      "js_pass": 57,
+      "js_fail": 2,
+      "unique_compiler_errors": 7,
+      "compiler_files": 5,
+      "source_handoff": "success",
+      "source_artifact_ids": [
+        15260460139,
+        15260046465
+      ]
+    }
   }
 }

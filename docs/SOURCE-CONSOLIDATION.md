@@ -865,3 +865,172 @@ Reviewed exact `a174170059830e60f90947e147c26814d2975948` method bodies, UI call
 - Version.props already 3.0.0.3200 but production gate incompatible with prerelease test; explicit RC2 validation environment gate, not production release. Default gate remains fail-closed.
 - All 23 global packages and original 100 IDs retained; 73 engineering/investigation entries, 8 asset/package entries and 19 QA/delivery groups from prior review remain open. Every observed failure must be added to canonical roadmap with workflow/job/SHA, symptom, fix and retest.
 Candidate branch `release/3.0.0.3200-rc2`; base `c25d9c5720de2266b8552e730143ada7376e915a`. Expected workflows: 3.0-rc-vm-audit, 3.0-rc-installer-e2e, 3.0-rc-performance-compare, 3.0-source-handoff, unified-r28-checks, windows-audit, plugin-compatibility, 3.0-integration, 3.0-plugins-e2e. No PASS until logs.
+
+
+## RC2 — actual CI evidence and post-RC correction queue
+
+Frozen source `0e6264ca7c55f8313381c626f3c5407137f0710a` (never move release branch). Supplemental workflow commit `163c4ea5242f428d268e9f5206cca7195b2a9ead` checks out frozen RC2, not its own source. All gates pending unless logs say otherwise. 59 JS: 57 PASS, 2 FAIL; 7 compiler errors in 5 files across Windows runner jobs. Source handoff succeeded (artifacts 15260460139, 15260046465). The default production release gate rejection in supplemental logs is expected, not a bug.
+
+| ID | Priority | File | Actual symptom | Required correction | Evidence |
+|---|---|---|---|---|---|
+| RC2-F01 | P0 | src/Music/MusicOverlayPage.cs:350–351 | CS0103 ×2: L local to constructor, UpdateFromSettings calls it outside scope. | Use existing localization selection in accessible helper; preserve Greek/English and session suspension text. | [run 46136458534](https://github.com/gs-applabs/Opsis/actions/runs/46136458534/job/140952740287) |
+| RC2-F02 | P0 | src/Services/ShellAssetPack.cs:95,100 | CS8352 ×2: payload ref-span escapes scope via sequenceData/rateData. | Use bounded chunk offset/length or scoped ref offset; preserve structural validation and add valid ANI fixture, no removal of checks. | [run 46136458534](https://github.com/gs-applabs/Opsis/actions/runs/46136458534/job/140952740287) |
+| RC2-F03 | P0 | src/Services/PluginCapabilityManifest.cs:27; src/Services/OpsisWidgetDesigner.cs:68 | CS1739 ×2: ReadAtLeast parameter throwIfEndOfStream does not exist. | Use the actual Stream.ReadAtLeast overload with positional false; retain read quotas and EOF checks. | [run 46136458534](https://github.com/gs-applabs/Opsis/actions/runs/46136458534/job/140952740287) |
+| RC2-F04 | P0 | src/UI/MainWindow.Performance.cs:76 | CS0026: this referenced inside static method. | Use panel.FindForm() or explicit passed owner, verify null/disposal/handle and cancellation; preserve diagnostics preview. | [run 46136458534](https://github.com/gs-applabs/Opsis/actions/runs/46136458534/job/140952740287) |
+| RC2-F05 | P0 | tests/PluginCompatibility.test.cjs:34 | JS source assertion expects requested.Version > available.Version; actual shared resolver uses available.Version >= requested.Version plus identity checks. | Reconcile assertion with actual RequireDependencyIdentity and retain behavioral tests for older/newer/identity mismatches; no weaker admission. | [run 46136458563](https://github.com/gs-applabs/Opsis/actions/runs/46136458563/job/140952740207) |
+| RC2-F06 | P0 | tests/Session4.test.cjs:9 | JS source assertion expects Pascal-case capability tokens; manifest now parses case-insensitively and normalizes network/audio/local-files. | Verify actual parsing, hash binding and deny/revoke; update stale assertion only with equivalent behavioral coverage. | [run 46136458563](https://github.com/gs-applabs/Opsis/actions/runs/46136458563/job/140952740207) |
+| RC2-F07 | P1 | GitHub Actions runtime | Node 20 action deprecation warning (checkout/setup-dotnet/setup-node/upload-artifact). | Review current action versions/pins, upgrade compatibly after build corrections, rerun exact candidate. | [run 46136458563](https://github.com/gs-applabs/Opsis/actions/runs/46136458563/job/140952740207) |
+| RC2-F08 | P1 | tools/qa-r9-windows.ps1 | Historical R9 QA script still hardcodes version 2.8.0.2500; not a valid RC2 upgrade gate. | Parameterize verified version and SHA-pinned upgrade/side-by-side/clean runtime matrix; use existing installer owner. Not a reported runtime failure. | Source review only |
+
+### Workflow snapshot (not final)
+
+| Run | Status | Conclusion |
+|---|---|---|
+| [Opsis RC source-only Claude handoff](https://github.com/gs-applabs/Opsis/actions/runs/46136458533) | completed | success |
+| [OPSIS unified RC build checks](https://github.com/gs-applabs/Opsis/actions/runs/46136458563) | completed | failure |
+| [Opsis 3.0 plugin ABI and ecosystem compatibility](https://github.com/gs-applabs/Opsis/actions/runs/46136458539) | in_progress | pending |
+| [Opsis 2.8 versus 3.0 RC resource comparison](https://github.com/gs-applabs/Opsis/actions/runs/46136458616) | completed | failure |
+| [Opsis 3.0 RC exhaustive Windows VM audit](https://github.com/gs-applabs/Opsis/actions/runs/46136458561) | in_progress | pending |
+| [Opsis - Desktop Customization Windows audit](https://github.com/gs-applabs/Opsis/actions/runs/46136458534) | completed | failure |
+| [Opsis 3.0 RC installer Windows VM E2E](https://github.com/gs-applabs/Opsis/actions/runs/46136458544) | in_progress | pending |
+| [Opsis 3.0.0.3200 pre-release full integration validation](https://github.com/gs-applabs/Opsis/actions/runs/46136458609) | in_progress | pending |
+| [Opsis RC plugin compatibility](https://github.com/gs-applabs/Opsis/actions/runs/46136458537) | completed | failure |
+| [OPSIS RC2 supplemental recovery, security, assets and one-hour stress](https://github.com/gs-applabs/Opsis/actions/runs/46136539625) | queued | pending |
+
+### Preserved active engineering inventory (73; aliases only, no duplicate work)
+
+**UI, accessibility, persistence**
+
+- DEV-A01: Remaining custom color contrast
+- DEV-A02: Exact disabled-control reasons
+- DEV-A03: Per-control F1 help
+- DEV-A04: Remaining localization/shortcuts
+- DEV-A05: Publisher/signature on separate plugin installer
+- DEV-A06: Additional icon/cursor roles
+- DEV-A07: Reopen active custom widgets after restart
+- DEV-A08: Portrait display density
+- DEV-A09: Remaining plugin/widget privacy paths
+- DEV-A10: Release/readiness metadata consistency (RC2 preflight corrected; final update pending)
+
+**Existing functional extensions**
+
+- DEV-B01: Opt-in DeskFlip Alt+Tab
+- DEV-B02: Select on Alt release
+- DEV-B03: Native fallback
+- DEV-B04: Keyboard zone preview before move
+- DEV-B05: External-window profile preview/owner
+- DEV-B06: Actual Explorer tab grouping/order restore
+- DEV-B07: Per-app appearance
+- DEV-B08: Advanced window grouping
+- DEV-B09: Native tray icons depth
+- DEV-B10: Taskbar calendar
+- DEV-B11: Additional widget sources
+- DEV-B12: Gallery package management
+
+**Core and Containers**
+
+- DEV-C01: True minimal Containers-only startup
+- DEV-C02: Audit ungated services
+- DEV-C03: Further startup cost reduction
+- DEV-C04: Per-feature CPU attribution
+- DEV-C05: Persistent dirty-layout recovery
+- DEV-C06: Complete legacy Containers migration
+- DEV-C07: Inspect spacer support in Core DLL before implementation
+
+**Rainmeter/Windhawk**
+
+- DEV-D01: Rainmeter image meters
+- DEV-D02: More declarative measures
+- DEV-D03: Math expressions
+- DEV-D04: Complex layouts
+- DEV-D05: Font support
+- DEV-D06: Mod-by-mod compatibility audit
+- DEV-D07: Native equivalents only for actual gaps
+
+**Native Shell**
+
+- DEV-E01: Full native Start replacement
+- DEV-E02: Native taskbar advanced styling beyond companion
+- DEV-E03: Native Explorer command bar
+- DEV-E04: Advanced Explorer appearance
+- DEV-E05: Notification Center
+- DEV-E06: Quick Settings
+- DEV-E07: Native Volume Flyout beyond companion
+- DEV-E08: Spotlight/lockscreen advanced
+
+**SDK2**
+
+- DEV-F01: API2 negotiation
+- DEV-F02: Isolated worker
+- DEV-F03: Authenticated bounded IPC
+- DEV-F04: OS-enforced capabilities
+- DEV-F05: Dependency graph
+- DEV-F06: Cycle detection
+- DEV-F07: Event bus/contracts
+- DEV-F08: SDK examples/validator
+- DEV-F09: Sibling interoperability
+
+**Multimedia/Automation**
+
+- DEV-Z01: Unified Now Playing broker
+- DEV-Z02: DSP Media Suite contract
+- DEV-Z03: Codec benchmark
+- DEV-Z04: General automation undo
+- DEV-Z05: Unified command registry
+
+**Opsis.UI6/Glass**
+
+- DEV-H01: Shared Opsis.UI6 integration
+- DEV-H02: Production Signature Composition
+- DEV-H03: Remaining Glass surfaces
+- DEV-H04: Real HDR/SDR
+- DEV-H05: SettingsEditSession/EffectsPolicy
+
+**Weather**
+
+- DEV-TH01: Three actual live render previews
+- DEV-TH02: RDP last frame
+- DEV-TH03: Photo occlusion quality gaps
+- DEV-TH04: HDR/GPU renderer
+
+**Marketplace/security**
+
+- DEV-I01: Online marketplace
+- DEV-I02: Online version management
+- DEV-I03: Safe online distribution
+- DEV-I04: Rollback provenance
+- DEV-I05: Transitive/bundled dependency review
+- DEV-I06: Complex transaction crash recovery
+
+### Assets (8)
+- ASSET-01: Remaining European capitals
+- ASSET-02: Verify existing originals and quality
+- ASSET-03: 200 static wallpaper payload
+- ASSET-04: Approved intro WebM
+- ASSET-05: Intro audio/generator
+- ASSET-06: Approved logo identity
+- ASSET-07: Steel Oval Rails originals
+- ASSET-08: Updated single add-on installer
+
+### QA/delivery (19)
+- QA-01: Final .NET 11 build
+- QA-02: All automated checks
+- QA-03: GitHub Windows runner
+- QA-04: Independent second Windows VM
+- QA-05: All buttons/settings
+- QA-06: Visual audit
+- QA-07: RAM/CPU/GPU/VRAM stress
+- QA-08: 24h continuous operation
+- QA-09: Multiple screens/DPI
+- QA-10: Real plugins/sibling integration
+- QA-11: Legacy Containers/profile migration
+- QA-12: Fences comparison
+- QA-13: Installer/upgrade/uninstall/rollback
+- QA-14: Wallpaper quality/playback
+- QA-15: Security/dependencies
+- QA-16: Help/History/About/MIT
+- QA-17: Free signing if feasible
+- QA-18: Canonical source and Inno
+- QA-19: Production release approval
+
+Physical Windows 11/GPU/DPI, second provider, 24-hour soak, full legacy upgrade and add-on E2E cannot be certified by the current runner jobs. Preserve all original 100 IDs, B01–B14, and G01–G23. After the runs terminate, inspect every failed job/log/artifact and add only distinct evidence-backed findings; fix on integration branch and rerun a new frozen candidate, not this SHA. No production release.
