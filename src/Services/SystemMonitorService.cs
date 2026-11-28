@@ -40,13 +40,8 @@ namespace MotionDesk.Services
                 if (now - _sampledAt < 500) return _cached;
                 if (ReadSystemTimes(out var idle, out var kernel, out var user))
                 {
-                    var idleDelta = idle - _lastIdle;
-                    var kernelDelta = kernel - _lastKernel;
-                    var userDelta = user - _lastUser;
-                    var totalDelta = kernelDelta + userDelta;
-
-                    if (totalDelta > 0)
-                        _cpuPercent = Math.Clamp((1.0 - (double)idleDelta / totalDelta) * 100.0, 0, 100);
+                    _cpuPercent = CalculateCpuPercent(_lastIdle, _lastKernel, _lastUser,
+                        idle, kernel, user, _cpuPercent);
 
                     _lastIdle = idle;
                     _lastKernel = kernel;
@@ -61,6 +56,16 @@ namespace MotionDesk.Services
                     TotalMemoryMb: memory.TotalMb,
                     Timestamp: DateTime.Now);
             }
+        }
+
+        internal static double CalculateCpuPercent(ulong previousIdle, ulong previousKernel, ulong previousUser,
+            ulong idle, ulong kernel, ulong user, double previous)
+        {
+            // Resume, driver/system counter reset: do not underflow unsigned
+            // deltas or feed false high-load signals to the governor.
+            if (idle < previousIdle || kernel < previousKernel || user < previousUser) return 0;
+            double total = (double)(kernel - previousKernel) + (user - previousUser);
+            return total > 0 ? Math.Clamp((1.0 - (idle - previousIdle) / total) * 100.0, 0, 100) : previous;
         }
 
         private static (double AvailableMb, double TotalMb) GetMemoryStatus()

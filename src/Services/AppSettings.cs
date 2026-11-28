@@ -60,6 +60,10 @@ namespace MotionDesk.Services
         //  αντί για σταθερή παλέτα accent χρωμάτων, ακολούθησε το πραγματικό
         // accent color που έχει επιλέξει ο χρήστης στα Windows (Ρυθμίσεις > Εξατομίκευση > Χρώματα).
         public bool FollowWindowsAccent { get; set; } = false;
+        // Opsis-only wallpaper accent; never changes the actual Windows accent.
+        public bool WallpaperAccentEnabled { get; set; } = false;
+        public string WallpaperAccentHex { get; set; } = "";
+
         public string Language { get; set; } = "Follow";  // Follow | el | en
         public double WindowOpacity { get; set; } = 1.0;  // 0.6 - 1.0, εφαρμόζεται στο κύριο παράθυρο
         public double DarkIntensity { get; set; } = 0.5;  // 0 (πιο ανοιχτό σκούρο) - 1 (σχεδόν μαύρο), 0.5 = η αρχική βάση
@@ -185,6 +189,29 @@ namespace MotionDesk.Services
         /// <summary>Opt-in: "New DeskContainer" / "Next animated wallpaper" in the desktop right-click menu (per-user registry verbs, see DesktopMenu).</summary>
         public bool DesktopMenuEnabled { get; set; } = true;
         public string MusicOverlayAnchor { get; set; } = "BottomRight";
+        // P0 optional desktop interactions. Values: None | OpenOpsis | ShowDesktop | TaskView.
+        // Explicit opt-in. Automation rules are inactive until the user enables the studio.
+        public bool OpsisAutomationsEnabled { get; set; } = false;
+        public bool WindowRulesEnabled { get; set; } = false; // P3: disabled until explicit opt-in
+        // Cursor FX: opt-in per-user overlay; no mouse hooks, scripts or system modifications.
+        public bool CursorFxEnabled { get; set; } = false;
+        public string CursorFxStyle { get; set; } = "Both"; // Halo | Ripple | Both
+        public int CursorFxIntensity { get; set; } = 70; // 20 .. 100
+
+        public bool HotCornersEnabled { get; set; } = false;
+        public string HotCornerTopLeft { get; set; } = "None";
+        public string HotCornerTopRight { get; set; } = "None";
+        public string HotCornerBottomLeft { get; set; } = "None";
+        public string HotCornerBottomRight { get; set; } = "None";
+        // P1 user-defined activation sensitivity, clamped by the runtime to safe ranges.
+        public int HotCornerDwellMilliseconds { get; set; } = 700;
+        public int HotCornerEdgePixels { get; set; } = 5;
+        public bool HotCornersPauseOnFullscreen { get; set; } = true;
+
+        // Keep the user's original Windows mouse trails value for a genuine restore.
+        public int? MouseTrailsOriginalCount { get; set; }
+
+
 
         /// <summary>2.6.0: the shared Glass theme choices (Opsis.UI.GlassSettings): Solid by default.</summary>
         public GlassSettings Glass { get; set; } = new();
@@ -225,10 +252,16 @@ namespace MotionDesk.Services
             }
         }
 
+        internal static event Action? SettingsSaved;
+
         public void Save()
         {
             Store().Save(this);
             lock (PeekLock) _peek = null;
+            // A successful persistent write must not become a reported failure
+            // merely because an optional runtime listener failed.
+            try { SettingsSaved?.Invoke(); }
+            catch (Exception ex) { System.Diagnostics.Debug.WriteLine(ex); }
         }
     }
 

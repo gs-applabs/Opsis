@@ -261,7 +261,10 @@ namespace MotionDesk
             // ΞΈΞ± Ξ­Ο†Ο„ΞΉΞ±Ο‡Ξ½Ξ±Ξ½ Ξ΄ΞΉΟ€Ξ»Ξ¬ wallpaper windows/tray icons ΞΊΞ±ΞΉ ΞΈΞ± Ξ­Ξ³ΟΞ±Ο†Ξ±Ξ½ Ο„Ξ± Ξ―Ξ΄ΞΉΞ± config Ξ±ΟΟ‡ΞµΞ―Ξ±.
             // An isolated data folder (OPSIS_APPDATA, used by automated tests) gets its own mutex, so a test run never collides with the user's real instance.
             string isolatedData = Environment.GetEnvironmentVariable("OPSIS_APPDATA") ?? "";
-            string mutexName = isolatedData.Length == 0 ? @"Local\Opsis.SingleInstance" : @"Local\Opsis.SingleInstance." + (uint)isolatedData.ToLowerInvariant().GetHashCode();
+            // String.GetHashCode is randomized per process; use a stable digest of the normalized data path.
+            string mutexName = isolatedData.Length == 0 ? @"Local\Opsis.SingleInstance" :
+                @"Local\Opsis.SingleInstance." + Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(
+                    System.Text.Encoding.UTF8.GetBytes(System.IO.Path.TrimEndingDirectorySeparator(System.IO.Path.GetFullPath(isolatedData)).ToUpperInvariant())));
             using var singleInstance = new System.Threading.Mutex(true, mutexName, out bool isFirst);
             if (!isFirst) { if (desktopAction != null) Services.DesktopMenu.Send(desktopAction); return; }
 
@@ -282,7 +285,7 @@ namespace MotionDesk
             Services.PerformanceGovernor.EffectiveChanged += t =>
             {
                 Services.RotatingLogger.Write("Performance: effective tier is now " + t);
-                try { MotionDesk.Widgets.WallpaperHostEngine.Instance.PushPerf(); } catch (Exception) { }
+                try { MotionDesk.Widgets.WallpaperHostEngine.QueuePerfIfCreated(); } catch (Exception) { }
             };
 
             // Ξ¤ΞΏ .NET 5+ Ξ΄ΞµΞ½ Ο€ΞµΟΞΉΞ»Ξ±ΞΌΞ²Ξ¬Ξ½ΞµΞΉ Ο€Ξ»Ξ­ΞΏΞ½ Ο„ΞΉΟ‚ legacy ΞΊΟ‰Ξ΄ΞΉΞΊΞΏΟƒΞµΞ»Ξ―Ξ΄ΞµΟ‚ (Ο€.Ο‡. 737 Ξ³ΞΉΞ± ΞµΞ»Ξ»Ξ·Ξ½ΞΉΞΊΞ¬

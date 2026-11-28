@@ -818,7 +818,7 @@
   "About.UpdateNoDigest": "このリリースには検証用のチェックサムがないため、自動ではインストールされません。代わりにリリース ページを開きます。",
   "About.DeskContainersGuideTitle": "DeskContainers — 使い方",
   "VersionNotes.2.4.6": "~ 共通の語句 (OK、キャンセル、リセット、「再起動が必要」、自動/低/バランス/高 ...) は Opsis ファミリー共有の翻訳 (Opsis.UI 0.3.0) から提供され、すべてのアプリで共通です。",
-  "VersionNotes.2.8.0.2511": "2.8.0.2511: スタート画面から Windows の外観に関するすべてのページ (個人用設定、オートメーション、パフォーマンス、プロファイル、サウンド) に移動でき、実行中のバージョンのノートが表示されます。バージョン情報にも実行中のバージョンのノートが表示されます。14 言語すべてでテキストを更新し、古い 2.6.0 の表記を削除しました。",
+  "VersionNotes.3.0.0.3200": "~ 新しい Opsis 3 ロゴと、視覚的なプレビュー付きの 11 種類のスタート ボタン スタイル。\n+ Opsis Signature ガラス壁紙と、統合された壁紙ギャラリー (内蔵、アドオン、画像パック)。\n~ より安全な Windows 連携: 更新ガードは Opsis を再起動するまでシェル機能を保留し、タスク バーの自動非表示の状態は安全に復元され、エクスプローラーのフォルダー取得でウィンドウが固まらなくなりました。\n~ 大きな画像パック (最大 200 枚) はバックグラウンドでインストールされます。",
   "VersionNotes.2.8.0.2510": "2.8.0.2510 最終ビルド: Opsis.UI/プラグイン コントラクト 1.0.0.0 は Crawler 0.28.0 のコントラクトとの和集合になりました (ホスト設定と更新元を追加)。別の Opsis エディションが動作中でも壁紙が失敗しなくなりました (引数ごとに分けた WebView2 プロファイル、予備の専用プロファイル)。プラグインはホスト設定 (言語、テーマ、ティア、拡大率) を受け取ります。",
   "VersionNotes.2.6.0": "~ 新コアのベータ版: GPU ガラス、新しい DeskContainers エンジン (試験的)、ミュージック オーバーレイ、デスクトップ メニュー項目、動画のドラッグ アンド ドロップ。ヘッダーの波はダーク テーマでも表示されます。\n+ 個人用設定に Windows の外観も含まれるようになりました: ライト/ダーク (日の出/日没にも対応)、アクセント カラー、タスク バー、ウィンドウ効果、壁紙スライドショー、テーマ、安全と復元。重複していた設定は統合されました。\n+ 天気: フォールバック付きの無料プロバイダー (NWS、Open-Meteo、MET Norway)、正確な地名 (ギリシャはオフライン、OpenStreetMap は任意)、おおよその位置情報は許可した場合のみ。壁紙と天気ウィジェットは 1 つの場所を共有します。\n+ 他のスタートアップ アプリより先に起動するオプション (タスク スケジューラ。Windows と同時に起動がオンの場合、初回起動後に一度だけ有効化) と、トレイのライト/ダーク切り替え。\n+ インストーラーは Windows のダーク テーマに従い、以前の別アプリ Appearance を置き換えます。サイド メニューは常にすべての項目を表示し、ファミリ ウィンドウはカタログのアプリのみを一覧表示します。",
   "VersionNotes.2.4.6.1": "~ 安定性: グローバルショートカットが他のアプリで使用中の場合、Opsis がどれかを通知します。バックグラウンド処理を軽量化（設定をキャッシュ）、スイッチの小さな GDI リークを修正、バックアップ復元後の再起動前にデスクトップアイコンを復元します。",
@@ -976,5 +976,6 @@
   "Personalization.LockGifFrame": "Use a frame of a GIF as the lock screen picture…",
   "Personalization.LockGifFrameInfo": "Windows cannot play an animation on the lock screen. Opsis checks the GIF (type, size, frames) and uses its first frame as the picture, through the normal lock-screen setting. Reset restores the original.",
   "Personalization.LockGifWarn": "This changes a Windows setting (the lock screen picture, with an administrator prompt). The original setting can be restored with the Reset button. Continue?",
-  "Win.ImportBackup": "以前の設定のバックアップを次の場所に保存しました: {0}"
+  "Win.ImportBackup": "以前の設定のバックアップを次の場所に保存しました: {0}",
+  "VersionNotes.2.8.0.2511": "2.8.0.2511: スタート画面から Windows の外観に関するすべてのページ (個人用設定、オートメーション、パフォーマンス、プロファイル、サウンド) に移動でき、実行中のバージョンのノートが表示されます。バージョン情報にも実行中のバージョンのノートが表示されます。14 言語すべてでテキストを更新し、古い 2.6.0 の表記を削除しました。"
 }

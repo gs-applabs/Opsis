@@ -1,0 +1,38 @@
+name: OPSIS unified RC build checks
+on:
+  push:
+    branches: [integration/opsis-unified-source-r27]
+  pull_request:
+    branches: [main, ci/rc-validation-base]
+  workflow_dispatch:
+concurrency:
+  group: opsis-unified-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+permissions:
+  contents: read
+jobs:
+  windows:
+    runs-on: windows-2025
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Shared Windows RC verification
+        shell: pwsh
+        env:
+          OPSIS_EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: ./tools/verify-windows-rc.ps1
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: Opsis-RC-verification
+          path: ci-results/verification.json
+          if-no-files-found: warn

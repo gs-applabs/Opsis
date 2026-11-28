@@ -1,0 +1,70 @@
+name: Europe replacement layer review R23
+on:
+  push:
+    branches: [feat/europe-photo-acquisition-r17]
+    paths: ['.github/workflows/europe-photo-replacement-review-r23.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  prepare-review:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install Pillow numpy opencv-python-headless
+      - uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          run-id: 45616819490
+          name: Europe-exact-viewpoint-corrections-R21
+          path: incoming/r21
+      - name: Prepare exact replacement sources and manifest
+        shell: bash
+        run: |
+          python - <<'PY'
+          import importlib.util,json
+          from pathlib import Path
+          base=Path("addons/opsis-100/authoring")
+          spec=importlib.util.spec_from_file_location("acquire",base/"acquire-commons-candidates.py")
+          m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m)
+          exact={"eu-vaduz":"View of Vaduz.jpg","eu-san-marino":"View of Mount Titano - San Marino.jpg"}
+          m.EXACT.update({k.removeprefix("eu-"):v for k,v in exact.items()})
+          original=m.candidates
+          def candidates(city):
+              for p,i,meta in original(city):
+                  if p["title"].replace("_"," ")=="File:"+exact[city["id"]]:
+                      yield p,i,meta
+                  break
+          m.candidates=candidates
+          out=Path("incoming/r23");out.mkdir(parents=True,exist_ok=True)
+          for city in json.loads((base/"europe-capitals.json").read_text(encoding="utf-8"))["scenes"]:
+              if city["id"] not in exact: continue
+              try: row=m.acquire(city,out)
+              except Exception as e: row={"id":city["id"],"status":"not-acquired","error":str(e)}
+              print(json.dumps(row,ensure_ascii=False),flush=True)
+          cities=[]
+          for p in Path("incoming").rglob("metadata.json"):
+              meta=json.loads(p.read_text(encoding="utf-8"))
+              cities.append({"id":p.parent.name,"state":"downloaded-review-required","active_source":meta["source_page"]})
+          cities.sort(key=lambda c:c["id"])
+          Path("replacement-review.json").write_text(json.dumps({"cities":cities},ensure_ascii=False,indent=2),encoding="utf-8")
+          PY
+      - name: Build replacement review layers
+        shell: bash
+        run: |
+          for batch in 0 1; do
+            python addons/opsis-100/authoring/build-photo-review-r22.py --manifest replacement-review.json --input incoming --out review/batch-${batch} --batch "$batch"
+          done
+          cp replacement-review.json review/
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: Europe-photo-replacement-layer-review-R23
+          path: review/
+          if-no-files-found: error
+          retention-days: 14

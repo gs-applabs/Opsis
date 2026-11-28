@@ -5,7 +5,7 @@ namespace MotionDesk.Widgets;
 public static class LandmarkCatalog
 {
     public sealed record CityScene(string Id, string Name, string NameEn, double Lat, double Lon,
-        string Terrain, string Motif, string? File, string? Lights, bool ManualOnly = false);
+        string Terrain, string Motif, string? File, string? Lights, bool ManualOnly = false, string? SkyMask = null);
 
     public sealed record Entry(string Id, string Name, string NameEl);
 
@@ -22,7 +22,7 @@ public static class LandmarkCatalog
     private static readonly Lazy<CityScene[]> CityCatalog = new(() => ReadScenes("opsis-capitals.json"));
     private static readonly Lazy<CityScene[]> SceneCatalog = new(() => [.. Cities, .. ReadScenes("opsis-islands.json")]);
     public static IReadOnlyList<CityScene> Cities => CityCatalog.Value;
-    public static IReadOnlyList<CityScene> Scenes => SceneCatalog.Value;
+    public static IReadOnlyList<CityScene> Scenes => [.. SceneCatalog.Value, .. EuropeanPhotoCatalog.Discover().Select(e => e.Scene)];
 
     public static readonly Entry[] Landmarks =
     [

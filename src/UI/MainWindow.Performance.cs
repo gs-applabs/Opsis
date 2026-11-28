@@ -38,6 +38,22 @@ namespace MotionDesk.UI
                 panel.Controls.Add(row);
             }
 
+#if SIGNATURE_COMPOSITION_PREVIEW
+            var glassDiagnostics = new Opsis.UI.FlatButton
+            {
+                Text = StudioText("Signature Glass diagnostics", "Διαγνωστικά Signature Glass"),
+                Width = 480, Height = 38, Margin = new Padding(0, 10, 0, 5)
+            };
+            glassDiagnostics.Click += (_, _) =>
+            {
+                var d = GlassPaneBinder.SignatureDiagnostics;
+                var report = d == null ? StudioText("No renderer created on this UI thread.", "Δεν έχει δημιουργηθεί renderer σε αυτό το νήμα UI.") :
+                    $"Ready: {d.Ready}\nHardware acceleration: {d.HardwareAccelerated}\nAdaptive tier: {d.AdaptiveTier}\nPanes: {d.PaneCount}\nSurface pixels: {d.SurfacePixels:N0}\nBackdrop pixels: {d.BackdropPixels:N0}\nDraw submissions: {d.SuccessfulRenders:N0}\nRejected draws: {d.RejectedRenders:N0}\nSubmission time: {d.SubmissionMilliseconds:F2} ms\nDXGI local memory: {d.LocalVideoMemoryUsage / 1048576.0:F1} / {d.LocalVideoMemoryBudget / 1048576.0:F1} MiB\nHRESULT: 0x{d.LastHResult:X8}\n\nCPU submission time is not GPU utilization. Local memory budget may be unavailable.";
+                MessageBox.Show(panel.FindForm(), report, "Signature Glass", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            };
+            panel.Controls.Add(glassDiagnostics);
+#endif
+
             // Roadmap #19/#100: explicit, time-limited LOCAL diagnostics. The saved
             // JSON contains counters only, never window titles or file paths.
             var diagnostics = new Opsis.UI.FlatButton

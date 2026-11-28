@@ -15,6 +15,7 @@ namespace MotionDesk.Widgets
         private const uint MOD_SHIFT = 0x0004;
 
         private int _nextId = 9000;
+        private bool _disposed;
         private readonly System.Collections.Generic.Dictionary<int, Action> _handlers = new();
 
         public HotkeyManager()
@@ -56,6 +57,7 @@ namespace MotionDesk.Widgets
         // ενοχλητική από ένα διάλογο σε κάθε εκκίνηση σε μηχανήματα με γνωστή σύγκρουση οδηγού.
         private bool Register(uint modifiers, uint vk, Action onPressed)
         {
+            if (_disposed || Handle == IntPtr.Zero) return false;
             int id = _nextId++;
             bool ok = RegisterHotKey(Handle, id, modifiers, vk);
             if (ok) { _handlers[id] = onPressed; }
@@ -126,17 +128,30 @@ namespace MotionDesk.Widgets
         {
             if (m.Msg == WM_HOTKEY && _handlers.TryGetValue(m.WParam.ToInt32(), out var handler))
             {
-                handler.Invoke();
+                if (!_disposed)
+                {
+                    try { handler.Invoke(); }
+                    catch (Exception ex) { try { RotatingLogger.Write("Hotkey action failed: " + ex.Message); } catch { } }
+                }
             }
             base.WndProc(ref m);
         }
 
         public void Dispose()
         {
-            foreach (var id in _handlers.Keys)
-                UnregisterHotKey(Handle, id);
-            _handlers.Clear();
-            DestroyHandle();
+            if (_disposed) return;
+            _disposed = true;
+            var handle = Handle;
+            try
+            {
+                if (handle != IntPtr.Zero)
+                    foreach (var id in _handlers.Keys) UnregisterHotKey(handle, id);
+            }
+            finally
+            {
+                _handlers.Clear();
+                if (Handle != IntPtr.Zero) DestroyHandle();
+            }
         }
 
         [DllImport("user32.dll", SetLastError = true)] private static extern bool RegisterHotKey(IntPtr hWnd, int id, uint fsModifiers, uint vk);

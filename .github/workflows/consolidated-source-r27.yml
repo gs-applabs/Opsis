@@ -1,0 +1,77 @@
+name: OPSIS consolidated source and files R27 (retry without workflow edits)
+on:
+  push:
+    branches: [integration/opsis-unified-source-r27]
+    paths: ['.github/workflows/consolidated-source-r27.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+jobs:
+  consolidate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Reconcile overlapping text files without overwriting conflicts
+        run: |
+          git fetch origin '+refs/heads/*:refs/remotes/origin/*'
+          python3 tools/reconcile-unified-source-r27.py
+          git config user.name 'OPSIS consolidation CI'
+          git config user.email 'github-actions[bot]@users.noreply.github.com'
+          git add -u
+          git diff --cached --quiet || git commit -m 'Reconcile clean three-way source overlaps and record remaining conflicts'
+          git push origin HEAD:refs/heads/integration/opsis-unified-source-r27
+      - uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          run-id: 45617103408
+          name: Europe-photo-layer-review-R22
+          path: incoming/r22
+      - uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          run-id: 45617208016
+          name: Europe-photo-replacement-layer-review-R23
+          path: incoming/r23
+      - uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          run-id: 45618032708
+          name: Europe-photo-replacement-layer-review-R25
+          path: incoming/r25
+      - uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          run-id: 45744541834
+          name: OPSIS-European-Capitals-R26-Preview-Installer
+          path: incoming/installer
+      - uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          run-id: 45744541834
+          name: OPSIS-R26-Compatible-Host-Preview
+          path: incoming/host
+      - name: Consolidated ZIP
+        run: python3 tools/package-unified-source-r27.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: OPSIS-3.0.0.3200-Unified-R27
+          path: dist/
+          compression-level: 0
+          if-no-files-found: error
+          retention-days: 30
+  windows-build:
+    needs: consolidate
+    runs-on: windows-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: integration/opsis-unified-source-r27
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '11.0.x'
+      - run: dotnet build Opsis.csproj -c Release -p:Platform=x64

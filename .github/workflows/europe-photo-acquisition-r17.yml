@@ -1,0 +1,28 @@
+name: Europe photo candidate acquisition R17
+on:
+  push:
+    branches: [feat/europe-photo-acquisition-r17]
+    paths:
+      - '.github/workflows/europe-photo-acquisition-r17.yml'
+      - 'addons/opsis-100/authoring/acquire-commons-candidates.py'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  acquire:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install Pillow
+      - run: python addons/opsis-100/authoring/acquire-commons-candidates.py --catalog addons/opsis-100/authoring/europe-capitals.json --out photo-review
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: Europe-real-photo-review-R17
+          path: photo-review/
+          if-no-files-found: warn
+          retention-days: 14

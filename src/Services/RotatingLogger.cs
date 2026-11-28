@@ -13,6 +13,44 @@ namespace MotionDesk.Services
         private const long MaxBytesPerFile = 1 * 1024 * 1024;
         private const int MaxFiles = 5;
         private static readonly object Gate = new();
+        // Only explicitly recurring diagnostics use throttling. Crash, safety,
+        // security, user actions and recovery/save failures keep normal logging.
+        internal enum RecurringSource { Activity, Glass, Experience, WallpaperAccent, ContainerTimer }
+        internal sealed class RepeatBudget
+        {
+            private bool _written;
+            private long _lastAt;
+            private int _suppressed;
+            internal bool Accept(long now, out int suppressed)
+            {
+                suppressed = 0;
+                if (_written && now - _lastAt < 60_000)
+                {
+                    if (_suppressed < int.MaxValue) _suppressed++;
+                    return false;
+                }
+                suppressed = _suppressed;
+                _suppressed = 0; _lastAt = now; _written = true;
+                return true;
+            }
+        }
+        private static readonly RepeatBudget[] RepeatBudgets =
+            Enum.GetValues<RecurringSource>().Select(_ => new RepeatBudget()).ToArray();
+
+        internal static void WriteRecurring(RecurringSource source, string message)
+        {
+            try
+            {
+                lock (Gate)
+                {
+                    if (!RepeatBudgets[(int)source].Accept(Environment.TickCount64, out int suppressed)) return;
+                    if (message.Length > 4096) message = message[..4096] + " [truncated]";
+                    if (suppressed != 0) message += $" [suppressed {suppressed} recurring messages since previous entry]";
+                    Write(message);
+                }
+            }
+            catch (Exception) { /* diagnostics must not break a timer */ }
+        }
         private static string LogDir => Path.Combine(AppPaths.AppDataFolder, "logs");
         private static string CurrentPath => Path.Combine(LogDir, "opsis.log");
 

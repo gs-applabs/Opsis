@@ -29,7 +29,7 @@ internal static class VisualPresets
 internal sealed record MusicOverlaySettings(
     string? Display = null,
     double X = 0.5,
-    double Y = 0.5,
+    double Y = 0.88,
     VisualPreset Preset = VisualPreset.Radial,
     string? Typeface = null,
     bool Enabled = false,
@@ -42,6 +42,8 @@ internal sealed record MusicOverlaySettings(
     int LayoutVersion = 0,
     Dictionary<VisualPreset, string[]>? PresetColors = null)
 {
+    public const double DefaultX = 0.5;
+    public const double DefaultY = 0.88;
     public const int MinSize = 50;
     public const int MaxSize = 300;
     private static readonly string[] DefaultColors = ["#87eaff", "#a896ff", "#ff8bc9", "#ffe7ac"];
@@ -51,8 +53,8 @@ internal sealed record MusicOverlaySettings(
         var useCenter = LayoutVersion == 0 && Display == null && X == 0.96 && Y == 0.87;
         return this with
         {
-            X = useCenter ? 0.5 : Math.Clamp(X, 0, 1),
-            Y = useCenter ? 0.5 : Math.Clamp(Y, 0, 1),
+            X = useCenter ? 0.5 : double.IsFinite(X) ? Math.Clamp(X, 0, 1) : DefaultX,
+            Y = useCenter ? 0.5 : double.IsFinite(Y) ? Math.Clamp(Y, 0, 1) : DefaultY,
             WidthPercent = Math.Clamp(WidthPercent, MinSize, MaxSize),
             HeightPercent = Math.Clamp(HeightPercent, MinSize, MaxSize),
             RadialColors = NormalizePalette(RadialColors),

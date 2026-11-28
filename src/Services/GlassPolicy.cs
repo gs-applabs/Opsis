@@ -36,10 +36,11 @@ namespace MotionDesk.Services
             if (i.Remote) return (GlassLevel.Solid, "remote desktop session");
             if (i.GpuFailed) return (GlassLevel.Blur, "the GPU path failed (device reset), using the simple blur");
             if (mode == GpuGlassMode.Blur) return (GlassLevel.Blur, "you chose the simple blur");
-            if (mode == GpuGlassMode.Always) return (GlassLevel.Full, "you chose Always");
-            // Auto: from the machine and the moment
+            // Power and fullscreen safety ceilings also apply to the explicit Always mode.
             if (i.Fullscreen) return (GlassLevel.Blur, "a full-screen app is running");
             if (i.BatterySaver) return (GlassLevel.Blur, "battery saver is on");
+            if (mode == GpuGlassMode.Always) return (GlassLevel.Full, "you chose Always");
+            // Auto: from the machine and the moment
             var level = i.EffectiveTier switch { HardwareTier.High => GlassLevel.Full, HardwareTier.Balanced => GlassLevel.Frosted, _ => GlassLevel.Blur };
             var why = i.EffectiveTier switch { HardwareTier.High => "the computer can carry full glass", HardwareTier.Balanced => "medium performance tier", _ => "low performance tier (or the load is high right now)" };
             void Cap(GlassLevel max, string reason) { if (level < max) { level = max; why = reason; } }

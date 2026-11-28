@@ -39,8 +39,23 @@ public sealed partial class MainWindow
                 if (known.Length > 0) desktops.SelectedIndex = Math.Max(0, Array.FindIndex(known, item => item.Id == selection));
             }
         }
+        bool observing = false;
+        void ObserveVisible()
+        {
+            bool wanted = card.Visible && !card.IsDisposed;
+            if (wanted == observing) return;
+            observing = wanted;
+            if (wanted) { VirtualWorkspaces.BeginObservation(); Update(); }
+            else VirtualWorkspaces.EndObservation();
+        }
         VirtualWorkspaces.Changed += Update;
-        card.Disposed += (_, _) => VirtualWorkspaces.Changed -= Update;
+        card.VisibleChanged += (_, _) => ObserveVisible();
+        card.Disposed += (_, _) =>
+        {
+            VirtualWorkspaces.Changed -= Update;
+            if (observing) { observing = false; VirtualWorkspaces.EndObservation(); }
+        };
+        ObserveVisible();
         Update();
         card.Controls.Add(status);
         card.Controls.Add(name);

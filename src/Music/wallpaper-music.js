@@ -17,7 +17,7 @@ if (!ctx) {
 }
 
 const baseWidth = 478;
-const baseHeight = 152;
+const baseHeight = 180;
 const defaultColors = ['#87eaff', '#a896ff', '#ff8bc9', '#ffe7ac'];
 const fonts = new Set(['Potra', 'Potra Light', 'Pavelt', 'MODERN WARFARE']);
 let artwork = null;
@@ -96,9 +96,11 @@ function note(x, y, opacity) {
     ctx.globalAlpha = opacity;
     ctx.beginPath();
     ctx.arc(x, y, 15, 0, 2 * Math.PI);
-    const shine = ctx.createLinearGradient(x, y - 15, x, y + 15);
-    shine.addColorStop(0, '#eef9ff77');
-    shine.addColorStop(1, '#678eff25');
+    const shine = ctx.createRadialGradient(x - 5, y - 6, 1, x, y, 15);
+    shine.addColorStop(0, '#edfcff');
+    shine.addColorStop(.28, '#79ccf6d9');
+    shine.addColorStop(.62, '#536bd9b3');
+    shine.addColorStop(1, '#172952b8');
     ctx.fillStyle = shine;
     ctx.strokeStyle = '#dff5ffad';
     ctx.shadowColor = '#6dc8ff';
@@ -106,6 +108,16 @@ function note(x, y, opacity) {
     ctx.fill();
     ctx.stroke();
     ctx.shadowBlur = 0;
+    ctx.save();
+    ctx.strokeStyle = '#dcf6ff90';
+    ctx.lineWidth = .7;
+    ctx.beginPath();
+    ctx.ellipse(x, y, 13, 5, -.6, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.ellipse(x, y, 5, 13, -.6, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
     ctx.fillStyle = '#ffffff';
     ctx.font = 'bold 20px "Segoe UI Symbol",sans-serif';
     ctx.textAlign = 'center';
@@ -128,9 +140,15 @@ function fitText(text, x, y, maxWidth) {
 
 function details(frame, x, centerY, available, maxHeight, accent, centered = false) {
     const title = frame.title?.trim();
-    const subtitle = [frame.artist?.trim(), frame.album?.trim()].filter(Boolean).join(' · ');
+    const subtitle = [frame.artist?.trim(), frame.album?.trim(), frame.subtitle?.trim()]
+        .filter((value, index, list) => value && list.indexOf(value) === index).join(' · ');
+    const source = String(frame.source || '').split('!')[0].replace(/\.exe$/i, '').trim();
+    const trackLabel = frame.trackNumber > 0 ? '#' + frame.trackNumber + (frame.albumTrackCount > 0 ? '/' + frame.albumTrackCount : '') : '';
+    const extra = [frame.albumArtist !== frame.artist ? frame.albumArtist?.trim() : '', trackLabel,
+        ...(Array.isArray(frame.genres) ? frame.genres.slice(0, 3) : []), source].filter(Boolean).join(' · ');
     const timeline = frame.duration > 0;
-    const blockHeight = (title ? 26 : 0) + (subtitle ? 20 : 0) + (timeline ? 16 : 0);
+    const blockHeight = (title ? 26 : 0) + (subtitle ? 20 : 0) + (extra ? 16 : 0) + (timeline ? 16 : 0);
+    if (!blockHeight || maxHeight <= 0 || available <= 0) return;
     const scale = Math.min(1, maxHeight / blockHeight);
     let y = 0;
     const typeface = fonts.has(frame.font) ? '"' + frame.font + '",' : '';
@@ -138,7 +156,10 @@ function details(frame, x, centerY, available, maxHeight, accent, centered = fal
     ctx.shadowColor = '#080e21';
     ctx.shadowBlur = 7;
     ctx.shadowOffsetY = 1.5;
-    ctx.translate(x, centerY - blockHeight * scale / 2);
+    const reveal = frame.reducedMotion ? 1 : fraction((performance.now() - appearedAt) / 480);
+    const eased = 1 - Math.pow(1 - reveal, 3);
+    ctx.globalAlpha *= .15 + .85 * eased;
+    ctx.translate(x + (centered ? 0 : (1 - eased) * 9), centerY - blockHeight * scale / 2);
     ctx.scale(scale, scale);
     available /= scale;
     const textX = centered ? available / 2 : 0;
@@ -154,6 +175,12 @@ function details(frame, x, centerY, available, maxHeight, accent, centered = fal
         ctx.font = '15px "Segoe UI",sans-serif';
         fitText(subtitle, textX, y + 14, available);
         y += 20;
+    }
+    if (extra) {
+        ctx.fillStyle = '#c9e6f9';
+        ctx.font = '12px "Segoe UI",sans-serif';
+        fitText(extra, textX, y + 12, available);
+        y += 16;
     }
     if (timeline) {
         ctx.textAlign = 'left';
@@ -175,8 +202,27 @@ function details(frame, x, centerY, available, maxHeight, accent, centered = fal
     ctx.restore();
 }
 
+// The weather block always wins; never persist an automatic placement.
+function placeMusicOverlay(vw, vh, w, h, x, y, weather, gap) {
+    const clamp = (v, min, max) => Math.min(max, Math.max(min, v));
+    const maxX = vw - gap - w, maxY = vh - gap - h;
+    if (maxX < gap || maxY < gap) return null;
+    const candidate = (left, top) => ({left: clamp(left, gap, maxX), top: clamp(top, gap, maxY)});
+    const preferred = candidate(x, y);
+    if (!weather) return preferred;
+    const safe = p => p.left + w <= weather.left - gap || p.left >= weather.right + gap ||
+        p.top + h <= weather.top - gap || p.top >= weather.bottom + gap;
+    if (safe(preferred)) return preferred;
+    const choices = [
+        candidate(x, weather.top - h - gap), candidate(x, weather.bottom + gap),
+        candidate(weather.left - w - gap, y), candidate(weather.right + gap, y)
+    ].filter(safe);
+    choices.sort((a,b) => Math.hypot(a.left-x,a.top-y)-Math.hypot(b.left-x,b.top-y));
+    return choices[0] ?? null;
+}
+
 function paint(frame) {
-    const track = JSON.stringify([frame.title, frame.artist, frame.album]);
+    const track = frame.trackKey ?? JSON.stringify([frame.title, frame.artist, frame.album]);
     if (lastTrack !== track) {
         lastTrack = track;
         appearedAt = performance.now();
@@ -195,17 +241,31 @@ function paint(frame) {
 
     const scale = Math.min(1.4, window.innerWidth / (baseWidth + 32), window.innerHeight / (baseHeight + 32));
     if (scale <= 0) return true;
-    const hasDetails = Boolean(frame.title?.trim() || frame.artist?.trim() || frame.album?.trim() || frame.duration > 0);
+    const hasDetails = Boolean(frame.title?.trim() || frame.artist?.trim() || frame.album?.trim() || frame.subtitle?.trim() || frame.albumArtist?.trim() || frame.source || frame.trackNumber > 0 || frame.genres?.length || frame.duration > 0);
     const hasHeader = hasDetails || Boolean(artwork);
     const suite = frame.preset && window.opsisSuiteVisualizer;
     const round = suite ? frame.preset === 'circular' || frame.preset === 'none' : !frame.bars;
     const logicalWidth = !round || hasDetails ? baseWidth : baseHeight;
-    const logicalHeight = round && hasDetails ? baseHeight + 66 : suite ? baseHeight + 52 : baseHeight;
+    const logicalHeight = round && hasDetails ? baseHeight + 94 : suite ? baseHeight + 52 : baseHeight;
     const margin = 12 * scale;
     const width = Math.min(logicalWidth * (frame.width ?? 100) / 100, (window.innerWidth - 2 * margin) / scale);
     const height = Math.min(logicalHeight * (frame.height ?? 100) / 100, (window.innerHeight - 2 * margin) / scale);
-    const left = margin + (window.innerWidth - 2 * margin - width * scale) * fraction(frame.x);
-    const top = margin + (window.innerHeight - 2 * margin - height * scale) * fraction(frame.y);
+    const preferredX = margin + (window.innerWidth - 2 * margin - width * scale) * fraction(frame.x);
+    const preferredY = margin + (window.innerHeight - 2 * margin - height * scale) * fraction(frame.y);
+    // Read the real transformed bounds, including Signature card and user text scaling.
+    const weatherBox = document.getElementById('wxInfo');
+    // The painter can be injected into a page without the normal wallpaper config.
+    // Use the actual DOM visibility/bounds instead of assuming cfg is in scope.
+    const weatherBounds = weatherBox && weatherBox.getClientRects().length &&
+        getComputedStyle(weatherBox).visibility !== 'hidden' ? weatherBox.getBoundingClientRect() : null;
+    const weather = weatherBounds && weatherBounds.width > 0 && weatherBounds.height > 0 ? weatherBounds : null;
+    const placement = placeMusicOverlay(window.innerWidth, window.innerHeight, width * scale, height * scale,
+        preferredX, preferredY, weather, Math.max(12, margin));
+    if (!placement || width < 1 || height < 1) {
+        canvas.style.visibility = 'hidden';
+        return true;
+    }
+    const {left, top} = placement;
     const density = Math.min(2.5, (window.devicePixelRatio || 1) * scale);
     const pixelWidth = Math.max(1, Math.round(width * density));
     const pixelHeight = Math.max(1, Math.round(height * density));
@@ -213,10 +273,11 @@ function paint(frame) {
         canvas.width = pixelWidth;
         canvas.height = pixelHeight;
     }
-    canvas.style.left = left + 'px';
-    canvas.style.top = top + 'px';
-    canvas.style.width = width * scale + 'px';
-    canvas.style.height = height * scale + 'px';
+    // Avoid reassigning identical CSS geometry on every audio frame.
+    for (const [key, value] of [['left', left], ['top', top], ['width', width * scale], ['height', height * scale]]) {
+        const px = value + 'px';
+        if (canvas.style[key] !== px) canvas.style[key] = px;
+    }
     ctx.setTransform(pixelWidth / width, 0, 0, pixelHeight / height, 0, 0);
     ctx.clearRect(0, 0, width, height);
 
@@ -224,8 +285,23 @@ function paint(frame) {
     const bands = frame.preview
         ? frame.bands.map((_, i) => .08 + .5 * Math.pow(.5 + .5 * Math.sin(performance.now() / 170 - i / 6), 3))
         : frame.bands;
-    const age = performance.now() - appearedAt;
-    const opacity = frame.preview ? 1 : fraction((4200 - age) / 650);
+    const opacity = frame.preview || frame.reducedMotion ? 1 : .65 + .35 * fraction((performance.now() - appearedAt) / 480);
+    function glassPanel(x, y, w, h) {
+        if (w < 10 || h < 10) return;
+        ctx.save();
+        ctx.beginPath();
+        ctx.roundRect(x, y, w, h, Math.min(12, h / 3));
+        const glass = ctx.createLinearGradient(x, y, x + w, y + h);
+        glass.addColorStop(0, '#243b60b8');
+        glass.addColorStop(.55, '#10213b99');
+        glass.addColorStop(1, '#334f7fa6');
+        ctx.fillStyle = glass;
+        ctx.fill();
+        ctx.strokeStyle = '#c4e6ff55';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+        ctx.restore();
+    }
     function drawSuite(x, y, w, h) {
         const decode = bytes => bytes ? Uint8Array.from(atob(bytes), value => value.charCodeAt(0)) : null;
         const frequency = !frame.preview && decode(frame.frequency) || Uint8Array.from({ length: 512 },
@@ -235,17 +311,19 @@ function paint(frame) {
         suite.draw(frame.preset, ctx, x, y, w, h, frequency, waveform, colors);
     }
     if (!round) {
-        const headerHeight = hasHeader ? Math.min(92, height * .59) : 0;
+        const headerHeight = hasHeader ? Math.min(104, height * .59) : 0;
+        if (hasHeader) glassPanel(3, 3, width - 6, headerHeight - 6);
         const spectrumHeight = height - headerHeight;
         if (suite) drawSuite(7, headerHeight + 3, width - 14, spectrumHeight - 6);
         else mirror(bands, colors, width, headerHeight + spectrumHeight * .5, Math.max(3, spectrumHeight / 2 - 9));
         const coverRadius = Math.min(26, headerHeight * .4);
         if (artwork) drawCover(artwork, hasDetails ? 17 + coverRadius : width / 2, headerHeight / 2, coverRadius, false);
         const textX = artwork ? 29 + 2 * coverRadius : 20;
-        if (hasDetails) details(frame, textX, headerHeight / 2, width - textX - 18, headerHeight - 4, colors[0]);
+        if (hasDetails) details(frame, textX, headerHeight / 2, width - textX - 35, headerHeight - 8, colors[0]);
         note(width - 19, Math.max(17, headerHeight - 17), opacity);
     } else {
-        const textHeight = hasDetails ? Math.min(66, height * .41) : 0;
+        const textHeight = hasDetails ? Math.min(94, height * .46) : 0;
+        if (hasDetails) glassPanel(3, height - textHeight + 2, width - 6, textHeight - 4);
         const centerX = width / 2;
         const centerY = (height - textHeight) / 2;
         const radiusX = Math.max(7, (hasDetails ? centerX * baseHeight / baseWidth : centerX) - 9);

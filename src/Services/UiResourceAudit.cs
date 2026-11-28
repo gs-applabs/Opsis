@@ -11,8 +11,24 @@ internal static class UiResourceAudit
     [DllImport("user32.dll")]
     private static extern uint GetGuiResources(IntPtr process, uint resource);
 
+    [StructLayout(LayoutKind.Sequential)]
+    private struct IoCounters
+    {
+        public ulong ReadOperations, WriteOperations, OtherOperations;
+        public ulong ReadBytes, WriteBytes, OtherBytes;
+    }
+    [DllImport("kernel32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool GetProcessIoCounters(IntPtr process, out IoCounters counters);
+
+    private static ulong? Delta(ulong? first, ulong? last) =>
+        first.HasValue && last.HasValue && last.Value >= first.Value ? last.Value - first.Value : null;
+
     private sealed record Sample(string Phase, double ElapsedMs, double CpuMs, double CpuCorePercent,
-        long ManagedBytes, long PrivateBytes, long WorkingSetBytes, int Handles, uint GdiObjects, uint UserObjects, List<BrowserSample> Browsers);
+        long ManagedBytes, long PrivateBytes, long WorkingSetBytes, int Handles, uint GdiObjects, uint UserObjects,
+        ulong? IoWriteBytes, ulong? IoWriteOperations, List<BrowserSample> Browsers,
+        long HeapSizeBytes, long FragmentedBytes, long TotalAllocatedBytes, int Gen0Collections,
+        int Gen1Collections, int Gen2Collections, GpuMonitorService.SensorAudit GpuSensors);
 
     private sealed record BrowserSample(int Pid, string Kind, double CpuMs, long PrivateBytes, double CpuCorePercent);
 
@@ -58,9 +74,19 @@ internal static class UiResourceAudit
                     }
                     catch (Exception ex) when (ex is ArgumentException or InvalidOperationException or System.ComponentModel.Win32Exception) { }
                 }
+                // Do not retain lifetime counters for retired WebView2 processes.
+                var livePids = browsers.Select(b => b.Pid).ToHashSet();
+                foreach (var pid in browserCounters.Keys.Where(pid => !livePids.Contains(pid)).ToArray())
+                    browserCounters.Remove(pid);
+                bool hasIo = GetProcessIoCounters(process.Handle, out var io);
+                var heap = GC.GetGCMemoryInfo();
                 samples.Add(new Sample(phase, Math.Round(at, 1), Math.Round(cpu, 1), Math.Round(cpuPercent, 2),
                     GC.GetTotalMemory(false), process.PrivateMemorySize64, process.WorkingSet64, process.HandleCount,
-                    GetGuiResources(process.Handle, 0), GetGuiResources(process.Handle, 1), browsers));
+                    GetGuiResources(process.Handle, 0), GetGuiResources(process.Handle, 1),
+                    hasIo ? io.WriteBytes : null, hasIo ? io.WriteOperations : null, browsers,
+                    heap.HeapSizeBytes, heap.FragmentedBytes, GC.GetTotalAllocatedBytes(false),
+                    GC.CollectionCount(0), GC.CollectionCount(1), GC.CollectionCount(2),
+                    GpuMonitorService.Instance.AuditState()));
                 lastElapsed = at;
                 lastCpu = cpu;
             }
@@ -128,7 +154,21 @@ internal static class UiResourceAudit
             MeasureIdle("idle-after");
 
             window.Hide();
-            try { MeasureIdle("tray-idle"); }
+            try
+            {
+                MeasureIdle("tray-idle");
+                // Optional extended observation: one sample every 30 seconds, bounded to
+                // 240 samples (120 minutes), with the existing UI message pump.
+                if (int.TryParse(Environment.GetEnvironmentVariable("OPSIS_AUDIT_SOAK_MINUTES"), out int minutes))
+                {
+                    int intervals = Math.Clamp(minutes, 0, 120) * 2;
+                    for (int i = 0; i < intervals && !window.IsDisposed; i++)
+                    {
+                        pump(30000);
+                        Capture("tray-soak");
+                    }
+                }
+            }
             finally { window.Show(); }
             var frames = WallpaperHostEngine.Instance.AuditFramesAsync();
             var frameWait = Stopwatch.StartNew();
@@ -166,13 +206,59 @@ internal static class UiResourceAudit
                         relatedEventCategory = lastEvent.Kind,
                         relatedEvent = lastEvent.Value };
                 }).ToArray();
+            double Median(IEnumerable<double> values)
+            {
+                var ordered = values.OrderBy(x => x).ToArray();
+                return ordered.Length == 0 ? 0 : (ordered[(ordered.Length - 1) / 2] + ordered[ordered.Length / 2]) / 2;
+            }
+            var idleBefore = samples.Where(s => s.Phase == "idle-before").Skip(2).ToArray();
+            var idleAfter = samples.Where(s => s.Phase == "idle-after").Skip(2).ToArray();
+            var settled = samples.Where(s => s.Phase.EndsWith("/settled", StringComparison.Ordinal)).ToArray();
+            var soak = samples.Where(s => s.Phase == "tray-soak").ToArray();
+            object Describe(Sample[] group) => new
+            {
+                count = group.Length,
+                medianCpuCorePercent = Median(group.Select(s => s.CpuCorePercent + s.Browsers.Sum(b => b.CpuCorePercent))),
+                medianPrivateBytes = Median(group.Select(s => (double)s.PrivateBytes + s.Browsers.Sum(b => b.PrivateBytes))),
+                medianHostPrivateBytes = Median(group.Select(s => (double)s.PrivateBytes)),
+                medianWebViewPrivateBytes = Median(group.Select(s => (double)s.Browsers.Sum(b => b.PrivateBytes))),
+                medianWebViewCount = Median(group.Select(s => (double)s.Browsers.Count)),
+                medianHostCpuCorePercent = Median(group.Select(s => s.CpuCorePercent)),
+                medianWebViewCpuCorePercent = Median(group.Select(s => s.Browsers.Sum(b => b.CpuCorePercent))),
+                medianManagedBytes = Median(group.Select(s => (double)s.ManagedBytes)),
+                medianHeapSizeBytes = Median(group.Select(s => (double)s.HeapSizeBytes)),
+                medianFragmentedBytes = Median(group.Select(s => (double)s.FragmentedBytes)),
+                medianHandles = Median(group.Select(s => (double)s.Handles)),
+                medianGdiObjects = Median(group.Select(s => (double)s.GdiObjects)),
+                medianUserObjects = Median(group.Select(s => (double)s.UserObjects))
+            };
+            var trend = new
+            {
+                idleBefore = Describe(idleBefore), idleAfter = Describe(idleAfter),
+                firstSettled = Describe(settled.Take(1).ToArray()),
+                lastSettled = Describe(settled.TakeLast(1).ToArray()),
+                soakFirst = Describe(soak.Take(Math.Min(5, soak.Length / 2)).ToArray()),
+                soakLast = Describe(soak.TakeLast(Math.Min(5, soak.Length / 2)).ToArray()),
+                soakHostIoWriteBytes = Delta(soak.FirstOrDefault()?.IoWriteBytes, soak.LastOrDefault()?.IoWriteBytes),
+                soakHostIoWriteOperations = Delta(soak.FirstOrDefault()?.IoWriteOperations, soak.LastOrDefault()?.IoWriteOperations),
+                gpuAtBaseline = first.GpuSensors,
+                gpuAtLastIdle = last.GpuSensors,
+                gpuAtSoakEnd = soak.LastOrDefault()?.GpuSensors,
+                gen2CollectionsDelta = last.Gen2Collections - first.Gen2Collections,
+                allocatedBytesDelta = last.TotalAllocatedBytes - first.TotalAllocatedBytes
+            };
+            // Expose the measured baseline and trend in CI logs, not just a ZIP.
+            Console.WriteLine("OPSIS_RESOURCE_TREND " + JsonSerializer.Serialize(trend));
             const string name = "ui-resources.json";
             File.WriteAllText(Path.Combine(folder, name), JsonSerializer.Serialize(new
             {
-                scope = "Main-process CPU is per phase in units of one core. Browser CPU is cumulative milliseconds per PID.",
+                scope = "Combined median CPU/private bytes include tracked WebView2 processes. Host and WebView2 medians are also separate; this is not necessarily the complete OS process tree. CPU units are one logical core. Host IO counters are not physical SSD writes and exclude child processes.",
+                hostIoWriteBytesDelta = Delta(first.IoWriteBytes, last.IoWriteBytes),
+                hostIoWriteOperationsDelta = Delta(first.IoWriteOperations, last.IoWriteOperations),
                 navigation,
                 events = eventSnapshot.Select(e => new { elapsedMs = e.AtMs, kind = e.Kind, value = e.Value }),
                 cpuSpikes,
+                trend,
                 widgetDeltas,
                 skinDeltas,
                 wallpaperFrames = frames.IsCompletedSuccessfully ? frames.Result : null,

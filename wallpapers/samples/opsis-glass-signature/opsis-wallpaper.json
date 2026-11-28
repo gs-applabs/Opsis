@@ -1,0 +1,150 @@
+{
+  "WallpaperId": "opsis-glass-signature",
+  "Name": "Opsis Glass Signature",
+  "NameEl": "Opsis — Γυάλινη υπογραφή",
+  "Author": "Opsis",
+  "Category": "Abstract",
+  "Collection": "OPSIS 100 3D Wallpapers",
+  "Description": "Animated glass reflections, peripheral refraction and light waves; fully offline.",
+  "DescriptionEl": "Κινούμενες αντανακλάσεις, περιφερειακές διαθλάσεις και φωτεινά κύματα. Χωρίς διαδίκτυο.",
+  "Properties": [
+    {
+      "Key": "quality",
+      "Type": "combo",
+      "Label": "Quality",
+      "LabelEl": "Ποιότητα",
+      "Default": "Balanced",
+      "Options": [
+        "Eco",
+        "Balanced",
+        "High"
+      ]
+    },
+    {
+      "Key": "strength",
+      "Type": "slider",
+      "Label": "Lighting intensity",
+      "LabelEl": "Ένταση φωτισμού",
+      "Min": 0,
+      "Max": 1.5,
+      "Step": 0.05,
+      "Default": 1
+    },
+    {
+      "Key": "speed",
+      "Type": "slider",
+      "Label": "Animation speed",
+      "LabelEl": "Ταχύτητα κίνησης",
+      "Min": 0.25,
+      "Max": 2,
+      "Step": 0.05,
+      "Default": 1
+    },
+    {
+      "Key": "waves",
+      "Type": "slider",
+      "Label": "Ribbon motion",
+      "LabelEl": "Κίνηση κυμάτων",
+      "Min": 0,
+      "Max": 1,
+      "Step": 0.05,
+      "Default": 0.8
+    },
+    {
+      "Key": "glints",
+      "Type": "checkbox",
+      "Label": "Moving rim reflections",
+      "LabelEl": "Κινούμενες αντανακλάσεις περιγράμματος",
+      "Default": true
+    },
+    {
+      "Key": "renderer",
+      "Type": "combo",
+      "Label": "Rendering backend",
+      "LabelEl": "Μηχανισμός γραφικών",
+      "Default": "Auto",
+      "Options": [
+        "Auto",
+        "Canvas2D"
+      ]
+    },
+    {
+      "Key": "adaptive",
+      "Type": "checkbox",
+      "Label": "Adaptive quality",
+      "LabelEl": "Προσαρμοζόμενη ποιότητα",
+      "Default": true
+    },
+    {
+      "Key": "depth",
+      "Type": "slider",
+      "Label": "Glass depth / caustics",
+      "LabelEl": "Βάθος γυαλιού και διαθλάσεις",
+      "Min": 0,
+      "Max": 1,
+      "Step": 0.05,
+      "Default": 0.65
+    },
+    {
+      "Key": "floor",
+      "Type": "slider",
+      "Label": "Floor reflection motion",
+      "LabelEl": "Κίνηση αντανακλάσεων δαπέδου",
+      "Min": 0,
+      "Max": 1,
+      "Step": 0.05,
+      "Default": 0.65
+    },
+    {
+      "Key": "layerDepth",
+      "Type": "slider",
+      "Label": "Independent ribbon layers",
+      "LabelEl": "Ανεξάρτητα επίπεδα κυμάτων",
+      "Min": 0,
+      "Max": 1,
+      "Step": 0.05,
+      "Default": 0.7
+    },
+    {
+      "Key": "palette",
+      "Type": "combo",
+      "Label": "Lighting color profile",
+      "LabelEl": "Χρωματικό προφίλ φωτισμού",
+      "Default": "Original",
+      "Options": [
+        "Original",
+        "Ice",
+        "Sapphire",
+        "Amethyst",
+        "Gold"
+      ]
+    },
+    {
+      "Key": "bloom",
+      "Type": "slider",
+      "Label": "Soft highlight bloom",
+      "LabelEl": "Απαλή λάμψη αντανακλάσεων",
+      "Min": 0,
+      "Max": 1,
+      "Step": 0.05,
+      "Default": 0.45
+    },
+    {
+      "Key": "dispersion",
+      "Type": "slider",
+      "Label": "Spectral edge accents",
+      "LabelEl": "Χρωματική διασπορά φωτός",
+      "Min": 0,
+      "Max": 1,
+      "Step": 0.05,
+      "Default": 0.2
+    },
+    {
+      "Key": "staticView",
+      "Type": "checkbox",
+      "Label": "Static view (freeze effects)",
+      "LabelEl": "Στατική προβολή (πάγωμα εφέ)",
+      "Default": false
+    }
+  ]
+}

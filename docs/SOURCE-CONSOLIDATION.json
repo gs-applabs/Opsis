@@ -1,0 +1,2284 @@
+{
+  "status": "PARTIAL_CONSOLIDATION_SOURCE_REVIEW_REQUIRED",
+  "base": "96bd979a03b736c8d879add9e8af888295196e2f",
+  "branches": [
+    {
+      "label": "appearance",
+      "head": "0173a75a766c055fed13fef684d4f1653f2450af",
+      "ancestor": "7a055f1e7fab4c9ae18d21c9b9692dbc37c1b469",
+      "applied": [
+        ".github/workflows/windows-audit.yml",
+        "Opsis.csproj",
+        "README-EL.md",
+        "assets/Opsis.ico",
+        "locales/ar-SA.json",
+        "locales/de-DE.json",
+        "locales/el-GR.json",
+        "locales/en-US.json",
+        "locales/es-ES.json",
+        "locales/fr-FR.json",
+        "locales/hi-IN.json",
+        "locales/it-IT.json",
+        "locales/ja-JP.json",
+        "locales/ko-KR.json",
+        "locales/pt-PT.json",
+        "locales/ru-RU.json",
+        "locales/tr-TR.json",
+        "locales/zh-CN.json",
+        "src/Services/ExplorerSessionStore.cs",
+        "src/Services/TaskbarViewProfiles.cs",
+        "src/Services/UiAudit.cs",
+        "src/Services/WallpaperGalleryCatalog.cs",
+        "src/Services/WindowsSystemSettings.cs",
+        "src/Services/WindowsUpdateGuard.cs",
+        "src/UI/MainWindow.Appearance.cs",
+        "src/UI/MainWindow.Experience.cs",
+        "src/UI/MainWindow.StudioChrome.cs",
+        "src/UI/MainWindow.UniversalSearch.cs",
+        "src/UI/MainWindow.WallpaperGallery.cs",
+        "src/UI/MainWindow.cs",
+        "src/UI/OpsisStartButtonArt.cs",
+        "src/UI/StartStudioForm.cs",
+        "src/UI/ThemeManager.cs",
+        "src/Widgets/DeskStripWindow.cs",
+        "tests/Opsis.ExperienceSmoke/Program.cs",
+        "assets/Opsis-3.svg",
+        "assets/start-buttons/Opsis-3-Glass-24.png",
+        "assets/start-buttons/Opsis-3-Glass-32.png",
+        "assets/start-buttons/Opsis-3-Glass-48.png",
+        "assets/start-buttons/Opsis-3-Glass-64.png",
+        "docs/REMAINING-TASKS-3.0.0.3200.md",
+        "opsis-ui-evidence/AppearancePreviewForm-1280x720.png",
+        "opsis-ui-evidence/AppearancePreviewForm-1600x900.png",
+        "opsis-ui-evidence/AppearancePreviewForm-800x600.png",
+        "opsis-ui-evidence/OpsisTaskbarDesignerForm-1280x720.png",
+        "opsis-ui-evidence/OpsisTaskbarDesignerForm-1600x900.png",
+        "opsis-ui-evidence/OpsisTaskbarDesignerForm-800x600.png",
+        "opsis-ui-evidence/StartStudioForm-1280x720.png",
+        "opsis-ui-evidence/StartStudioForm-1600x900.png",
+        "opsis-ui-evidence/StartStudioForm-800x600.png",
+        "opsis-ui-evidence/appdata/logs/opsis.log",
+        "opsis-ui-evidence/appdata/settings.json",
+        "opsis-ui-evidence/appdata/settings.json.bak",
+        "opsis-ui-evidence/sidebar-page-About.png",
+        "opsis-ui-evidence/sidebar-page-AudioEnhancement.png",
+        "opsis-ui-evidence/sidebar-page-Automation.png",
+        "opsis-ui-evidence/sidebar-page-Dashboard.png",
+        "opsis-ui-evidence/sidebar-page-DeskContainers.png",
+        "opsis-ui-evidence/sidebar-page-DeskMusicVisualizer.png",
+        "opsis-ui-evidence/sidebar-page-DeskStrip.png",
+        "opsis-ui-evidence/sidebar-page-DeskZones.png",
+        "opsis-ui-evidence/sidebar-page-Performance.png",
+        "opsis-ui-evidence/sidebar-page-Personalization.png",
+        "opsis-ui-evidence/sidebar-page-Settings.png",
+        "opsis-ui-evidence/sidebar-page-Theme.png",
+        "opsis-ui-evidence/sidebar-page-Wallpaper.png",
+        "opsis-ui-evidence/sidebar-page-Widgets.png",
+        "opsis-ui-evidence/start-button-gallery.png",
+        "opsis-ui-evidence/ui-smoke-report.json",
+        "src/Services/HangTrace.cs",
+        "wallpapers/samples/opsis-glass-signature/adaptive.js",
+        "wallpapers/samples/opsis-glass-signature/index.html",
+        "wallpapers/samples/opsis-glass-signature/opsis-wallpaper.json",
+        "wallpapers/samples/opsis-glass-signature/poster.png",
+        "wallpapers/samples/opsis-glass-signature/poster.webp",
+        "wallpapers/samples/opsis-glass-signature/reflection-mask.webp",
+        "wallpapers/samples/opsis-glass-signature/scene.webp",
+        "wallpapers/samples/opsis-glass-signature/signature.js"
+      ],
+      "already_present": [],
+      "conflicts": [],
+      "deletions_not_applied": []
+    },
+    {
+      "label": "desktop-materials",
+      "head": "2d15e7814e7a5e6e0e20eae50d9dd7bbceae501c",
+      "ancestor": "fbc81328622ec630f3bbc7171cd72dc8708c1a66",
+      "applied": [
+        "src/Containers/ContainerWindow.cs",
+        "src/Services/DesktopMaterials.cs",
+        "src/UI/MainWindow.DesktopMaterials.cs",
+        "src/UI/SecondaryWindowStyler.cs",
+        "tests/WeatherInfoTone.test.cjs"
+      ],
+      "already_present": [],
+      "conflicts": [
+        ".github/workflows/windows-audit.yml",
+        "Opsis.csproj",
+        "src/Services/UiAudit.cs"
+      ],
+      "deletions_not_applied": []
+    },
+    {
+      "label": "europe-R26",
+      "head": "e72ee5877526c03ead97ce8bbdd098fe41b49838",
+      "ancestor": "cf906d7840a37af3f1dcaa8977ccaa7a4f3278c3",
+      "applied": [
+        ".github/workflows/3.0-installer-e2e.yml",
+        ".github/workflows/3.0-integration.yml",
+        "src/Appearance/AppearanceService.cs",
+        "src/Appearance/WindowEffects.cs",
+        "src/Services/GlassPolicy.cs",
+        "src/Services/GlassService.cs",
+        "src/UI/MainWindow.Opacity.cs",
+        "src/UI/MainWindow.Performance.cs",
+        "src/UI/MainWindow.SkinColors.cs",
+        "src/UI/MainWindow.Themes.cs",
+        "src/UI/UiTheme.cs",
+        "src/UI/WidgetTheme.cs",
+        "src/Widgets/LandmarkCatalog.cs",
+        "src/Widgets/WidgetEngine.cs",
+        ".github/workflows/ancient-athens-core.yml",
+        ".github/workflows/europe-integration-r24.yml",
+        ".github/workflows/europe-photo-acquisition-r17.yml",
+        ".github/workflows/europe-photo-corrections-r19.yml",
+        ".github/workflows/europe-photo-corrections-r20.yml",
+        ".github/workflows/europe-photo-corrections-r21.yml",
+        ".github/workflows/europe-photo-fallback-r18.yml",
+        ".github/workflows/europe-photo-layer-review-r22.yml",
+        ".github/workflows/europe-photo-replacement-review-r23.yml",
+        ".github/workflows/europe-preview-installer-r26.yml",
+        "addons/opsis-100/authoring/R24-INSTALLER-INTEGRATION.md",
+        "addons/opsis-100/authoring/R26-PREVIEW-INSTALLER.md",
+        "addons/opsis-100/authoring/acquire-batches-r18.py",
+        "addons/opsis-100/authoring/acquire-commons-candidates.py",
+        "addons/opsis-100/authoring/build-photo-review-r22.py",
+        "addons/opsis-100/authoring/europe-files.iss",
+        "addons/opsis-100/authoring/europe-photo-review-r21.json",
+        "addons/opsis-100/authoring/europe-preview-r26.iss",
+        "addons/opsis-100/authoring/stage-approved-europe.py",
+        "addons/opsis-100/authoring/stage-preview-r26.py",
+        "addons/opsis-100/authoring/test-stage-approved-europe.py",
+        "docs/SIGNATURE-COMPOSITION-PREVIEW.md",
+        "src/UI/OpsisBrandMark.cs",
+        "src/Widgets/EuropeanPhotoCatalog.cs",
+        "tests/SignatureExplorerSmoke/Program.cs",
+        "tests/SignatureExplorerSmoke/SignatureExplorerSmoke.csproj",
+        "tools/Build-SignaturePreview.ps1"
+      ],
+      "already_present": [
+        "assets/Opsis.ico",
+        "src/Widgets/WallpaperManifest.cs",
+        "src/Widgets/wallpaper/ancient-athens.js",
+        "addons/opsis-100/authoring/README.md",
+        "addons/opsis-100/authoring/ancient-rome.theme.json",
+        "addons/opsis-100/authoring/europe-capitals.json",
+        "addons/opsis-100/authoring/validate.cjs",
+        "assets/Opsis-3.svg",
+        "assets/start-buttons/Opsis-3-Glass-24.png",
+        "assets/start-buttons/Opsis-3-Glass-32.png",
+        "assets/start-buttons/Opsis-3-Glass-48.png",
+        "assets/start-buttons/Opsis-3-Glass-64.png",
+        "src/Widgets/wallpaper/ancient-athens-effects.js",
+        "tests/weather-spatial/ancient-athens.test.cjs"
+      ],
+      "conflicts": [
+        "Opsis.csproj",
+        "src/Services/DesktopMaterials.cs",
+        "src/Services/OpsisTaskbarDesigner.cs",
+        "src/UI/MainWindow.Appearance.cs",
+        "src/UI/MainWindow.WallpaperGallery.cs",
+        "src/UI/MainWindow.cs",
+        "src/UI/ThemeManager.cs",
+        "src/Widgets/DeskFlipEngine.cs",
+        "src/Widgets/DeskStripWindow.cs",
+        "src/Widgets/DesktopLauncher.cs",
+        "src/Widgets/ReplacementTaskbar.cs",
+        "src/Widgets/TrayApplicationContext.cs",
+        "src/Widgets/WallpaperWindow.cs",
+        "src/Widgets/wallpaper/index.html",
+        "src/Widgets/wallpaper/weather.js",
+        "tests/Opsis.ExperienceSmoke/Program.cs",
+        "src/Services/WallpaperGalleryCatalog.cs"
+      ],
+      "deletions_not_applied": []
+    },
+    {
+      "label": "europe-R25",
+      "head": "5c1aefb4f587df83bb2b43a9a5ddd3ce1a76ca07",
+      "ancestor": "58f9580fafe33affa056765aaeb055f2fbc36c80",
+      "applied": [
+        ".github/workflows/europe-photo-replacement-review-r25.yml"
+      ],
+      "already_present": [],
+      "conflicts": [],
+      "deletions_not_applied": []
+    },
+    {
+      "label": "crawler-bridge",
+      "head": "9fa970b8a2f046fa6b8dcddc6acfa7ca62bd4f69",
+      "ancestor": "6f8b5da31a5951d9dd467d6ef1250c52f8e8176f",
+      "applied": [
+        "tools/check-plugin-dll-versions.ps1"
+      ],
+      "already_present": [],
+      "conflicts": [
+        ".github/workflows/plugin-compatibility.yml",
+        "Opsis.csproj",
+        "src/Services/PluginHost.cs",
+        "src/Widgets/DeskStripWindow.cs"
+      ],
+      "deletions_not_applied": []
+    },
+    {
+      "label": "main-2.8-followup",
+      "head": "12018a0b085d52dba96847e552d203787b15ed08",
+      "ancestor": "6f8b5da31a5951d9dd467d6ef1250c52f8e8176f",
+      "applied": [
+        "tests/PluginCompatibility.test.cjs",
+        "RELEASE-NOTES-2.8.0.2510.md",
+        "RELEASE-NOTES-2.8.0.2511.md"
+      ],
+      "already_present": [
+        "README-EL.md",
+        "src/Containers/ContainerWindow.cs",
+        "src/Services/DesktopMaterials.cs",
+        "src/Services/WindowsSystemSettings.cs",
+        "src/UI/MainWindow.Appearance.cs",
+        "src/UI/MainWindow.DesktopMaterials.cs",
+        "src/UI/MainWindow.UniversalSearch.cs",
+        "src/UI/SecondaryWindowStyler.cs",
+        "src/Widgets/DeskStripWindow.cs",
+        "src/Services/HangTrace.cs"
+      ],
+      "conflicts": [
+        ".github/workflows/windows-audit.yml",
+        "Opsis.csproj",
+        "Version.props",
+        "locales/ar-SA.json",
+        "locales/de-DE.json",
+        "locales/el-GR.json",
+        "locales/en-US.json",
+        "locales/es-ES.json",
+        "locales/fr-FR.json",
+        "locales/hi-IN.json",
+        "locales/it-IT.json",
+        "locales/ja-JP.json",
+        "locales/ko-KR.json",
+        "locales/pt-PT.json",
+        "locales/ru-RU.json",
+        "locales/tr-TR.json",
+        "locales/zh-CN.json",
+        "src/Services/PluginHost.cs",
+        "src/Services/UiAudit.cs",
+        "src/UI/MainWindow.StudioChrome.cs",
+        "src/UI/MainWindow.cs",
+        "src/UI/ThemeManager.cs",
+        "src/Widgets/wallpaper/index.html",
+        "tests/WeatherInfoTone.test.cjs"
+      ],
+      "deletions_not_applied": []
+    }
+  ],
+  "conflicts": [
+    {
+      "branch": "desktop-materials",
+      "path": ".github/workflows/windows-audit.yml",
+      "ancestor": "fbc81328622ec630f3bbc7171cd72dc8708c1a66",
+      "head": "2d15e7814e7a5e6e0e20eae50d9dd7bbceae501c",
+      "base_blob": "8c7c44169d73d9ae73f216593d715dcfaf4628ef",
+      "incoming_blob": "99d269ba17061cd66a56914fbbd2f34bd7c5caa1",
+      "current_blob": "0f5361c96dec80e937d844de1fb7a67ed60196a8"
+    },
+    {
+      "branch": "desktop-materials",
+      "path": "Opsis.csproj",
+      "ancestor": "fbc81328622ec630f3bbc7171cd72dc8708c1a66",
+      "head": "2d15e7814e7a5e6e0e20eae50d9dd7bbceae501c",
+      "base_blob": "431450383ce68519e714a918bf8bee4c20aea2d0",
+      "incoming_blob": "21e5452f64db9f9bcacaec2571cbd42b241cd2ac",
+      "current_blob": "4c34b27d32e34706f8697174f76e34e06c6df919"
+    },
+    {
+      "branch": "desktop-materials",
+      "path": "src/Services/UiAudit.cs",
+      "ancestor": "fbc81328622ec630f3bbc7171cd72dc8708c1a66",
+      "head": "2d15e7814e7a5e6e0e20eae50d9dd7bbceae501c",
+      "base_blob": "d8664220594f44766d3e0c62cb7af69c3fb4b643",
+      "incoming_blob": "3629b28dda9c77d6e82257e807973b3f007152f3",
+      "current_blob": "28b3834e279f164835b5d1f256ed91b9e764354e"
+    },
+    {
+      "branch": "europe-R26",
+      "path": "Opsis.csproj",
+      "ancestor": "cf906d7840a37af3f1dcaa8977ccaa7a4f3278c3",
+      "head": "e72ee5877526c03ead97ce8bbdd098fe41b49838",
+      "base_blob": "1f17b31d288ecf513f79e787e42b5e85d6ef6ead",
+      "incoming_blob": "b742226f05b03903964117c7c9b50fa08ea2a145",
+      "current_blob": "4c34b27d32e34706f8697174f76e34e06c6df919"
+    },
+    {
+      "branch": "europe-R26",
+      "path": "src/Services/DesktopMaterials.cs",
+      "ancestor": "cf906d7840a37af3f1dcaa8977ccaa7a4f3278c3",
+      "head": "e72ee5877526c03ead97ce8bbdd098fe41b49838",
+      "base_blob": "11f6849934e0e5a68a02c923b892ec9985eff591",
+      "incoming_blob": "9e433bea3ca26f77a057d3257744c73a20cb561a",
+      "current_blob": "562c3e25c2e602c8915bed91332028eb81e7af8b"
+    },
+    {
+      "branch": "europe-R26",
+      "path": "src/Services/OpsisTaskbarDesigner.cs",
+      "ancestor": "cf906d7840a37af3f1dcaa8977ccaa7a4f3278c3",
+      "head": "e72ee5877526c03ead97ce8bbdd098fe41b49838",
+      "base_blob": "7f073c09d8c85b53837ac7d75dac8b996fa9f822",
+      "incoming_blob": "d64a95fd1542baecaa2331c5fde6fb2cce45ec84",
+      "current_blob": "6b302f23dd144e064d274c1c3330d4ed68e42738"
+    },
+    {
+      "branch": "europe-R26",
+      "path": "src/UI/MainWindow.Appearance.cs",
+      "ancestor": "cf906d7840a37af3f1dcaa8977ccaa7a4f3278c3",
+      "head": "e72ee5877526c03ead97ce8bbdd098fe41b49838",
+      "base_blob": "3ee1687c7d840be2a61c033a22882389431f67ab",
+      "incoming_blob": "6f3a387389591b5f0081d6ade2834d3b7374c928",
+      "current_blob": "54f25eed9e45d2ec120ca7fd7aaefd47f1937bc6"
+    },
+    {
+      "branch": "europe-R26",
+      "path": "src/UI/MainWindow.WallpaperGallery.cs",
+      "ancestor": "cf906d7840a37af3f1dcaa8977ccaa7a4f3278c3",
+      "head": "e72ee5877526c03ead97ce8bbdd098fe41b49838",
+      "base_blob": "69eee2837278e4926ff359ba4cf6da79d9ad24fd",
+      "incoming_blob": "b998cb357b18500a25a744b13979b60a8952a828",
+      "current_blob": "bd5e62d36b01de369d94d9091bb81c48e8711a18"
+    },
+    {
+      "branch": "europe-R26",
+      "path": "src/UI/MainWindow.cs",
+      "ancestor": "cf906d7840a37af3f1dcaa8977ccaa7a4f3278c3",
+      "head": "e72ee5877526c03ead97ce8bbdd098fe41b49838",
+      "base_blob": "b897e036615a53443e0e36c4f1f3da0473578eec",
+      "incoming_blob": "d458247701c625bb880d91777e3e4306976b71d3",
+      "current_blob": "7b2bd26bf1d0e5ddbc134dfefeb7f79a21f33567"
+    },
+    {
+      "branch": "europe-R26",
+      "path": "src/UI/ThemeManager.cs",
+      "ancestor": "cf906d7840a37af3f1dcaa8977ccaa7a4f3278c3",
+      "head": "e72ee5877526c03ead97ce8bbdd098fe41b49838",
+      "base_blob": "65a1725f5bf32cc77b4da174c8432247602efe3b",
+      "incoming_blob": "ccad9f4050f210b152c4165bc153ab334ed05424",
+      "current_blob": "15f7be6c8d6d76f8d9dbc9be1c18dbbcbaabbc60"
+    },
+    {
+      "branch": "europe-R26",
+      "path": "src/Widgets/DeskFlipEngine.cs",
+      "ancestor": "cf906d7840a37af3f1dcaa8977ccaa7a4f3278c3",
+      "head": "e72ee5877526c03ead97ce8bbdd098fe41b49838",
+      "base_blob": "ed61a8e217750b55180c60cd72efedfe429e94a0",
+      "incoming_blob": "2137b0e3c8073dc08f0b107b97441a0551e91ac4",
+      "current_blob": "781ccc6504e2e3392219fa2362de619cf9f970de"
+    },
+    {
+      "branch": "europe-R26",
+      "path": "src/Widgets/DeskStripWindow.cs",
+      "ancestor": "cf906d7840a37af3f1dcaa8977ccaa7a4f3278c3",
+      "head": "e72ee5877526c03ead97ce8bbdd098fe41b49838",
+      "base_blob": "605541f57e3ff1f2155754c97fe5e34d3773294c",
+      "incoming_blob": "03ee6f43c199d518293e6552588049489e877cfa",
+      "current_blob": "b2ffd38d72ec7aadb67d875464627f148e9b9c75"
+    },
+    {
+      "branch": "europe-R26",
+      "path": "src/Widgets/DesktopLauncher.cs",
+      "ancestor": "cf906d7840a37af3f1dcaa8977ccaa7a4f3278c3",
+      "head": "e72ee5877526c03ead97ce8bbdd098fe41b49838",
+      "base_blob": "e2179b48a48bbb16d04ce83e90fc1cb49dc57a61",
+      "incoming_blob": "c17a93b5c4999005d4a94d07bb244397115871d7",
+      "current_blob": "af665120d51958c37662b4cc92a1133a8b1cb2dc"
+    },
+    {
+      "branch": "europe-R26",
+      "path": "src/Widgets/ReplacementTaskbar.cs",
+      "ancestor": "cf906d7840a37af3f1dcaa8977ccaa7a4f3278c3",
+      "head": "e72ee5877526c03ead97ce8bbdd098fe41b49838",
+      "base_blob": "7968197a4e1d886a928df606273baa992d5fa67a",
+      "incoming_blob": "1e0a0d108e5b9f7c997d7b492029043944b45d17",
+      "current_blob": "17bb5cde40d305cca7436d25169ef6d077ccafbe"
+    },
+    {
+      "branch": "europe-R26",
+      "path": "src/Widgets/TrayApplicationContext.cs",
+      "ancestor": "cf906d7840a37af3f1dcaa8977ccaa7a4f3278c3",
+      "head": "e72ee5877526c03ead97ce8bbdd098fe41b49838",
+      "base_blob": "ab61e79d3842c36423b5e5118c235dd984ba7746",
+      "incoming_blob": "9ef598a9987e9dd978ce28613b1ed13cf98d2e33",
+      "current_blob": "b372da4d96a667d320894ea25314a86839128309"
+    },
+    {
+      "branch": "europe-R26",
+      "path": "src/Widgets/WallpaperWindow.cs",
+      "ancestor": "cf906d7840a37af3f1dcaa8977ccaa7a4f3278c3",
+      "head": "e72ee5877526c03ead97ce8bbdd098fe41b49838",
+      "base_blob": "0bb1bac9384396f54755a94c6b7a77d4b1b9d1bf",
+      "incoming_blob": "e955063aad6fa8503e1a03ca7d04e4d2c2409831",
+      "current_blob": "844a24e4a1abb99d33c1eda64e8bf97d5cfff3fd"
+    },
+    {
+      "branch": "europe-R26",
+      "path": "src/Widgets/wallpaper/index.html",
+      "ancestor": "cf906d7840a37af3f1dcaa8977ccaa7a4f3278c3",
+      "head": "e72ee5877526c03ead97ce8bbdd098fe41b49838",
+      "base_blob": "af4858f238d89f1a75b68301f08d39c1fd8e8d97",
+      "incoming_blob": "38746cfb9887f73ca78aaaf0e5ceaedd9bafc6fd",
+      "current_blob": "d1e1162ac57433b6ff5815846712288e91523a8e"
+    },
+    {
+      "branch": "europe-R26",
+      "path": "src/Widgets/wallpaper/weather.js",
+      "ancestor": "cf906d7840a37af3f1dcaa8977ccaa7a4f3278c3",
+      "head": "e72ee5877526c03ead97ce8bbdd098fe41b49838",
+      "base_blob": "d8a04fbd5913193520d5e220e9028028ba78fb1e",
+      "incoming_blob": "618b932a0640e2ec7fd54a54a4746f565f819397",
+      "current_blob": "fa4d7f015b9446c6b65834686bfcb3991f59ee9f"
+    },
+    {
+      "branch": "europe-R26",
+      "path": "tests/Opsis.ExperienceSmoke/Program.cs",
+      "ancestor": "cf906d7840a37af3f1dcaa8977ccaa7a4f3278c3",
+      "head": "e72ee5877526c03ead97ce8bbdd098fe41b49838",
+      "base_blob": "bd0c7c724ed13323d527fea4bb8d57d2e18f4ecf",
+      "incoming_blob": "903ba3d0c3432d224cbf2c7cbbb46a807c0a824b",
+      "current_blob": "4d749bed41d34a4e8a53552fde53e60a90814982"
+    },
+    {
+      "branch": "europe-R26",
+      "path": "src/Services/WallpaperGalleryCatalog.cs",
+      "ancestor": "cf906d7840a37af3f1dcaa8977ccaa7a4f3278c3",
+      "head": "e72ee5877526c03ead97ce8bbdd098fe41b49838",
+      "base_blob": null,
+      "incoming_blob": "83efa813cb93107c3944d533d0d67875524968b2",
+      "current_blob": "e67426108673267b35fe2669e1b7ce2186bfe3b2"
+    },
+    {
+      "branch": "crawler-bridge",
+      "path": ".github/workflows/plugin-compatibility.yml",
+      "ancestor": "6f8b5da31a5951d9dd467d6ef1250c52f8e8176f",
+      "head": "9fa970b8a2f046fa6b8dcddc6acfa7ca62bd4f69",
+      "base_blob": "9c5ed6756222f4eb9e93ddf48e8f0e222ed5b280",
+      "incoming_blob": "211dfb9669c6398c489abca594b8688b4752e922",
+      "current_blob": "c1f6be850fb55e5debe078f8ea122795ca869758"
+    },
+    {
+      "branch": "crawler-bridge",
+      "path": "Opsis.csproj",
+      "ancestor": "6f8b5da31a5951d9dd467d6ef1250c52f8e8176f",
+      "head": "9fa970b8a2f046fa6b8dcddc6acfa7ca62bd4f69",
+      "base_blob": "3abd65bfcf680e4eb33fdcf3d1f9b182c50fdec1",
+      "incoming_blob": "8cdf1a307c5df836e3327b199069ed7d735ad976",
+      "current_blob": "4c34b27d32e34706f8697174f76e34e06c6df919"
+    },
+    {
+      "branch": "crawler-bridge",
+      "path": "src/Services/PluginHost.cs",
+      "ancestor": "6f8b5da31a5951d9dd467d6ef1250c52f8e8176f",
+      "head": "9fa970b8a2f046fa6b8dcddc6acfa7ca62bd4f69",
+      "base_blob": "c69bc42bbc00fe996eccde45c01d664f491aeeff",
+      "incoming_blob": "707995a9d5f5708d963fbca43b478d24cdc0218f",
+      "current_blob": "46976dc0144e852511c6b3ab41722f36f66a6ed6"
+    },
+    {
+      "branch": "crawler-bridge",
+      "path": "src/Widgets/DeskStripWindow.cs",
+      "ancestor": "6f8b5da31a5951d9dd467d6ef1250c52f8e8176f",
+      "head": "9fa970b8a2f046fa6b8dcddc6acfa7ca62bd4f69",
+      "base_blob": "605541f57e3ff1f2155754c97fe5e34d3773294c",
+      "incoming_blob": "2bf4e3a1bbd982c113764c95d37bf31a28fbb65d",
+      "current_blob": "b2ffd38d72ec7aadb67d875464627f148e9b9c75"
+    },
+    {
+      "branch": "main-2.8-followup",
+      "path": ".github/workflows/windows-audit.yml",
+      "ancestor": "6f8b5da31a5951d9dd467d6ef1250c52f8e8176f",
+      "head": "12018a0b085d52dba96847e552d203787b15ed08",
+      "base_blob": "8c7c44169d73d9ae73f216593d715dcfaf4628ef",
+      "incoming_blob": "987d5f27309301f3abe0e6c2ed65d1c123b484e4",
+      "current_blob": "0f5361c96dec80e937d844de1fb7a67ed60196a8"
+    },
+    {
+      "branch": "main-2.8-followup",
+      "path": "Opsis.csproj",
+      "ancestor": "6f8b5da31a5951d9dd467d6ef1250c52f8e8176f",
+      "head": "12018a0b085d52dba96847e552d203787b15ed08",
+      "base_blob": "3abd65bfcf680e4eb33fdcf3d1f9b182c50fdec1",
+      "incoming_blob": "f1121e7b46c2d7a0418b94e65a2dd5c0ca21d04d",
+      "current_blob": "4c34b27d32e34706f8697174f76e34e06c6df919"
+    },
+    {
+      "branch": "main-2.8-followup",
+      "path": "Version.props",
+      "ancestor": "6f8b5da31a5951d9dd467d6ef1250c52f8e8176f",
+      "head": "12018a0b085d52dba96847e552d203787b15ed08",
+      "base_blob": "c5a431b25c29eb0760fc69a5de0783067fda1ed2",
+      "incoming_blob": "629767f0cf60c416fad8125299f117cff27b065b",
+      "current_blob": "c5a431b25c29eb0760fc69a5de0783067fda1ed2"
+    },
+    {
+      "branch": "main-2.8-followup",
+      "path": "locales/ar-SA.json",
+      "ancestor": "6f8b5da31a5951d9dd467d6ef1250c52f8e8176f",
+      "head": "12018a0b085d52dba96847e552d203787b15ed08",
+      "base_blob": "4a671db1d434a74ae79c952d0f7bda6da64f0da3",
+      "incoming_blob": "4f09b292ad7376dbd2e9837186c3b233f7470aa2",
+      "current_blob": "62d2c2f93697aa6423ac17dedc737200fa02f335"
+    },
+    {
+      "branch": "main-2.8-followup",
+      "path": "locales/de-DE.json",
+      "ancestor": "6f8b5da31a5951d9dd467d6ef1250c52f8e8176f",
+      "head": "12018a0b085d52dba96847e552d203787b15ed08",
+      "base_blob": "d99870e21abac3cbeae04cb01d5786fc503b8a4d",
+      "incoming_blob": "82cd0ee3b56fa9e5d50b6b87e93291e65da3101f",
+      "current_blob": "c8bd91898339053a6920eeab3b5b9cef35af4f90"
+    },
+    {
+      "branch": "main-2.8-followup",
+      "path": "locales/el-GR.json",
+      "ancestor": "6f8b5da31a5951d9dd467d6ef1250c52f8e8176f",
+      "head": "12018a0b085d52dba96847e552d203787b15ed08",
+      "base_blob": "232fb07c5c806098812d526d106ddafffa65cf7f",
+      "incoming_blob": "dc81c4e2529376410d602f1f576ca4ed67f75191",
+      "current_blob": "f2647200acbcd4b37af279f3e078128b8cf6888f"
+    },
+    {
+      "branch": "main-2.8-followup",
+      "path": "locales/en-US.json",
+      "ancestor": "6f8b5da31a5951d9dd467d6ef1250c52f8e8176f",
+      "head": "12018a0b085d52dba96847e552d203787b15ed08",
+      "base_blob": "d06d35ce587b86364430b4cf17a2bbab8095603d",
+      "incoming_blob": "8ae6a0f7a3b4372daeddeb158aaa1dd7e904809f",
+      "current_blob": "31c6214553c535e21fbbd98282a312981e2cd27f"
+    },
+    {
+      "branch": "main-2.8-followup",
+      "path": "locales/es-ES.json",
+      "ancestor": "6f8b5da31a5951d9dd467d6ef1250c52f8e8176f",
+      "head": "12018a0b085d52dba96847e552d203787b15ed08",
+      "base_blob": "129baf9f40763a0d6cc1a1da4b0545822ac97f30",
+      "incoming_blob": "781bf24bb1f5c02a10f86d5c634f1a58f01afc77",
+      "current_blob": "eaa441275d14819ff9053fba9493514612598b40"
+    },
+    {
+      "branch": "main-2.8-followup",
+      "path": "locales/fr-FR.json",
+      "ancestor": "6f8b5da31a5951d9dd467d6ef1250c52f8e8176f",
+      "head": "12018a0b085d52dba96847e552d203787b15ed08",
+      "base_blob": "634cde6abcd91fb107edf96a3bbe0714d1844fe1",
+      "incoming_blob": "5fa3dd5729991bd22ff25c7ceeef4c42b53b4049",
+      "current_blob": "e44e6a98634f1b913c5298fdeca5c74eb8f6fd4b"
+    },
+    {
+      "branch": "main-2.8-followup",
+      "path": "locales/hi-IN.json",
+      "ancestor": "6f8b5da31a5951d9dd467d6ef1250c52f8e8176f",
+      "head": "12018a0b085d52dba96847e552d203787b15ed08",
+      "base_blob": "da6972e20d6831e76506613cf14d68b66235eb14",
+      "incoming_blob": "1783dbe66deabdcc60f1d8a096b5a2dcc3f041e5",
+      "current_blob": "f03e42cf354829f55a138051409cf1f6a3744b5a"
+    },
+    {
+      "branch": "main-2.8-followup",
+      "path": "locales/it-IT.json",
+      "ancestor": "6f8b5da31a5951d9dd467d6ef1250c52f8e8176f",
+      "head": "12018a0b085d52dba96847e552d203787b15ed08",
+      "base_blob": "507c35f90a92dd05be4e0c1f0e5afa1d76e7cdeb",
+      "incoming_blob": "52a09a6509f151d5e98cfd03e07954054cba12cd",
+      "current_blob": "c915fb1d6fd8c3e155d82690478ee977f4080e37"
+    },
+    {
+      "branch": "main-2.8-followup",
+      "path": "locales/ja-JP.json",
+      "ancestor": "6f8b5da31a5951d9dd467d6ef1250c52f8e8176f",
+      "head": "12018a0b085d52dba96847e552d203787b15ed08",
+      "base_blob": "c422023b2758e2c3ca8f10d11611fc3636ea8215",
+      "incoming_blob": "d31b6f874b81259b7ac4fcc0f541ad913de90463",
+      "current_blob": "1292c4c8d9d097dba905bad83575f7d4854a840c"
+    },
+    {
+      "branch": "main-2.8-followup",
+      "path": "locales/ko-KR.json",
+      "ancestor": "6f8b5da31a5951d9dd467d6ef1250c52f8e8176f",
+      "head": "12018a0b085d52dba96847e552d203787b15ed08",
+      "base_blob": "076455141fdfbfb423f485083ba0eb2dcc161e17",
+      "incoming_blob": "3f706aa79dbd94691e570befbe0358ade5c575cf",
+      "current_blob": "ac594997caedd1ef32374b473ce6fdc33dee4d2f"
+    },
+    {
+      "branch": "main-2.8-followup",
+      "path": "locales/pt-PT.json",
+      "ancestor": "6f8b5da31a5951d9dd467d6ef1250c52f8e8176f",
+      "head": "12018a0b085d52dba96847e552d203787b15ed08",
+      "base_blob": "112566c7371b87a3f48d2feee5743ce3a8735cc5",
+      "incoming_blob": "cb10469f27f663465084abe996bd7544d7e7ee47",
+      "current_blob": "cf6637ba407608a564d02072467da282b8631a24"
+    },
+    {
+      "branch": "main-2.8-followup",
+      "path": "locales/ru-RU.json",
+      "ancestor": "6f8b5da31a5951d9dd467d6ef1250c52f8e8176f",
+      "head": "12018a0b085d52dba96847e552d203787b15ed08",
+      "base_blob": "16866afcc7fb2fee42c2a1afdfb1758bbb831ff7",
+      "incoming_blob": "db9d4c038daf9f0112023167720532c83f92363a",
+      "current_blob": "e27639789c8827db18b0d1ff857c909676616d40"
+    },
+    {
+      "branch": "main-2.8-followup",
+      "path": "locales/tr-TR.json",
+      "ancestor": "6f8b5da31a5951d9dd467d6ef1250c52f8e8176f",
+      "head": "12018a0b085d52dba96847e552d203787b15ed08",
+      "base_blob": "3ff14aca3731e6111b7a4b04c07768b6e25ac03c",
+      "incoming_blob": "914c95825d90d6f62e955ee3a87ee3d2ba460428",
+      "current_blob": "71653af93ca1951659285e0fd639a50913376157"
+    },
+    {
+      "branch": "main-2.8-followup",
+      "path": "locales/zh-CN.json",
+      "ancestor": "6f8b5da31a5951d9dd467d6ef1250c52f8e8176f",
+      "head": "12018a0b085d52dba96847e552d203787b15ed08",
+      "base_blob": "bc3e62d9a5968211dab34f4e952be38d01aaadb7",
+      "incoming_blob": "d3b2dcbcb09e17faac16b16aeae82f93d2f493c6",
+      "current_blob": "18696ca80b92177f7255798f3619e77288b61441"
+    },
+    {
+      "branch": "main-2.8-followup",
+      "path": "src/Services/PluginHost.cs",
+      "ancestor": "6f8b5da31a5951d9dd467d6ef1250c52f8e8176f",
+      "head": "12018a0b085d52dba96847e552d203787b15ed08",
+      "base_blob": "c69bc42bbc00fe996eccde45c01d664f491aeeff",
+      "incoming_blob": "4487c20e166a7e8e3297139f71da788a55d2785b",
+      "current_blob": "46976dc0144e852511c6b3ab41722f36f66a6ed6"
+    },
+    {
+      "branch": "main-2.8-followup",
+      "path": "src/Services/UiAudit.cs",
+      "ancestor": "6f8b5da31a5951d9dd467d6ef1250c52f8e8176f",
+      "head": "12018a0b085d52dba96847e552d203787b15ed08",
+      "base_blob": "d8664220594f44766d3e0c62cb7af69c3fb4b643",
+      "incoming_blob": "a7025eeadad33367de864a894af3855d4bd5ec85",
+      "current_blob": "28b3834e279f164835b5d1f256ed91b9e764354e"
+    },
+    {
+      "branch": "main-2.8-followup",
+      "path": "src/UI/MainWindow.StudioChrome.cs",
+      "ancestor": "6f8b5da31a5951d9dd467d6ef1250c52f8e8176f",
+      "head": "12018a0b085d52dba96847e552d203787b15ed08",
+      "base_blob": "d680f3a0fc51c25c03402d15049ed8d3f7ac2ee8",
+      "incoming_blob": "8717c1b9e926b4dd53bd7b647aff5855c50bfe46",
+      "current_blob": "83fde6460f92f26f747d1ae467793b3643eddf02"
+    },
+    {
+      "branch": "main-2.8-followup",
+      "path": "src/UI/MainWindow.cs",
+      "ancestor": "6f8b5da31a5951d9dd467d6ef1250c52f8e8176f",
+      "head": "12018a0b085d52dba96847e552d203787b15ed08",
+      "base_blob": "1325f262680e35643d328a24c9bc6e8e6a999a4d",
+      "incoming_blob": "282fc0a255626b116a9084f11edc4cca60694c0a",
+      "current_blob": "7b2bd26bf1d0e5ddbc134dfefeb7f79a21f33567"
+    },
+    {
+      "branch": "main-2.8-followup",
+      "path": "src/UI/ThemeManager.cs",
+      "ancestor": "6f8b5da31a5951d9dd467d6ef1250c52f8e8176f",
+      "head": "12018a0b085d52dba96847e552d203787b15ed08",
+      "base_blob": "d80fba77b589ac8ac118ecd67c578e0d52278341",
+      "incoming_blob": "ffd29a7cce26ec1d865c0bebfccb2a92fe962398",
+      "current_blob": "15f7be6c8d6d76f8d9dbc9be1c18dbbcbaabbc60"
+    },
+    {
+      "branch": "main-2.8-followup",
+      "path": "src/Widgets/wallpaper/index.html",
+      "ancestor": "6f8b5da31a5951d9dd467d6ef1250c52f8e8176f",
+      "head": "12018a0b085d52dba96847e552d203787b15ed08",
+      "base_blob": "54c8430d04ede33bf10d6c840b1f364e6ec7d2f4",
+      "incoming_blob": "ee975b0dfb1d315acf2a07739aa040e6e2a0f1d0",
+      "current_blob": "d1e1162ac57433b6ff5815846712288e91523a8e"
+    },
+    {
+      "branch": "main-2.8-followup",
+      "path": "tests/WeatherInfoTone.test.cjs",
+      "ancestor": "6f8b5da31a5951d9dd467d6ef1250c52f8e8176f",
+      "head": "12018a0b085d52dba96847e552d203787b15ed08",
+      "base_blob": null,
+      "incoming_blob": "7f3550490d383f4df5ade4831b25dfe15c0afdee",
+      "current_blob": "3846233faea2c9d58ac52e7b1f78e00498577356"
+    }
+  ],
+  "legacy_handoff_copied": [
+    "docs/opsis-wallpapers-addon-r19/INTEGRATION-HANDOFF.md",
+    "docs/opsis-wallpapers-addon-r19/WEATHER-SEAM-FIX.patch",
+    "docs/opsis-wallpapers-addon-r19/WallpaperGalleryCatalog.cs"
+  ],
+  "unrelated_histories": [
+    {
+      "branch": "integration/p1-crawler-opsis-widgets",
+      "sha": "182a62a05b20a39cbdcf989c34963578ec9fcc92"
+    },
+    {
+      "branch": "feat/p0-explorer-view-profiles",
+      "sha": "3eba0c1297a02bd9005ed0bb3f7cfc7c37595acd"
+    },
+    {
+      "branch": "fix/weather-overlay-white-text",
+      "sha": "869b752efc67d4c94b0d32a0651d1ef499e3c142"
+    }
+  ],
+  "unavailable_local_sources": [
+    "OPSIS-3.0.0.3200-RC-Integrated-Source-R20.zip (not found)",
+    "R13 and older integrated source ZIPs (materialization denied)",
+    "OPSIS-110-Wallpapers-AddOn-v1.2.0",
+    "Complete Patch Claude Code v2",
+    "R16 Spectrum Wallpaper Patch",
+    "3 RC User Bugs Containers UI Installer Patch"
+  ],
+  "notes": "No branch deletions or claims of final merges. Overlaps must be reconciled, not silently overwritten. Review assets are not production.",
+  "three_way_resolved": [
+    {
+      "branch": "desktop-materials",
+      "path": "Opsis.csproj",
+      "ancestor": "fbc81328622ec630f3bbc7171cd72dc8708c1a66",
+      "head": "2d15e7814e7a5e6e0e20eae50d9dd7bbceae501c",
+      "base_blob": "431450383ce68519e714a918bf8bee4c20aea2d0",
+      "incoming_blob": "21e5452f64db9f9bcacaec2571cbd42b241cd2ac",
+      "current_blob": "4c34b27d32e34706f8697174f76e34e06c6df919",
+      "method": "clean Git three-way merge"
+    },
+    {
+      "branch": "desktop-materials",
+      "path": "src/Services/UiAudit.cs",
+      "ancestor": "fbc81328622ec630f3bbc7171cd72dc8708c1a66",
+      "head": "2d15e7814e7a5e6e0e20eae50d9dd7bbceae501c",
+      "base_blob": "d8664220594f44766d3e0c62cb7af69c3fb4b643",
+      "incoming_blob": "3629b28dda9c77d6e82257e807973b3f007152f3",
+      "current_blob": "28b3834e279f164835b5d1f256ed91b9e764354e",
+      "method": "clean Git three-way merge"
+    },
+    {
+      "branch": "europe-R26",
+      "path": "src/Services/DesktopMaterials.cs",
+      "ancestor": "cf906d7840a37af3f1dcaa8977ccaa7a4f3278c3",
+      "head": "e72ee5877526c03ead97ce8bbdd098fe41b49838",
+      "base_blob": "11f6849934e0e5a68a02c923b892ec9985eff591",
+      "incoming_blob": "9e433bea3ca26f77a057d3257744c73a20cb561a",
+      "current_blob": "562c3e25c2e602c8915bed91332028eb81e7af8b",
+      "method": "clean Git three-way merge"
+    },
+    {
+      "branch": "europe-R26",
+      "path": "src/UI/MainWindow.Appearance.cs",
+      "ancestor": "cf906d7840a37af3f1dcaa8977ccaa7a4f3278c3",
+      "head": "e72ee5877526c03ead97ce8bbdd098fe41b49838",
+      "base_blob": "3ee1687c7d840be2a61c033a22882389431f67ab",
+      "incoming_blob": "6f3a387389591b5f0081d6ade2834d3b7374c928",
+      "current_blob": "54f25eed9e45d2ec120ca7fd7aaefd47f1937bc6",
+      "method": "clean Git three-way merge"
+    },
+    {
+      "branch": "europe-R26",
+      "path": "src/Widgets/DeskStripWindow.cs",
+      "ancestor": "cf906d7840a37af3f1dcaa8977ccaa7a4f3278c3",
+      "head": "e72ee5877526c03ead97ce8bbdd098fe41b49838",
+      "base_blob": "605541f57e3ff1f2155754c97fe5e34d3773294c",
+      "incoming_blob": "03ee6f43c199d518293e6552588049489e877cfa",
+      "current_blob": "b2ffd38d72ec7aadb67d875464627f148e9b9c75",
+      "method": "clean Git three-way merge"
+    },
+    {
+      "branch": "europe-R26",
+      "path": "src/Widgets/TrayApplicationContext.cs",
+      "ancestor": "cf906d7840a37af3f1dcaa8977ccaa7a4f3278c3",
+      "head": "e72ee5877526c03ead97ce8bbdd098fe41b49838",
+      "base_blob": "ab61e79d3842c36423b5e5118c235dd984ba7746",
+      "incoming_blob": "9ef598a9987e9dd978ce28613b1ed13cf98d2e33",
+      "current_blob": "b372da4d96a667d320894ea25314a86839128309",
+      "method": "clean Git three-way merge"
+    },
+    {
+      "branch": "europe-R26",
+      "path": "src/Widgets/WallpaperWindow.cs",
+      "ancestor": "cf906d7840a37af3f1dcaa8977ccaa7a4f3278c3",
+      "head": "e72ee5877526c03ead97ce8bbdd098fe41b49838",
+      "base_blob": "0bb1bac9384396f54755a94c6b7a77d4b1b9d1bf",
+      "incoming_blob": "e955063aad6fa8503e1a03ca7d04e4d2c2409831",
+      "current_blob": "844a24e4a1abb99d33c1eda64e8bf97d5cfff3fd",
+      "method": "clean Git three-way merge"
+    },
+    {
+      "branch": "crawler-bridge",
+      "path": "src/Services/PluginHost.cs",
+      "ancestor": "6f8b5da31a5951d9dd467d6ef1250c52f8e8176f",
+      "head": "9fa970b8a2f046fa6b8dcddc6acfa7ca62bd4f69",
+      "base_blob": "c69bc42bbc00fe996eccde45c01d664f491aeeff",
+      "incoming_blob": "707995a9d5f5708d963fbca43b478d24cdc0218f",
+      "current_blob": "46976dc0144e852511c6b3ab41722f36f66a6ed6",
+      "method": "clean Git three-way merge"
+    },
+    {
+      "branch": "crawler-bridge",
+      "path": "src/Widgets/DeskStripWindow.cs",
+      "ancestor": "6f8b5da31a5951d9dd467d6ef1250c52f8e8176f",
+      "head": "9fa970b8a2f046fa6b8dcddc6acfa7ca62bd4f69",
+      "base_blob": "605541f57e3ff1f2155754c97fe5e34d3773294c",
+      "incoming_blob": "2bf4e3a1bbd982c113764c95d37bf31a28fbb65d",
+      "current_blob": "b2ffd38d72ec7aadb67d875464627f148e9b9c75",
+      "method": "clean Git three-way merge"
+    },
+    {
+      "branch": "main-2.8-followup",
+      "path": "src/Services/PluginHost.cs",
+      "ancestor": "6f8b5da31a5951d9dd467d6ef1250c52f8e8176f",
+      "head": "12018a0b085d52dba96847e552d203787b15ed08",
+      "base_blob": "c69bc42bbc00fe996eccde45c01d664f491aeeff",
+      "incoming_blob": "4487c20e166a7e8e3297139f71da788a55d2785b",
+      "current_blob": "46976dc0144e852511c6b3ab41722f36f66a6ed6",
+      "method": "clean Git three-way merge"
+    },
+    {
+      "branch": "main-2.8-followup",
+      "path": "src/Services/UiAudit.cs",
+      "ancestor": "6f8b5da31a5951d9dd467d6ef1250c52f8e8176f",
+      "head": "12018a0b085d52dba96847e552d203787b15ed08",
+      "base_blob": "d8664220594f44766d3e0c62cb7af69c3fb4b643",
+      "incoming_blob": "a7025eeadad33367de864a894af3855d4bd5ec85",
+      "current_blob": "28b3834e279f164835b5d1f256ed91b9e764354e",
+      "method": "identical/no incoming delta"
+    },
+    {
+      "branch": "main-2.8-followup",
+      "path": "src/UI/MainWindow.StudioChrome.cs",
+      "ancestor": "6f8b5da31a5951d9dd467d6ef1250c52f8e8176f",
+      "head": "12018a0b085d52dba96847e552d203787b15ed08",
+      "base_blob": "d680f3a0fc51c25c03402d15049ed8d3f7ac2ee8",
+      "incoming_blob": "8717c1b9e926b4dd53bd7b647aff5855c50bfe46",
+      "current_blob": "83fde6460f92f26f747d1ae467793b3643eddf02",
+      "method": "clean Git three-way merge"
+    },
+    {
+      "branch": "main-2.8-followup",
+      "path": "src/UI/MainWindow.cs",
+      "ancestor": "6f8b5da31a5951d9dd467d6ef1250c52f8e8176f",
+      "head": "12018a0b085d52dba96847e552d203787b15ed08",
+      "base_blob": "1325f262680e35643d328a24c9bc6e8e6a999a4d",
+      "incoming_blob": "282fc0a255626b116a9084f11edc4cca60694c0a",
+      "current_blob": "7b2bd26bf1d0e5ddbc134dfefeb7f79a21f33567",
+      "method": "clean Git three-way merge"
+    },
+    {
+      "branch": "main-2.8-followup",
+      "path": "src/UI/ThemeManager.cs",
+      "ancestor": "6f8b5da31a5951d9dd467d6ef1250c52f8e8176f",
+      "head": "12018a0b085d52dba96847e552d203787b15ed08",
+      "base_blob": "d80fba77b589ac8ac118ecd67c578e0d52278341",
+      "incoming_blob": "ffd29a7cce26ec1d865c0bebfccb2a92fe962398",
+      "current_blob": "15f7be6c8d6d76f8d9dbc9be1c18dbbcbaabbc60",
+      "method": "clean Git three-way merge"
+    }
+  ],
+  "unresolved_after_three_way": [],
+  "manual_resolutions": [
+    {
+      "branch": "europe-R26",
+      "path": "src/UI/MainWindow.WallpaperGallery.cs",
+      "ancestor": "cf906d7840a37af3f1dcaa8977ccaa7a4f3278c3",
+      "head": "e72ee5877526c03ead97ce8bbdd098fe41b49838",
+      "base_blob": "69eee2837278e4926ff359ba4cf6da79d9ad24fd",
+      "incoming_blob": "b998cb357b18500a25a744b13979b60a8952a828",
+      "current_blob": "bd5e62d36b01de369d94d9091bb81c48e8711a18",
+      "reason": "Git three-way conflict",
+      "method": "R28 targeted port; preserve current paginated Gallery / existing deduplication / native renderer; tests pending"
+    },
+    {
+      "branch": "europe-R26",
+      "path": "src/Widgets/wallpaper/weather.js",
+      "ancestor": "cf906d7840a37af3f1dcaa8977ccaa7a4f3278c3",
+      "head": "e72ee5877526c03ead97ce8bbdd098fe41b49838",
+      "base_blob": "d8a04fbd5913193520d5e220e9028028ba78fb1e",
+      "incoming_blob": "618b932a0640e2ec7fd54a54a4746f565f819397",
+      "current_blob": "fa4d7f015b9446c6b65834686bfcb3991f59ee9f",
+      "reason": "Git three-way conflict",
+      "method": "R28 targeted port; preserve current paginated Gallery / existing deduplication / native renderer; tests pending"
+    },
+    {
+      "branch": "europe-R26",
+      "path": "src/Services/WallpaperGalleryCatalog.cs",
+      "ancestor": "cf906d7840a37af3f1dcaa8977ccaa7a4f3278c3",
+      "head": "e72ee5877526c03ead97ce8bbdd098fe41b49838",
+      "base_blob": null,
+      "incoming_blob": "83efa813cb93107c3944d533d0d67875524968b2",
+      "current_blob": "e67426108673267b35fe2669e1b7ce2186bfe3b2",
+      "reason": "add/add or missing common base",
+      "method": "R28 targeted port; preserve current paginated Gallery / existing deduplication / native renderer; tests pending"
+    },
+    {
+      "branch": "main-2.8-followup",
+      "path": "Version.props",
+      "ancestor": "6f8b5da31a5951d9dd467d6ef1250c52f8e8176f",
+      "head": "12018a0b085d52dba96847e552d203787b15ed08",
+      "base_blob": "c5a431b25c29eb0760fc69a5de0783067fda1ed2",
+      "incoming_blob": "629767f0cf60c416fad8125299f117cff27b065b",
+      "current_blob": "c5a431b25c29eb0760fc69a5de0783067fda1ed2",
+      "reason": "do not downgrade RC; manually port relevant changes",
+      "method": "R29: set requested 3.0.0.3200 RC build identity, retain single property source; runtime verification pending"
+    },
+    {
+      "branch": "main-2.8-followup",
+      "path": "locales/ar-SA.json",
+      "ancestor": "6f8b5da31a5951d9dd467d6ef1250c52f8e8176f",
+      "head": "12018a0b085d52dba96847e552d203787b15ed08",
+      "base_blob": "4a671db1d434a74ae79c952d0f7bda6da64f0da3",
+      "incoming_blob": "4f09b292ad7376dbd2e9837186c3b233f7470aa2",
+      "current_blob": "62d2c2f93697aa6423ac17dedc737200fa02f335",
+      "reason": "Git three-way conflict",
+      "method": "R29: preserve current locale strings and append missing VersionNotes.2.8.0.2511; JSON parse and original value preservation validated"
+    },
+    {
+      "branch": "main-2.8-followup",
+      "path": "locales/de-DE.json",
+      "ancestor": "6f8b5da31a5951d9dd467d6ef1250c52f8e8176f",
+      "head": "12018a0b085d52dba96847e552d203787b15ed08",
+      "base_blob": "d99870e21abac3cbeae04cb01d5786fc503b8a4d",
+      "incoming_blob": "82cd0ee3b56fa9e5d50b6b87e93291e65da3101f",
+      "current_blob": "c8bd91898339053a6920eeab3b5b9cef35af4f90",
+      "reason": "Git three-way conflict",
+      "method": "R29: preserve current locale strings and append missing VersionNotes.2.8.0.2511; JSON parse and original value preservation validated"
+    },
+    {
+      "branch": "main-2.8-followup",
+      "path": "locales/el-GR.json",
+      "ancestor": "6f8b5da31a5951d9dd467d6ef1250c52f8e8176f",
+      "head": "12018a0b085d52dba96847e552d203787b15ed08",
+      "base_blob": "232fb07c5c806098812d526d106ddafffa65cf7f",
+      "incoming_blob": "dc81c4e2529376410d602f1f576ca4ed67f75191",
+      "current_blob": "f2647200acbcd4b37af279f3e078128b8cf6888f",
+      "reason": "Git three-way conflict",
+      "method": "R29: preserve current locale strings and append missing VersionNotes.2.8.0.2511; JSON parse and original value preservation validated"
+    },
+    {
+      "branch": "main-2.8-followup",
+      "path": "locales/en-US.json",
+      "ancestor": "6f8b5da31a5951d9dd467d6ef1250c52f8e8176f",
+      "head": "12018a0b085d52dba96847e552d203787b15ed08",
+      "base_blob": "d06d35ce587b86364430b4cf17a2bbab8095603d",
+      "incoming_blob": "8ae6a0f7a3b4372daeddeb158aaa1dd7e904809f",
+      "current_blob": "31c6214553c535e21fbbd98282a312981e2cd27f",
+      "reason": "Git three-way conflict",
+      "method": "R29: preserve current locale strings and append missing VersionNotes.2.8.0.2511; JSON parse and original value preservation validated"
+    },
+    {
+      "branch": "main-2.8-followup",
+      "path": "locales/es-ES.json",
+      "ancestor": "6f8b5da31a5951d9dd467d6ef1250c52f8e8176f",
+      "head": "12018a0b085d52dba96847e552d203787b15ed08",
+      "base_blob": "129baf9f40763a0d6cc1a1da4b0545822ac97f30",
+      "incoming_blob": "781bf24bb1f5c02a10f86d5c634f1a58f01afc77",
+      "current_blob": "eaa441275d14819ff9053fba9493514612598b40",
+      "reason": "Git three-way conflict",
+      "method": "R29: preserve current locale strings and append missing VersionNotes.2.8.0.2511; JSON parse and original value preservation validated"
+    },
+    {
+      "branch": "main-2.8-followup",
+      "path": "locales/fr-FR.json",
+      "ancestor": "6f8b5da31a5951d9dd467d6ef1250c52f8e8176f",
+      "head": "12018a0b085d52dba96847e552d203787b15ed08",
+      "base_blob": "634cde6abcd91fb107edf96a3bbe0714d1844fe1",
+      "incoming_blob": "5fa3dd5729991bd22ff25c7ceeef4c42b53b4049",
+      "current_blob": "e44e6a98634f1b913c5298fdeca5c74eb8f6fd4b",
+      "reason": "Git three-way conflict",
+      "method": "R29: preserve current locale strings and append missing VersionNotes.2.8.0.2511; JSON parse and original value preservation validated"
+    },
+    {
+      "branch": "main-2.8-followup",
+      "path": "locales/hi-IN.json",
+      "ancestor": "6f8b5da31a5951d9dd467d6ef1250c52f8e8176f",
+      "head": "12018a0b085d52dba96847e552d203787b15ed08",
+      "base_blob": "da6972e20d6831e76506613cf14d68b66235eb14",
+      "incoming_blob": "1783dbe66deabdcc60f1d8a096b5a2dcc3f041e5",
+      "current_blob": "f03e42cf354829f55a138051409cf1f6a3744b5a",
+      "reason": "Git three-way conflict",
+      "method": "R29: preserve current locale strings and append missing VersionNotes.2.8.0.2511; JSON parse and original value preservation validated"
+    },
+    {
+      "branch": "main-2.8-followup",
+      "path": "locales/it-IT.json",
+      "ancestor": "6f8b5da31a5951d9dd467d6ef1250c52f8e8176f",
+      "head": "12018a0b085d52dba96847e552d203787b15ed08",
+      "base_blob": "507c35f90a92dd05be4e0c1f0e5afa1d76e7cdeb",
+      "incoming_blob": "52a09a6509f151d5e98cfd03e07954054cba12cd",
+      "current_blob": "c915fb1d6fd8c3e155d82690478ee977f4080e37",
+      "reason": "Git three-way conflict",
+      "method": "R29: preserve current locale strings and append missing VersionNotes.2.8.0.2511; JSON parse and original value preservation validated"
+    },
+    {
+      "branch": "main-2.8-followup",
+      "path": "locales/ja-JP.json",
+      "ancestor": "6f8b5da31a5951d9dd467d6ef1250c52f8e8176f",
+      "head": "12018a0b085d52dba96847e552d203787b15ed08",
+      "base_blob": "c422023b2758e2c3ca8f10d11611fc3636ea8215",
+      "incoming_blob": "d31b6f874b81259b7ac4fcc0f541ad913de90463",
+      "current_blob": "1292c4c8d9d097dba905bad83575f7d4854a840c",
+      "reason": "Git three-way conflict",
+      "method": "R29: preserve current locale strings and append missing VersionNotes.2.8.0.2511; JSON parse and original value preservation validated"
+    },
+    {
+      "branch": "main-2.8-followup",
+      "path": "locales/ko-KR.json",
+      "ancestor": "6f8b5da31a5951d9dd467d6ef1250c52f8e8176f",
+      "head": "12018a0b085d52dba96847e552d203787b15ed08",
+      "base_blob": "076455141fdfbfb423f485083ba0eb2dcc161e17",
+      "incoming_blob": "3f706aa79dbd94691e570befbe0358ade5c575cf",
+      "current_blob": "ac594997caedd1ef32374b473ce6fdc33dee4d2f",
+      "reason": "Git three-way conflict",
+      "method": "R29: preserve current locale strings and append missing VersionNotes.2.8.0.2511; JSON parse and original value preservation validated"
+    },
+    {
+      "branch": "main-2.8-followup",
+      "path": "locales/pt-PT.json",
+      "ancestor": "6f8b5da31a5951d9dd467d6ef1250c52f8e8176f",
+      "head": "12018a0b085d52dba96847e552d203787b15ed08",
+      "base_blob": "112566c7371b87a3f48d2feee5743ce3a8735cc5",
+      "incoming_blob": "cb10469f27f663465084abe996bd7544d7e7ee47",
+      "current_blob": "cf6637ba407608a564d02072467da282b8631a24",
+      "reason": "Git three-way conflict",
+      "method": "R29: preserve current locale strings and append missing VersionNotes.2.8.0.2511; JSON parse and original value preservation validated"
+    },
+    {
+      "branch": "main-2.8-followup",
+      "path": "locales/ru-RU.json",
+      "ancestor": "6f8b5da31a5951d9dd467d6ef1250c52f8e8176f",
+      "head": "12018a0b085d52dba96847e552d203787b15ed08",
+      "base_blob": "16866afcc7fb2fee42c2a1afdfb1758bbb831ff7",
+      "incoming_blob": "db9d4c038daf9f0112023167720532c83f92363a",
+      "current_blob": "e27639789c8827db18b0d1ff857c909676616d40",
+      "reason": "Git three-way conflict",
+      "method": "R29: preserve current locale strings and append missing VersionNotes.2.8.0.2511; JSON parse and original value preservation validated"
+    },
+    {
+      "branch": "main-2.8-followup",
+      "path": "locales/tr-TR.json",
+      "ancestor": "6f8b5da31a5951d9dd467d6ef1250c52f8e8176f",
+      "head": "12018a0b085d52dba96847e552d203787b15ed08",
+      "base_blob": "3ff14aca3731e6111b7a4b04c07768b6e25ac03c",
+      "incoming_blob": "914c95825d90d6f62e955ee3a87ee3d2ba460428",
+      "current_blob": "71653af93ca1951659285e0fd639a50913376157",
+      "reason": "Git three-way conflict",
+      "method": "R29: preserve current locale strings and append missing VersionNotes.2.8.0.2511; JSON parse and original value preservation validated"
+    },
+    {
+      "branch": "main-2.8-followup",
+      "path": "locales/zh-CN.json",
+      "ancestor": "6f8b5da31a5951d9dd467d6ef1250c52f8e8176f",
+      "head": "12018a0b085d52dba96847e552d203787b15ed08",
+      "base_blob": "bc3e62d9a5968211dab34f4e952be38d01aaadb7",
+      "incoming_blob": "d3b2dcbcb09e17faac16b16aeae82f93d2f493c6",
+      "current_blob": "18696ca80b92177f7255798f3619e77288b61441",
+      "reason": "Git three-way conflict",
+      "method": "R29: preserve current locale strings and append missing VersionNotes.2.8.0.2511; JSON parse and original value preservation validated"
+    },
+    {
+      "branch": "europe-R26",
+      "path": "Opsis.csproj",
+      "ancestor": "cf906d7840a37af3f1dcaa8977ccaa7a4f3278c3",
+      "head": "e72ee5877526c03ead97ce8bbdd098fe41b49838",
+      "base_blob": "1f17b31d288ecf513f79e787e42b5e85d6ef6ead",
+      "incoming_blob": "b742226f05b03903964117c7c9b50fa08ea2a145",
+      "current_blob": "4c34b27d32e34706f8697174f76e34e06c6df919",
+      "reason": "Git three-way conflict",
+      "method": "R30: retain current .NET 11, SkiaSharp and exclusion superset; port conditional Signature preview block and reference exclusion; Windows build pending"
+    },
+    {
+      "branch": "crawler-bridge",
+      "path": "Opsis.csproj",
+      "ancestor": "6f8b5da31a5951d9dd467d6ef1250c52f8e8176f",
+      "head": "9fa970b8a2f046fa6b8dcddc6acfa7ca62bd4f69",
+      "base_blob": "3abd65bfcf680e4eb33fdcf3d1f9b182c50fdec1",
+      "incoming_blob": "8cdf1a307c5df836e3327b199069ed7d735ad976",
+      "current_blob": "4c34b27d32e34706f8697174f76e34e06c6df919",
+      "reason": "Git three-way conflict",
+      "method": "R30: retain current .NET 11, SkiaSharp and exclusion superset; port conditional Signature preview block and reference exclusion; Windows build pending"
+    },
+    {
+      "branch": "main-2.8-followup",
+      "path": "Opsis.csproj",
+      "ancestor": "6f8b5da31a5951d9dd467d6ef1250c52f8e8176f",
+      "head": "12018a0b085d52dba96847e552d203787b15ed08",
+      "base_blob": "3abd65bfcf680e4eb33fdcf3d1f9b182c50fdec1",
+      "incoming_blob": "f1121e7b46c2d7a0418b94e65a2dd5c0ca21d04d",
+      "current_blob": "4c34b27d32e34706f8697174f76e34e06c6df919",
+      "reason": "do not downgrade RC; manually port relevant changes",
+      "method": "R30: retain current .NET 11, SkiaSharp and exclusion superset; port conditional Signature preview block and reference exclusion; Windows build pending"
+    },
+    {
+      "branch": "europe-R26",
+      "path": "src/Services/OpsisTaskbarDesigner.cs",
+      "ancestor": "cf906d7840a37af3f1dcaa8977ccaa7a4f3278c3",
+      "head": "e72ee5877526c03ead97ce8bbdd098fe41b49838",
+      "base_blob": "7f073c09d8c85b53837ac7d75dac8b996fa9f822",
+      "incoming_blob": "d64a95fd1542baecaa2331c5fde6fb2cce45ec84",
+      "current_blob": "6b302f23dd144e064d274c1c3330d4ed68e42738",
+      "reason": "Git three-way conflict",
+      "method": "R31: existing StartStudioPreferences.StartButtonStyle and OpsisStartButtonArt renderer supersede legacy duplicate StartGlassIcon boolean; retain single preference; runtime verification pending"
+    },
+    {
+      "branch": "europe-R26",
+      "path": "src/Widgets/wallpaper/index.html",
+      "ancestor": "cf906d7840a37af3f1dcaa8977ccaa7a4f3278c3",
+      "head": "e72ee5877526c03ead97ce8bbdd098fe41b49838",
+      "base_blob": "af4858f238d89f1a75b68301f08d39c1fd8e8d97",
+      "incoming_blob": "38746cfb9887f73ca78aaaf0e5ceaedd9bafc6fd",
+      "current_blob": "d1e1162ac57433b6ff5815846712288e91523a8e",
+      "reason": "Git three-way conflict",
+      "method": "R31: retain explicit user fixed-white policy over legacy adaptive dark text; R26 atmosphere/card/signature incoming added lines present except obsolete GPU sampling guard; regression coverage added; runtime verification pending"
+    },
+    {
+      "branch": "main-2.8-followup",
+      "path": "src/Widgets/wallpaper/index.html",
+      "ancestor": "6f8b5da31a5951d9dd467d6ef1250c52f8e8176f",
+      "head": "12018a0b085d52dba96847e552d203787b15ed08",
+      "base_blob": "54c8430d04ede33bf10d6c840b1f364e6ec7d2f4",
+      "incoming_blob": "ee975b0dfb1d315acf2a07739aa040e6e2a0f1d0",
+      "current_blob": "d1e1162ac57433b6ff5815846712288e91523a8e",
+      "reason": "Git three-way conflict",
+      "method": "R31: retain explicit user fixed-white policy over legacy adaptive dark text; R26 atmosphere/card/signature incoming added lines present except obsolete GPU sampling guard; regression coverage added; runtime verification pending"
+    },
+    {
+      "branch": "main-2.8-followup",
+      "path": "tests/WeatherInfoTone.test.cjs",
+      "ancestor": "6f8b5da31a5951d9dd467d6ef1250c52f8e8176f",
+      "head": "12018a0b085d52dba96847e552d203787b15ed08",
+      "base_blob": null,
+      "incoming_blob": "7f3550490d383f4df5ade4831b25dfe15c0afdee",
+      "current_blob": "3846233faea2c9d58ac52e7b1f78e00498577356",
+      "reason": "add/add or missing common base",
+      "method": "R31: retain explicit user fixed-white policy over legacy adaptive dark text; R26 atmosphere/card/signature incoming added lines present except obsolete GPU sampling guard; regression coverage added; runtime verification pending"
+    },
+    {
+      "branch": "europe-R26",
+      "path": "src/UI/ThemeManager.cs",
+      "ancestor": "cf906d7840a37af3f1dcaa8977ccaa7a4f3278c3",
+      "head": "e72ee5877526c03ead97ce8bbdd098fe41b49838",
+      "base_blob": "65a1725f5bf32cc77b4da174c8432247602efe3b",
+      "incoming_blob": "ccad9f4050f210b152c4165bc153ab334ed05424",
+      "current_blob": "15f7be6c8d6d76f8d9dbc9be1c18dbbcbaabbc60",
+      "reason": "Git three-way conflict",
+      "method": "R32: targeted incoming palette and launcher styling/search changes; retain current accent, power actions and Quick Look; runtime tests pending"
+    },
+    {
+      "branch": "europe-R26",
+      "path": "src/Widgets/DesktopLauncher.cs",
+      "ancestor": "cf906d7840a37af3f1dcaa8977ccaa7a4f3278c3",
+      "head": "e72ee5877526c03ead97ce8bbdd098fe41b49838",
+      "base_blob": "e2179b48a48bbb16d04ce83e90fc1cb49dc57a61",
+      "incoming_blob": "c17a93b5c4999005d4a94d07bb244397115871d7",
+      "current_blob": "af665120d51958c37662b4cc92a1133a8b1cb2dc",
+      "reason": "Git three-way conflict",
+      "method": "R32: targeted incoming palette and launcher styling/search changes; retain current accent, power actions and Quick Look; runtime tests pending"
+    },
+    {
+      "branch": "europe-R26",
+      "path": "src/Widgets/DeskFlipEngine.cs",
+      "ancestor": "cf906d7840a37af3f1dcaa8977ccaa7a4f3278c3",
+      "head": "e72ee5877526c03ead97ce8bbdd098fe41b49838",
+      "base_blob": "ed61a8e217750b55180c60cd72efedfe429e94a0",
+      "incoming_blob": "2137b0e3c8073dc08f0b107b97441a0551e91ac4",
+      "current_blob": "781ccc6504e2e3392219fa2362de619cf9f970de",
+      "reason": "Git three-way conflict",
+      "method": "R42: retain current asynchronous capture and three persisted styles; port high contrast, reduced motion, accessibility name and valid HWND check. Windows tests pending."
+    },
+    {
+      "branch": "europe-R26",
+      "path": "src/Widgets/ReplacementTaskbar.cs",
+      "ancestor": "cf906d7840a37af3f1dcaa8977ccaa7a4f3278c3",
+      "head": "e72ee5877526c03ead97ce8bbdd098fe41b49838",
+      "base_blob": "7968197a4e1d886a928df606273baa992d5fa67a",
+      "incoming_blob": "1e0a0d108e5b9f7c997d7b492029043944b45d17",
+      "current_blob": "17bb5cde40d305cca7436d25169ef6d077ccafbe",
+      "reason": "Git three-way conflict",
+      "method": "R44: port Signature/high contrast palette, pause-aware pulse and DPI cache key; preserve per-monitor profiles, segmentation, thumbnail style and existing Start art, no duplicate flag. Windows regression pending."
+    },
+    {
+      "branch": "europe-R26",
+      "path": "tests/Opsis.ExperienceSmoke/Program.cs",
+      "ancestor": "cf906d7840a37af3f1dcaa8977ccaa7a4f3278c3",
+      "head": "e72ee5877526c03ead97ce8bbdd098fe41b49838",
+      "base_blob": "bd0c7c724ed13323d527fea4bb8d57d2e18f4ecf",
+      "incoming_blob": "903ba3d0c3432d224cbf2c7cbbb46a807c0a824b",
+      "current_blob": "4d749bed41d34a4e8a53552fde53e60a90814982",
+      "reason": "Git three-way conflict",
+      "method": "R45: incoming older single-meter Rainmeter rejection is superseded by current composite native widget support. Retain existing tests for both rows, persistence and rejection of executable measures; no regression to single meter. CI execution pending."
+    },
+    {
+      "branch": "desktop-materials",
+      "path": ".github/workflows/windows-audit.yml",
+      "ancestor": "fbc81328622ec630f3bbc7171cd72dc8708c1a66",
+      "head": "2d15e7814e7a5e6e0e20eae50d9dd7bbceae501c",
+      "base_blob": "8c7c44169d73d9ae73f216593d715dcfaf4628ef",
+      "incoming_blob": "99d269ba17061cd66a56914fbbd2f34bd7c5caa1",
+      "current_blob": "0f5361c96dec80e937d844de1fb7a67ed60196a8",
+      "reason": "workflow edits require connector review and workflows permission",
+      "method": "R53: retained incoming legacy release trigger plus current RC branches, added integration branch, preserved existing self-test/audit and version-neutral unreleased artifact names."
+    },
+    {
+      "branch": "main-2.8-followup",
+      "path": ".github/workflows/windows-audit.yml",
+      "ancestor": "6f8b5da31a5951d9dd467d6ef1250c52f8e8176f",
+      "head": "12018a0b085d52dba96847e552d203787b15ed08",
+      "base_blob": "8c7c44169d73d9ae73f216593d715dcfaf4628ef",
+      "incoming_blob": "987d5f27309301f3abe0e6c2ed65d1c123b484e4",
+      "current_blob": "0f5361c96dec80e937d844de1fb7a67ed60196a8",
+      "reason": "workflow edits require connector review and workflows permission",
+      "method": "R53: retained incoming legacy release trigger plus current RC branches, added integration branch, preserved existing self-test/audit and version-neutral unreleased artifact names."
+    },
+    {
+      "branch": "crawler-bridge",
+      "path": ".github/workflows/plugin-compatibility.yml",
+      "ancestor": "6f8b5da31a5951d9dd467d6ef1250c52f8e8176f",
+      "head": "9fa970b8a2f046fa6b8dcddc6acfa7ca62bd4f69",
+      "base_blob": "9c5ed6756222f4eb9e93ddf48e8f0e222ed5b280",
+      "incoming_blob": "211dfb9669c6398c489abca594b8688b4752e922",
+      "current_blob": "c1f6be850fb55e5debe078f8ea122795ca869758",
+      "reason": "workflow edits require connector review and workflows permission",
+      "method": "R53: port checked existing provider refs, canonical staged UI, strict ABI SHA256 and UI file version checks; keep current check-plugin-dll-versions.ps1 (plugin assembly/file version, contract identity), runtime smoke and Media Suite tests. Runtime certification pending."
+    },
+    {
+      "branch": "europe-R26",
+      "path": "src/UI/MainWindow.cs",
+      "ancestor": "cf906d7840a37af3f1dcaa8977ccaa7a4f3278c3",
+      "head": "e72ee5877526c03ead97ce8bbdd098fe41b49838",
+      "base_blob": "b897e036615a53443e0e36c4f1f3da0473578eec",
+      "incoming_blob": "d458247701c625bb880d91777e3e4306976b71d3",
+      "current_blob": "7b2bd26bf1d0e5ddbc134dfefeb7f79a21f33567",
+      "reason": "Git three-way conflict",
+      "method": "R53: exposed SignatureGlass in canonical theme selector, existing DesktopMaterials.ApplySignature with default-No confirmation, guarded shared button gradient. Retained existing AppWindowIcon static brand and stopped pulse (user requires exact asset), existing persisted DeskFlip style picker supersedes incoming one-shot layout commands. No duplicate controls. UI runtime certification pending."
+    }
+  ],
+  "feature_audit": {
+    "version": "R79",
+    "target": "3.0.0.3200",
+    "source_reviewed_at": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+    "original_proposals": "ROADMAP-100-EL.md",
+    "legacy_backlog": "docs/REMAINING-TASKS-3.0.0.3200.md",
+    "canonical_history": "docs/SOURCE-CONSOLIDATION.md",
+    "classification": "Source present = named source anchor, not complete feature; partial = related code/history; review = no sufficient evidence. No item release-certified by this audit.",
+    "counts": {
+      "PARTIAL_OR_RELATED_EVIDENCE": 31,
+      "REVIEW_REQUIRED": 43,
+      "SOURCE_PRESENT_RUNTIME_GATE_OPEN": 26
+    },
+    "proposals": [
+      {
+        "id": 1,
+        "requirement": "Δείκτης CPU ανά λειτουργία, με ξεχωριστή ένδειξη για τις διεργασίες WebView2.",
+        "pass": "MP02/03",
+        "status": "PARTIAL_OR_RELATED_EVIDENCE",
+        "evidencePath": "src/Services/UiResourceAudit.cs",
+        "evidence": "Describe medianHostCpuCorePercent/medianWebViewCpuCorePercent; no per-feature exclusive attribution",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 2,
+        "requirement": "Καταγραφή του 95ου και 99ου εκατοστημορίου χρόνου καρέ ανά οθόνη.",
+        "pass": "MP02/03",
+        "status": "REVIEW_REQUIRED",
+        "evidencePath": null,
+        "evidence": "Measure actual per-monitor p95/p99 frame reporting and test evidence",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 3,
+        "requirement": "Μέτρηση του χρόνου από το κλικ μέχρι το πρώτο ζωγραφισμένο καρέ της σελίδας.",
+        "pass": "MP02/03",
+        "status": "SOURCE_PRESENT_RUNTIME_GATE_OPEN",
+        "evidencePath": "src/Services/UiResourceAudit.cs",
+        "evidence": "MeasurePagePaint and navigation firstPaintMs; click-to-first-paint needs real UI proof",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 4,
+        "requirement": "Σύγκριση private bytes μετά από επαναλαμβανόμενο άνοιγμα και κλείσιμο κάθε widget.",
+        "pass": "MP02/03",
+        "status": "SOURCE_PRESENT_RUNTIME_GATE_OPEN",
+        "evidencePath": "src/Services/UiResourceAudit.cs",
+        "evidence": "widgetDeltas from before/closed samples; repeat/stress proof pending",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 5,
+        "requirement": "Εντοπισμός αύξησης GDI και USER handles μετά από αλλαγές skin.",
+        "pass": "MP02/03",
+        "status": "SOURCE_PRESENT_RUNTIME_GATE_OPEN",
+        "evidencePath": "src/Services/UiResourceAudit.cs",
+        "evidence": "skinDeltas, GdiObjects/UserObjects; long-run gate open",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 6,
+        "requirement": "Μία κοινή δειγματοληψία αισθητήρων για όλα τα widgets και τις οθόνες.",
+        "pass": "MP02/03",
+        "status": "SOURCE_PRESENT_RUNTIME_GATE_OPEN",
+        "evidencePath": "src/Services/GpuMonitorService.cs",
+        "evidence": "RequestSample and one ReadSensors worker; native driver proof pending; R80 negative retry and nonactivating GPU audit (source only).",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 7,
+        "requirement": "Αναστολή σχεδίασης χωριστά στην οθόνη που καλύπτεται από παιχνίδι.",
+        "pass": "MP02/03",
+        "status": "SOURCE_PRESENT_RUNTIME_GATE_OPEN",
+        "evidencePath": "src/Services/AppActivity.cs",
+        "evidence": "IsPausedFor per screen, coverage and fullscreenDevice; multi-monitor tests pending",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 8,
+        "requirement": "Αυτόματη μείωση ανάλυσης του wallpaper όταν υπερβαίνεται ο στόχος χρόνου καρέ.",
+        "pass": "MP02/03",
+        "status": "REVIEW_REQUIRED",
+        "evidencePath": null,
+        "evidence": "Verify adaptive wallpaper resolution based on measured frame budget",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 9,
+        "requirement": "Πάγωμα του τελευταίου καρέ σε απομακρυσμένη συνεδρία με δυνατότητα εξαίρεσης.",
+        "pass": "MP02/03",
+        "status": "PARTIAL_OR_RELATED_EVIDENCE",
+        "evidencePath": "src/Services/AppActivity.cs",
+        "evidence": "remote pause state; verify last-frame freeze and override",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 10,
+        "requirement": "Προβολή χρονογραμμής που συσχετίζει αιχμές CPU με αλλαγή σκηνής ή φόρτωση πρόσθετου.",
+        "pass": "MP02/03",
+        "status": "PARTIAL_OR_RELATED_EVIDENCE",
+        "evidencePath": "src/Services/UiResourceAudit.cs",
+        "evidence": "Activity/Mark, cpuSpikes, relatedEvent; verify visual timeline and provider events",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 11,
+        "requirement": "Προεπισκόπηση των αρχείων ενός πακέτου wallpaper πριν από την εισαγωγή.",
+        "pass": "MP01/04/06/09",
+        "status": "SOURCE_PRESENT_RUNTIME_GATE_OPEN",
+        "evidencePath": "src/Services/WallpaperPackages.cs",
+        "evidence": "Inspect returns Files/UncompressedBytes/EntryPoint/ScriptCount; verify UI preview",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 12,
+        "requirement": "Δήλωση δικαιωμάτων ανά πρόσθετο για δίκτυο, ήχο και πρόσβαση σε τοπικά αρχεία.",
+        "pass": "MP01/04/06/09",
+        "status": "PARTIAL_OR_RELATED_EVIDENCE",
+        "evidencePath": "src/Services/PluginCapabilityManifest.cs",
+        "evidence": "Read/Summary network/audio/local files declaration; enforce consent/SDK2 separately",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 13,
+        "requirement": "Ανακλητή συναίνεση ανά τοπικό web widget για τη λήψη στοιχείων συστήματος.",
+        "pass": "MP01/04/06/09",
+        "status": "SOURCE_PRESENT_RUNTIME_GATE_OPEN",
+        "evidencePath": "src/Services/WidgetConsentStore.cs",
+        "evidence": "Fingerprint/Allowed/Grant/Revoke; verify control and revocation enforcement",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 14,
+        "requirement": "Εμφάνιση εκδότη και κατάστασης υπογραφής στο παράθυρο εγκατάστασης πρόσθετου.",
+        "pass": "MP01/04/06/09",
+        "status": "REVIEW_REQUIRED",
+        "evidencePath": null,
+        "evidence": "Verify publisher/signature on install UI; do not infer from AuthenticodeVerifier filename",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 15,
+        "requirement": "Έλεγχος ακεραιότητας του update πριν από αντικατάσταση αρχείων.",
+        "pass": "MP01/04/06/09",
+        "status": "REVIEW_REQUIRED",
+        "evidencePath": null,
+        "evidence": "Verify integrity enforcement before actual update replacement",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 16,
+        "requirement": "Επαναφορά προηγούμενης έκδοσης αν το νέο προφίλ αποτύχει να ανοίξει.",
+        "pass": "MP01/04/06/09",
+        "status": "PARTIAL_OR_RELATED_EVIDENCE",
+        "evidencePath": "tests/Opsis.ExperienceSmoke/Program.cs",
+        "evidence": "failed recovery cannot modify live settings; real rollback test pending",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 17,
+        "requirement": "Αναίρεση μαζικής μετακίνησης εικονιδίων με αποθήκευση της αρχικής θέσης.",
+        "pass": "MP01/04/06/09",
+        "status": "PARTIAL_OR_RELATED_EVIDENCE",
+        "evidencePath": "src/Widgets/DesktopIconVisibilityEngine.cs",
+        "evidence": "bulk undo/positions and original journal; Explorer fixture test pending",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 18,
+        "requirement": "Προσωρινή απομόνωση συγκεκριμένου πρόσθετου μετά από διαδοχικές αστοχίες.",
+        "pass": "MP01/04/06/09",
+        "status": "SOURCE_PRESENT_RUNTIME_GATE_OPEN",
+        "evidencePath": "src/Services/PluginFailureQuarantine.cs",
+        "evidence": "IsQuarantined/RecordFailure/Clear; verify thresholds and runtime recovery; R81 gates callbacks and blocks in-process replacement after failed Stop (source only).",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 19,
+        "requirement": "Εξαγωγή διαγνωστικών με προεπισκόπηση και απόκρυψη ονομάτων αρχείων και τοποθεσίας.",
+        "pass": "MP01/04/06/09",
+        "status": "REVIEW_REQUIRED",
+        "evidencePath": null,
+        "evidence": "Verify redacted export preview and path/location redaction",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 20,
+        "requirement": "Έλεγχος επαναφοράς μετά από διακοπή ρεύματος την ώρα αποθήκευσης προφίλ.",
+        "pass": "MP01/04/06/09",
+        "status": "PARTIAL_OR_RELATED_EVIDENCE",
+        "evidencePath": "src/Services/AtomicFile.cs",
+        "evidence": "durable staged JSON, recovery and E2E crash stage; run interrupted-write test",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 21,
+        "requirement": "Επικάλυψη της ανιχνευμένης γραμμής ουρανού στην προεπισκόπηση.",
+        "pass": "MP08",
+        "status": "PARTIAL_OR_RELATED_EVIDENCE",
+        "evidencePath": "src/UI/SkylineMaskEditorForm.cs",
+        "evidence": "mask editor source present; verify overlay in preview",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 22,
+        "requirement": "Διόρθωση της μάσκας με πινέλο ανά φωτογραφία.",
+        "pass": "MP08",
+        "status": "PARTIAL_OR_RELATED_EVIDENCE",
+        "evidencePath": "src/UI/SkylineMaskEditorForm.cs",
+        "evidence": "OpenFor editor; verify brush vs actual control behavior",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 23,
+        "requirement": "Αποθήκευση της μάσκας με αποτύπωμα εικόνας ώστε να μην εφαρμόζεται σε άλλη λήψη.",
+        "pass": "MP08",
+        "status": "SOURCE_PRESENT_RUNTIME_GATE_OPEN",
+        "evidencePath": "src/UI/SkylineMaskEditorForm.cs",
+        "evidence": "SHA256.HashData and saved Sha256 match; verify mismatch rejection",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 24,
+        "requirement": "Ταυτόχρονη προεπισκόπηση χαραυγής, μεσημεριού και νύχτας.",
+        "pass": "MP08",
+        "status": "PARTIAL_OR_RELATED_EVIDENCE",
+        "evidencePath": "src/UI/WeatherTriptychForm.cs",
+        "evidence": "three graded panel render path; verify actual scene rather than illustration",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 25,
+        "requirement": "Επιλογή σημείου ενδιαφέροντος για την περικοπή σε κατακόρυφη οθόνη.",
+        "pass": "MP08",
+        "status": "REVIEW_REQUIRED",
+        "evidencePath": null,
+        "evidence": "Verify persisted portrait crop point and scene rendering",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 26,
+        "requirement": "Ομαλή μετάβαση στον τελευταίο διαθέσιμο καιρό όταν χαθεί η σύνδεση.",
+        "pass": "MP08",
+        "status": "PARTIAL_OR_RELATED_EVIDENCE",
+        "evidencePath": "docs/SOURCE-CONSOLIDATION.md",
+        "evidence": "R50 coordinate-keyed weather cache; exact offline transition test pending",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 27,
+        "requirement": "Ένδειξη ηλικίας και πηγής των δεδομένων καιρού επάνω στο widget.",
+        "pass": "MP08",
+        "status": "PARTIAL_OR_RELATED_EVIDENCE",
+        "evidencePath": "docs/SOURCE-CONSOLIDATION.md",
+        "evidence": "R50 configured weather location/source and white text; actual age/source verification",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 28,
+        "requirement": "Ανεξάρτητος έλεγχος έντασης για βροχή στο τζάμι και βροχή στο τοπίο.",
+        "pass": "MP08",
+        "status": "REVIEW_REQUIRED",
+        "evidencePath": null,
+        "evidence": "Verify separate scene and glass rain intensity control",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 29,
+        "requirement": "Διαδρομή ήλιου και σελήνης με βάση ημερομηνία και γεωγραφικό πλάτος.",
+        "pass": "MP08",
+        "status": "REVIEW_REQUIRED",
+        "evidencePath": null,
+        "evidence": "Verify astronomical date/latitude moon/sun path",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 30,
+        "requirement": "Έλεγχος αναγνωσιμότητας ρολογιού στην πραγματική θέση του πάνω στη φωτογραφία.",
+        "pass": "MP08",
+        "status": "PARTIAL_OR_RELATED_EVIDENCE",
+        "evidencePath": "docs/SOURCE-CONSOLIDATION.md",
+        "evidence": "R50 fixed white text and weather-priority music geometry; actual contrast on photos pending",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 31,
+        "requirement": "Αναγνώριση διάταξης οθονών μετά τη σύνδεση docking station.",
+        "pass": "MP05/07",
+        "status": "SOURCE_PRESENT_RUNTIME_GATE_OPEN",
+        "evidencePath": "src/Services/MonitorTopologyService.cs",
+        "evidence": "Current/Fingerprint/Remember/Known and DockWindowRestorer",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 32,
+        "requirement": "Πανοραμικό φόντο μόνο σε επιλεγμένο ζεύγος οθονών.",
+        "pass": "MP05/07",
+        "status": "REVIEW_REQUIRED",
+        "evidencePath": null,
+        "evidence": "Verify selective monitor pair panorama",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 33,
+        "requirement": "Αντιστάθμιση πλαισίων για πανοραμικές εικόνες.",
+        "pass": "MP05/07",
+        "status": "REVIEW_REQUIRED",
+        "evidencePath": null,
+        "evidence": "Verify bezel compensation",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 34,
+        "requirement": "Σταθερή θέση widget σε οθόνες με διαφορετικό DPI.",
+        "pass": "MP05/07",
+        "status": "PARTIAL_OR_RELATED_EVIDENCE",
+        "evidencePath": "src/Services/MonitorTopologyService.cs",
+        "evidence": "stable IDs and DPI; verify widget position restore",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 35,
+        "requirement": "Προεπισκόπηση προφίλ με χρονόμετρο επαναφοράς.",
+        "pass": "MP05/07",
+        "status": "REVIEW_REQUIRED",
+        "evidencePath": null,
+        "evidence": "Verify timed preview and automatic rollback",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 36,
+        "requirement": "Κανόνες προφίλ ανά συνδεδεμένο τροφοδοτικό και στάθμη μπαταρίας.",
+        "pass": "MP05/07",
+        "status": "REVIEW_REQUIRED",
+        "evidencePath": null,
+        "evidence": "Verify power/battery profile rule action, not just adaptive power tier",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 37,
+        "requirement": "Επαναφορά παραθύρων στην αρχική οθόνη μετά από προσωρινή αποσύνδεση.",
+        "pass": "MP05/07",
+        "status": "SOURCE_PRESENT_RUNTIME_GATE_OPEN",
+        "evidencePath": "src/Services/MonitorTopologyService.cs",
+        "evidence": "DockWindowRestorer remembered placements and monitor IDs; reconnect test pending",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 38,
+        "requirement": "Διαφορετική πυκνότητα πληροφοριών σε κατακόρυφη δευτερεύουσα οθόνη.",
+        "pass": "MP05/07",
+        "status": "REVIEW_REQUIRED",
+        "evidencePath": null,
+        "evidence": "Verify portrait-specific information density",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 39,
+        "requirement": "Μεταφορά προφίλ σε άλλο PC με χειροκίνητη αντιστοίχιση οθονών.",
+        "pass": "MP05/07",
+        "status": "SOURCE_PRESENT_RUNTIME_GATE_OPEN",
+        "evidencePath": "src/Services/WorkspaceProfileService.cs",
+        "evidence": "PreviewPortableMonitors/import mapping; ProfileMonitorMappingDialog",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 40,
+        "requirement": "Εξαίρεση οθόνης παρουσίασης από προσωπικές ειδοποιήσεις και στοιχεία πολυμέσων.",
+        "pass": "MP05/07",
+        "status": "PARTIAL_OR_RELATED_EVIDENCE",
+        "evidencePath": "docs/SOURCE-CONSOLIDATION.md",
+        "evidence": "R57 privacy check before audio allocation; verify all notifications and metadata",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 41,
+        "requirement": "Προεπισκόπηση ζώνης με το πληκτρολόγιο πριν από τη μετακίνηση.",
+        "pass": "MP05",
+        "status": "PARTIAL_OR_RELATED_EVIDENCE",
+        "evidencePath": "src/Widgets/ZoneLayoutEditorForm.cs",
+        "evidence": "preview keyboard arrows/home/end; verify window move preview",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 42,
+        "requirement": "Αναίρεση τελευταίας ομαδικής τακτοποίησης παραθύρων.",
+        "pass": "MP05",
+        "status": "REVIEW_REQUIRED",
+        "evidencePath": null,
+        "evidence": "Verify undo batch window arrangement",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 43,
+        "requirement": "Κανόνες αντιστοίχισης εφαρμογής και τύπου εγγράφου σε ζώνη.",
+        "pass": "MP05",
+        "status": "REVIEW_REQUIRED",
+        "evidencePath": null,
+        "evidence": "Verify app/document rule and conflict with AutoTile",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 44,
+        "requirement": "Προσωρινή επέκταση παραθύρου σε δύο γειτονικές ζώνες.",
+        "pass": "MP05",
+        "status": "REVIEW_REQUIRED",
+        "evidencePath": null,
+        "evidence": "Verify spanning two adjacent zones",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 45,
+        "requirement": "Αλλαγή μεγέθους δύο γειτονικών ζωνών από κοινό όριο.",
+        "pass": "MP05",
+        "status": "REVIEW_REQUIRED",
+        "evidencePath": null,
+        "evidence": "Verify shared divider resizing",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 46,
+        "requirement": "Διατάξεις ειδικά για κατακόρυφη εργασία κώδικα και τεκμηρίωσης.",
+        "pass": "MP05",
+        "status": "REVIEW_REQUIRED",
+        "evidencePath": null,
+        "evidence": "Verify portrait code/document presets",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 47,
+        "requirement": "Εξαγωγή διάταξης σε αναγνώσιμο JSON με προεπισκόπηση εισαγωγής.",
+        "pass": "MP05",
+        "status": "PARTIAL_OR_RELATED_EVIDENCE",
+        "evidencePath": "src/Widgets/ZoneLayoutEditorForm.cs",
+        "evidence": "imported layout and preview panel; verify JSON export/import",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 48,
+        "requirement": "Επαναφορά ομάδας εφαρμογών με σωστή σειρά εκκίνησης.",
+        "pass": "MP05",
+        "status": "PARTIAL_OR_RELATED_EVIDENCE",
+        "evidencePath": "src/Widgets/DeskStripWindow.cs",
+        "evidence": "LaunchGroups settings; actual ordered restore not established",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 49,
+        "requirement": "Εξαιρέσεις για διαλόγους, παλέτες εργαλείων και προσωρινά παράθυρα.",
+        "pass": "MP05",
+        "status": "REVIEW_REQUIRED",
+        "evidencePath": null,
+        "evidence": "Verify dialog/palette/temp-window exclusion",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 50,
+        "requirement": "Προεπισκόπηση των παραθύρων που θα μετακινηθούν όταν αλλάξει προφίλ.",
+        "pass": "MP05",
+        "status": "REVIEW_REQUIRED",
+        "evidencePath": null,
+        "evidence": "Verify profile movement preview",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 51,
+        "requirement": "Προσομοίωση κανόνα ταξινόμησης πριν μετακινηθεί αρχείο.",
+        "pass": "MP04",
+        "status": "PARTIAL_OR_RELATED_EVIDENCE",
+        "evidencePath": "src/Containers/ContainerHost.Organization.cs",
+        "evidence": "SaveFileRules/RefreshOrganization; verify dry-run with no actual file movement",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 52,
+        "requirement": "Εντοπισμός σύγκρουσης όταν δύο κανόνες διεκδικούν το ίδιο αρχείο.",
+        "pass": "MP04",
+        "status": "REVIEW_REQUIRED",
+        "evidencePath": null,
+        "evidence": "Verify rule conflict detection before any mutation",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 53,
+        "requirement": "Προβολή φακέλου ως container με παρακολούθηση μόνο όσο είναι ορατό.",
+        "pass": "MP04",
+        "status": "PARTIAL_OR_RELATED_EVIDENCE",
+        "evidencePath": "src/Containers/ContainerWindow.cs",
+        "evidence": "portal source and RefreshPortal; visibility-only watcher test",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 54,
+        "requirement": "Φίλτρο καρτέλας κατά τύπο, ημερομηνία ή ετικέτα.",
+        "pass": "MP04",
+        "status": "REVIEW_REQUIRED",
+        "evidencePath": null,
+        "evidence": "Verify all three tab filter modes",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 55,
+        "requirement": "Άμεση αναζήτηση σε όλα τα containers με μετάβαση στο αποτέλεσμα.",
+        "pass": "MP04",
+        "status": "REVIEW_REQUIRED",
+        "evidencePath": null,
+        "evidence": "Locate and exercise SpotSearch route; inventory alone insufficient",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 56,
+        "requirement": "Προσωρινή ανάπτυξη κλειστού container κατά τη μεταφορά αρχείου.",
+        "pass": "MP04",
+        "status": "REVIEW_REQUIRED",
+        "evidencePath": null,
+        "evidence": "Verify collapsed-container temporary expansion on drag",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 57,
+        "requirement": "Επισήμανση συντομεύσεων με ανύπαρκτο προορισμό και μαζική επιδιόρθωση.",
+        "pass": "MP04",
+        "status": "SOURCE_PRESENT_RUNTIME_GATE_OPEN",
+        "evidencePath": "src/Containers/ContainerHost.cs",
+        "evidence": "InspectBrokenShortcutsAsync calls InspectAndRepairAsync; verify repair controls",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 58,
+        "requirement": "Κάδος πρόσφατων αλλαγών διάταξης με επαναφορά ανά container.",
+        "pass": "MP04",
+        "status": "SOURCE_PRESENT_RUNTIME_GATE_OPEN",
+        "evidencePath": "src/Containers/ContainerHost.cs",
+        "evidence": "_layoutHistory.Remember/Save and previous container restore; fault test",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 59,
+        "requirement": "Αντιγραφή διάταξης container σε δεύτερο workspace χωρίς αντιγραφή των αρχείων.",
+        "pass": "MP04",
+        "status": "SOURCE_PRESENT_RUNTIME_GATE_OPEN",
+        "evidencePath": "src/Containers/ContainerHost.Organization.cs",
+        "evidence": "CopyContainerIntoLayout/CopyContainerIntoNewLayout; verify no files copied",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 60,
+        "requirement": "Ένδειξη διαδρομής πριν από σύρσιμο μεταξύ τοπικού και δικτυακού φακέλου.",
+        "pass": "MP04",
+        "status": "REVIEW_REQUIRED",
+        "evidencePath": null,
+        "evidence": "Verify path indication before local/network drag",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 61,
+        "requirement": "Ελληνική αναζήτηση χωρίς τόνους και με εναλλακτική πληκτρολόγηση Greeklish.",
+        "pass": "MP05/07",
+        "status": "PARTIAL_OR_RELATED_EVIDENCE",
+        "evidencePath": "src/Widgets/DesktopLauncher.cs",
+        "evidence": "Score delegates SearchLanguage.Score; verify accent and Greeklish behavior",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 62,
+        "requirement": "Εμφάνιση της συντόμευσης δίπλα σε κάθε αποτέλεσμα εντολής.",
+        "pass": "MP05/07",
+        "status": "REVIEW_REQUIRED",
+        "evidencePath": null,
+        "evidence": "Verify shortcut label for each command",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 63,
+        "requirement": "Ιστορικό εντολών με τοπική διαγραφή ανά εγγραφή.",
+        "pass": "MP05/07",
+        "status": "SOURCE_PRESENT_RUNTIME_GATE_OPEN",
+        "evidencePath": "src/Services/CommandHistoryStore.cs",
+        "evidence": "RecentIds/RecordUse/Remove; verify UI deletion",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 64,
+        "requirement": "Καρφίτσωμα αναζήτησης ως έτοιμης ενέργειας στο dock.",
+        "pass": "MP05/07",
+        "status": "REVIEW_REQUIRED",
+        "evidencePath": null,
+        "evidence": "Verify pinned search action, not normal dock app pin",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 65,
+        "requirement": "Προεπισκόπηση εγγράφου από τον εκκινητή χωρίς εκκίνηση εφαρμογής.",
+        "pass": "MP05/07",
+        "status": "SOURCE_PRESENT_RUNTIME_GATE_OPEN",
+        "evidencePath": "src/Widgets/DesktopLauncher.cs",
+        "evidence": "F3 PreviewSelection/QuickLookPreview.Show; verify supported docs",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 66,
+        "requirement": "Ομαδοποίηση πολλών παραθύρων της ίδιας εφαρμογής στο DeskStrip.",
+        "pass": "MP05/07",
+        "status": "PARTIAL_OR_RELATED_EVIDENCE",
+        "evidencePath": "src/Widgets/DeskStripWindow.cs",
+        "evidence": "running apps/previews and item key; grouping behavior test",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 67,
+        "requirement": "Προσαρμογή σειράς εικονιδίων χωριστά για κάθε οθόνη.",
+        "pass": "MP05/07",
+        "status": "SOURCE_PRESENT_RUNTIME_GATE_OPEN",
+        "evidencePath": "src/Widgets/DeskStripWindow.cs",
+        "evidence": "MonitorPinnedOrder persisted; verify independent monitor order; R81 mirror timer only for AllMonitors (source, runtime gate open).",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 68,
+        "requirement": "Ένδειξη ενεργού workspace δίπλα στο dock.",
+        "pass": "MP05/07",
+        "status": "SOURCE_PRESENT_RUNTIME_GATE_OPEN",
+        "evidencePath": "src/Widgets/DeskStripWindow.cs",
+        "evidence": "ShowWorkspaceLabel/UpdateWorkspaceLabel",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 69,
+        "requirement": "Κατάλογος συγκρούσεων καθολικών συντομεύσεων με δοκιμή νέου συνδυασμού.",
+        "pass": "MP05/07",
+        "status": "PARTIAL_OR_RELATED_EVIDENCE",
+        "evidencePath": "src/Widgets/DesktopLauncher.cs",
+        "evidence": "HotkeyDiagnosticDialog.Open; verify actual conflict and new combination test",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 70,
+        "requirement": "Εναλλακτική συμπαγής προβολή εντολών για μικρή ανάλυση.",
+        "pass": "MP05/07",
+        "status": "REVIEW_REQUIRED",
+        "evidencePath": null,
+        "evidence": "Verify compact command view at small resolution",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 71,
+        "requirement": "Κοινό πλέγμα στοίχισης για ρολόι, καιρό και system monitor.",
+        "pass": "MP02/06/07",
+        "status": "REVIEW_REQUIRED",
+        "evidencePath": null,
+        "evidence": "Verify common widget snap grid",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 72,
+        "requirement": "Προσωρινό ξεκλείδωμα όλων των widgets με αντίστροφη μέτρηση.",
+        "pass": "MP02/06/07",
+        "status": "REVIEW_REQUIRED",
+        "evidencePath": null,
+        "evidence": "Verify temporary unlock countdown",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 73,
+        "requirement": "Προσαρμογή συχνότητας ανανέωσης ανά widget.",
+        "pass": "MP02/06/07",
+        "status": "PARTIAL_OR_RELATED_EVIDENCE",
+        "evidencePath": "docs/SOURCE-CONSOLIDATION.md",
+        "evidence": "R63 adaptive music cadence and R72 activity demand; per-widget controls not certified",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 74,
+        "requirement": "Σήμανση μη διαθέσιμου αισθητήρα αντί για πλασματική μηδενική τιμή.",
+        "pass": "MP02/06/07",
+        "status": "SOURCE_PRESENT_RUNTIME_GATE_OPEN",
+        "evidencePath": "src/Services/GpuMonitorService.cs",
+        "evidence": "nullable sensor values; UI unknown display still needs verification; R80 unavailable GPU negative result cached 5 minutes, driver fixture pending.",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 75,
+        "requirement": "Επιλογή συγκεκριμένης GPU σε σύστημα με ενσωματωμένα και διακριτά γραφικά.",
+        "pass": "MP02/06/07",
+        "status": "SOURCE_PRESENT_RUNTIME_GATE_OPEN",
+        "evidencePath": "src/Widgets/WidgetEngine.cs",
+        "evidence": "SystemMonitorGpuIndex and GpuStep; physical multi-GPU test",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 76,
+        "requirement": "Απεικόνιση τάσης θερμοκρασίας σε κυλιόμενο διάστημα.",
+        "pass": "MP02/06/07",
+        "status": "REVIEW_REQUIRED",
+        "evidencePath": null,
+        "evidence": "Verify rolling temperature/voltage chart and bounded buffer",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 77,
+        "requirement": "Σταθερό αναγνωριστικό κάρτας δικτύου όταν αλλάξει το όνομα σύνδεσης.",
+        "pass": "MP02/06/07",
+        "status": "SOURCE_PRESENT_RUNTIME_GATE_OPEN",
+        "evidencePath": "src/Services/AdvancedSystemMonitorService.cs",
+        "evidence": "stable NetworkInterface.Id and removes retired adapters",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 78,
+        "requirement": "Επιλογή συσκευής εισόδου του visualizer ξεχωριστά από την προεπιλεγμένη έξοδο.",
+        "pass": "MP02/06/07",
+        "status": "REVIEW_REQUIRED",
+        "evidencePath": null,
+        "evidence": "Verify independent visualizer input and output device controls",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 79,
+        "requirement": "Προσωρινή απόκρυψη τίτλου τραγουδιού σε κοινή χρήση οθόνης.",
+        "pass": "MP02/06/07",
+        "status": "PARTIAL_OR_RELATED_EVIDENCE",
+        "evidencePath": "docs/SOURCE-CONSOLIDATION.md",
+        "evidence": "R57 presentation privacy before capture; actual screenshare privacy test",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 80,
+        "requirement": "Ομαλή επιστροφή του visualizer μετά από αποσύνδεση Bluetooth.",
+        "pass": "MP02/06/07",
+        "status": "REVIEW_REQUIRED",
+        "evidencePath": null,
+        "evidence": "Verify Bluetooth disconnect/reconnect visualizer recovery",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 81,
+        "requirement": "Δείγμα κουμπιού σε κανονική κατάσταση, hover, πάτημα, εστίαση και απενεργοποίηση στον επεξεργαστή θέματος.",
+        "pass": "MP07",
+        "status": "REVIEW_REQUIRED",
+        "evidencePath": null,
+        "evidence": "Verify all control states in theme editor",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 82,
+        "requirement": "Προεπισκόπηση θέματος με τις μεγαλύτερες μεταφρασμένες λεζάντες.",
+        "pass": "MP07",
+        "status": "REVIEW_REQUIRED",
+        "evidencePath": null,
+        "evidence": "Verify longest localized captions layout",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 83,
+        "requirement": "Ελάχιστη αντίθεση κειμένου κατά την επιλογή προσαρμοσμένου χρώματος.",
+        "pass": "MP07",
+        "status": "REVIEW_REQUIRED",
+        "evidencePath": null,
+        "evidence": "Verify contrast minimum during custom color selection",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 84,
+        "requirement": "Ορατή σειρά πλοήγησης με Tab στον επεξεργαστή διάταξης.",
+        "pass": "MP07",
+        "status": "PARTIAL_OR_RELATED_EVIDENCE",
+        "evidencePath": "src/Widgets/ZoneLayoutEditorForm.cs",
+        "evidence": "keyboard preview; complete Tab navigation unverified",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 85,
+        "requirement": "Αναγγελία αλλαγής ενεργού προφίλ μέσω αναγνώστη οθόνης.",
+        "pass": "MP07",
+        "status": "REVIEW_REQUIRED",
+        "evidencePath": null,
+        "evidence": "Verify screen-reader profile change announcement",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 86,
+        "requirement": "Εφαρμογή της ρύθμισης μειωμένης κίνησης και στα web wallpapers.",
+        "pass": "MP07",
+        "status": "PARTIAL_OR_RELATED_EVIDENCE",
+        "evidencePath": "docs/SOURCE-CONSOLIDATION.md",
+        "evidence": "R49 reduced motion music and Athens gate; general web wallpapers verify",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 87,
+        "requirement": "Ξεχωριστή κλίμακα γραμματοσειράς για το dock και τις κάρτες.",
+        "pass": "MP07",
+        "status": "SOURCE_PRESENT_RUNTIME_GATE_OPEN",
+        "evidencePath": "src/Widgets/DeskStripWindow.cs",
+        "evidence": "LabelFontScalePercent independent from cards; UI behavior verify",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 88,
+        "requirement": "Αυτόματη επιλογή accent από το φόντο με προεπισκόπηση πριν από εφαρμογή.",
+        "pass": "MP07",
+        "status": "PARTIAL_OR_RELATED_EVIDENCE",
+        "evidencePath": "src/Widgets/TrayApplicationContext.cs",
+        "evidence": "WallpaperAccentEngine.RefreshIfChanged opt-in; actual preview verify",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 89,
+        "requirement": "Προεπισκόπηση από δεξιά προς τα αριστερά για αραβική μετάφραση.",
+        "pass": "MP07",
+        "status": "REVIEW_REQUIRED",
+        "evidencePath": null,
+        "evidence": "Verify RTL theme preview",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 90,
+        "requirement": "Επεξήγηση του λόγου που ένα κουμπί είναι ανενεργό μέσα στην ίδια σελίδα.",
+        "pass": "MP07",
+        "status": "REVIEW_REQUIRED",
+        "evidencePath": null,
+        "evidence": "Verify in-page disabled reason catalog",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 91,
+        "requirement": "Ένας πίνακας έκδοσης για app, installer, βοήθεια και ενημερώσεις.",
+        "pass": "MP09/07/06",
+        "status": "REVIEW_REQUIRED",
+        "evidencePath": null,
+        "evidence": "Verify version matrix app/installer/help/update on exact final SHA",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 92,
+        "requirement": "Δοκιμή της υπάρχουσας σελίδας εξαρτήσεων σε Windows με μόνο .NET 10, με .NET 11, χωρίς WebView2 και με ακύρωση λήψης. Και τα δύο branches έχουν έλεγχο runtime.",
+        "pass": "MP09/07/06",
+        "status": "PARTIAL_OR_RELATED_EVIDENCE",
+        "evidencePath": "docs/REMAINING-TASKS-3.0.0.3200.md",
+        "evidence": "old dependency matrix retained; real install scenarios not certified",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 93,
+        "requirement": "Επαλήθευση του νέου εναλλακτικού κλασικού μενού σε Windows χωρίς Visual C++ Build Tools. Δοκιμή και των πέντε εντολών και της μετάβασης στο εγγενές μενού μετά από πλήρες build.",
+        "pass": "MP09/07/06",
+        "status": "REVIEW_REQUIRED",
+        "evidencePath": null,
+        "evidence": "R81 exact-executable fallback cleanup source; native/fallback five commands and side-by-side test still open.",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 94,
+        "requirement": "Σύντομη προβολή νέων λειτουργιών μόνο στην πρώτη εκκίνηση μετά από αναβάθμιση.",
+        "pass": "MP09/07/06",
+        "status": "PARTIAL_OR_RELATED_EVIDENCE",
+        "evidencePath": "docs/SOURCE-CONSOLIDATION.md",
+        "evidence": "R48 first steps/help; upgrade-only tour not established",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 95,
+        "requirement": "Θεματική βοήθεια από κάθε κουμπί με F1.",
+        "pass": "MP09/07/06",
+        "status": "PARTIAL_OR_RELATED_EVIDENCE",
+        "evidencePath": "docs/SOURCE-CONSOLIDATION.md",
+        "evidence": "R48 F1 route; per-control topic coverage not established",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 96,
+        "requirement": "Αναζήτηση στη βοήθεια με συνώνυμα των ελληνικών ονομασιών.",
+        "pass": "MP09/07/06",
+        "status": "REVIEW_REQUIRED",
+        "evidencePath": null,
+        "evidence": "Verify Greek synonyms in Help, not just launcher search",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 97,
+        "requirement": "Κατάλογος συμβατότητας επεκτάσεων ανά branch. Πρώτα News Crawler και Appearance, που αναφέρονται στον παλιό installer, με έκδοση API και διαδρομή εγκατάστασης για κάθε πακέτο.",
+        "pass": "MP09/07/06",
+        "status": "SOURCE_PRESENT_RUNTIME_GATE_OPEN",
+        "evidencePath": "src/Services/PluginCompatibilityCatalog.cs",
+        "evidence": "Read/Probe entries; Appearance runtime still unverified",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 98,
+        "requirement": "Εξαγωγή αναφοράς build με ακριβές στάδιο αποτυχίας και έκδοση εργαλείων.",
+        "pass": "MP09/07/06",
+        "status": "SOURCE_PRESENT_RUNTIME_GATE_OPEN",
+        "evidencePath": "docs/SOURCE-CONSOLIDATION.md",
+        "evidence": "R57 verify-windows-rc.ps1 evidence; R75 build diagnostics artifact",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 99,
+        "requirement": "Δύο δοκιμές με αποθηκευμένες ρυθμίσεις: αναβάθμιση εντός του τρέχοντος branch και χωριστή εγκατάσταση δίπλα στην 2.4.6.1. Έλεγχος καταλόγου, autostart, απεγκατάστασης και εκκίνησης όσο τρέχει το άλλο branch.",
+        "pass": "MP09/07/06",
+        "status": "REVIEW_REQUIRED",
+        "evidencePath": null,
+        "evidence": "Real 2.8 upgrade and parallel 2.4.6.1 installer isolation",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 100,
+        "requirement": "Προαιρετική καταγραφή συνεδρίας διάγνωσης με αυτόματο τερματισμό και τοπικό αρχείο.",
+        "pass": "MP09/07/06",
+        "status": "SOURCE_PRESENT_RUNTIME_GATE_OPEN",
+        "evidencePath": "src/Services/DiagnosticSessionService.cs",
+        "evidence": "Start(destination,duration), Cancel, Finished; verify bounded local recording",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      }
+    ],
+    "handoff": {
+      "active_branch": "integration/opsis-unified-source-r27",
+      "active_when_prepared": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+      "parent_R77": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+      "main": "76615c1f2661816f1645f65e87ed6223d0dcdbeb",
+      "review_pr": 18,
+      "ci_only_never_merge": 20,
+      "latest_certified": "1bbb82b2bcd660674ee92a8f1c59bc463caea8be",
+      "latest_audit_run": 46100848383,
+      "latest_artifact": 15245119446,
+      "next": "Check R77 full audit 46102704472 and split host/WebView data. If all seven success CAS R77 -> R80 (ahead 2/behind 0) to test GPU/heap separately. R81 staged atop R80; promote after R80 gates. Continue demand lifecycle, SDK2 and native migration gates. No main merge/release.",
+      "parent_R79": "835b784e5cdce8fb8eb2134df79c1632366b82a0",
+      "parent_R80": "5ad65d13c11262ff9a75b4a5c387bbeb50e40c59"
+    }
+  }
+}

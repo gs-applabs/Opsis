@@ -121,9 +121,10 @@ namespace MotionDesk.Services
         // ---- Wallpaper "Weather" mode: richer data than the widget (cloud cover, wind direction, precipitation, UTC offset).
         // Cached for 10 minutes per location (shared by every screen's bridge); on failure the last good payload (even if stale)
         // is returned, otherwise {"ok":false} and the wallpaper keeps a clear sky with the real time of day.
-        private static string? _wpCacheKey, _wpCacheJson;
-        private static DateTime _wpCacheAt = DateTime.MinValue;
         private static readonly object _wpLock = new();
+        private static readonly Dictionary<string, (string Json, DateTime At)> _wpCache = new(StringComparer.Ordinal);
+        private static readonly HashSet<string> _wpRefreshing = new(StringComparer.Ordinal);
+        private const int WallpaperWeatherCacheLimit = 8;
 
         private static string BuildWallpaperUrl(double lat, double lon) =>
             $"https://api.open-meteo.com/v1/forecast?latitude={lat.ToString(CultureInfo.InvariantCulture)}&longitude={lon.ToString(CultureInfo.InvariantCulture)}" +
@@ -138,16 +139,15 @@ namespace MotionDesk.Services
         // Synchronous, non-blocking accessors for the WebView2 host object (async Task<T> across the COM bridge is not reliable):
         // GetWallpaperWeatherCached returns whatever is cached for this location (or {"ok":false,"pending":true}),
         // RequestWallpaperWeatherRefresh starts a background refresh when the cache is missing/stale (de-duplicated).
-        private static int _wpRefreshing;
 
         public static string GetWallpaperWeatherCached(double lat, double lon)
         {
             string key = $"{lat.ToString(CultureInfo.InvariantCulture)},{lon.ToString(CultureInfo.InvariantCulture)}";
             lock (_wpLock)
             {
-                if (_wpCacheKey == key && _wpCacheJson != null)
-                    return DateTime.UtcNow - _wpCacheAt >= TimeSpan.FromMinutes(10)
-                        ? MarkStale(_wpCacheJson) : _wpCacheJson;
+                if (_wpCache.TryGetValue(key, out var cached))
+                    return DateTime.UtcNow - cached.At >= TimeSpan.FromMinutes(10)
+                        ? MarkStale(cached.Json) : cached.Json;
             }
             return "{\"ok\":false,\"pending\":true}";
         }
@@ -157,14 +157,15 @@ namespace MotionDesk.Services
             string key = $"{lat.ToString(CultureInfo.InvariantCulture)},{lon.ToString(CultureInfo.InvariantCulture)}";
             lock (_wpLock)
             {
-                if (_wpCacheKey == key && _wpCacheJson != null && DateTime.UtcNow - _wpCacheAt < TimeSpan.FromMinutes(10)) return;   // still fresh
+                if (_wpCache.TryGetValue(key, out var cached) && DateTime.UtcNow - cached.At < TimeSpan.FromMinutes(10)) return;
+                // Different configured scenes (e.g. Ancient Athens and the selected city) must not block each other.
+                if (_wpRefreshing.Count >= 4 || !_wpRefreshing.Add(key)) return;
             }
-            if (System.Threading.Interlocked.Exchange(ref _wpRefreshing, 1) == 1) return;
             _ = Task.Run(async () =>
             {
                 try { await GetWallpaperWeatherJsonAsync(lat, lon); }
                 catch (Exception) { /* offline: the page keeps polling */ }
-                finally { System.Threading.Interlocked.Exchange(ref _wpRefreshing, 0); }
+                finally { lock (_wpLock) _wpRefreshing.Remove(key); }
             });
         }
 
@@ -173,7 +174,7 @@ namespace MotionDesk.Services
             string key = $"{lat.ToString(CultureInfo.InvariantCulture)},{lon.ToString(CultureInfo.InvariantCulture)}";
             lock (_wpLock)
             {
-                if (_wpCacheKey == key && _wpCacheJson != null && DateTime.UtcNow - _wpCacheAt < TimeSpan.FromMinutes(10)) return _wpCacheJson;
+                if (_wpCache.TryGetValue(key, out var cached) && DateTime.UtcNow - cached.At < TimeSpan.FromMinutes(10)) return cached.Json;
             }
 
             string? json = null;
@@ -202,8 +203,14 @@ namespace MotionDesk.Services
 
             lock (_wpLock)
             {
-                if (json != null) { _wpCacheKey = key; _wpCacheJson = json; _wpCacheAt = DateTime.UtcNow; return json; }
-                if (_wpCacheKey == key && _wpCacheJson != null) return MarkStale(_wpCacheJson);   // stale but better than nothing (observedAt in it tells the user how old)
+                if (json != null)
+                {
+                    _wpCache[key] = (json, DateTime.UtcNow);
+                    if (_wpCache.Count > WallpaperWeatherCacheLimit)
+                        _wpCache.Remove(_wpCache.OrderBy(x => x.Value.At).First().Key);
+                    return json;
+                }
+                if (_wpCache.TryGetValue(key, out var cached)) return MarkStale(cached.Json);
             }
             return "{\"ok\":false}";
         }

@@ -22,7 +22,16 @@ internal sealed class WallpaperMusicSurface : IDisposable
     private CoreWebView2? current;
     private string? cover;
     private byte[]? coverSource;
-    private bool installed, pending;
+    private string? coverTrackIdentity;
+    private bool installed, pending, disposed;
+    private Task<string>? activeRenderScript;
+    private Task<string>? activeClearScript;
+
+    // A WaitAsync timeout does not cancel WebView2's underlying native request.
+    // Drop frames until that request actually completes; never queue replacement work.
+    internal bool CanAcceptFrame => !disposed && !pending && Environment.TickCount64 >= nextAttempt &&
+        (activeRenderScript == null || activeRenderScript.IsCompleted) &&
+        (activeClearScript == null || activeClearScript.IsCompleted);
     private int revision;
     private long nextAttempt;
 
@@ -30,7 +39,9 @@ internal sealed class WallpaperMusicSurface : IDisposable
         MediaSnapshot? snapshot, float[] bands, bool preview, byte[]? frequency, byte[]? waveform)
     {
         var now = Environment.TickCount64;
-        if (screen == null || pending || now < nextAttempt) return;
+        if (screen == null || !CanAcceptFrame) return;
+        ObserveCompleted(ref activeRenderScript);
+        ObserveCompleted(ref activeClearScript);
         pending = true;
         int frameRevision = revision;
         try
@@ -45,16 +56,20 @@ internal sealed class WallpaperMusicSurface : IDisposable
             }
             if (!installed)
             {
-                installed = await ExecuteAsync(core, Guard(Installer.Value)) == "true";
-                if (frameRevision != revision || !installed) return;
+                var ready = await ExecuteRenderAsync(core, Guard(Installer.Value)) == "true";
+                if (frameRevision != revision || disposed) return;
+                installed = ready;
+                if (!installed) return;
             }
 
             var track = snapshot?.Track;
             var visibleCover = settings.HideTrackMetadata ? null : track?.Cover;
-            bool sendCover = !ReferenceEquals(visibleCover, coverSource);
+            var visibleIdentity = settings.HideTrackMetadata ? null : track?.Identity;
+            bool sendCover = !ReferenceEquals(visibleCover, coverSource) || visibleIdentity != coverTrackIdentity;
             if (sendCover)
             {
                 coverSource = visibleCover;
+                coverTrackIdentity = visibleIdentity;
                 cover = AlbumCoverData(coverSource);
             }
             var elapsed = snapshot?.Timeline?.GetPosition(DateTimeOffset.UtcNow).TotalSeconds ?? 0;
@@ -66,16 +81,27 @@ internal sealed class WallpaperMusicSurface : IDisposable
                 title = settings.HideTrackMetadata ? null : track?.Title,
                 artist = settings.HideTrackMetadata ? null : track?.Artist,
                 album = settings.HideTrackMetadata ? null : track?.Album,
-                duration = snapshot?.Timeline?.Duration.TotalSeconds ?? 0,
-                elapsed, bands, preview, frequency, waveform, preset = VisualPresets.ModeOf(settings.Preset),
+                albumArtist = settings.HideTrackMetadata ? null : track?.AlbumArtist,
+                subtitle = settings.HideTrackMetadata ? null : track?.Subtitle,
+                source = settings.HideTrackMetadata ? null : track?.Source,
+                trackNumber = settings.HideTrackMetadata ? 0 : track?.TrackNumber ?? 0,
+                albumTrackCount = settings.HideTrackMetadata ? 0 : track?.AlbumTrackCount ?? 0,
+                genres = settings.HideTrackMetadata ? null : track?.Genres,
+                trackKey = visibleIdentity,
+                reducedMotion = !MotionDesk.Services.AppSettings.Peek().EnableAnimations || System.Windows.Forms.SystemInformation.HighContrast,
+                duration = settings.HideTrackMetadata ? 0 : snapshot?.Timeline?.Duration.TotalSeconds ?? 0,
+                elapsed = settings.HideTrackMetadata ? 0 : elapsed,
+                bands, preview, frequency, waveform, preset = VisualPresets.ModeOf(settings.Preset),
                 updateCover = sendCover,
                 cover = sendCover ? cover : null
             });
-            string? result = await ExecuteAsync(core, Guard($"return window.opsisMusicPainter?.paint({payload}) === true"));
+            string? result = await ExecuteRenderAsync(core, Guard($"return window.opsisMusicPainter?.paint({payload}) === true"));
             if (frameRevision == revision && result != "true")
             {
                 installed = false;
                 coverSource = null;
+                coverTrackIdentity = null;
+                cover = null;
             }
         }
         catch (Exception ex) when (ex is InvalidOperationException or COMException or TimeoutException)
@@ -83,6 +109,8 @@ internal sealed class WallpaperMusicSurface : IDisposable
             nextAttempt = now + 1500;
             installed = false;
             coverSource = null;
+            coverTrackIdentity = null;
+            cover = null;
             System.Diagnostics.Debug.WriteLine(ex);
         }
         finally { pending = false; }
@@ -95,8 +123,18 @@ internal sealed class WallpaperMusicSurface : IDisposable
         })()
         """;
 
-    private static Task<string> ExecuteAsync(CoreWebView2 core, string script) =>
-        core.ExecuteScriptAsync(script).WaitAsync(TimeSpan.FromSeconds(2));
+    private static void ObserveCompleted(ref Task<string>? task)
+    {
+        if (task?.IsCompleted != true) return;
+        if (task.IsFaulted) _ = task.Exception;
+        task = null;
+    }
+
+    private Task<string> ExecuteRenderAsync(CoreWebView2 core, string script)
+    {
+        activeRenderScript = core.ExecuteScriptAsync(script);
+        return activeRenderScript.WaitAsync(TimeSpan.FromSeconds(2));
+    }
 
     private static string? AlbumCoverData(byte[]? data)
     {
@@ -119,9 +157,17 @@ internal sealed class WallpaperMusicSurface : IDisposable
         current = null;
         installed = false;
         coverSource = null;
+        coverTrackIdentity = null;
         cover = null;
         if (core == null) return;
-        try { await ExecuteAsync(core, Guard("window.opsisMusicPainter?.remove(); return true;")); }
+        try
+        {
+            // Clear at most once per retained renderer. No timer retries or queue.
+            ObserveCompleted(ref activeClearScript);
+            if (activeClearScript != null) return;
+            activeClearScript = core.ExecuteScriptAsync(Guard("window.opsisMusicPainter?.remove(); return true;"));
+            await activeClearScript.WaitAsync(TimeSpan.FromSeconds(2));
+        }
         catch (Exception ex) when (ex is InvalidOperationException or COMException or TimeoutException)
         {
             System.Diagnostics.Debug.WriteLine(ex);
@@ -135,5 +181,10 @@ internal sealed class WallpaperMusicSurface : IDisposable
         host.SetMusicSceneRequested(false);
     }
 
-    public void Dispose() => Clear();
+    public void Dispose()
+    {
+        if (disposed) return;
+        disposed = true;
+        Clear();
+    }
 }

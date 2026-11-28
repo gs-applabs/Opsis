@@ -1,4 +1,3 @@
-using System.Collections.Concurrent;
 using System.Text;
 using System.Text.Json;
 
@@ -13,9 +12,14 @@ namespace MotionDesk.Services;
 /// </summary>
 internal static class AtomicFile
 {
-    private static readonly ConcurrentDictionary<string, object> FileLocks =
-        new(StringComparer.OrdinalIgnoreCase);
-    private static object Sync(string path) => FileLocks.GetOrAdd(Path.GetFullPath(path), _ => new object());
+    // Fixed lock stripes: unique temporary/profile paths cannot grow a static
+    // dictionary forever. Same normalized path always shares the same stripe.
+    // Collisions serialize unrelated files, never weaken per-path exclusion.
+    private const int StripeCount = 128;
+    private static readonly object[] FileLocks = Enumerable.Range(0, StripeCount).Select(_ => new object()).ToArray();
+    internal static int LockStripe(string path) =>
+        (int)((uint)StringComparer.OrdinalIgnoreCase.GetHashCode(Path.GetFullPath(path)) % StripeCount);
+    private static object Sync(string path) => FileLocks[LockStripe(path)];
 
     public static void WriteAllText(string path, string contents)
     {

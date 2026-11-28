@@ -23,6 +23,9 @@ internal sealed class HelpForm : OpsisWindow
     private readonly Label _searchHint = new() { AutoSize = true, Padding = new Padding(8, 6, 0, 0) };
     private bool _licenseLoaded;
     private bool _settingContext;
+    private string _lastQuery = "";
+    private int _matchIndex = -1;
+    private sealed record HelpMatch(int Tab, int Version, int Offset, int Length);
 
     internal static void ShowSingle(IWin32Window? owner, IReadOnlyList<(string Version, string Date)> history,
         HelpSection section = HelpSection.Instructions, string? query = null, string? controlTopic = null)
@@ -95,7 +98,7 @@ internal sealed class HelpForm : OpsisWindow
         KeyDown += (_, e) =>
         {
             if (e.KeyCode == Keys.Escape) Close();
-            if (e.KeyCode == Keys.F3) { Search(_search.Text); e.Handled = true; }
+            if (e.KeyCode == Keys.F3) { Search(_search.Text, advance: true); e.Handled = true; e.SuppressKeyPress = true; }
         };
 
         _instructions = CreateReader("HelpInstructions");
@@ -120,6 +123,16 @@ internal sealed class HelpForm : OpsisWindow
             "Personalization · Εξατομίκευση: lock screen and cursor effects · κλείδωμα και δείκτες.",
             "About · Information / Πληροφορίες: version, licences and updates · εκδόσεις και ενημερώσεις."
         }));
+        // Practical paths use existing page identities and commands, not proposed features.
+        _instructions.AppendText("\n\n" + MainWindow.StudioText(
+            "FIRST STEPS\n1. Open a category in the sidebar. Use Ctrl+K to search functions and settings.\n2. Select a control and press F1 for contextual help.\n3. Read any unavailable-action explanation before enabling an optional feature.\n\n" +
+            "CONTAINERS — DESKTOP FILES\n1. Open DeskContainers, or right-click the Opsis tray icon and open its Containers submenu.\n2. Choose New container, New note or New portal. Drag files into a data container to add references; removing a reference does not delete the file.\n3. Use the container menu for its settings. Ctrl+Alt+Shift+H toggles container visibility; Ctrl+` opens Spot Search if the shortcut is available.\n4. Use Backup now or Snapshots in the tray before major layout changes. Restore icons is available in the same menu.\n\n" +
+            "WINDOW SWITCHING\n1. Open Personalization and locate DeskFlip.\n2. Choose Flip 3D, Thumbnail grid or Compact list.\n3. Ctrl+Alt+F opens the switcher if the shortcut was registered; use Tab and Enter to select a window.\n\n" +
+            "HELP AND HISTORY\nOpen About → Help, then History to read changes by version. Plugin availability and compatibility are shown separately in About. Experimental or planned functions are not presented as available.",
+            "ΠΡΩΤΑ ΒΗΜΑΤΑ\n1. Άνοιξε μια κατηγορία από το πλευρικό μενού. Με Ctrl+K αναζήτησε λειτουργίες και ρυθμίσεις.\n2. Επίλεξε ένα στοιχείο και πάτησε F1 για σχετική βοήθεια.\n3. Διάβασε την αιτία μη διαθεσιμότητας πριν ενεργοποιήσεις προαιρετική λειτουργία.\n\n" +
+            "DESKCONTAINERS — ΑΡΧΕΙΑ ΕΠΙΦΑΝΕΙΑΣ\n1. Άνοιξε την καρτέλα Containers ή το αντίστοιχο υπομενού με δεξί κλικ στο tray.\n2. Δημιούργησε container, σημείωση ή portal φακέλου. Σύρε αρχεία σε container δεδομένων για να προσθέσεις αναφορές. Η αφαίρεση αναφοράς δεν διαγράφει το αρχείο.\n3. Χρησιμοποίησε το μενού του container για τις ρυθμίσεις του. Ctrl+Alt+Shift+H για απόκρυψη/εμφάνιση, Ctrl+` για Spot Search αν είναι διαθέσιμη η συντόμευση.\n4. Χρησιμοποίησε το αντίγραφο ασφαλείας ή τα στιγμιότυπα διάταξης από το tray πριν από μεγάλες αλλαγές. Η επαναφορά εικονιδίων βρίσκεται στο ίδιο μενού.\n\n" +
+            "DESKFLIP — ΕΝΑΛΛΑΓΗ ΠΑΡΑΘΥΡΩΝ\n1. Άνοιξε την Εξατομίκευση και εντόπισε το DeskFlip.\n2. Επίλεξε Flip 3D, Thumbnail grid ή Compact list.\n3. Ctrl+Alt+F για άνοιγμα εφόσον καταχωρήθηκε η συντόμευση· Tab και Enter για επιλογή παραθύρου.\n\n" +
+            "ΒΟΗΘΕΙΑ ΚΑΙ ΙΣΤΟΡΙΚΟ\nΣχετικά → Βοήθεια → Ιστορικό για αλλαγές ανά έκδοση. Η διαθεσιμότητα και συμβατότητα προσθέτων εμφανίζεται χωριστά στα Σχετικά. Οι πειραματικές ή σχεδιαζόμενες λειτουργίες δεν παρουσιάζονται ως διαθέσιμες."));
         _license = CreateReader("HelpLicense");
         _notes = CreateReader("HistoryNotes");
         _notes.AccessibleName = LocalizationManager.T("Help.TabHistory");
@@ -169,32 +182,59 @@ internal sealed class HelpForm : OpsisWindow
         Disposed += (_, _) => OpsisTheme.Changed -= Recolour;
     }
 
-    private void Search(string? query)
+    private void Search(string? query, bool advance = false)
     {
-        if (string.IsNullOrWhiteSpace(query)) return;
-        // SearchLanguage has accent-insensitive Greek, transliteration and synonyms.
-        // Use whole lines rather than a raw IndexOf, so Greeklish also finds Greek.
-        var readers = new[] { (_instructions, 0), (_notes, 2), (_license, 1) };
-        foreach (var (reader, tabIndex) in readers)
+        query = query?.Trim() ?? "";
+        if (query.Length == 0)
         {
-            if (tabIndex == 1 && !_licenseLoaded) _license.Text = ReadLegalText();
-            if (tabIndex == 2 && _versionPicker.Items.Count == 0) continue;
-            int start = 0;
-            foreach (var line in reader.Lines)
+            _lastQuery = "";
+            _matchIndex = -1;
+            return;
+        }
+        var matches = new List<HelpMatch>();
+        void Collect(string content, int tab, int version = -1)
+        {
+            int offset = 0;
+            foreach (var line in content.Replace("\r\n", "\n").Split('\n'))
             {
-                if (SearchLanguage.Matches(line, query))
-                {
-                    _tabs.SelectedIndex = tabIndex;
-                    reader.SelectionStart = start;
-                    reader.SelectionLength = Math.Min(line.Length, reader.TextLength - start);
-                    reader.ScrollToCaret();
-                    _searchHint.Text = MainWindow.StudioText("Found", "Βρέθηκε");
-                    return;
-                }
-                start += line.Length + 1;
+                if (line.Length > 0 && SearchLanguage.Matches(line, query))
+                    matches.Add(new HelpMatch(tab, version, offset, line.Length));
+                offset += line.Length + 1;
             }
         }
-        _searchHint.Text = MainWindow.StudioText("No matching help topic", "Δεν βρέθηκε αντίστοιχο θέμα");
+        Collect(_instructions.Text, 0);
+        // Index every historical version without constructing a separate page.
+        for (int i = 0; i < _history.Count; i++)
+            Collect(FormatHistoryNotes(i), 2, i);
+        if (!_licenseLoaded)
+        {
+            _license.Text = ReadLegalText();
+            _licenseLoaded = true;
+        }
+        Collect(_license.Text, 1);
+        if (matches.Count == 0)
+        {
+            _lastQuery = query;
+            _matchIndex = -1;
+            _searchHint.Text = MainWindow.StudioText("No matching help topic", "Δεν βρέθηκε αντίστοιχο θέμα");
+            return;
+        }
+        _matchIndex = advance && string.Equals(query, _lastQuery, StringComparison.OrdinalIgnoreCase)
+            ? (_matchIndex + 1) % matches.Count : 0;
+        _lastQuery = query;
+        var hit = matches[_matchIndex];
+        _tabs.SelectedIndex = hit.Tab;
+        if (hit.Version >= 0)
+        {
+            LoadActivePage();
+            _versionPicker.SelectedIndex = hit.Version;
+        }
+        var reader = hit.Tab == 0 ? _instructions : hit.Tab == 1 ? _license : _notes;
+        reader.SelectionStart = Math.Clamp(hit.Offset, 0, reader.TextLength);
+        reader.SelectionLength = Math.Min(hit.Length, reader.TextLength - reader.SelectionStart);
+        reader.ScrollToCaret();
+        _searchHint.Text = MainWindow.StudioText($"Match {_matchIndex + 1}/{matches.Count} · F3 next",
+            $"Αποτέλεσμα {_matchIndex + 1}/{matches.Count} · F3 επόμενο");
     }
 
     private static TabPage CreatePage(string titleKey, Control content)
@@ -250,8 +290,16 @@ internal sealed class HelpForm : OpsisWindow
     {
         int index = _versionPicker.SelectedIndex;
         if (index < 0 || index >= _history.Count) return;
+        _notes.Text = FormatHistoryNotes(index);
+        _notes.SelectionStart = 0;
+        _notes.ScrollToCaret();
+    }
+
+    private string FormatHistoryNotes(int index)
+    {
         var (version, date) = _history[index];
-        var title = $"{LocalizationManager.T("VersionHistory.VersionPrefix")} {version}   •   {date}";
+        var title = $"{LocalizationManager.T("VersionHistory.VersionPrefix")} {version}";
+        if (!string.IsNullOrWhiteSpace(date)) title += "   •   " + date;
         if (index == 0) title += "   •   " + LocalizationManager.T("VersionHistory.Current");
         string key = "VersionNotes." + version;
         var notes = LocalizationManager.T(key);
@@ -260,9 +308,7 @@ internal sealed class HelpForm : OpsisWindow
             : string.Join("\n\n", notes.Replace("\\n", "\n").Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
                 .Select(line => line.StartsWith("+ ") || line.StartsWith("~ ") ? "• " + line[2..] :
                     line.StartsWith("= ") ? line[2..] : line));
-        _notes.Text = title + "\n\n" + content;
-        _notes.SelectionStart = 0;
-        _notes.ScrollToCaret();
+        return title + "\n\n" + content;
     }
 
     private void DrawTab(DrawItemEventArgs e)

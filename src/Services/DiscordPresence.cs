@@ -4,137 +4,221 @@ using System.Text.Json;
 
 namespace MotionDesk.Services;
 
-/// <summary>
-/// Optional Discord "Rich Presence" (off by default): shows what Opsis is doing ("Wallpaper: Waves", "Paused") on the user's Discord profile.
-/// Talks to the local Discord client over its documented IPC pipe (discord-ipc-0..9); nothing leaves the PC except through Discord itself.
-/// Needs an Application ID: create a free application at https://discord.com/developers/applications and paste its ID in Settings.
-/// </summary>
+/// <summary>Optional local Discord IPC. A selected session owns its pipe and cancellation.
+/// Exactly one worker may connect, write and read; disabling never waits on Discord.</summary>
 public sealed class DiscordPresence : IDisposable
 {
     public static DiscordPresence Instance { get; } = new();
-
-    private NamedPipeClientStream? _pipe;
-    private string _connectedId = "";
+    private const int MaxFrameBytes = 1 << 20;
+    private const int MaxResponseFrames = 8;
     private System.Windows.Forms.Timer? _timer;
+    private Session? _session;
+    private int _busy;
+    internal bool ActivityDemand => _timer != null;
     private readonly long _startedAt = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-    private string _lastSent = "";
 
-    /// <summary>Applies the current settings: starts, stops or re-targets the presence. Call at startup and after the settings change.</summary>
-    public void Apply()
+    private sealed class Session
     {
-        var s = AppSettings.Load();
-        bool on = s.DiscordPresenceEnabled && IsValidId(s.DiscordApplicationId);
-        if (!on) { Stop(); return; }
-        if (_connectedId != s.DiscordApplicationId) Disconnect();
-        if (_timer == null)
+        private readonly object _gate = new();
+        private readonly CancellationTokenSource _cancel = new();
+        private NamedPipeClientStream? _pipe;
+        private bool _working, _retired;
+        internal readonly string Id;
+        internal string LastSent = "";
+        internal Session(string id) { Id = id; }
+        internal CancellationToken Token => _cancel.Token; // only the active worker reads this
+        internal bool Begin()
         {
-            _timer = new System.Windows.Forms.Timer { Interval = 20_000 };      // Discord limits updates to one per 15 s
-            _timer.Tick += (_, _) => Push();
-            _timer.Start();
+            lock (_gate)
+            {
+                if (_retired || _working) return false;
+                _working = true; return true;
+            }
         }
-        Push();
+        internal NamedPipeClientStream? Pipe { get { lock (_gate) return _pipe; } }
+        internal bool Attach(NamedPipeClientStream pipe)
+        {
+            lock (_gate)
+            {
+                if (_retired) return false;
+                _pipe = pipe; return true;
+            }
+        }
+        internal void Disconnect()
+        {
+            lock (_gate)
+            {
+                var old = _pipe; _pipe = null; LastSent = "";
+                try { old?.Dispose(); } catch (Exception ex) { System.Diagnostics.Debug.WriteLine(ex); }
+            }
+        }
+        internal void Retire()
+        {
+            lock (_gate)
+            {
+                if (_retired) return;
+                _retired = true;
+                // Cancellation and disposal interrupt pending async I/O. No UI-thread
+                // protocol write or synchronous wait; closing the IPC session ends ownership.
+                try { _cancel.Cancel(); } catch (Exception ex) { System.Diagnostics.Debug.WriteLine(ex); }
+                Disconnect();
+                if (!_working) _cancel.Dispose();
+            }
+        }
+        internal void End()
+        {
+            lock (_gate)
+            {
+                _working = false;
+                if (_retired) _cancel.Dispose();
+            }
+        }
     }
 
-    public static bool IsValidId(string? id) => !string.IsNullOrWhiteSpace(id) && id.Trim().Length is >= 15 and <= 25 && id.Trim().All(char.IsDigit);
+    internal static bool ShouldRun(bool selected, string? id, bool safeMode) =>
+        selected && !safeMode && IsValidId(id);
+    public static bool IsValidId(string? id) => !string.IsNullOrWhiteSpace(id) &&
+        id.Trim().Length is >= 15 and <= 25 && id.Trim().All(c => c is >= '0' and <= '9');
+    internal static bool ValidFrameLength(int length) => length > 0 && length <= MaxFrameBytes;
+
+    /// <summary>UI thread: reconcile selected identity. Repeated settings application is a no-op.</summary>
+    public void Apply()
+    {
+        var s = AppSettings.Peek();
+        if (!ShouldRun(s.DiscordPresenceEnabled, s.DiscordApplicationId, SafeModeService.IsSafeMode))
+        { Stop(); return; }
+        string id = s.DiscordApplicationId.Trim();
+        if (_session?.Id == id && _timer != null) return;
+        Stop();
+        _session = new Session(id);
+        _timer = new System.Windows.Forms.Timer { Interval = 20_000 };
+        _timer.Tick += (_, _) => Push();
+        _timer.Start();
+        AppActivity.RequestRefresh();
+        Push();
+    }
 
     public void Stop()
     {
         _timer?.Stop(); _timer?.Dispose(); _timer = null;
-        try { if (_pipe is { IsConnected: true }) Send(1, "{\"cmd\":\"SET_ACTIVITY\",\"args\":{\"pid\":" + Environment.ProcessId + "},\"nonce\":\"" + Guid.NewGuid() + "\"}"); } catch (Exception) { }
-        Disconnect();
-        _lastSent = "";
+        var old = _session; _session = null;
+        old?.Retire();
+        AppActivity.RequestRefresh();
     }
 
-    private int _busy;
     private void Push()
     {
-        // the pipe work (connect, handshake, reply) runs on a pool thread: it must never block the UI
-        if (System.Threading.Interlocked.Exchange(ref _busy, 1) == 1) return;
-        _ = Task.Run(() => { try { PushCore(); } finally { System.Threading.Volatile.Write(ref _busy, 0); } });
-    }
-
-    private void PushCore()
-    {
+        var session = _session;
+        if (session == null || Interlocked.Exchange(ref _busy, 1) != 0) return;
+        if (!session.Begin()) { Volatile.Write(ref _busy, 0); return; }
         try
         {
-            var s = AppSettings.Load();
-            string id = s.DiscordApplicationId.Trim();
-            if (!EnsureConnected(id)) return;
-            var wp = MotionDesk.Widgets.WallpaperSettings.Load();
-            var engine = MotionDesk.Widgets.WallpaperHostEngine.Instance;
-            string details = engine.IsEnabled ? "Wallpaper: " + wp.Mode : "Desktop customization";
+            // Snapshot desktop state on the UI thread, never construct a wallpaper
+            // engine or inspect WinForms windows from the worker.
+            string details = MotionDesk.Widgets.WallpaperHostEngine.IsEnabledIfCreated
+                ? "Wallpaper: " + MotionDesk.Widgets.WallpaperSettings.Load().Mode : "Desktop customization";
             string state = AppActivity.IsFullscreenAppActive ? "Paused while another app is in front" : "Opsis " + AppVersion.Label;
-            string key = details + "|" + state;
-            if (key == _lastSent) return;
-            var payload = new
+            _ = Task.Run(async () =>
             {
-                cmd = "SET_ACTIVITY",
-                args = new { pid = Environment.ProcessId, activity = new { details, state, timestamps = new { start = _startedAt } } },
-                nonce = Guid.NewGuid().ToString(),
-            };
-            Send(1, JsonSerializer.Serialize(payload));
-            _lastSent = key;
+                try { await PushCoreAsync(session, details, state).ConfigureAwait(false); }
+                catch (Exception ex) { session.Disconnect(); System.Diagnostics.Debug.WriteLine(ex); }
+                finally { session.End(); Volatile.Write(ref _busy, 0); }
+            });
         }
-        catch (Exception) { Disconnect(); }     // Discord closed: try again at the next tick
+        catch (Exception ex)
+        {
+            session.End(); Volatile.Write(ref _busy, 0);
+            System.Diagnostics.Debug.WriteLine(ex);
+        }
     }
 
-    private bool EnsureConnected(string id)
+    private async Task PushCoreAsync(Session session, string details, string state)
     {
-        if (_pipe is { IsConnected: true } && _connectedId == id) return true;
-        Disconnect();
+        var token = session.Token;
+        token.ThrowIfCancellationRequested();
+        var pipe = await EnsureConnectedAsync(session, token).ConfigureAwait(false);
+        if (pipe == null) return;
+        string key = details + "|" + state;
+        if (key == session.LastSent) return;
+        string nonce = Guid.NewGuid().ToString();
+        var payload = new
+        {
+            cmd = "SET_ACTIVITY",
+            args = new { pid = Environment.ProcessId, activity = new { details, state, timestamps = new { start = _startedAt } } },
+            nonce
+        };
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(token);
+        timeout.CancelAfter(TimeSpan.FromSeconds(3));
+        await SendFrameAsync(pipe, 1, Encoding.UTF8.GetBytes(JsonSerializer.Serialize(payload)), timeout.Token).ConfigureAwait(false);
+        await ReadResponseAsync(pipe, nonce, timeout.Token).ConfigureAwait(false);
+        token.ThrowIfCancellationRequested();
+        session.LastSent = key;
+    }
+
+    private static async Task<NamedPipeClientStream?> EnsureConnectedAsync(Session session, CancellationToken token)
+    {
+        if (session.Pipe is { IsConnected: true } existing) return existing;
+        session.Disconnect();
         for (int i = 0; i < 10; i++)
         {
-            NamedPipeClientStream? p = null;
+            token.ThrowIfCancellationRequested();
+            var pipe = new NamedPipeClientStream(".", "discord-ipc-" + i, PipeDirection.InOut, PipeOptions.Asynchronous);
+            if (!session.Attach(pipe)) { pipe.Dispose(); return null; }
             try
             {
-                p = new NamedPipeClientStream(".", "discord-ipc-" + i, PipeDirection.InOut, PipeOptions.Asynchronous);
-                p.Connect(250);
-                _pipe = p;
-                Send(0, JsonSerializer.Serialize(new { v = 1, client_id = id }));
-                ReadFrame();                    // READY (or an error): read it so the pipe does not fill up
-                _connectedId = id;
-                return true;
+                await pipe.ConnectAsync(250, token).ConfigureAwait(false);
+                using var timeout = CancellationTokenSource.CreateLinkedTokenSource(token);
+                timeout.CancelAfter(TimeSpan.FromSeconds(3));
+                await SendFrameAsync(pipe, 0, Encoding.UTF8.GetBytes(JsonSerializer.Serialize(new { v = 1, client_id = session.Id })), timeout.Token).ConfigureAwait(false);
+                await ReadResponseAsync(pipe, null, timeout.Token).ConfigureAwait(false);
+                return pipe;
             }
-            catch (Exception) { p?.Dispose(); _pipe = null; }
+            catch (Exception ex) when (ex is IOException or TimeoutException or OperationCanceledException or ObjectDisposedException or JsonException)
+            {
+                session.Disconnect();
+                token.ThrowIfCancellationRequested();
+            }
         }
-        return false;
+        return null;
     }
 
-    private void Send(int opcode, string json)
+    private static async Task SendFrameAsync(NamedPipeClientStream pipe, int opcode, byte[] body, CancellationToken token)
     {
-        if (_pipe == null) return;
-        var body = Encoding.UTF8.GetBytes(json);
+        if (!ValidFrameLength(body.Length)) throw new IOException("Invalid Discord frame length.");
         var frame = new byte[8 + body.Length];
         BitConverter.GetBytes(opcode).CopyTo(frame, 0);
         BitConverter.GetBytes(body.Length).CopyTo(frame, 4);
         body.CopyTo(frame, 8);
-        _pipe.Write(frame, 0, frame.Length);
-        _pipe.Flush();
-        if (opcode == 1) _ = Task.Run(() => { try { ReadFrame(); } catch (Exception) { } });      // drain the reply
+        await pipe.WriteAsync(frame.AsMemory(), token).ConfigureAwait(false);
+        await pipe.FlushAsync(token).ConfigureAwait(false);
     }
 
-    private string ReadFrame()
+    internal static bool MatchesResponse(JsonElement root, string? nonce)
     {
-        if (_pipe == null) return "";
-        var pipe = _pipe;
-        var read = Task.Run(() =>
+        if (root.ValueKind != JsonValueKind.Object) return false;
+        string? evt = root.TryGetProperty("evt", out var e) && e.ValueKind == JsonValueKind.String ? e.GetString() : null;
+        if (evt == "ERROR") throw new IOException("Discord rejected the IPC request.");
+        if (nonce == null) return evt == "READY";
+        return root.TryGetProperty("nonce", out var n) && n.ValueKind == JsonValueKind.String && n.GetString() == nonce;
+    }
+
+    private static async Task ReadResponseAsync(NamedPipeClientStream pipe, string? nonce, CancellationToken token)
+    {
+        var header = new byte[8];
+        for (int i = 0; i < MaxResponseFrames; i++)
         {
-            var header = new byte[8];
-            pipe.ReadExactly(header, 0, 8);
-            int len = BitConverter.ToInt32(header, 4);
-            if (len <= 0 || len > 1 << 20) return "";
-            var body = new byte[len];
-            pipe.ReadExactly(body, 0, len);
-            return Encoding.UTF8.GetString(body);
-        });
-        if (!read.Wait(3000)) { Disconnect(); return ""; }      // Discord did not answer: drop the connection, retry later
-        return read.Result;
-    }
-
-    private void Disconnect()
-    {
-        try { _pipe?.Dispose(); } catch (Exception) { }
-        _pipe = null; _connectedId = "";
+            await pipe.ReadExactlyAsync(header.AsMemory(), token).ConfigureAwait(false);
+            int opcode = BitConverter.ToInt32(header, 0), length = BitConverter.ToInt32(header, 4);
+            if (!ValidFrameLength(length)) throw new IOException("Invalid Discord response length.");
+            var body = new byte[length];
+            await pipe.ReadExactlyAsync(body.AsMemory(), token).ConfigureAwait(false);
+            if (opcode == 2) throw new IOException("Discord closed the IPC session.");
+            if (opcode == 3) { await SendFrameAsync(pipe, 4, body, token).ConfigureAwait(false); continue; }
+            if (opcode != 1) continue;
+            using var json = JsonDocument.Parse(body);
+            if (MatchesResponse(json.RootElement, nonce)) return;
+        }
+        throw new IOException("Discord response frame limit reached.");
     }
 
     public void Dispose() => Stop();

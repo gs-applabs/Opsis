@@ -91,8 +91,30 @@ public sealed partial class MainWindow
                 check.ForeColor = UiTheme.TextPrimary;
                 check.FlatStyle = FlatStyle.Flat;
                 break;
+            case RadioButton radio:
+                radio.Font = UiTheme.FontBody;
+                radio.ForeColor = SystemInformation.HighContrast ? SystemColors.ControlText : UiTheme.TextPrimary;
+                if (radio.Appearance == System.Windows.Forms.Appearance.Button)
+                {
+                    radio.UseVisualStyleBackColor = false;
+                    radio.BackColor = SystemInformation.HighContrast ? SystemColors.Control : UiTheme.Surface;
+                    radio.FlatStyle = FlatStyle.Flat;
+                    radio.FlatAppearance.BorderSize = 1;
+                    radio.FlatAppearance.BorderColor = SystemInformation.HighContrast ? SystemColors.WindowText : UiTheme.TextSecondary;
+                    radio.FlatAppearance.CheckedBackColor = SystemInformation.HighContrast ? SystemColors.ControlDark : UiTheme.SurfaceHover;
+                    radio.FlatAppearance.MouseOverBackColor = SystemInformation.HighContrast ? SystemColors.Control : UiTheme.SurfaceHover;
+                }
+                break;
             case Button button when button.GetType() == typeof(Button) && button.FlatStyle == FlatStyle.Standard:
                 button.Font = UiTheme.FontBody;
+                if (string.IsNullOrWhiteSpace(button.AccessibleName) && !string.IsNullOrWhiteSpace(button.Text))
+                    button.AccessibleName = button.Text;
+                if (SystemInformation.HighContrast)
+                {
+                    button.FlatStyle = FlatStyle.System;
+                    button.UseVisualStyleBackColor = true;
+                    break;
+                }
                 button.ForeColor = UiTheme.TextPrimary;
                 button.BackColor = UiTheme.Surface;
                 button.FlatStyle = FlatStyle.Flat;

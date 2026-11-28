@@ -1,5 +1,4 @@
 using System;
-using System.Management;
 using System.Runtime.InteropServices;
 
 namespace MotionDesk.Services
@@ -54,6 +53,7 @@ namespace MotionDesk.Services
         // πραγματικά το αποτέλεσμα.
         public static void Refresh()
         {
+            HardwareInfo.InvalidateAdapterMetadata();
             var next = Compute();
             bool changed;
             lock (_sync) { changed = _cached != next; _cached = next; }
@@ -111,20 +111,13 @@ namespace MotionDesk.Services
             string? simGpu = Environment.GetEnvironmentVariable("OPSIS_SIM_DGPU");
             if (simGpu == "0") return false;
             if (simGpu == "1") return true;
-            try
+            foreach (string name in HardwareInfo.AdapterNames())
             {
-                using var searcher = new ManagementObjectSearcher("SELECT Name FROM Win32_VideoController");
-                foreach (ManagementObject mo in searcher.Get())
-                {
-                    string name = mo["Name"] as string ?? "";
-                    if (name.Length == 0) continue;
-                    bool knownIntegrated = name.Contains("Intel", StringComparison.OrdinalIgnoreCase)
-                        || name.Contains("Basic Display", StringComparison.OrdinalIgnoreCase)
-                        || name.Contains("Remote Display", StringComparison.OrdinalIgnoreCase);
-                    if (!knownIntegrated) return true;
-                }
+                bool knownIntegrated = name.Contains("Intel", StringComparison.OrdinalIgnoreCase)
+                    || name.Contains("Basic Display", StringComparison.OrdinalIgnoreCase)
+                    || name.Contains("Remote Display", StringComparison.OrdinalIgnoreCase);
+                if (!knownIntegrated) return true;
             }
-            catch (Exception) { }
             return false;
         }
 

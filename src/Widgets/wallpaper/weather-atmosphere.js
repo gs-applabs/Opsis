@@ -14,12 +14,20 @@
         return { x, y: height - photoHeight, width: photoWidth, height: photoHeight };
     }
 
+    // SDR filmic shoulder: linear light input, normalized to reference white.
+    // This is not Windows HDR output; avoids clipping extreme atmospheric lighting.
+    function toneMap(value) {
+        const x = Math.max(0, Number.isFinite(value) ? value : 0);
+        const curve = v => (v * (2.51*v + .03)) / (v * (2.43*v + .59) + .14);
+        return clamp(curve(x) / curve(1));
+    }
+
     function photoGrade(ambient, glow, weather) {
         const night = clamp(1 - ambient / .38);
         const day = Math.pow(clamp(ambient), .64);
         const storm = clamp(weather.storm + weather.rain * .43);
         return {
-            exposure: .27 + day * .73 - storm * .15,
+            exposure: .27 + toneMap(day) * .73 - storm * .15,
             saturation: .80 + day * .16 - storm * .23,
             contrast: 1.07 + day * .05,
             night,
@@ -67,5 +75,45 @@
         g.restore();
     }
 
-    window.OpsisWeatherAtmosphere = { photoBounds, photoGrade, drawSky, drawDepth };
+    // Conservative water-only regions in source-image coordinates. Quays, buildings
+    // and hills retain their photographic detail even on cropped portrait screens.
+    const gulf = [[0,.45],[.99,.45],[.99,.474],[.86,.474],[.82,.496],[.57,.493],[.49,.521],[.32,.55],[.18,.59],[0,.645]];
+    const waters = {
+        patras: gulf, 'patras-harbor': gulf,
+        whitetower: [[0,.54],[.30,.54],[.37,.56],[.60,.58],[.60,.73],[.47,.80],[.28,.86],[.07,.97],[0,.985]],
+    };
+    function drawPhotoWater(g, id, image, x, y, w, h, light, weather, seconds, high) {
+        const shore = waters[id];
+        if (!shore) return;
+        const first = Math.min(...shore.map(p=>p[1])), last = Math.max(...shore.map(p=>p[1]));
+        const rows = high ? 54 : 30;
+        const wind = clamp(weather.wind / 45);
+        g.save();
+        g.translate(x,y);
+        g.beginPath();
+        shore.forEach(([u,v],i) => i ? g.lineTo(u*w,v*h) : g.moveTo(u*w,v*h));
+        g.closePath(); g.clip();
+        const sourceX = light ? (light.x-x)/w : .5;
+        for (let i=0;i<rows;i++) {
+            const depth=(i+.5)/rows, v=first+depth*(last-first);
+            const band=h*(last-first)/rows;
+            const phase=seconds*(.65+wind*.95)+i*.83;
+            const drift=Math.sin(phase)*(.25+1.3*depth)*w/1280;
+            g.globalAlpha=.48;
+            g.drawImage(image,0,v*image.height,image.width,band*image.height/h,
+                drift,v*h,w,band+.4);
+            if (!light || light.power<=.03) continue;
+            const glint=Math.max(0,Math.sin(i*19.3+seconds*.85))**3;
+            const breadth=.017+depth*.065;
+            const centre=sourceX+Math.sin(i*7.17+seconds*.35)*breadth;
+            g.globalAlpha=glint*light.power*(1-weather.fog*.85)*.55;
+            g.fillStyle=rgb(light.col);
+            g.beginPath();
+            g.ellipse(centre*w,v*h,(.002+.009*depth)*w,Math.max(.35,h*(.0004+.0005*depth)),0,0,Math.PI*2);
+            g.fill();
+        }
+        g.restore();
+    }
+
+    window.OpsisWeatherAtmosphere = { photoBounds, photoGrade, drawSky, drawDepth, drawPhotoWater, toneMap };
 })();

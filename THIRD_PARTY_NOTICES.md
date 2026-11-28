@@ -62,3 +62,6 @@ Additional landmark photos: Lighthouse of Patras (public domain), Rio-Antirrio B
 
 Aerial scene of the Acropolis and Athens: The Acropolis of Athens from Mount Lycabettus on March 14, 2020, by George E. Koronaios (CC0), cropped, widened and faded (see docs/LANDMARK-IMAGES.md).
 
+
+## SkiaSharp / Skia native assets
+SkiaSharp 4.150.7 (MIT) and corresponding SkiaSharp.NativeAssets.Win32 are used for bounded static raster decoding. Upstream: https://github.com/mono/SkiaSharp ; Skia and bundled codec notices: https://skia.googlesource.com/skia/+/main/LICENSE and upstream third-party notices. Preserve package license files with redistributed binaries; release license review remains required.

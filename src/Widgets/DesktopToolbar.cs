@@ -7,6 +7,7 @@ internal sealed class DesktopToolbar : Form
 {
     private static readonly Dictionary<string, DesktopToolbar> Bars = new(StringComparer.OrdinalIgnoreCase);
     private static System.Windows.Forms.Timer? _timer;
+    internal static bool ActivityDemand => _timer != null;
     private const int BarHeight = 38;
     private readonly Label _clock = new() { AutoSize = false, TextAlign = ContentAlignment.MiddleRight, Dock = DockStyle.Right, Width = 182 };
     private readonly FlowLayoutPanel _actions = new() { Dock = DockStyle.Fill, WrapContents = false, AutoScroll = true, Padding = new Padding(9, 3, 0, 0) };
@@ -22,6 +23,7 @@ internal sealed class DesktopToolbar : Form
             ThemeManager.Changed += RefreshColors;
             LocalizationManager.Changed += Rebuild;
             _timer.Start();
+            AppActivity.RequestRefresh();
         }
         Sync();
     }
@@ -48,6 +50,7 @@ internal sealed class DesktopToolbar : Form
         LocalizationManager.Changed -= Rebuild;
         foreach (var bar in Bars.Values) bar.Dispose();
         Bars.Clear();
+        AppActivity.RequestRefresh();
     }
 
     private static void RefreshColors()

@@ -50,6 +50,7 @@ public static class DesktopMenu
             handler.SetValue("Greek", (greekOverride ?? LocalizationManager.CurrentLanguage == "el") ? 1 : 0, RegistryValueKind.DWord);
         }
         RemoveOldVerbs();
+        RemoveOwnedClassicFallback(exe);
         NotifyExplorer();
     }
 
@@ -85,11 +86,26 @@ public static class DesktopMenu
         foreach (var name in OldVerbs) Registry.CurrentUser.DeleteSubKeyTree(Root + name, false);
     }
 
+    internal static bool OwnsClassicFallback(string? command, string exe) =>
+        !string.IsNullOrWhiteSpace(exe) &&
+        string.Equals(command, $"\"{exe}\" --desktop-action new-container", StringComparison.OrdinalIgnoreCase);
+
+    private static void RemoveOwnedClassicFallback(string exe)
+    {
+        string? command;
+        using (var key = Registry.CurrentUser.OpenSubKey(Root + @"Opsis\shell\1-new-container\command"))
+            command = key?.GetValue("") as string;
+        // A parallel installation may own this key; do not remove its menu.
+        if (OwnsClassicFallback(command, exe))
+            Registry.CurrentUser.DeleteSubKeyTree(Root + "Opsis", false);
+    }
+
     public static void Unregister()
     {
         Registry.CurrentUser.DeleteSubKeyTree(Handler, false);
         Registry.CurrentUser.DeleteSubKeyTree(ComClass, false);
         RemoveOldVerbs();
+        RemoveOwnedClassicFallback(ExePath);
         NotifyExplorer();
     }
 
@@ -98,7 +114,7 @@ public static class DesktopMenu
         try
         {
             using var menu = Registry.CurrentUser.OpenSubKey(Root + @"Opsis\shell\1-new-container\command");
-            if (Equals(menu?.GetValue(""), $"\"{ExePath}\" --desktop-action new-container")) return true;
+            if (OwnsClassicFallback(menu?.GetValue("") as string, ExePath)) return true;
             using var key = Registry.CurrentUser.OpenSubKey(Handler);
             using var server = Registry.CurrentUser.OpenSubKey(ComClass + @"\InprocServer32");
             return Equals(key?.GetValue(""), ClassicId) && server?.GetValue("") is string dll && File.Exists(dll);
@@ -134,16 +150,15 @@ public static class DesktopMenu
     {
         try
         {
-            var wallpaper = WallpaperHostEngine.Instance;
             switch (action)
             {
-                case "next-wallpaper": wallpaper.StepWallpaper(true); break;
-                case "prev-wallpaper": wallpaper.StepWallpaper(false); break;
-                case "toggle-wallpaper": wallpaper.PlayOrPauseWallpaper(); break;
-                case "stop-wallpaper": wallpaper.StopWallpaper(); break;
-                case "next-video": wallpaper.StepVideo(true); break;
-                case "prev-video": wallpaper.StepVideo(false); break;
-                case "toggle-video": wallpaper.TogglePause(); break;
+                case "next-wallpaper": WallpaperHostEngine.Instance.StepWallpaper(true); break;
+                case "prev-wallpaper": WallpaperHostEngine.Instance.StepWallpaper(false); break;
+                case "toggle-wallpaper": WallpaperHostEngine.Instance.PlayOrPauseWallpaper(); break;
+                case "stop-wallpaper": WallpaperHostEngine.Instance.StopWallpaper(); break;
+                case "next-video": WallpaperHostEngine.Instance.StepVideo(true); break;
+                case "prev-video": WallpaperHostEngine.Instance.StepVideo(false); break;
+                case "toggle-video": WallpaperHostEngine.Instance.TogglePause(); break;
                 case "new-container":
                     ContainerHost.Current?.NewContainerAtCursor(title: LocalizationManager.CurrentLanguage == "el" ? "Νέο DeskContainer" : "New DeskContainer");
                     break;
@@ -159,7 +174,12 @@ public static class DesktopMenu
         public JsonNode? Handle(string cmd, JsonObject args)
         {
             if (!Allowed.Contains(cmd)) throw new PipeException("unknown-command", "not allowed");
-            if (cmd != "ping") _ui.Post(_ => Run(cmd), null);
+            if (SafeModeService.IsSafeMode || !AppSettings.Peek().DesktopMenuEnabled)
+                throw new PipeException("disabled", "desktop menu is disabled");
+            if (cmd != "ping") _ui.Post(_ =>
+            {
+                if (!SafeModeService.IsSafeMode && AppSettings.Peek().DesktopMenuEnabled) Run(cmd);
+            }, null);
             return new JsonObject { ["accepted"] = cmd };
         }
     }

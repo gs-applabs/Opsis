@@ -9,7 +9,8 @@ internal sealed class DesktopMusicController : IDisposable
     private static string SettingsPath => Path.Combine(MotionDesk.Services.AppPaths.AppDataFolder, "music-overlay.json");
     private readonly MediaSessionReader media = new();
     private readonly CancellationTokenSource shutdown = new();
-    private readonly System.Windows.Forms.Timer timer = new() { Interval = 42 };
+    private const int ActiveInterval = 42, IdleInterval = 250, SuspendedInterval = 500, BackpressureInterval = 100;
+    private readonly System.Windows.Forms.Timer timer = new() { Interval = IdleInterval };
     private readonly WallpaperMusicSurface surface = new();
     private const int BandCount = 64;
     private static readonly float[] Silence = new float[BandCount];
@@ -22,6 +23,7 @@ internal sealed class DesktopMusicController : IDisposable
     private long nextRead, previewUntil, nextDisplayLookup;
     private Screen? display;
     private string? displaySetting;
+    private string? monitorId;
 
     public DesktopMusicController()
     {
@@ -71,6 +73,14 @@ internal sealed class DesktopMusicController : IDisposable
         }
     }
 
+    internal static int SelectTickInterval(bool suspended, bool visible, bool rendererReady) =>
+        suspended ? SuspendedInterval : !visible ? IdleInterval : rendererReady ? ActiveInterval : BackpressureInterval;
+
+    private void SetTickInterval(int interval)
+    {
+        if (timer.Interval != interval) timer.Interval = interval;
+    }
+
     private async void Tick(object? sender, EventArgs e)
     {
         if (disposed) return;
@@ -85,36 +95,54 @@ internal sealed class DesktopMusicController : IDisposable
         if (paused || locked)
         {
             if (drawing || spectrum != null || snapshot != null || previewUntil != 0) StopPlayback();
+            SetTickInterval(SelectTickInterval(true, false, false));
             return;
         }
 
+        // Reuse the display selection across visualizer frames, checking for hotplug periodically.
+        if (now >= nextDisplayLookup || displaySetting != settings.Display)
+        {
+            displaySetting = settings.Display;
+            display = Screen.AllScreens.FirstOrDefault(s => s.DeviceName == displaySetting) ?? Screen.PrimaryScreen;
+            monitorId = display == null ? null : MonitorTopologyService.ForDevice(display.DeviceName)?.Id;
+            nextDisplayLookup = now + 1000;
+        }
+        // Per-monitor presentation privacy: no title, artwork OR visualizer drawn there.
+        var hide = display != null && (MotionDesk.Services.AppSettings.Peek().PresentationMonitorIds?.Any(id =>
+            id.Equals(display.DeviceName,StringComparison.OrdinalIgnoreCase) ||
+            id.Equals(monitorId,StringComparison.OrdinalIgnoreCase)) ?? false);
+        if (hide || display == null)
+        {
+            // Do not reopen an audio endpoint on an excluded or unavailable screen.
+            if (drawing || spectrum != null || snapshot != null || previewUntil != 0) StopPlayback();
+            SetTickInterval(SelectTickInterval(true, false, false));
+            return;
+        }
         if (settings.Enabled) spectrum ??= new AudioSpectrumService(BandCount, settings.InputDeviceId);
         bool audible = settings.Enabled && (spectrum?.HasRecentSignal ?? false);
         if (preview || audible || snapshot != null)
         {
             drawing = true;
-            // Reuse the display selection across visualizer frames, checking for hotplug periodically.
-            if (now >= nextDisplayLookup || displaySetting != settings.Display)
+            // The renderer owns the single outstanding request. Avoid allocating FFT
+            // snapshots and JSON payloads for frames which it would discard.
+            bool ready = surface.CanAcceptFrame;
+            SetTickInterval(SelectTickInterval(false, true, ready));
+            if (ready)
             {
-                displaySetting = settings.Display;
-                display = Screen.AllScreens.FirstOrDefault(s => s.DeviceName == displaySetting) ?? Screen.PrimaryScreen;
-                nextDisplayLookup = now + 1000;
+                var bands = spectrum?.GetBands() ?? Silence;
+                var analysis = spectrum?.GetVisualizerFrame();
+                _ = surface.RenderAsync(display, settings, snapshot, bands, preview && !audible && snapshot == null,
+                    analysis?.Frequency, analysis?.Waveform);
             }
-            // Per-monitor presentation privacy: no title, artwork OR visualizer drawn there.
-            var monitorId = display == null ? null : MonitorTopologyService.ForDevice(display.DeviceName)?.Id;
-            var hide = display != null && (MotionDesk.Services.AppSettings.Peek().PresentationMonitorIds?.Any(id =>
-                id.Equals(display.DeviceName,StringComparison.OrdinalIgnoreCase) ||
-                id.Equals(monitorId,StringComparison.OrdinalIgnoreCase)) ?? false);
-            if (hide) { drawing = false; surface.Clear(); StopAudio(); return; }
-            var bands = spectrum?.GetBands() ?? Silence;
-            var analysis = spectrum?.GetVisualizerFrame();
-            _ = surface.RenderAsync(display, settings, snapshot, bands, preview && !audible && snapshot == null,
-                analysis?.Frequency, analysis?.Waveform);
         }
-        else if (drawing)
+        else
         {
-            drawing = false;
-            surface.Clear();
+            SetTickInterval(SelectTickInterval(false, false, false));
+            if (drawing)
+            {
+                drawing = false;
+                surface.Clear();
+            }
         }
 
         if (!settings.Enabled || reading || now < nextRead) return;
@@ -134,8 +162,18 @@ internal sealed class DesktopMusicController : IDisposable
 
     public void SetHostPaused(bool value)
     {
+        if (disposed || paused == value) return;
         paused = value;
-        if (value) StopPlayback();
+        if (value)
+        {
+            StopPlayback();
+            SetTickInterval(SelectTickInterval(true, false, false));
+        }
+        else if (settings.Enabled)
+        {
+            nextDisplayLookup = 0;
+            SetTickInterval(SelectTickInterval(false, false, false));
+        }
     }
 
     private void SessionSwitched(object sender, SessionSwitchEventArgs e)
@@ -145,43 +183,59 @@ internal sealed class DesktopMusicController : IDisposable
     }
 
     public void Refresh() => nextRead = 0;
-    public void SetPreset(VisualPreset preset) { settings = settings with { Preset = preset }; SaveSettings(); }
-    public void SetTypeface(string? name) { settings = settings with { Typeface = name }; SaveSettings(); }
+    public void SetPreset(VisualPreset preset)
+    {
+        if (!Enum.IsDefined(preset) || settings.Preset == preset) return;
+        settings = settings with { Preset = preset }; SaveSettings();
+    }
+    public void SetTypeface(string? name)
+    {
+        if (settings.Typeface == name) return;
+        settings = settings with { Typeface = name }; SaveSettings();
+    }
     public void Preview()
     {
         if (disposed || paused || locked) return;
         previewUntil = Environment.TickCount64 + 15000;
+        SetTickInterval(ActiveInterval);
         timer.Start();
     }
-    public void ResetPosition() => SetPosition(settings.Display, 0.5, 0.5);
+    public void ResetPosition() => SetPosition(settings.Display, MusicOverlaySettings.DefaultX, MusicOverlaySettings.DefaultY);
 
     public void SetSize(int width, int height)
     {
-        settings = settings with
-        {
-            WidthPercent = Math.Clamp(width, MusicOverlaySettings.MinSize, MusicOverlaySettings.MaxSize),
-            HeightPercent = Math.Clamp(height, MusicOverlaySettings.MinSize, MusicOverlaySettings.MaxSize)
-        };
+        width = Math.Clamp(width, MusicOverlaySettings.MinSize, MusicOverlaySettings.MaxSize);
+        height = Math.Clamp(height, MusicOverlaySettings.MinSize, MusicOverlaySettings.MaxSize);
+        if (settings.WidthPercent == width && settings.HeightPercent == height) return;
+        settings = settings with { WidthPercent = width, HeightPercent = height };
         SaveSettings();
     }
 
     public void SetColor(int index, Color color)
     {
         var palette = (string[])settings.Palette.Clone();
-        palette[index] = $"#{color.R:x2}{color.G:x2}{color.B:x2}";
+        if (index < 0 || index >= palette.Length) return;
+        var value = $"#{color.R:x2}{color.G:x2}{color.B:x2}";
+        if (string.Equals(palette[index], value, StringComparison.OrdinalIgnoreCase)) return;
+        palette[index] = value;
         settings = settings.WithPalette(palette);
         SaveSettings();
     }
 
     public void ResetPalette()
     {
-        settings = settings.WithPalette(null);
+        var reset = settings.WithPalette(null);
+        if (settings.Palette.SequenceEqual(reset.Palette, StringComparer.OrdinalIgnoreCase)) return;
+        settings = reset;
         SaveSettings();
     }
 
     public void SetPosition(string? display, double x, double y)
     {
-        settings = settings with { Display = display, X = Math.Clamp(x, 0, 1), Y = Math.Clamp(y, 0, 1) };
+        if (!double.IsFinite(x) || !double.IsFinite(y)) return;
+        x = Math.Clamp(x, 0, 1); y = Math.Clamp(y, 0, 1);
+        if (settings.Display == display && settings.X == x && settings.Y == y) return;
+        settings = settings with { Display = display, X = x, Y = y };
         SaveSettings();
     }
 

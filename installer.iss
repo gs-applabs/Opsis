@@ -169,9 +169,16 @@ begin
 end;
 
 function PrepareToInstall(var NeedsRestart: Boolean): String;
+var
+  PreviousVersion: String;
 begin
   Result := '';
-  if FileExists(ExpandConstant('{app}\Opsis.exe')) then
+  { Protect a folder containing an unregistered Opsis executable, but allow
+    recognized in-place upgrades/reinstalls with this exact product AppId. }
+  if FileExists(ExpandConstant('{app}\Opsis.exe')) and
+     not RegQueryStringValue(HKLM64,
+       'Software\Microsoft\Windows\CurrentVersion\Uninstall\{' + '{#OpsisAppId}' + '}_is1',
+       'DisplayVersion', PreviousVersion) then
   begin
     Result := CustomMessage('LegacyFolder');
     Exit;

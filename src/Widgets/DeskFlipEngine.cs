@@ -16,16 +16,22 @@ public sealed class DeskFlipOverlay : Form
     private readonly List<Entry> _entries = new();
     private readonly System.Windows.Forms.Timer _timer = new() { Interval = 16 };
     private readonly Bitmap? _desktop;
+    private readonly string _style;
     private readonly PointF[] _texturePoints = new PointF[3];
     private int _selection;
     private float _position, _transitionFrom, _target;
     private long _transitionStarted;
     private bool _closing;
+    private static readonly System.Threading.SemaphoreSlim CaptureGate = new(1, 1);
 
     private sealed record Entry(IntPtr Handle, string Title, Bitmap? Snapshot);
 
-    public DeskFlipOverlay()
+    public DeskFlipOverlay() : this(DeskFlipEngine.Style) { }
+
+    internal DeskFlipOverlay(string style)
     {
+        _style = SystemInformation.HighContrast ? "Compact list" : style;
+        AccessibleName = "DeskFlip window switcher";
         var foreground = GetForegroundWindow();
         Bounds = Screen.FromHandle(foreground).Bounds;
         FormBorderStyle = FormBorderStyle.None;
@@ -34,10 +40,10 @@ public sealed class DeskFlipOverlay : Form
         TopMost = true;
         DoubleBuffered = true;
         KeyPreview = true;
-        BackColor = Color.FromArgb(20, 35, 49);
-        _desktop = CaptureDesktop(Bounds);
+        BackColor = SystemInformation.HighContrast ? SystemColors.Window : Color.FromArgb(20, 35, 49);
+        _desktop = _style == "Flip 3D" ? CaptureDesktop(Bounds) : null;
         foreach (var window in CandidateWindows())
-            _entries.Add(new Entry(window, GetTitle(window), CaptureWindow(window)));
+            _entries.Add(new Entry(window, GetTitle(window), null));
         int front = _entries.FindIndex(e => e.Handle == foreground);
         _selection = _entries.Count > 1 ? (Math.Max(front, 0) + 1) % _entries.Count : 0;
         _position = _target = _selection;
@@ -51,6 +57,35 @@ public sealed class DeskFlipOverlay : Form
         base.OnShown(e);
         Activate();
         Focus();
+        if (_style != "Compact list") _ = PopulateSnapshotsAsync();
+    }
+
+    // PrintWindow can block even after WM_NULL succeeds. Keep at most one
+    // capture worker globally; a hung third-party window never blocks Opsis UI
+    // or causes additional capture workers to accumulate.
+    private async System.Threading.Tasks.Task PopulateSnapshotsAsync()
+    {
+        if (!CaptureGate.Wait(0)) return;
+        try
+        {
+            for (int i = 0; i < _entries.Count && !_closing && !IsDisposed; i++)
+            {
+                var handle = _entries[i].Handle;
+                var image = await System.Threading.Tasks.Task.Run(() => CaptureWindow(handle));
+                if (_closing || IsDisposed || i >= _entries.Count)
+                {
+                    image?.Dispose();
+                    return;
+                }
+                if (image != null)
+                {
+                    _entries[i] = _entries[i] with { Snapshot = image };
+                    Invalidate();
+                }
+            }
+        }
+        catch (Exception ex) { RotatingLogger.Write("DeskFlip snapshot worker: " + ex.Message); }
+        finally { CaptureGate.Release(); }
     }
 
     protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
@@ -80,6 +115,12 @@ public sealed class DeskFlipOverlay : Form
     {
         base.OnMouseDown(e);
         if (e.Button != MouseButtons.Left) return;
+        if (_style != "Flip 3D")
+        {
+            for (int i = 0; i < _entries.Count; i++)
+                if (FlatBounds(i).Contains(e.Location)) { SwitchTo(i); return; }
+            return;
+        }
         foreach (var (index, depth) in VisibleCards().OrderBy(card => card.Depth))
         {
             using var polygon = new GraphicsPath();
@@ -93,6 +134,14 @@ public sealed class DeskFlipOverlay : Form
     internal void MoveSelection(int direction)
     {
         if (_entries.Count < 2) return;
+        if (_style != "Flip 3D" || !Opsis.UI.OpsisMotion.Enabled || SystemInformation.HighContrast)
+        {
+            _timer.Stop();
+            _selection = Wrap(_selection + direction);
+            _position = _target = _selection;
+            Invalidate();
+            return;
+        }
         _target += direction;
         _selection = Wrap((int)_target);
         _transitionFrom = _position;
@@ -104,7 +153,7 @@ public sealed class DeskFlipOverlay : Form
 
     private void Animate()
     {
-        var progress = Math.Clamp((Environment.TickCount64 - _transitionStarted) / 195f, 0, 1);
+        var progress = !Opsis.UI.OpsisMotion.Enabled || SystemInformation.HighContrast ? 1f : Math.Clamp((Environment.TickCount64 - _transitionStarted) / 195f, 0, 1);
         var ease = 1 - MathF.Pow(1 - progress, 3);
         _position = _transitionFrom + (_target - _transitionFrom) * ease;
         if (progress >= 1) { _position = _target = _selection; _timer.Stop(); }
@@ -117,6 +166,7 @@ public sealed class DeskFlipOverlay : Form
         _closing = true;
         var handle = _entries[index].Handle;
         Close();
+        if (!IsWindow(handle)) return;
         if (IsIconic(handle)) ShowWindow(handle, 9);
         SetForegroundWindow(handle);
     }
@@ -159,12 +209,53 @@ public sealed class DeskFlipOverlay : Form
         var graphics = e.Graphics;
         if (_desktop != null) graphics.DrawImage(_desktop, ClientRectangle);
         using var tint = new SolidBrush(Color.FromArgb(70, 5, 19, 30));
-        graphics.FillRectangle(tint, ClientRectangle);
+        if (!SystemInformation.HighContrast) graphics.FillRectangle(tint, ClientRectangle);
+        else graphics.Clear(SystemColors.Window);
         graphics.SmoothingMode = SmoothingMode.AntiAlias;
         graphics.InterpolationMode = InterpolationMode.HighQualityBilinear;
         graphics.PixelOffsetMode = PixelOffsetMode.Half;
+        if (_style != "Flip 3D")
+        {
+            for (int i = 0; i < _entries.Count; i++) DrawFlat(graphics, i);
+            return;
+        }
         foreach (var (index, depth) in VisibleCards().OrderByDescending(card => card.Depth))
             DrawWindow(graphics, _entries[index], depth);
+    }
+
+    private Rectangle FlatBounds(int index)
+    {
+        int columns = _style == "Compact list" ? Math.Min(2, Math.Max(1, (_entries.Count + 5) / 6))
+            : Math.Min(4, Math.Max(1, _entries.Count));
+        int rows = Math.Max(1, (_entries.Count + columns - 1) / columns);
+        int pad = Math.Max(8, Math.Min(Width, Height) / 60);
+        int w = Math.Max(1, (Width - 4 * pad) / columns - pad);
+        int h = Math.Max(1, Math.Min((Height - 4 * pad) / rows - pad, _style == "Compact list" ? 64 : Height / 3));
+        int left = (Width - columns * (w + pad) + pad) / 2;
+        int top = (Height - rows * (h + pad) + pad) / 2;
+        return new Rectangle(left + index % columns * (w + pad), top + index / columns * (h + pad), w, h);
+    }
+
+    private void DrawFlat(Graphics graphics, int index)
+    {
+        var box = FlatBounds(index);
+        var entry = _entries[index];
+        bool active = index == _selection;
+        bool hc = SystemInformation.HighContrast;
+        using var fill = new SolidBrush(hc ? (active ? SystemColors.Highlight : SystemColors.Window) : (active ? Color.FromArgb(235, 39, 81, 112) : Color.FromArgb(230, 26, 43, 58)));
+        using var rim = new Pen(hc ? SystemColors.WindowText : (active ? Color.White : Color.FromArgb(130, 170, 195)), active ? 2f : 1f);
+        graphics.FillRectangle(fill, box);
+        graphics.DrawRectangle(rim, box);
+        int labelHeight = Math.Min(32, box.Height);
+        if (entry.Snapshot is { } image && box.Height > labelHeight + 8 && box.Width > 8)
+        {
+            float scale = Math.Min((box.Width - 8f) / image.Width, (box.Height - labelHeight - 8f) / image.Height);
+            int w = Math.Max(1, (int)(image.Width * scale)), h = Math.Max(1, (int)(image.Height * scale));
+            graphics.DrawImage(image, new Rectangle(box.X + (box.Width - w) / 2, box.Y + 4, w, h));
+        }
+        var label = _style == "Compact list" ? box : new Rectangle(box.X, box.Bottom - labelHeight, box.Width, labelHeight);
+        TextRenderer.DrawText(graphics, entry.Title, SystemFonts.MessageBoxFont, label, hc ? (active ? SystemColors.HighlightText : SystemColors.WindowText) : Color.White,
+            TextFormatFlags.EndEllipsis | TextFormatFlags.NoPrefix | TextFormatFlags.VerticalCenter | TextFormatFlags.HorizontalCenter);
     }
 
     private void DrawWindow(Graphics graphics, Entry entry, float depth)
@@ -273,6 +364,7 @@ public sealed class DeskFlipOverlay : Form
     {
         if (disposing)
         {
+            _closing = true;
             _timer.Dispose();
             foreach (var entry in _entries) entry.Snapshot?.Dispose();
             _entries.Clear();
@@ -294,6 +386,7 @@ public sealed class DeskFlipOverlay : Form
     [DllImport("user32.dll")] private static extern bool SetForegroundWindow(IntPtr handle);
     [DllImport("user32.dll")] private static extern bool GetWindowRect(IntPtr handle, out WindowRect area);
     [DllImport("dwmapi.dll")] private static extern int DwmGetWindowAttribute(IntPtr handle, int attribute, out int value, int bytes);
+    [DllImport("user32.dll")] private static extern bool IsWindow(IntPtr handle);
     [DllImport("user32.dll")] private static extern bool IsIconic(IntPtr handle);
     [DllImport("user32.dll")] private static extern bool ShowWindow(IntPtr handle, int command);
     [DllImport("user32.dll")] private static extern bool PrintWindow(IntPtr handle, IntPtr dc, uint flags);
@@ -304,6 +397,29 @@ public sealed class DeskFlipOverlay : Form
 public static class DeskFlipEngine
 {
     private static DeskFlipOverlay? _overlay;
+    private const string ModuleId = "desktop.window-switcher";
+    public static bool IsValidStyle(string style) => style is "Flip 3D" or "Thumbnail grid" or "Compact list";
+    public static string Style
+    {
+        get
+        {
+            try
+            {
+                var state = OpsisModCore.Read();
+                if (state.Options.TryGetValue(ModuleId, out var options) &&
+                    options.TryGetValue("style", out var style) && IsValidStyle(style)) return style;
+            }
+            catch (Exception ex) when (ex is IOException or System.Text.Json.JsonException or UnauthorizedAccessException)
+            { RotatingLogger.Write("DeskFlip preferences: " + ex.Message); }
+            return "Flip 3D";
+        }
+    }
+
+    public static void SetStyle(string style)
+    {
+        if (!IsValidStyle(style)) throw new ArgumentOutOfRangeException(nameof(style));
+        OpsisModCore.SetOption(ModuleId, "style", style);
+    }
 
     public static void Show()
     {

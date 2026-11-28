@@ -44,7 +44,8 @@ namespace MotionDesk.Services
             {
                 try
                 {
-                    using var k = RegistryKey.OpenBaseKey(hive, view).OpenSubKey(sub);
+                    using var baseKey = RegistryKey.OpenBaseKey(hive, view);
+                    using var k = baseKey.OpenSubKey(sub);
                     if (k == null) continue;
                     foreach (var n in k.GetSubKeyNames()) { using var s = k.OpenSubKey(n); if (s?.GetValue("DisplayName") is string dn) names.Add(dn); }
                 }
