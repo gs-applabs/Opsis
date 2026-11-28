@@ -917,6 +917,17 @@ try
     var cpuRain = OpsisRainmeterSkinImporter.PreviewIni("[CPU]\nMeasure=CPU\nProcessor=0\n[Meter]\nMeter=String\nMeasureName=CPU", "CPU");
     var ramRain = OpsisRainmeterSkinImporter.PreviewIni("[RAM]\nMeasure=PhysicalMemory\n[Meter]\nMeter=String\nMeasureName=RAM", "RAM");
     Check(cpuRain.Binding == "CPU" && ramRain.Binding == "RAM", "Rainmeter CPU and used physical memory mapped to existing percentage widgets");
+    var variableSkin = OpsisRainmeterSkinImporter.PreviewIni("[Variables]\nInk=64,160,224\nCaption=Welcome\nSize=28\n[Meter]\nMeter=String\nText=#Caption#\nFontColor=#Ink#\nFontSize=#Size#", "Literal Variables");
+    Check(variableSkin.Text == "Welcome" && variableSkin.AccentHex == "#40A0E0" && variableSkin.FontSize == 28,
+        "R114 bounded literal Rainmeter variable expansion");
+    rejected = false;
+    try { OpsisRainmeterSkinImporter.PreviewIni("[Variables]\nA=#B#\n[Meter]\nMeter=String\nText=#A#", "Recursive"); }
+    catch (InvalidDataException) { rejected = true; }
+    Check(rejected, "R114 rejects recursive variable expansion");
+    rejected = false;
+    try { OpsisRainmeterSkinImporter.PreviewIni("[Variables]\nM=Time\n[Measure]\nMeasure=#M#\n[Meter]\nMeter=String\nMeasureName=Measure", "Active"); }
+    catch (InvalidDataException) { rejected = true; }
+    Check(rejected, "R114 rejects variables in active fields");
     var rainPreview = OpsisRainmeterSkinImporter.PreviewIni(supportedRainmeter, "Converted Clock");
     Check(rainPreview.Binding == "Clock" && rainPreview.AccentHex == "#40A0E0",
         "Rainmeter built-in Time/clock INI mapped to native Opsis widget");
@@ -971,6 +982,12 @@ try
     Check(rejected, "Rainmeter unknown executable meter property refused");
 
 
+    Check(NativeShellThemeBridge.ReadBoundedAsync(new StringReader("ok"), System.Threading.CancellationToken.None).GetAwaiter().GetResult() == "ok",
+        "R114 native CLI bounded reader normal output");
+    rejected = false;
+    try { NativeShellThemeBridge.ReadBoundedAsync(new StringReader(new string('x', 65537)), System.Threading.CancellationToken.None).GetAwaiter().GetResult(); }
+    catch (InvalidDataException) { rejected = true; }
+    Check(rejected, "R114 native CLI output quota");
     var combinedMods = OpsisModCompatibility.Evaluate(new[]
     {
         "StartAllBack", "Windhawk", "Rainmeter", "A Different Product", "StartAllBack"

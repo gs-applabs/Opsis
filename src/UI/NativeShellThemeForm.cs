@@ -41,7 +41,7 @@ internal sealed class NativeShellThemeForm : Form
             _status.Text = "Read the currently installed theme before applying.";
         };
         _target.SelectedIndex = 0;
-        FormClosing += (_, e) => { if (!_target.Enabled) e.Cancel = true; };
+        FormClosing += (_, e) => { if (!_target.Enabled && e.CloseReason == CloseReason.UserClosing) e.Cancel = true; };
         _read.Click += async (_, _) => await Run(() => NativeShellThemeBridge.ReadTheme(Selected.Id));
         _apply.Click += async (_, _) =>
         {

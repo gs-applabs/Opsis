@@ -4,12 +4,13 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace MotionDesk.Services;
 
 /// <summary>
 /// A strictly limited, DATA-ONLY compatibility importer for simple Rainmeter INI
-/// String skins. No Rainmeter binary, Lua, plugin measure, dynamic variables,
+/// String skins with bounded literal variables. No Rainmeter binary, Lua, plugin measure, dynamic variables,
 /// !Bang commands, external network or filesystem actions are ever executed.
 /// Unsupported active elements are rejected rather than silently simulated.
 /// </summary>
@@ -88,9 +89,58 @@ public static class OpsisRainmeterSkinImporter
         return $"#{rgb[0]:X2}{rgb[1]:X2}{rgb[2]:X2}";
     }
 
-    public static Preview PreviewIni(string text, string importedName)
+    // Only literal user-defined variables in visual String meter fields.
+    // No nesting, system variables, includes, measures, expressions or actions.
+    private static readonly HashSet<string> LiteralFields = new(StringComparer.OrdinalIgnoreCase)
+    { "Text", "FontColor", "FontSize", "W", "H" };
+    private static readonly Regex VariableToken = new(@"#[A-Za-z][A-Za-z0-9_]{0,39}#", RegexOptions.CultureInvariant);
+
+    private static string ExpandLiteralVariables(string text)
     {
         var sections = Parse(text);
+        if (!sections.TryGetValue("Variables", out var variables) || variables.Count == 0) return text;
+        if (variables.Count > 24) throw new InvalidDataException("Too many literal skin variables.");
+        foreach (var (name, value) in variables)
+        {
+            if (!Regex.IsMatch(name, @"\A[A-Za-z][A-Za-z0-9_]{0,39}\z", RegexOptions.CultureInvariant) ||
+                value.Length > 250 || value.Any(c => char.IsControl(c) || c is '#' or '[' or ']' or '!' or '@'))
+                throw new InvalidDataException("Unsupported or recursive skin variable.");
+        }
+        var expanded = new StringBuilder();
+        foreach (var (section, options) in sections)
+        {
+            if (section.Equals("Variables", StringComparison.OrdinalIgnoreCase)) continue;
+            expanded.Append('[').Append(section).AppendLine("]");
+            bool stringMeter = options.TryGetValue("Meter", out var kind) && kind.Equals("String", StringComparison.OrdinalIgnoreCase);
+            foreach (var (key, raw) in options)
+            {
+                string value = raw;
+                if (VariableToken.IsMatch(raw))
+                {
+                    if (!stringMeter || !LiteralFields.Contains(key))
+                        throw new InvalidDataException("Variables are only supported in visual String meter fields.");
+                    value = VariableToken.Replace(raw, match =>
+                    {
+                        if (!variables.TryGetValue(match.Value[1..^1], out var literal))
+                            throw new InvalidDataException("Unknown literal skin variable: " + match.Value);
+                        return literal;
+                    });
+                    if (value.Length > 1000 || value.Contains('#'))
+                        throw new InvalidDataException("Expanded skin variable exceeds safe limits.");
+                }
+                expanded.Append(key).Append('=').AppendLine(value);
+                if (expanded.Length > 64 * 1024) throw new InvalidDataException("Expanded skin exceeds safe quota.");
+            }
+        }
+        return expanded.ToString();
+    }
+
+    public static Preview PreviewIni(string text, string importedName)
+    {
+        text = ExpandLiteralVariables(text);
+        var sections = Parse(text);
+        if (sections.Values.Any(options => options.Values.Any(value => VariableToken.IsMatch(value))))
+            throw new InvalidDataException("Unresolved or unsupported skin variable.");
         var meters = sections.Where(x => x.Value.ContainsKey("Meter")).ToArray();
         if (meters.Length <= 1) return PreviewSingle(text, importedName);
         if (meters.Length > 8 || meters.Any(x => !x.Value["Meter"].Equals("String", StringComparison.OrdinalIgnoreCase)))
@@ -202,6 +252,8 @@ public static class OpsisRainmeterSkinImporter
             }
             else throw new InvalidDataException("Unknown active Rainmeter skin section.");
         }
+        if (Read("Hidden", "0") != "0") throw new InvalidDataException("Hidden String meters cannot be represented faithfully.");
+        if (display.Length > 250) throw new InvalidDataException("String meter text exceeds widget layout quota.");
         if (binding == "Text" && string.IsNullOrWhiteSpace(display))
             throw new InvalidDataException("Static String skin has no content.");
         var font = Number(Read("FontSize"), 30, 12, 80);
@@ -213,10 +265,21 @@ public static class OpsisRainmeterSkinImporter
 
     public static Preview PreviewFile(string filename)
     {
-        if (!Path.GetExtension(filename).Equals(".ini", StringComparison.OrdinalIgnoreCase) ||
-            new FileInfo(filename).Length > 64 * 1024)
+        if (!Path.GetExtension(filename).Equals(".ini", StringComparison.OrdinalIgnoreCase))
             throw new InvalidDataException("Expected a Rainmeter .ini file under 64 KiB.");
-        return PreviewIni(File.ReadAllText(filename), SafeName(filename));
+        using var stream = new FileStream(filename, FileMode.Open, FileAccess.Read, FileShare.Read);
+        if (stream.Length > 64 * 1024) throw new InvalidDataException("Skin exceeds safe size quota.");
+        var bytes = new byte[64 * 1024 + 1];
+        int count = 0;
+        while (count < bytes.Length)
+        {
+            int read = stream.Read(bytes, count, bytes.Length - count);
+            if (read == 0) break;
+            count += read;
+        }
+        if (count > 64 * 1024) throw new InvalidDataException("Skin exceeds safe size quota.");
+        using var reader = new StreamReader(new MemoryStream(bytes, 0, count, writable: false), detectEncodingFromByteOrderMarks: true);
+        return PreviewIni(reader.ReadToEnd(), SafeName(filename));
     }
 
     public static string Import(string filename, string? nameOverride = null)

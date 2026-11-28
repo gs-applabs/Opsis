@@ -55,7 +55,7 @@ public static class NativeShellThemeBridge
     private static void EnsureWritable(string id)
     {
         if (!KnownId(id)) throw new ArgumentOutOfRangeException(nameof(id));
-        if (!OperatingSystem.IsWindowsVersionAtLeast(10, 0, 22000) || SafeModeService.IsSafeMode || WindowsUpdateGuard.RequiresReview)
+        if (!OperatingSystem.IsWindowsVersionAtLeast(10, 0, 22000) || SafeModeService.IsSafeMode || WindowsUpdateGuard.RequiresReview || WindowsUpdateGuard.RuntimeHold)
             throw new InvalidOperationException("Windows 11 compatibility review is required.");
         if ((id == "windows-11-taskbar-styler" || id.StartsWith("taskbar-", StringComparison.Ordinal)) && AppSettings.Peek().ReplaceWindowsTaskbar)
             throw new InvalidOperationException("Turn off the Opsis replacement taskbar before using native Taskbar Styler.");
@@ -87,6 +87,20 @@ public static class NativeShellThemeBridge
         return result!;
     }
 
+    private const int OutputLimit = 65536;
+    internal static async Task<string> ReadBoundedAsync(TextReader reader, CancellationToken token)
+    {
+        var output = new System.Text.StringBuilder();
+        var buffer = new char[4096];
+        while (true)
+        {
+            int read = await reader.ReadAsync(buffer.AsMemory(), token).ConfigureAwait(false);
+            if (read == 0) return output.ToString();
+            if (read > OutputLimit - output.Length) throw new InvalidDataException("Windhawk CLI output exceeds quota.");
+            output.Append(buffer, 0, read);
+        }
+    }
+
     private static async Task<string> Run(string id, string? theme = null)
     {
         if (!KnownId(id) || (theme != null && !SafeStoredTheme(theme))) throw new ArgumentException("Invalid theme request.");
@@ -101,23 +115,31 @@ public static class NativeShellThemeBridge
         using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(15));
         try
         {
-            var stdout = process.StandardOutput.ReadToEndAsync(deadline.Token);
-            var stderr = process.StandardError.ReadToEndAsync(deadline.Token);
-            await process.WaitForExitAsync(deadline.Token);
+            var stdout = ReadBoundedAsync(process.StandardOutput, deadline.Token);
+            var stderr = ReadBoundedAsync(process.StandardError, deadline.Token);
+            await Task.WhenAll(stdout, stderr, process.WaitForExitAsync(deadline.Token));
             var output = await stdout;
             var error = await stderr;
             if (process.ExitCode != 0 || output.Length > 65536 || error.Length > 65536)
                 throw new InvalidOperationException("Windhawk CLI rejected the request (exit " + process.ExitCode + "). Confirm the compatible mod is installed.");
             return output;
         }
-        catch (OperationCanceledException)
+        catch (Exception ex)
         {
             try { if (!process.HasExited) process.Kill(); } catch { }
-            throw new TimeoutException("Windhawk CLI timed out. Re-read the actual theme before retrying.");
+            if (ex is OperationCanceledException)
+                throw new TimeoutException("Windhawk CLI timed out. Re-read the actual theme before retrying.");
+            throw;
         }
     }
 
-    public static async Task<string> ReadTheme(string id) => ParseTheme(await Run(id), id);
+    private static async Task<string> ReadThemeCore(string id) => ParseTheme(await Run(id), id);
+    public static async Task<string> ReadTheme(string id)
+    {
+        if (!await Gate.WaitAsync(0)) throw new InvalidOperationException("Another native shell operation is running.");
+        try { return await ReadThemeCore(id); }
+        finally { Gate.Release(); }
+    }
 
     private static Dictionary<string, string> ReadBackups()
     {
@@ -132,11 +154,11 @@ public static class NativeShellThemeBridge
     public static async Task<string> Apply(string id, string theme)
     {
         if (!IsKnownTheme(id, theme)) throw new ArgumentOutOfRangeException(nameof(theme));
-        await Gate.WaitAsync();
+        if (!await Gate.WaitAsync(0)) throw new InvalidOperationException("Another native shell operation is running.");
         try
         {
             EnsureWritable(id);
-            var current = await ReadTheme(id);
+            var current = await ReadThemeCore(id);
             if (current == theme) return current;
             var backups = ReadBackups();
             if (!backups.ContainsKey(id))
@@ -146,7 +168,7 @@ public static class NativeShellThemeBridge
             }
             EnsureWritable(id);
             await Run(id, theme);
-            var actual = await ReadTheme(id);
+            var actual = await ReadThemeCore(id);
             if (actual != theme) throw new InvalidOperationException("Theme readback differs; restore the original if necessary.");
             return actual;
         }
@@ -155,17 +177,17 @@ public static class NativeShellThemeBridge
 
     public static async Task<string> Restore(string id)
     {
-        await Gate.WaitAsync();
+        if (!await Gate.WaitAsync(0)) throw new InvalidOperationException("Another native shell operation is running.");
         try
         {
             EnsureWritable(id);
             if (!ReadBackups().TryGetValue(id, out var original)) throw new InvalidOperationException("No original theme backup for this mod.");
-            if (await ReadTheme(id) != original)
+            if (await ReadThemeCore(id) != original)
             {
                 EnsureWritable(id);
                 await Run(id, original);
             }
-            var actual = await ReadTheme(id);
+            var actual = await ReadThemeCore(id);
             if (actual != original) throw new InvalidOperationException("Theme restore readback differs.");
             return actual;
         }
