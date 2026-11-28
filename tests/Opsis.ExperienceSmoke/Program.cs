@@ -1062,6 +1062,12 @@ try
     try { OpsisTaskbarDesigner.Validate(new OpsisTaskbarDesigner.Profile { Style = "ShellPatch" }); }
     catch (InvalidDataException) { rejected = true; }
     Check(rejected, "taskbar designer rejects undocumented shell modification styles");
+    Check(StartStudioPreferences.LauncherView("Tiles") == System.Windows.Forms.View.Tile &&
+        StartStudioPreferences.LauncherView("Compact") == System.Windows.Forms.View.List &&
+        StartStudioPreferences.LauncherView("List") == System.Windows.Forms.View.Details, "R113 actual launcher view mapping");
+    var testPins = new List<string> { "one", "two", "three" };
+    Check(StartStudioPreferences.MovePin(testPins, "TWO", -1) && testPins.SequenceEqual(new[] { "two", "one", "three" }) &&
+        !StartStudioPreferences.MovePin(testPins, "two", -1) && !StartStudioPreferences.MovePin(testPins, "missing", 1), "R113 pin order and boundaries");
     StartStudioPreferences.SetDisplay("Tiles", true);
     Check(StartStudioPreferences.Read().DisplayStyle == "Tiles" &&
           StartStudioPreferences.Read().GroupByFolder,

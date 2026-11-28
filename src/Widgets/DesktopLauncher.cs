@@ -14,7 +14,10 @@ internal sealed class DesktopLauncher : Form
 
     private static DesktopLauncher? _visible;
     private readonly TextBox _query = new() { Dock = DockStyle.Fill, Font = UiTheme.FontBody };
-    private readonly ListBox _results = new() { Dock = DockStyle.Fill, IntegralHeight = false, Font = UiTheme.FontBody };
+    private readonly ListView _results = new() { Dock = DockStyle.Fill, Font = UiTheme.FontBody,
+        View = View.Details, HeaderStyle = ColumnHeaderStyle.None, FullRowSelect = true,
+        HideSelection = false, MultiSelect = false, ShowGroups = false, ShowItemToolTips = true };
+    private Entry? SelectedEntry => _results.SelectedItems.Count == 1 ? _results.SelectedItems[0].Tag as Entry : null;
     private readonly CancellationTokenSource _closing = new();
     private Entry[] _index = [];
     private readonly bool _signature = AppSettings.Peek().ThemeMode == "SignatureGlass" && !SystemInformation.HighContrast;
@@ -41,6 +44,7 @@ internal sealed class DesktopLauncher : Form
         window.Location = new Point(Math.Clamp(x, screen.Left, Math.Max(screen.Left, screen.Right - window.Width)),
             Math.Clamp(y, screen.Top, Math.Max(screen.Top, screen.Bottom - window.Height)));
         window.Show();
+        window.ResizeResultColumns();
         window.Activate();
     }
 
@@ -62,6 +66,20 @@ internal sealed class DesktopLauncher : Form
         _query.ForeColor = SystemInformation.HighContrast ? SystemColors.WindowText : UiTheme.TextPrimary;
         _results.BackColor = _query.BackColor;
         _results.ForeColor = _query.ForeColor;
+        _results.AccessibleName = MainWindow.StudioText("Launcher results", "Αποτελέσματα εκκινητή");
+        _results.Columns.Add("Application", 380);
+        _results.Columns.Add("Group", 160);
+        _results.Resize += (_, _) => ResizeResultColumns();
+        if (startMenu)
+        {
+            try { _results.View = StartStudioPreferences.LauncherView(StartStudioPreferences.Read().DisplayStyle); }
+            catch (Exception ex) { RotatingLogger.Write("Start layout: " + ex.Message); }
+            if (_results.View == View.Tile)
+            {
+                int dpi = DeviceDpi;
+                _results.TileSize = new Size(230 * dpi / 96, 64 * dpi / 96);
+            }
+        }
         if (_signature) _results.BorderStyle = BorderStyle.FixedSingle;
         var layout = new TableLayoutPanel { Dock = DockStyle.Fill, RowCount = 2, ColumnCount = 1, Padding = new Padding(14) };
         layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
@@ -142,8 +160,8 @@ internal sealed class DesktopLauncher : Form
                 case Keys.Escape: Close(); break;
                 case Keys.Enter: LaunchSelection(); break;
                 case Keys.F3: PreviewSelection(); break;
-                case Keys.Up when _results.Items.Count > 0: _results.SelectedIndex = Math.Max(0, _results.SelectedIndex - 1); break;
-                case Keys.Down when _results.Items.Count > 0: _results.SelectedIndex = Math.Min(_results.Items.Count - 1, _results.SelectedIndex + 1); break;
+                case Keys.Up when _query.Focused && _results.Items.Count > 0: MoveSelection(-1); break;
+                case Keys.Down when _query.Focused && _results.Items.Count > 0: MoveSelection(1); break;
                 default: return;
             }
             e.SuppressKeyPress = true;
@@ -163,6 +181,28 @@ internal sealed class DesktopLauncher : Form
             catch (Exception ex) { if (!IsDisposed && !Disposing) _query.PlaceholderText = ex.Message; }
         };
         FormClosed += (_, _) => { _closing.Cancel(); _closing.Dispose(); };
+    }
+
+    private void ResizeResultColumns()
+    {
+        if (_results.Columns.Count < 2) return;
+        int available = Math.Max(100, _results.ClientSize.Width - SystemInformation.VerticalScrollBarWidth - 4);
+        int group = Math.Min(180 * DeviceDpi / 96, available / 3);
+        _results.Columns[0].Width = available - group;
+        _results.Columns[1].Width = group;
+        if (_results.View == View.Tile)
+            _results.TileSize = new Size(Math.Max(120, Math.Min(230 * DeviceDpi / 96, available)), 64 * DeviceDpi / 96);
+        else if (_results.View == View.List)
+            _results.Columns[0].Width = Math.Min(240 * DeviceDpi / 96, available);
+    }
+
+    private void MoveSelection(int direction)
+    {
+        int selected = _results.SelectedIndices.Count > 0 ? _results.SelectedIndices[0] : -1;
+        int next = Math.Clamp(selected + direction, 0, _results.Items.Count - 1);
+        _results.Items[next].Selected = true;
+        _results.Items[next].Focused = true;
+        _results.EnsureVisible(next);
     }
 
     private void StyleShortcut(Button button)
@@ -250,9 +290,28 @@ internal sealed class DesktopLauncher : Form
         _results.BeginUpdate();
         try
         {
+            var previous = SelectedEntry;
             _results.Items.Clear();
-            _results.Items.AddRange(matches.ToArray());
-            if (_results.Items.Count > 0) _results.SelectedIndex = 0;
+            foreach (var entry in matches)
+            {
+                string name = (entry.PinRank != int.MaxValue ? "★ " : "") + entry.Name;
+                string group = entry.ShowGroup ? entry.Group : "";
+                var item = new ListViewItem(_results.View == View.List && group.Length > 0 ? name + " · " + group : name)
+                {
+                    Tag = entry, ToolTipText = entry.Target
+                };
+                item.SubItems.Add(group);
+                _results.Items.Add(item);
+            }
+            if (_results.Items.Count > 0)
+            {
+                int index = previous == null ? 0 : matches.FindIndex(x => x.Window == previous.Window &&
+                    string.Equals(x.Target, previous.Target, StringComparison.OrdinalIgnoreCase));
+                var item = _results.Items[Math.Max(0, index)];
+                item.Selected = true;
+                item.Focused = true;
+                item.EnsureVisible();
+            }
         }
         finally { _results.EndUpdate(); }
     }
@@ -261,7 +320,7 @@ internal sealed class DesktopLauncher : Form
 
     private void PreviewSelection()
     {
-        if (_results.SelectedItem is not Entry item || item.Window != IntPtr.Zero) return;
+        if (SelectedEntry is not Entry item || item.Window != IntPtr.Zero) return;
         try
         {
             if (!Path.IsPathFullyQualified(item.Target) || !File.Exists(item.Target)) return;
@@ -274,7 +333,7 @@ internal sealed class DesktopLauncher : Form
 
     private void LaunchSelection()
     {
-        if (_results.SelectedItem is not Entry selected) return;
+        if (SelectedEntry is not Entry selected) return;
         try
         {
             if (selected.Window != IntPtr.Zero) WinApi.BringToFront(selected.Window);

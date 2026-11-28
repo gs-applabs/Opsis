@@ -21,6 +21,7 @@ public sealed class StartStudioForm : Form
     private readonly Label _info = new() { Dock = DockStyle.Bottom, Height = 30, TextAlign = System.Drawing.ContentAlignment.MiddleLeft };
     private List<StartStudioPreferences.Shortcut> _entries = new();
     private HashSet<string> _pinned = new(StringComparer.OrdinalIgnoreCase);
+    private List<string> _pinOrder = new();
     private readonly CheckBox _pinnedOnly = new() { Text = "Pinned only / Μόνο καρφιτσωμένα", AutoSize = true, Margin = new Padding(7, 10, 10, 6) };
     private readonly Button _pinButton = new() { Text = "Pin / Unpin", Width = 120, Height = 30 };
     private readonly Button _refreshButton = new() { Text = "Refresh / Ανανέωση", Width = 160, Height = 30 };
@@ -44,6 +45,11 @@ public sealed class StartStudioForm : Form
         Controls.Add(_search);
         _toolbar.Controls.Add(_pinnedOnly);
         _toolbar.Controls.Add(_pinButton);
+        var pinUp = new Button { Text = "↑ Pin", AutoSize = true, AccessibleName = "Move pinned application earlier" };
+        var pinDown = new Button { Text = "↓ Pin", AutoSize = true, AccessibleName = "Move pinned application later" };
+        pinUp.Click += (_, _) => MoveSelectedPin(-1);
+        pinDown.Click += (_, _) => MoveSelectedPin(1);
+        _toolbar.Controls.Add(pinUp); _toolbar.Controls.Add(pinDown);
         _toolbar.Controls.Add(_refreshButton);
         _layoutStyle.Items.AddRange(new object[] { "List", "Tiles", "Compact" });
         _toolbar.Controls.Add(_layoutStyle);
@@ -126,7 +132,8 @@ public sealed class StartStudioForm : Form
         try
         {
             var preferences = StartStudioPreferences.Read();
-            _pinned = preferences.PinnedShortcuts.ToHashSet(StringComparer.OrdinalIgnoreCase);
+            _pinOrder = preferences.PinnedShortcuts.ToList();
+            _pinned = _pinOrder.ToHashSet(StringComparer.OrdinalIgnoreCase);
             _loadingPresentation = true;
             try
             {
@@ -225,15 +232,31 @@ public sealed class StartStudioForm : Form
         {
             var next = !_pinned.Contains(selected);
             StartStudioPreferences.SetPinned(selected, next);
-            if (next) _pinned.Add(selected); else _pinned.Remove(selected);
+            _pinOrder = StartStudioPreferences.Read().PinnedShortcuts.ToList();
+            _pinned = _pinOrder.ToHashSet(StringComparer.OrdinalIgnoreCase);
             RefreshResults();
         }
         catch (Exception ex) { MessageBox.Show(this, ex.Message, "Start Studio", MessageBoxButtons.OK, MessageBoxIcon.Error); }
     }
 
+    private void MoveSelectedPin(int direction)
+    {
+        if (_results.SelectedItems.Count != 1 || _results.SelectedItems[0].Tag is not string path || !_pinned.Contains(path)) return;
+        try
+        {
+            if (!StartStudioPreferences.MovePinned(path, direction)) return;
+            _pinOrder = StartStudioPreferences.Read().PinnedShortcuts.ToList();
+            RefreshResults();
+        }
+        catch (Exception ex) { MessageBox.Show(this, ex.Message, Text); }
+    }
+
     private void RefreshResults()
     {
         var term = _search.Text.Trim();
+        var selected = _results.SelectedItems.Count == 1 ? _results.SelectedItems[0].Tag as string : null;
+        var ranks = _pinOrder.Select((path, index) => (path, index)).GroupBy(x => x.path, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(g => g.Key, g => g.First().index, StringComparer.OrdinalIgnoreCase);
         _results.BeginUpdate();
         try
         {
@@ -244,7 +267,7 @@ public sealed class StartStudioForm : Form
                 (term.Length == 0 ||
                 x.Name.Contains(term, StringComparison.CurrentCultureIgnoreCase) ||
                 x.Group.Contains(term, StringComparison.CurrentCultureIgnoreCase)))
-                .OrderByDescending(x => _pinned.Contains(x.Path))
+                .OrderBy(x => ranks.TryGetValue(x.Path, out int rank) ? rank : int.MaxValue)
                 .ThenBy(x => x.Group, StringComparer.CurrentCultureIgnoreCase)
                 .ThenBy(x => x.Name, StringComparer.CurrentCultureIgnoreCase).Take(300))
             {
@@ -253,15 +276,17 @@ public sealed class StartStudioForm : Form
                 item.Tag = entry.Path;
                 if (_groupByFolder.Checked)
                 {
-                    if (!groups.TryGetValue(entry.Group, out var group))
+                    string groupName = _pinned.Contains(entry.Path) ? "Pinned / Καρφιτσωμένα" : entry.Group;
+                    if (!groups.TryGetValue(groupName, out var group))
                     {
-                        group = new ListViewGroup(entry.Group);
-                        groups.Add(entry.Group, group);
+                        group = new ListViewGroup(groupName);
+                        groups.Add(groupName, group);
                         _results.Groups.Add(group);
                     }
                     item.Group = group;
                 }
                 _results.Items.Add(item);
+                if (string.Equals(selected, entry.Path, StringComparison.OrdinalIgnoreCase)) { item.Selected = true; item.Focused = true; }
             }
             _info.Text = $"{_results.Items.Count} displayed / {_entries.Count} indexed — double click or Enter to launch";
         }

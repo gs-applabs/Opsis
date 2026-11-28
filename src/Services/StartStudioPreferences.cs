@@ -123,6 +123,34 @@ public static class StartStudioPreferences
         }
     }
 
+    internal static System.Windows.Forms.View LauncherView(string style) => style switch
+    {
+        "Tiles" => System.Windows.Forms.View.Tile,
+        "Compact" => System.Windows.Forms.View.List,
+        _ => System.Windows.Forms.View.Details
+    };
+
+    internal static bool MovePin(List<string> pins, string path, int direction)
+    {
+        if (direction is not (-1 or 1)) throw new ArgumentOutOfRangeException(nameof(direction));
+        int index = pins.FindIndex(p => string.Equals(p, path, StringComparison.OrdinalIgnoreCase));
+        int target = index + direction;
+        if (index < 0 || target < 0 || target >= pins.Count) return false;
+        (pins[index], pins[target]) = (pins[target], pins[index]);
+        return true;
+    }
+
+    public static bool MovePinned(string path, int direction)
+    {
+        lock (Gate)
+        {
+            var data = Read();
+            if (!MovePin(data.PinnedShortcuts, path, direction)) return false;
+            AtomicFile.WriteAllText(Config, JsonSerializer.Serialize(data, new JsonSerializerOptions { WriteIndented = true }));
+            return true;
+        }
+    }
+
     public static bool IsPinned(string path) => Read().PinnedShortcuts.Contains(path, StringComparer.OrdinalIgnoreCase);
 
     public static void SetDisplay(string style, bool groupByFolder)
