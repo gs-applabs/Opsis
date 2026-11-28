@@ -70,6 +70,22 @@ try
     bool workerDenied = false;
     try { PluginCapabilityManifest.RequireCompatibleApi(sdkFixture); } catch (InvalidDataException) { workerDenied = true; }
     Check(workerDenied, "P0 unsupported isolated execution must not fall back to in-process loading");
+    Check(PluginCapabilityManifest.HostVersionAllowed(new Version(3,0,0,3200), new Version(3,0), new Version(3,1)) &&
+        !PluginCapabilityManifest.HostVersionAllowed(new Version(3,0,0,3200), new Version(3,1), null) &&
+        !PluginCapabilityManifest.HostVersionAllowed(new Version(3,0,0,3200), null, new Version(2,8)),
+        "R118 host version range negotiation");
+    Check(PluginCapabilityManifest.ValidDependencyFile("Example.Dependency.dll") &&
+        !PluginCapabilityManifest.ValidDependencyFile("../outside.dll") &&
+        !PluginCapabilityManifest.ValidDependencyFile("external.exe"), "R118 dependencies restricted to local DLL names");
+    File.WriteAllText(Path.Combine(sdkFixture, "opsis-sdk.json"),
+        """{"schemaVersion":1,"minApi":1,"maxApi":1,"execution":"trusted-in-process","dependencies":[{"file":"Missing.dll","assemblyVersion":"1.0.0.0"}]}""");
+    bool missingDependencyDenied = false;
+    try { PluginCapabilityManifest.RequireCompatibleApi(sdkFixture); } catch (InvalidDataException) { missingDependencyDenied = true; }
+    Check(missingDependencyDenied, "R118 missing declared dependency fails before loading");
+    Check(PluginHost.DependencyIdentityMatches(new System.Reflection.AssemblyName("Example, Version=1.0.0.0"), new System.Reflection.AssemblyName("Example, Version=2.0.0.0")) &&
+        !PluginHost.DependencyIdentityMatches(new System.Reflection.AssemblyName("Example, Version=2.0.0.0"), new System.Reflection.AssemblyName("Example, Version=1.0.0.0")) &&
+        !PluginHost.DependencyIdentityMatches(new System.Reflection.AssemblyName("Example, Version=1.0.0.0"), new System.Reflection.AssemblyName("Other, Version=1.0.0.0")),
+        "R118 runtime dependency identity and version checks");
     var grantFolder = Path.Combine(folder, "plugin-consent"); Directory.CreateDirectory(grantFolder);
     var permissionFile = Path.Combine(grantFolder, "opsis-permissions.json");
     File.WriteAllText(permissionFile, "{\"Network\":true,\"Audio\":false,\"LocalFiles\":true}");

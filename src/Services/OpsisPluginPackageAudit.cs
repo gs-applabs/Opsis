@@ -47,10 +47,11 @@ public static class OpsisPluginPackageAudit
                         new FileInfo(file).Length > 100 * 1024 * 1024)
                         throw new InvalidDataException("Unsafe plugin DLL file path/size");
                     version = AssemblyName.GetAssemblyName(file).Version;
+                    PluginCapabilityManifest.RequireCompatibleApi(folder);
                     status = Classify(Path.GetFileName(file), version);
                 }
                 catch (Exception ex) when (ex is IOException or BadImageFormatException or
-                    UnauthorizedAccessException or InvalidDataException or ArgumentException)
+                    UnauthorizedAccessException or InvalidDataException or ArgumentException or System.Text.Json.JsonException)
                 { status = "InvalidMetadata"; }
                 results.Add(new Package(Path.GetFileName(folder), Path.GetFileName(file),
                     version?.ToString() ?? "unknown", status,

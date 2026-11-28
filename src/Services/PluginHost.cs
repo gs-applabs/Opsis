@@ -853,9 +853,19 @@ namespace MotionDesk.Services
             PluginCapabilityManifest.RequireCompatibleApi(folder);
             _ = PluginCapabilityManifest.Read(folder);
             if (IsReplacedByBuiltIn(folder)) { Log($"Plugin folder '{Path.GetFileName(folder)}' skipped: its features are built into Opsis 2.6.0"); return; }
-            foreach (var dll in Directory.EnumerateFiles(folder, "*Plugin.dll"))
+            var entrypoints = Directory.EnumerateFiles(folder, "*Plugin.dll").Take(81).ToArray();
+            if (entrypoints.Length > 80) throw new InvalidDataException("Plugin entrypoint quota exceeded.");
+            foreach (var dll in entrypoints.OrderBy(x => x, StringComparer.OrdinalIgnoreCase))
             {
-                if (!PackagePaths.IsExistingUnlinkedPath(folder, dll)) continue;
+                try { LoadEntrypoint(folder, dll); }
+                catch (Exception ex) { Log($"Plugin entrypoint '{dll}' failed: {ex}"); }
+            }
+        }
+
+        private void LoadEntrypoint(string folder, string dll)
+        {
+                if (PackageExcluded(folder) || !PackagePaths.IsExistingUnlinkedPath(folder, dll)) return;
+                if (new FileInfo(dll).Length > 100L * 1024 * 1024) throw new InvalidDataException("Plugin entrypoint exceeds size quota.");
                 // #97: only known 1.0.0.0 plugin entrypoints are gated.
                 // Unknown third-party plugins retain the established ABI policy.
                 var fileName = Path.GetFileName(dll);
@@ -866,7 +876,7 @@ namespace MotionDesk.Services
                     if (identity.Version != new Version(1, 0, 0, 0))
                     {
                         Log($"Plugin '{fileName}' skipped: ABI {identity.Version} (" + AppVersion.Short + " requires 1.0.0.0). Update this plugin before enabling it.");
-                        continue;
+                        return;
                     }
                 }
                 var context = new PluginLoadContext(dll);
@@ -890,13 +900,27 @@ namespace MotionDesk.Services
                     }
                     AddLoaded(new Loaded { Plugin = plugin, Folder = folder });
                 }
-            }
         }
 
         private static bool IsNewerVersion(string candidate, string current)
         {
             if (System.Version.TryParse(candidate, out var c) && System.Version.TryParse(current, out var u)) return c > u;
             return string.CompareOrdinal(candidate, current) > 0; // fallback: ασυνήθιστη μορφή έκδοσης, τουλάχιστον σταθερή σύγκριση
+        }
+
+        internal static bool DependencyIdentityMatches(AssemblyName requested, AssemblyName available)
+        {
+            var token = requested.GetPublicKeyToken() ?? Array.Empty<byte>();
+            return AssemblyName.ReferenceMatchesDefinition(requested, available) &&
+                (requested.Version == null || available.Version != null && available.Version >= requested.Version) &&
+                (token.Length == 0 || token.SequenceEqual(available.GetPublicKeyToken() ?? Array.Empty<byte>())) &&
+                (string.IsNullOrEmpty(requested.CultureName) || string.Equals(requested.CultureName, available.CultureName, StringComparison.OrdinalIgnoreCase));
+        }
+
+        private static void RequireDependencyIdentity(AssemblyName requested, AssemblyName available)
+        {
+            if (!DependencyIdentityMatches(requested, available))
+                throw new FileLoadException($"Plugin requires {requested.FullName}; available {available.FullName}. Update Opsis or the plugin.");
         }
 
         private sealed class PluginLoadContext : AssemblyLoadContext
@@ -930,7 +954,10 @@ namespace MotionDesk.Services
                 // Πρώτα χρησιμοποιούμε το .deps.json μέσω του AssemblyDependencyResolver.
                 var path = _resolver.ResolveAssemblyToPath(name);
                 if (path != null && File.Exists(path) && PackagePaths.IsExistingUnlinkedPath(_pluginDirectory, path))
+                {
+                    RequireDependencyIdentity(name, AssemblyName.GetAssemblyName(path));
                     return LoadFromAssemblyPath(path);
+                }
 
                 // Fallback: αρκετά plugin distributions περιλαμβάνουν τις εξαρτήσεις δίπλα
                 // στο *Plugin.dll, αλλά το .deps.json μπορεί να μην τις καταγράφει σωστά.
@@ -943,8 +970,8 @@ namespace MotionDesk.Services
                         try
                         {
                             var candidateName = AssemblyName.GetAssemblyName(candidate);
-                            if (AssemblyName.ReferenceMatchesDefinition(name, candidateName))
-                                return LoadFromAssemblyPath(candidate);
+                            RequireDependencyIdentity(name, candidateName);
+                            return LoadFromAssemblyPath(candidate);
                         }
                         catch (BadImageFormatException)
                         {
@@ -958,10 +985,7 @@ namespace MotionDesk.Services
 
             private static Assembly CompatibleHostAssembly(AssemblyName requested, Assembly host)
             {
-                var available = host.GetName();
-                if (!AssemblyName.ReferenceMatchesDefinition(requested, available) ||
-                    (requested.Version != null && available.Version != null && requested.Version > available.Version))
-                    throw new FileLoadException($"Plugin requires {requested.FullName}; Opsis provides {available.FullName}. Update Opsis or the plugin.");
+                RequireDependencyIdentity(requested, host.GetName());
                 return host;
             }
 
