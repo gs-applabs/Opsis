@@ -240,6 +240,35 @@ public static class OpsisTaskbarDesigner
         return new Rectangle(x, y, vertical ? thickness : length, vertical ? length : thickness);
     }
 
+    // DeskStrip owns its chosen edge and reserves its reveal footprint even
+    // while auto-hidden. Move only the Opsis companion bar, never Windows'
+    // taskbar or saved geometry. Fail closed if there is not enough room.
+    internal static Rectangle AvoidDeskStrip(Profile profile, Rectangle desired, Rectangle work,
+        IReadOnlyList<Rectangle> reservations)
+    {
+        if (desired.IsEmpty || !reservations.Any(r => r.IntersectsWith(desired))) return desired;
+        if (!IsDetached(profile)) return Rectangle.Empty;
+        if (!work.Contains(desired)) return Rectangle.Empty;
+        bool vertical = desired.Height > desired.Width;
+        bool nearStart = vertical ? desired.Left + desired.Width / 2 <= work.Left + work.Width / 2
+            : desired.Top + desired.Height / 2 <= work.Top + work.Height / 2;
+        const int clearance = 8;
+        var candidate = desired;
+        for (int step = 0; step < reservations.Count; step++)
+        {
+            var collisions = reservations.Where(r => r.IntersectsWith(candidate)).ToArray();
+            if (collisions.Length == 0) return candidate;
+            if (vertical)
+                candidate.X = nearStart ? collisions.Max(r => r.Right) + clearance
+                    : collisions.Min(r => r.Left) - clearance - candidate.Width;
+            else
+                candidate.Y = nearStart ? collisions.Max(r => r.Bottom) + clearance
+                    : collisions.Min(r => r.Top) - clearance - candidate.Height;
+            if (!work.Contains(candidate)) return Rectangle.Empty;
+        }
+        return reservations.Any(r => r.IntersectsWith(candidate)) ? Rectangle.Empty : candidate;
+    }
+
     public static int ButtonHeight(Profile p, bool vertical, int barThickness)
     {
         Validate(p);

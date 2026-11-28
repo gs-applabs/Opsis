@@ -46,7 +46,7 @@ public sealed class OpsisTaskbarDesignerForm : Form
         Font = UiTheme.FontBody;
         BackColor = UiTheme.PageBackground;
         ForeColor = UiTheme.TextPrimary;
-        _heading.Text = "Opsis Taskbar Designer\nNative position is unchanged. Detached Opsis bars use the monitor work area; Windows taskbar remains available.";
+        _heading.Text = "Opsis Taskbar Designer\nDeskStrip has edge priority. A conflicting detached bar shifts inward or hides; Windows taskbar stays available. Pins share the DeskStrip list.";
         _heading.Padding = new Padding(12, 10, 10, 5);
         Controls.Add(_heading);
         var grid = new FlowLayoutPanel

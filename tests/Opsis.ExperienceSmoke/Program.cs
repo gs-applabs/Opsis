@@ -1035,6 +1035,23 @@ try
     var desktop = new System.Drawing.Rectangle(-1920, 0, 1920, 1080);
     var work = new System.Drawing.Rectangle(-1920, 0, 1920, 1032);
     var nativeBar = new System.Drawing.Rectangle(-1920, 1032, 1920, 48);
+    var collisionProfile = new OpsisTaskbarDesigner.Profile { Edge = "Bottom", Floating = true };
+    var dockRect = new System.Drawing.Rectangle(-1300, 900, 600, 124);
+    var desiredBar = new System.Drawing.Rectangle(-1450, 960, 900, 56);
+    var shiftedBar = OpsisTaskbarDesigner.AvoidDeskStrip(collisionProfile, desiredBar, work, new[] { dockRect });
+    Check(!shiftedBar.IsEmpty && work.Contains(shiftedBar) && !shiftedBar.IntersectsWith(dockRect) && shiftedBar.Bottom < dockRect.Top,
+        "R116 detached bottom taskbar yields inward to DeskStrip");
+    Check(OpsisTaskbarDesigner.AvoidDeskStrip(collisionProfile, desiredBar, work, new[] { new System.Drawing.Rectangle(100, 900, 600, 124) }) == desiredBar,
+        "R116 reservation on another monitor does not alter placement");
+    Check(OpsisTaskbarDesigner.AvoidDeskStrip(collisionProfile, desiredBar, work, new[] { work }).IsEmpty &&
+        OpsisTaskbarDesigner.AvoidDeskStrip(new OpsisTaskbarDesigner.Profile(), nativeBar, work, new[] { nativeBar }).IsEmpty,
+        "R116 insufficient room and native overlay fail closed");
+    var verticalProfile = new OpsisTaskbarDesigner.Profile { Edge = "Left", Floating = true };
+    var verticalBar = new System.Drawing.Rectangle(-1910, 200, 70, 600);
+    var verticalDock = new System.Drawing.Rectangle(-1920, 300, 100, 400);
+    var shiftedVertical = OpsisTaskbarDesigner.AvoidDeskStrip(verticalProfile, verticalBar, work, new[] { verticalDock });
+    Check(!shiftedVertical.IsEmpty && shiftedVertical.Left > verticalDock.Right && work.Contains(shiftedVertical),
+        "R116 vertical taskbar yields inward to DeskStrip");
     Check(OpsisTaskbarDesigner.CalculateBounds(new OpsisTaskbarDesigner.Profile(), desktop, work, nativeBar, 3) == nativeBar,
         "unchanged taskbar profile preserves native bounds");
     foreach (var edge in new[] { "Top", "Bottom", "Left", "Right" })

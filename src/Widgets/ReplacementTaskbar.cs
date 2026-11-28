@@ -135,6 +135,18 @@ internal sealed class ReplacementTaskbar : Form
         RefreshBars();
     }
 
+    internal static void YieldToDeskStrip(Rectangle reservation)
+    {
+        if (_timer == null || reservation.IsEmpty) return;
+        foreach (var bar in Bars.Values)
+        {
+            if (!bar.Visible || !bar.Bounds.IntersectsWith(reservation)) continue;
+            bar.Hide();
+            TaskbarWindowPreview.CloseCurrent();
+            OpsisVolumeFlyout.CloseCurrent();
+        }
+    }
+
     private static void RefreshBars()
     {
         if (!Admission) { Stop(); return; }
@@ -165,6 +177,7 @@ internal sealed class ReplacementTaskbar : Form
                 _displaySignature = signature; _identityAt = Environment.TickCount64;
             }
         }
+        var dockReservations = DeskStripHostEngine.TaskbarReservations();
         foreach (var (id, screen) in screens)
         {
             var effective = profile;
@@ -180,6 +193,7 @@ internal sealed class ReplacementTaskbar : Form
             var localWindows = _windows.Where(window => Screen.FromHandle(window.Handle).DeviceName == id).ToArray();
             var bounds = OpsisTaskbarDesigner.CalculateBounds(effective, screen.Bounds, screen.WorkingArea, native,
                 Math.Min(14, pins.Count) + localWindows.Length);
+            bounds = OpsisTaskbarDesigner.AvoidDeskStrip(effective, bounds, screen.WorkingArea, dockReservations);
             if (bounds.Width < 24 || bounds.Height < 24) { bar.Hide(); continue; }
             if (bar.Bounds != bounds) bar.Bounds = bounds;
             if (AppActivity.IsFullscreenOn(screen)) { bar.Hide(); TaskbarWindowPreview.CloseCurrent(); OpsisVolumeFlyout.CloseCurrent(); continue; }

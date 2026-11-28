@@ -481,9 +481,24 @@ namespace MotionDesk.Widgets
             };
         }
 
+        // Reserve requested bounds even when auto-hidden. During an animated
+        // move reserve the swept rectangle as well, so the existing taskbar
+        // refresh cannot place an overlay in the dock's path.
+        internal Rectangle TaskbarReservation
+        {
+            get
+            {
+                var target = TargetBounds(DockScreen.WorkingArea);
+                return Visible ? Rectangle.Union(Bounds, target) : target;
+            }
+        }
+
         private void ApplyLayout(bool animate)
         {
             var r = TargetBounds(DockScreen.WorkingArea);
+            // Yield existing bars before any visible movement, not one tick
+            // after overlap. The existing bar timer will resolve placement.
+            ReplacementTaskbar.YieldToDeskStrip(Visible ? Rectangle.Union(Bounds, r) : r);
             Size = r.Size;
             UpdateRegion();
             if (!animate || !_shown || !IsHandleCreated || !Visible) { _slideT = 1; Location = r.Location; Invalidate(); return; }
@@ -1337,6 +1352,16 @@ namespace MotionDesk.Widgets
         private static DeskStripHostEngine? _instance;
         public static DeskStripHostEngine Instance => _instance ??= new DeskStripHostEngine();
         internal static bool ActivityDemand => _instance?.IsEnabled == true;
+        internal static IReadOnlyList<Rectangle> TaskbarReservations() => _instance?.CollectTaskbarReservations() ?? Array.Empty<Rectangle>();
+
+        private IReadOnlyList<Rectangle> CollectTaskbarReservations()
+        {
+            var reservations = new List<Rectangle>();
+            if (_window is { IsDisposed: false } primary) reservations.Add(primary.TaskbarReservation);
+            foreach (var mirror in _mirrors.Values)
+                if (!mirror.IsDisposed) reservations.Add(mirror.TaskbarReservation);
+            return reservations;
+        }
 
         private DeskStripWindow? _window;
         private readonly Dictionary<string, DeskStripWindow> _mirrors = new(StringComparer.OrdinalIgnoreCase);
