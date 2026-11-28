@@ -8,7 +8,7 @@ on:
       crawler_ref:
         description: 'News Crawler branch/ref for the staged plugin DLL'
         required: false
-        default: '4d97e291317cec28ec9fd925efd9b0d97117eade'
+        default: '2f2616ce4280be150a0605799e2670ea5b3334dc'
         type: string
       chronikologio_ref:
         description: 'Chronikologio branch/ref for the staged plugin DLL'
@@ -40,7 +40,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: gs-applabs/OpsisNewsCrawler
-          ref: ${{ inputs.crawler_ref || '4d97e291317cec28ec9fd925efd9b0d97117eade' }}
+          ref: ${{ inputs.crawler_ref || '2f2616ce4280be150a0605799e2670ea5b3334dc' }}
           path: _compat/crawler
           persist-credentials: false
       - uses: actions/checkout@v4
