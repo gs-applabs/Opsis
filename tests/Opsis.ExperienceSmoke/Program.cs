@@ -1161,6 +1161,15 @@ try
     catch (ArgumentOutOfRangeException) { rejected = true; }
     Check(rejected, "Start Studio refuses unsupported third-party shell mode");
 
+    Check(OpsisScreensaverHost.Parse(Array.Empty<string>()).Mode == OpsisScreensaverHost.Command.Configure &&
+        OpsisScreensaverHost.Parse(new[] { "/s" }).Mode == OpsisScreensaverHost.Command.Fullscreen &&
+        OpsisScreensaverHost.Parse(new[] { "/C:123" }).Mode == OpsisScreensaverHost.Command.Configure,
+        "R120 SCR standard configure/fullscreen commands");
+    Check(OpsisScreensaverHost.Parse(new[] { "/p", "123" }).Parent == new IntPtr(123) &&
+        OpsisScreensaverHost.Parse(new[] { "/P:123" }).Mode == OpsisScreensaverHost.Command.Preview &&
+        OpsisScreensaverHost.Parse(new[] { "/p", "-1" }).Mode == OpsisScreensaverHost.Command.Invalid &&
+        OpsisScreensaverHost.Parse(new[] { "--background" }).Mode == OpsisScreensaverHost.Command.Invalid,
+        "R120 SCR preview handle and fail-closed unknown commands");
     var screensaverProfile = OpsisScreensaverStudio.Read();
     Check(screensaverProfile.Mode == "Clock", "screensaver first-run mode is safe clock-only");
     screensaverProfile.DimPercent = 35;

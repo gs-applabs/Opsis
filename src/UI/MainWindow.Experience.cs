@@ -401,71 +401,17 @@ public sealed partial class MainWindow
                 catch (Exception ex) { MessageBox.Show(this, ex.Message, "Windows Start", MessageBoxButtons.OK, MessageBoxIcon.Error); }
             }));
 
-        var screensaverCard = AddCardSection(panel, StudioText("P4 — Screensaver Studio", "P4 — Στούντιο προφύλαξης οθόνης"));
-        AddText(screensaverCard, StudioText(
-            "Create native Opsis fullscreen clock/image scenes. User-triggered preview only; Windows .scr registration remains a separate opt-in integration.",
-            "Δημιουργία σκηνών ρολογιού και εικόνας πλήρους οθόνης. Προεπισκόπηση μόνο με επιλογή χρήστη· δεν αλλάζει η προφύλαξη οθόνης των Windows."));
-        var saverMode = new ComboBox { Width = 152, DropDownStyle = ComboBoxStyle.DropDownList };
-        saverMode.Items.AddRange(new object[] { "Clock", "StaticImage", "ClockAndImage" });
-        var saverImage = new TextBox { Width = 320, ReadOnly = true };
-        var saverChoose = new Button { Text = StudioText("Choose image", "Επιλογή εικόνας"), Width = 120 };
-        var saverDim = new NumericUpDown { Minimum = 0, Maximum = 75, Increment = 5, Width = 68 };
-        var saverSeconds = new CheckBox { Text = StudioText("Show seconds", "Εμφάνιση δευτερολέπτων"),
-            AutoSize = true, ForeColor = UiTheme.TextPrimary };
-        OpsisScreensaverStudio.Profile savedSaver;
-        try { savedSaver = OpsisScreensaverStudio.Read(); }
-        catch (Exception ex)
-        {
-            RotatingLogger.Write("Invalid screensaver configuration: " + ex.Message);
-            savedSaver = new OpsisScreensaverStudio.Profile();
-        }
-        saverMode.SelectedItem = savedSaver.Mode;
-        saverImage.Text = savedSaver.ImagePath;
-        saverDim.Value = savedSaver.DimPercent;
-        saverSeconds.Checked = savedSaver.ShowSeconds;
-        saverChoose.Click += (_, _) =>
-        {
-            using var chooser = new OpenFileDialog
-            {
-                Filter = "Images (*.jpg;*.jpeg;*.png;*.bmp)|*.jpg;*.jpeg;*.png;*.bmp"
-            };
-            if (chooser.ShowDialog(this) == DialogResult.OK) saverImage.Text = chooser.FileName;
-        };
-        var saverRow = new FlowLayoutPanel { Width = 720, AutoSize = true, WrapContents = true };
-        saverRow.Controls.Add(saverMode);
-        saverRow.Controls.Add(saverImage);
-        saverRow.Controls.Add(saverChoose);
-        saverRow.Controls.Add(new Label { Text = StudioText("Dim %", "Σκοτείνιασμα %"),
-            AutoSize = true, ForeColor = UiTheme.TextSecondary, Margin = new Padding(4, 8, 2, 0) });
-        saverRow.Controls.Add(saverDim);
-        saverRow.Controls.Add(saverSeconds);
-        screensaverCard.Controls.Add(saverRow);
-        OpsisScreensaverStudio.Profile BuildScreensaverProfile() => new()
-        {
-            Mode = saverMode.SelectedItem?.ToString() ?? "Clock",
-            ImagePath = saverImage.Text,
-            DimPercent = (int)saverDim.Value,
-            ShowSeconds = saverSeconds.Checked
-        };
+        var screensaverCard = AddCardSection(panel, StudioText("Screensaver Studio", "Στούντιο προφύλαξης οθόνης"));
+        AddText(screensaverCard, StudioText("Built-in clock and image scenes; optional installed Opsis.scr. Windows keeps control of timeout, activation and secure resume.",
+            "Ενσωματωμένες σκηνές ρολογιού και εικόνας, με προαιρετική επιλογή Opsis.scr. Τα Windows διαχειρίζονται χρόνο αναμονής, ενεργοποίηση και ασφαλή επαναφορά."));
         AddButtonGrid(screensaverCard,
-            (StudioText("Save screensaver scene", "Αποθήκευση σκηνής"), (_, _) =>
+            (StudioText("Open Screensaver Studio", "Άνοιγμα στούντιο προφύλαξης"), (_, _) =>
             {
-                try { OpsisScreensaverStudio.Save(BuildScreensaverProfile()); }
-                catch (Exception ex) { MessageBox.Show(this, ex.Message, "Opsis Screensaver", MessageBoxButtons.OK, MessageBoxIcon.Error); }
-            }),
-            (StudioText("Fullscreen preview", "Προεπισκόπηση πλήρους οθόνης"), (_, _) =>
-            {
-                try
-                {
-                    using var preview = new OpsisScreensaverPreviewForm(BuildScreensaverProfile());
-                    preview.ShowDialog(this);
-                }
-                catch (Exception ex) { MessageBox.Show(this, ex.Message, "Opsis Screensaver", MessageBoxButtons.OK, MessageBoxIcon.Error); }
+                using var dialog = new OpsisScreensaverSettingsForm(); dialog.ShowDialog(this);
             }),
             (StudioText("Windows screensaver settings", "Προφύλαξη οθόνης Windows"), (_, _) =>
             {
-                try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("control.exe", "desk.cpl,,1")
-                    { UseShellExecute = true }); }
+                try { DesktopEffects.OpenScreenSaverSettings(); }
                 catch (Exception ex) { MessageBox.Show(this, ex.Message, "Windows Screensaver", MessageBoxButtons.OK, MessageBoxIcon.Error); }
             }));
 

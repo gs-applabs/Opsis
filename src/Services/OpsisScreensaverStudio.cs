@@ -6,8 +6,8 @@ namespace MotionDesk.Services;
 
 /// <summary>
 /// Data-only local screensaver scene presets. Launches a native fullscreen Opsis
-/// preview only when explicitly requested. Does not register an untrusted .scr
-/// executable or replace Windows' built-in screen saver settings.
+/// preview or the separately selected installed Opsis SCR. No arbitrary saver
+/// executable or automatic changes to Windows timeout/security settings.
 /// </summary>
 public static class OpsisScreensaverStudio
 {
@@ -48,12 +48,20 @@ public static class OpsisScreensaverStudio
         }
     }
 
+    internal static void RequireLocalImage(string path)
+    {
+        if (!Path.IsPathFullyQualified(path) || path.StartsWith(@"\\", StringComparison.Ordinal) ||
+            new DriveInfo(Path.GetPathRoot(path)!).DriveType is not (DriveType.Fixed or DriveType.Removable) ||
+            !File.Exists(path) || new FileInfo(path).Length > 64L * 1024 * 1024)
+            throw new InvalidDataException("Choose a local supported image under 64 MiB.");
+        for (string? item = Path.GetFullPath(path); item != null; item = Path.GetDirectoryName(item))
+            if (PackagePaths.IsLink(item)) throw new InvalidDataException("Linked screensaver images are not supported.");
+    }
+
     public static void Save(Profile profile)
     {
         Validate(profile);
-        if (profile.Mode != "Clock" &&
-            (!File.Exists(profile.ImagePath) || new FileInfo(profile.ImagePath).Length > 64L * 1024 * 1024))
-            throw new InvalidDataException("Screensaver image is missing or too large.");
+        if (profile.Mode != "Clock") RequireLocalImage(profile.ImagePath);
         lock (Sync)
         {
             Directory.CreateDirectory(Path.GetDirectoryName(FilePath)!);

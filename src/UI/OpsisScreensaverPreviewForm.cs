@@ -8,8 +8,8 @@ using MotionDesk.Services;
 namespace MotionDesk.UI;
 
 /// <summary>
-/// User-initiated native screensaver preview. Does not install a Windows .scr
-/// handler, launch scripts or poll user input globally.
+/// Shared native screensaver scene, fullscreen or embedded in the Windows
+/// settings preview HWND. No global input hook or core/tray initialization.
 /// </summary>
 public sealed class OpsisScreensaverPreviewForm : Form
 {
@@ -18,41 +18,82 @@ public sealed class OpsisScreensaverPreviewForm : Form
     private Image? _image;
     private readonly DateTime _opened = DateTime.UtcNow;
     private Point? _lastMouse;
-
-    public OpsisScreensaverPreviewForm(OpsisScreensaverStudio.Profile profile)
+    private readonly IntPtr _parent;
+    private readonly bool _embedded;
+    protected override bool ShowWithoutActivation => _embedded;
+    protected override CreateParams CreateParams
     {
+        get
+        {
+            var cp = base.CreateParams;
+            if (_embedded) { cp.Parent = _parent; cp.Style = (cp.Style & unchecked((int)~0x80000000u)) | 0x40000000; cp.ExStyle |= 0x08000000; }
+            return cp;
+        }
+    }
+
+    public OpsisScreensaverPreviewForm(OpsisScreensaverStudio.Profile profile, IntPtr parent = default, bool allScreens = false)
+    {
+        _parent = parent; _embedded = parent != IntPtr.Zero;
         OpsisScreensaverStudio.Validate(profile);
         _profile = profile;
         Text = "Opsis — Screensaver Preview";
         FormBorderStyle = FormBorderStyle.None;
-        WindowState = FormWindowState.Maximized;
-        TopMost = true;
+        TopMost = !_embedded;
+        if (_embedded)
+        {
+            StartPosition = FormStartPosition.Manual;
+            if (!OpsisScreensaverHost.TryPreviewSize(parent, out var size)) throw new InvalidOperationException("Preview window is no longer available.");
+            Bounds = new Rectangle(Point.Empty, size);
+        }
+        else if (allScreens)
+        {
+            StartPosition = FormStartPosition.Manual;
+            Bounds = SystemInformation.VirtualScreen;
+        }
+        else WindowState = FormWindowState.Maximized;
         ShowInTaskbar = false;
         KeyPreview = true;
         BackColor = Color.FromArgb(7, 13, 22);
         DoubleBuffered = true;
         if (_profile.Mode != "Clock")
         {
-            if (!File.Exists(_profile.ImagePath) || new FileInfo(_profile.ImagePath).Length > 64L * 1024 * 1024)
-                throw new InvalidDataException("Screensaver image missing or too large.");
+            OpsisScreensaverStudio.RequireLocalImage(_profile.ImagePath);
             using var input = Image.FromFile(_profile.ImagePath);
             if ((long)input.Width * input.Height > 45_000_000)
                 throw new InvalidDataException("Screensaver image exceeds the safe pixel budget.");
             _image = new Bitmap(input);
         }
-        _clock.Tick += (_, _) => Invalidate();
-        Shown += (_, _) => { Activate(); _clock.Start(); };
-        KeyDown += (_, e) => { if (e.KeyCode is Keys.Escape or Keys.Enter) Close(); };
-        MouseDown += (_, _) => Close();
-        MouseMove += (_, e) =>
+        _clock.Tick += (_, _) =>
         {
-            if ((DateTime.UtcNow - _opened).TotalSeconds < 1.5) return;
-            if (_lastMouse.HasValue &&
-                (Math.Abs(_lastMouse.Value.X - e.X) > 8 || Math.Abs(_lastMouse.Value.Y - e.Y) > 8))
-                Close();
-            _lastMouse = e.Location;
+            if (_embedded)
+            {
+                if (!OpsisScreensaverHost.TryPreviewSize(_parent, out var size)) { Close(); return; }
+                if (Size != size) Size = size;
+            }
+            if (_profile.Mode != "StaticImage") Invalidate();
         };
-        FormClosed += (_, _) => { _clock.Stop(); _clock.Dispose(); _image?.Dispose(); };
+        Shown += (_, _) =>
+        {
+            if (!_embedded) Activate();
+            if (_embedded || _profile.Mode != "StaticImage") _clock.Start();
+        };
+        if (!_embedded)
+        {
+            KeyDown += (_, _) => Close();
+            MouseDown += (_, _) => Close();
+            MouseMove += (_, e) =>
+            {
+                if ((DateTime.UtcNow - _opened).TotalSeconds < 1.5) return;
+                _lastMouse ??= e.Location;
+                if (Math.Abs(_lastMouse.Value.X - e.X) > 8 || Math.Abs(_lastMouse.Value.Y - e.Y) > 8) Close();
+            };
+        }
+    }
+
+    protected override void Dispose(bool disposing)
+    {
+        if (disposing) { _clock.Stop(); _clock.Dispose(); _image?.Dispose(); _image = null; }
+        base.Dispose(disposing);
     }
 
     protected override void OnPaint(PaintEventArgs e)
@@ -74,7 +115,7 @@ public sealed class OpsisScreensaverPreviewForm : Form
         g.FillRectangle(shade, ClientRectangle);
         if (_profile.Mode == "StaticImage") return;
         var text = DateTime.Now.ToString(_profile.ShowSeconds ? "HH:mm:ss" : "HH:mm");
-        using var font = new Font("Segoe UI Variable Display", Math.Clamp(Width / 20f, 32f, 90f),
+        using var font = new Font("Segoe UI Variable Display", Math.Clamp(Width / 20f, _embedded ? 8f : 32f, 90f),
             FontStyle.Regular, GraphicsUnit.Pixel);
         using var brush = new SolidBrush(Color.White);
         using var center = new StringFormat { Alignment = StringAlignment.Center,

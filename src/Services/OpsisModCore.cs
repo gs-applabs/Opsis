@@ -55,7 +55,7 @@ public static class OpsisModCore
         new ModuleDefinition("cursor.trails", "Mouse", "Native pointer trails", Array.Empty<string>(), Array.Empty<string>(), 19041, true),
         new ModuleDefinition("cursor.effects", "Mouse", "Cursor Halo/Ripple FX overlay", Array.Empty<string>(), Array.Empty<string>(), 19041, true),
         new ModuleDefinition("screensaver.native", "Desktop", "Windows Screen Saver controls", Array.Empty<string>(), Array.Empty<string>(), 19041, true),
-        new ModuleDefinition("screensaver.creator", "Desktop", "Complete Windows .scr installation (planned)", Array.Empty<string>(), Array.Empty<string>()),
+        new ModuleDefinition("screensaver.creator", "Desktop", "Built-in Windows .scr host and opt-in selection", Array.Empty<string>(), Array.Empty<string>(), 19041, true),
         new ModuleDefinition("screensaver.preview", "Desktop", "Native clock/image screensaver scene preview", Array.Empty<string>(), Array.Empty<string>(), 19041, true),
         new ModuleDefinition("theme.appearance-presets", "Themes", "Appearance Presets", Array.Empty<string>(), Array.Empty<string>(), 19041, true),
         new ModuleDefinition("theme.icon-atlas", "Themes", "IconAtlas pack manager and folder colours", Array.Empty<string>(), Array.Empty<string>(), 19041, true),

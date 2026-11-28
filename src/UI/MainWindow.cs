@@ -4163,6 +4163,8 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                         using (var form = new StartStudioForm()) form.ShowDialog(this);
                         break;
                     case "OpsisScreensaverStudio":
+                        using (var form = new OpsisScreensaverSettingsForm()) form.ShowDialog(this);
+                        break;
                     case "OpsisEcosystem": NavigateTo("Personalization"); break;
                     case string featureId when featureId.StartsWith("feature:", StringComparison.Ordinal):
                         NavigateTo("Personalization"); break;

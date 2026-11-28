@@ -126,6 +126,7 @@ Name: "autostart"; Description: "{cm:AutostartTask}"; GroupDescription: "{cm:Sta
 
 [Files]
 Source: "{#PublishDir}\Opsis.exe"; DestDir: "{app}"; Flags: ignoreversion restartreplace
+Source: "{#PublishDir}\Opsis.exe"; DestDir: "{app}"; DestName: "Opsis.scr"; Flags: ignoreversion restartreplace
 Source: "{#PublishDir}\Opsis.dll"; DestDir: "{app}"; Flags: ignoreversion restartreplace
 Source: "{#PublishDir}\OpsisExplorer.dll"; DestDir: "{app}"; Flags: ignoreversion restartreplace skipifsourcedoesntexist
 Source: "{#PublishDir}\*"; DestDir: "{app}"; Excludes: "\Opsis.exe,\Opsis.dll,\OpsisExplorer.dll"; Flags: ignoreversion recursesubdirs createallsubdirs
@@ -152,6 +153,37 @@ Filename: "{app}\{#MyAppExeName}"; Parameters: "--setup-desktop-menu off {langua
 Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#MyAppName}}"; Flags: nowait postinstall skipifsilent runasoriginaluser; Check: DotNetDesktop11Present
 
 [Code]
+procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
+var
+  Current, Marker, Original, OwnSaver: String;
+  Present: Cardinal;
+  Restored: Boolean;
+begin
+  if CurUninstallStep <> usUninstall then exit;
+  OwnSaver := ExpandConstant('{app}\Opsis.scr');
+  if not RegQueryStringValue(HKCU, 'Control Panel\Desktop', 'SCRNSAVE.EXE', Current) then exit;
+  if CompareText(Current, OwnSaver) <> 0 then exit;
+  Restored := False;
+  if RegQueryStringValue(HKCU, 'Software\Opsis\ScreensaverBackup', 'SelectedPath', Marker) and
+     (CompareText(Marker, OwnSaver) = 0) and
+     RegQueryDWordValue(HKCU, 'Software\Opsis\ScreensaverBackup', 'OriginalPresent', Present) then
+  begin
+    if Present = 0 then
+      Restored := RegDeleteValue(HKCU, 'Control Panel\Desktop', 'SCRNSAVE.EXE')
+    else if (Present = 1) and RegQueryStringValue(HKCU, 'Software\Opsis\ScreensaverBackup', 'OriginalValue', Original) then
+      Restored := RegWriteStringValue(HKCU, 'Control Panel\Desktop', 'SCRNSAVE.EXE', Original);
+  end
+  else
+    Restored := RegDeleteValue(HKCU, 'Control Panel\Desktop', 'SCRNSAVE.EXE');
+  if Restored then
+  begin
+    RegDeleteValue(HKCU, 'Software\Opsis\ScreensaverBackup', 'SelectedPath');
+    RegDeleteValue(HKCU, 'Software\Opsis\ScreensaverBackup', 'OriginalPresent');
+    RegDeleteValue(HKCU, 'Software\Opsis\ScreensaverBackup', 'OriginalValue');
+  end
+  else Log('Opsis screensaver selection could not be restored for the current uninstall account.');
+end;
+
 procedure InitializeWizard();
 var
   Previous: String;
