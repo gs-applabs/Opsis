@@ -44,7 +44,7 @@ public sealed class DeskFlipOverlay : Form
         // DeskFlip lists windows from every screen; suppress the entire Opsis
         // overlay while any connected display is marked for presentation.
         if (!DeskFlipEngine.CanOpen()) return;
-        _desktop = _style == "Flip 3D" ? CaptureDesktop(Bounds) : null;
+        _desktop = _style == "Flip 3D" && Opsis.UI.OpsisMotion.Enabled ? CaptureDesktop(Bounds) : null;
         foreach (var window in CandidateWindows())
             _entries.Add(new Entry(window, GetTitle(window), null));
         int front = _entries.FindIndex(e => e.Handle == foreground);
@@ -63,7 +63,7 @@ public sealed class DeskFlipOverlay : Form
         if (!DeskFlipEngine.CanOpen()) { Close(); return; }
         Activate();
         Focus();
-        if (_style != "Compact list") _ = PopulateSnapshotsAsync();
+        if (_style != "Compact list" && Opsis.UI.OpsisMotion.Enabled) _ = PopulateSnapshotsAsync();
     }
 
     private void OnDisplaySettingsChanged(object? sender, EventArgs e) => OnPrivacyChanged();
@@ -87,7 +87,7 @@ public sealed class DeskFlipOverlay : Form
         if (!CaptureGate.Wait(0)) return;
         try
         {
-            for (int i = 0; i < _entries.Count && !_closing && !IsDisposed; i++)
+            for (int i = 0; i < _entries.Count && !_closing && !IsDisposed && Opsis.UI.OpsisMotion.Enabled; i++)
             {
                 var handle = _entries[i].Handle;
                 var image = await System.Threading.Tasks.Task.Run(() => CaptureWindow(handle));
@@ -330,8 +330,13 @@ public sealed class DeskFlipOverlay : Form
     private static PointF Lerp(PointF a, PointF b, float t) =>
         new(a.X + (b.X - a.X) * t, a.Y + (b.Y - a.Y) * t);
 
+    internal static bool WithinCaptureBudget(int width, int height) =>
+        width > 0 && height > 0 && width <= 7680 && height <= 4320 &&
+        (long)width * height <= 16L * 1024 * 1024;
+
     private static Bitmap? CaptureDesktop(Rectangle area)
     {
+        if (!WithinCaptureBudget(area.Width, area.Height)) return null;
         try
         {
             using var original = new Bitmap(area.Width, area.Height);
@@ -347,7 +352,7 @@ public sealed class DeskFlipOverlay : Form
         if (IsIconic(handle) || SendMessageTimeout(handle, WmNull, UIntPtr.Zero, IntPtr.Zero,
                 SmtoAbortIfHung, 70, out _) == IntPtr.Zero || !GetWindowRect(handle, out var area)) return null;
         int width = area.Right - area.Left, height = area.Bottom - area.Top;
-        if (width is <= 0 or > 7680 || height is <= 0 or > 4320) return null;
+        if (!WithinCaptureBudget(width, height)) return null;
         try
         {
             using var source = new Bitmap(width, height, PixelFormat.Format32bppRgb);

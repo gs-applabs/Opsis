@@ -2827,13 +2827,18 @@ namespace MotionDesk.Widgets
                 Math.Clamp(y,area.Top,Math.Max(area.Top,area.Bottom-height)), width, height);
         }
 
+        internal static Rectangle ResolveSnapshotPlacement(WidgetSnapshot snapshot)
+        {
+            var match = MonitorTopologyService.Match(snapshot.MonitorId, snapshot.MonitorDevice, snapshot.MonitorWidth, snapshot.MonitorHeight);
+            var area = match?.WorkingArea ?? Screen.FromRectangle(new Rectangle(snapshot.X, snapshot.Y, 1, 1)).WorkingArea;
+            return ResolveSnapshotBounds(snapshot, area);
+        }
+
         private void RestoreLiveSnapshots(IEnumerable<WidgetSnapshot> snapshots, bool persist)
         {
             foreach (var snapshot in snapshots)
             {
-                var match = MonitorTopologyService.Match(snapshot.MonitorId, snapshot.MonitorDevice, snapshot.MonitorWidth, snapshot.MonitorHeight);
-                var area = match?.WorkingArea ?? Screen.FromRectangle(new Rectangle(snapshot.X, snapshot.Y, 1, 1)).WorkingArea;
-                var bounds = ResolveSnapshotBounds(snapshot, area);
+                var bounds = ResolveSnapshotPlacement(snapshot);
                 // Apply the stored size AND position before Show; the widget's
                 // own config loader must not override a workspace snapshot.
                 var widget = SpawnCore(snapshot.WidgetId, bounds.X, bounds.Y, bounds.Width, bounds.Height,

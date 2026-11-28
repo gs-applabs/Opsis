@@ -18,6 +18,19 @@ try
         !WorkspaceProfileService.MayRestoreSession(false, true, false) &&
         WorkspaceProfileService.MayRestoreSession(false, true, true),
         "R67 startup session restoration respects user preference, existence and safe mode");
+    var profileFixture = Path.Combine(folder, "profile-validation.json");
+    File.WriteAllText(profileFixture, "{}");
+    File.WriteAllText(profileFixture + ".bak", JsonSerializer.Serialize(new WorkspaceProfile { Name = "Previous" }));
+    Check(WorkspaceProfileService.ReadValidated(profileFixture)?.Name == "Previous" &&
+        File.ReadAllText(profileFixture) == "{}", "R126 semantic backup fallback does not overwrite profile");
+    var beforeLayout = new[] { new MotionDesk.Widgets.WidgetSnapshot { WidgetId = "clock", X = 10, Width = 200, Height = 100 } };
+    var afterLayout = new[] { new MotionDesk.Widgets.WidgetSnapshot { WidgetId = "clock", X = 30, Width = 200, Height = 100 },
+        new MotionDesk.Widgets.WidgetSnapshot { WidgetId = "network", Width = 200, Height = 100 } };
+    var changes = WorkspaceProfileService.CompareLayouts(beforeLayout, afterLayout,
+        w => new System.Drawing.Rectangle(w.X, w.Y, w.Width, w.Height));
+    Check(changes.Count == 2 && changes.Any(x => x.Id == "network" && x.Before == null), "R126 profile preview lists actual widget additions and moves");
+    Check(MotionDesk.Widgets.DeskFlipOverlay.WithinCaptureBudget(3840, 2160) &&
+        !MotionDesk.Widgets.DeskFlipOverlay.WithinCaptureBudget(7680, 4320), "R126 DeskFlip bounded capture allocation");
     Check(!WorkspaceProfileService.MaySaveLastSession(true, false) &&
         !WorkspaceProfileService.MaySaveLastSession(false, true) &&
         WorkspaceProfileService.MaySaveLastSession(false, false),

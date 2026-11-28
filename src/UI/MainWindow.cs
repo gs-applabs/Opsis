@@ -1408,7 +1408,7 @@ namespace MotionDesk.UI
             panel.Controls.Add(unlockRow);
             AddIconButtonGrid(panel,
                 ("Save", LocalizationManager.T("Widgets.SaveLayout"), (_, _) => { WorkspaceProfileService.Save("Last Session"); _statusLabel.Text = LocalizationManager.T("Widgets.LayoutSavedStatus"); }),
-                ("Restore", LocalizationManager.T("Widgets.RestoreLayout"), (_, _) => { WorkspaceProfileService.Load("Last Session"); _statusLabel.Text = LocalizationManager.T("Widgets.WorkspaceRestoredStatus"); }),
+                ("Restore", LocalizationManager.T("Widgets.RestoreLayout"), (_, _) => { if (ConfirmProfileChanges("Last Session") && WorkspaceProfileService.Load("Last Session")) _statusLabel.Text = LocalizationManager.T("Widgets.WorkspaceRestoredStatus"); }),
                 ("Close", LocalizationManager.T("Widgets.CloseAllWidgets"), (_, _) => { WidgetHostEngine.Instance.CloseAll(); }));
 
             AddSection(panel, LocalizationManager.T("Widgets.SectionActiveWidgets"));
@@ -4280,7 +4280,7 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
             var name = new TextBox { Width = 240, Text = "Work" }; panel.Controls.Add(name);
             AddIconButtonGrid(panel,
                 ("Save", LocalizationManager.T("Profiles.SaveCurrentAsProfile"), (_, _) => { if (!string.IsNullOrWhiteSpace(name.Text)) { WorkspaceProfileService.Save(name.Text.Trim()); Refresh(); } }),
-                ("Restore", LocalizationManager.T("Profiles.LoadSelected"), (_, _) => { if (list.SelectedItem is string p && WorkspaceProfileService.Load(p)) { NavigateTo("Dashboard"); } }),
+                ("Restore", LocalizationManager.T("Profiles.LoadSelected"), (_, _) => { if (list.SelectedItem is string p && ConfirmProfileChanges(p) && WorkspaceProfileService.Load(p)) { NavigateTo("Dashboard"); } }),
                 ("Preview", StudioText("Preview for 30 seconds", "Προεπισκόπηση 30 δευτερολέπτων"), (_, _) =>
                 {
                     if (list.SelectedItem is string p) PreviewProfileWithRollback(p);
@@ -4340,8 +4340,44 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
         }
 
         /// <summary>Keep the original workspace in a temporary profile and revert if not confirmed within 30 seconds.</summary>
+        private bool ConfirmProfileChanges(string profile)
+        {
+            try
+            {
+                var changes = WorkspaceProfileService.PreviewChanges(profile);
+                string BoundsText(Rectangle? bounds) => bounds is Rectangle r
+                    ? $"({r.X}, {r.Y}) · {r.Width} × {r.Height}" : "—";
+                string details = string.Join(Environment.NewLine, changes.Select(x =>
+                    x.Id + ": " + BoundsText(x.Before) + " → " + BoundsText(x.After)));
+                using var dialog = new Form
+                {
+                    Text = StudioText("Workspace changes", "Αλλαγές χώρου εργασίας"),
+                    StartPosition = FormStartPosition.CenterParent, Size = new Size(680, 440),
+                    MinimizeBox = false, MaximizeBox = false, ShowInTaskbar = false
+                };
+                var note = new Label { Dock = DockStyle.Top, Height = 76, Padding = new Padding(12),
+                    Text = StudioText("Opsis widgets only: added, removed or moved. External application windows are not moved by this profile. Wallpaper and snap settings may also change.",
+                        "Μόνο widgets OPSIS: προσθήκη, αφαίρεση ή μετακίνηση. Το προφίλ δεν μετακινεί παράθυρα άλλων εφαρμογών. Ενδέχεται να αλλάξει το φόντο και οι ρυθμίσεις στοίχισης.") };
+                var list = new TextBox { Dock = DockStyle.Fill, Multiline = true, ReadOnly = true, ScrollBars = ScrollBars.Both,
+                    WordWrap = false, Text = changes.Count == 0 ? StudioText("No widget geometry changes.", "Καμία αλλαγή γεωμετρίας widgets.") : details };
+                var buttons = new FlowLayoutPanel { Dock = DockStyle.Bottom, Height = 48, FlowDirection = FlowDirection.RightToLeft };
+                var cancel = new Button { Text = StudioText("Cancel", "Ακύρωση"), DialogResult = DialogResult.Cancel, AutoSize = true };
+                var proceed = new Button { Text = StudioText("Continue", "Συνέχεια"), DialogResult = DialogResult.OK, AutoSize = true };
+                buttons.Controls.Add(cancel); buttons.Controls.Add(proceed);
+                dialog.Controls.Add(list); dialog.Controls.Add(note); dialog.Controls.Add(buttons);
+                dialog.CancelButton = cancel;
+                return dialog.ShowDialog(this) == DialogResult.OK;
+            }
+            catch (Exception ex)
+            {
+                ReportStatus(StudioText("Cannot preview profile: ", "Αδυναμία προεπισκόπησης προφίλ: ") + ex.Message, StatusKind.Error);
+                return false;
+            }
+        }
+
         private void PreviewProfileWithRollback(string profile)
         {
+            if (!ConfirmProfileChanges(profile)) return;
             string backupName = "__opsis-preview-" + Guid.NewGuid().ToString("N");
             bool mayDeleteBackup = false;
             bool backupSaved = false;

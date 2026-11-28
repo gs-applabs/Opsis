@@ -58,7 +58,8 @@ public static class WorkspaceProfileService
     {
         if (SafeModeService.IsSafeMode) return;
         var saved = AppSettings.Load();
-        if (MayRestoreSession(false, saved.RestoreLastSession, File.Exists(Path.Combine(Root, "Last Session.json"))))
+        if (MayRestoreSession(false, saved.RestoreLastSession, (File.Exists(Path.Combine(Root, "Last Session.json")) ||
+            File.Exists(Path.Combine(Root, "Last Session.json.bak")))))
         {
             try { Load("Last Session"); } catch (Exception ex) { System.Diagnostics.Debug.WriteLine(ex); }
         }
@@ -96,31 +97,68 @@ public static class WorkspaceProfileService
         MotionDesk.Services.AtomicFile.WriteAllText(Path.Combine(Root, name + ".json"), JsonSerializer.Serialize(profile, new JsonSerializerOptions { WriteIndented = true }));
     }
 
+    internal static WorkspaceProfile? ReadValidated(string path)
+    {
+        // Never mutate a profile merely to preview it. A syntactically valid
+        // but semantically invalid current file must not hide a valid backup.
+        foreach (var candidate in new[] { path, path + ".bak" })
+        {
+            try
+            {
+                if (!File.Exists(candidate) || !PackagePaths.IsExistingUnlinkedPath(
+                        Path.GetDirectoryName(Path.GetFullPath(path))!, candidate)) continue;
+                using var input = new FileStream(candidate, FileMode.Open, FileAccess.Read, FileShare.Read);
+                const int limit = 16 * 1024 * 1024;
+                if (input.Length is < 2 or > limit) continue;
+                var data = new byte[(int)input.Length];
+                input.ReadExactly(data);
+                if (input.ReadByte() != -1) continue;
+                using var document = JsonDocument.Parse(data);
+                var root = document.RootElement;
+                if (root.ValueKind != JsonValueKind.Object ||
+                    !root.TryGetProperty("AppSettings", out _) ||
+                    !root.TryGetProperty("Wallpaper", out _) ||
+                    !root.TryGetProperty("Widgets", out _)) continue;
+                var profile = JsonSerializer.Deserialize<WorkspaceProfile>(data);
+                if (profile?.AppSettings == null || profile.Wallpaper == null ||
+                    profile.Widgets == null || profile.Widgets.Count > 120 ||
+                    profile.Widgets.Any(w => w == null || string.IsNullOrWhiteSpace(w.WidgetId) ||
+                        w.WidgetId.Length > 255 || w.Width < 1 || w.Height < 1 ||
+                        w.Width > 16384 || w.Height > 16384)) continue;
+                _ = WidgetHostEngine.CopyLayout(profile.Widgets);
+                return profile;
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException or ArgumentException)
+            { /* try the previous saved copy without rewriting either file */ }
+        }
+        return null;
+    }
+
+    internal sealed record WidgetChange(string Id, Rectangle? Before, Rectangle? After);
+    internal static IReadOnlyList<WidgetChange> CompareLayouts(IEnumerable<WidgetSnapshot> before,
+        IEnumerable<WidgetSnapshot> after, Func<WidgetSnapshot, Rectangle> resolve)
+    {
+        var old = WidgetHostEngine.CopyLayout(before).ToDictionary(x => x.WidgetId, resolve, StringComparer.OrdinalIgnoreCase);
+        var next = WidgetHostEngine.CopyLayout(after).ToDictionary(x => x.WidgetId, resolve, StringComparer.OrdinalIgnoreCase);
+        return old.Keys.Union(next.Keys, StringComparer.OrdinalIgnoreCase)
+            .Select(id => new WidgetChange(id, old.TryGetValue(id, out var a) ? a : null,
+                next.TryGetValue(id, out var b) ? b : null))
+            .Where(x => x.Before != x.After).ToArray();
+    }
+
+    internal static IReadOnlyList<WidgetChange> PreviewChanges(string name)
+    {
+        var profile = ReadValidated(Path.Combine(Root, Sanitize(name) + ".json"))
+            ?? throw new InvalidDataException("No valid current or previous profile.");
+        return CompareLayouts(WidgetHostEngine.Instance.GetSnapshots(), profile.Widgets,
+            WidgetHostEngine.ResolveSnapshotPlacement);
+    }
+
     public static bool Load(string name)
     {
         var path = Path.Combine(Root, Sanitize(name) + ".json");
-        if (!File.Exists(path))
-        {
-            VerifiedRollbackService.NoteProfileFailed(name);
-            return false;
-        }
-        WorkspaceProfile? profile;
-        try
-        {
-            // A damaged profile may be restored from .bak by AtomicFile.ReadAllText.
-            if (new FileInfo(path).Length > 16L * 1024 * 1024)
-            {
-                VerifiedRollbackService.NoteProfileFailed(name);
-                return false;
-            }
-            profile = JsonSerializer.Deserialize<WorkspaceProfile>(AtomicFile.ReadAllText(path));
-        }
-        catch (Exception ex) when (ex is JsonException or IOException or UnauthorizedAccessException)
-        {
-            VerifiedRollbackService.NoteProfileFailed(name);
-            return false;
-        }
-        if (profile?.AppSettings == null || profile.Wallpaper == null || profile.Widgets == null)
+        var profile = ReadValidated(path);
+        if (profile == null)
         {
             VerifiedRollbackService.NoteProfileFailed(name);
             return false;
