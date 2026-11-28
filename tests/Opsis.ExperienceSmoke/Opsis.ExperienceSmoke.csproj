@@ -7,5 +7,12 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
   </PropertyGroup>
-  <ItemGroup><ProjectReference Include="../../Opsis.csproj" /></ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../Opsis.csproj" />
+    <!-- Real migration fixture uses the host's bundled native serializer types. -->
+    <Reference Include="Opsis.Containers.Core">
+      <HintPath>../../lib/Opsis.Containers.Core.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+  </ItemGroup>
 </Project>

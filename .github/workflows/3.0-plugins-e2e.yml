@@ -34,7 +34,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: gs-applabs/san-shmera
-          ref: 'e100ed17a55839d42a9f10efd5196209c878a1e6'
+          ref: '1a2ef201e7fc2748e56379aa62973f3743c3bf96'
           path: _compat/chronikologio
           persist-credentials: false
       - uses: actions/checkout@v4

@@ -4263,7 +4263,21 @@
       "nuget": "PASS",
       "assets_source": "PASS; production Europe gate OPEN",
       "resource_compare": "PASS job",
-      "installer": "PENDING"
+      "installer": "PENDING",
+      "main_build_windows_2025": "PASS",
+      "installer_windows_2022": "PASS clean install/reinstall/uninstall",
+      "installer_artifact": 15269642416,
+      "performance": {
+        "baseline_ms": 359.7,
+        "candidate_ms": 331.6,
+        "baseline_peak_mib": 42.6,
+        "candidate_peak_mib": 44.6,
+        "scope": "five published self-test samples; not GUI benchmark"
+      },
+      "source_artifacts": [
+        15269576378,
+        15269516455
+      ]
     },
     "new_findings": [
       {
@@ -4277,7 +4291,47 @@
         "run": 46161238005,
         "job": 141028799638,
         "tested_sha": "c958144601fd7caaf57ffab93061853f532ec01f"
+      },
+      {
+        "id": "RC2R1-F02",
+        "priority": "P0",
+        "type": "TEST_BUILD",
+        "path": "tests/Opsis.ExperienceSmoke/Opsis.ExperienceSmoke.csproj",
+        "symptom": "9 errors CS0246/CS0103/CS0012 in ExperienceSmoke native migration fixture (missing reference to Opsis.Containers.Core). Main app built successfully.",
+        "fix": "Reference the exact existing bundled Opsis.Containers.Core.dll from smoke csproj; do not mock serializer.",
+        "status": "SOURCE_CHANGED_RETEST_REQUIRED",
+        "run": 46161237968,
+        "job": 141028799765,
+        "tested_sha": "c958144601fd7caaf57ffab93061853f532ec01f"
+      },
+      {
+        "id": "RC2R1-F03",
+        "priority": "P0",
+        "type": "SIBLING_ABI",
+        "path": "Chronikologio.OpsisPlugin.csproj / pinned sibling workflow refs",
+        "symptom": "Chronikologio main pinned e100ed17a55839d42a9f10efd5196209c878a1e6 builds assembly 1.2.1.0, incompatible with required plugin identity 1.0.0.0.",
+        "fix": "Pin existing fix/resource-lifecycle-next descendant 1a2ef201e7fc2748e56379aa62973f3743c3bf96 (114 commits ahead, 0 behind main; source explicitly sets AssemblyVersion/FileVersion=1.0.0.0). Run actual ABI/host loading. Main is not certified; coordinate sibling release rather than weakening ABI.",
+        "status": "SOURCE_CHANGED_RETEST_REQUIRED",
+        "run": 46161237953,
+        "job": 141028799601,
+        "tested_sha": "c958144601fd7caaf57ffab93061853f532ec01f"
+      },
+      {
+        "id": "RC2R1-F04",
+        "priority": "P1",
+        "type": "INSTALLER_WARNING",
+        "path": "installer.iss:14",
+        "symptom": "Inno Setup 7 warning: GetFileVersion renamed to GetVersionNumbersString.",
+        "fix": "Review compatibility and update compiler invocation/test contract together; installer E2E passed, not blocker.",
+        "status": "OPEN",
+        "run": 46161237972,
+        "job": 141028799832
       }
-    ]
+    ],
+    "sibling_correction": {
+      "previous_main": "e100ed17a55839d42a9f10efd5196209c878a1e6",
+      "compatibility_ref": "1a2ef201e7fc2748e56379aa62973f3743c3bf96",
+      "not_certified": true
+    }
   }
 }
