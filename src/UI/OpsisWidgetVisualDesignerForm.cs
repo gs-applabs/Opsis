@@ -28,12 +28,13 @@ public sealed class OpsisWidgetVisualDesignerForm : Form
     private Point _startMouse;
     private Point _startElement;
     private Font? _previewFont;
+    private DataGridView? _composite;
+    private NumericUpDown? _compositeWidth, _compositeHeight;
 
     public OpsisWidgetVisualDesignerForm(OpsisWidgetDesigner.Layout layout)
     {
         OpsisWidgetDesigner.Validate(layout);
-        if (layout.Rows is { Length: > 0 }) throw new InvalidOperationException("Composite Rainmeter widgets retain their imported rows; the single-element editor cannot modify them yet.");
-        _layout = layout;
+        _layout = OpsisWidgetDesigner.Copy(layout);
         _originalName = layout.Name;
         Text = "Opsis Visual Widget Designer — " + layout.Name;
         BackColor = UiTheme.Background;
@@ -42,6 +43,7 @@ public sealed class OpsisWidgetVisualDesignerForm : Form
         MinimumSize = new Size(620, 510);
         ClientSize = new Size(780, 575);
         StartPosition = FormStartPosition.CenterParent;
+        if (_layout.Rows is { Length: > 0 }) { BuildComposite(); return; }
 
         _canvas.Location = new Point(18, 16);
         _canvas.Size = new Size(740, 340);
@@ -78,6 +80,7 @@ public sealed class OpsisWidgetVisualDesignerForm : Form
             _element.Location = new Point(px, py);
         };
         _element.MouseUp += (_, _) => { _dragging = false; _element.Capture = false; };
+        _element.MouseCaptureChanged += (_, _) => _dragging = false;
         _canvas.Controls.Add(_element);
         Controls.Add(_canvas);
 
@@ -150,6 +153,52 @@ public sealed class OpsisWidgetVisualDesignerForm : Form
         RefreshPreview();
     }
 
+    private void BuildComposite()
+    {
+        var grid = _composite = new DataGridView
+        {
+            Dock = DockStyle.Fill, AllowUserToAddRows = false, AllowUserToDeleteRows = false,
+            RowHeadersVisible = false, AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill,
+            SelectionMode = DataGridViewSelectionMode.FullRowSelect, MultiSelect = false,
+            BackgroundColor = UiTheme.Surface, ForeColor = UiTheme.TextPrimary
+        };
+        grid.DefaultCellStyle.BackColor = UiTheme.Surface;
+        grid.DefaultCellStyle.ForeColor = UiTheme.TextPrimary;
+        grid.Columns.Add(new DataGridViewComboBoxColumn { HeaderText = "Binding", DataSource = new[] { "Clock", "Date", "Text", "CPU", "RAM", "Battery" } });
+        grid.Columns.Add("Text", "Text"); grid.Columns.Add("Accent", "Accent #RRGGBB"); grid.Columns.Add("Size", "Font");
+        foreach (var row in _layout.Rows!) grid.Rows.Add(row.Binding, row.Text, row.AccentHex, row.FontSize);
+        var tools = new FlowLayoutPanel { Dock = DockStyle.Bottom, Height = 108, WrapContents = true, Padding = new Padding(6), AutoScroll = true };
+        _compositeWidth = new NumericUpDown { Minimum = 190, Maximum = 1200, Value = _layout.Width, Width = 75 };
+        _compositeHeight = new NumericUpDown { Minimum = 80, Maximum = 700, Value = _layout.Height, Width = 75 };
+        _opacity.Value = _layout.OpacityPercent;
+        tools.Controls.Add(Caption("Width")); tools.Controls.Add(_compositeWidth);
+        tools.Controls.Add(Caption("Height")); tools.Controls.Add(_compositeHeight);
+        tools.Controls.Add(Caption("Opacity")); tools.Controls.Add(_opacity);
+        void Button(string caption, Action action)
+        {
+            var b = new Button { Text = caption, AutoSize = true };
+            b.Click += (_, _) => { try { action(); } catch (Exception ex) { MessageBox.Show(this, ex.Message, Text); } };
+            tools.Controls.Add(b);
+        }
+        void Move(int direction)
+        {
+            grid.EndEdit();
+            if (grid.SelectedRows.Count != 1) return;
+            int index = grid.SelectedRows[0].Index, next = index + direction;
+            if (next < 0 || next >= grid.Rows.Count) return;
+            var values = grid.Rows[index].Cells.Cast<DataGridViewCell>().Select(c => c.Value).ToArray();
+            grid.Rows.RemoveAt(index); grid.Rows.Insert(next, values);
+            grid.ClearSelection(); grid.Rows[next].Selected = true;
+        }
+        Button("+ Row", () => { if (grid.Rows.Count < 8) grid.Rows.Add("Text", "New row", "#00D2FF", 24); });
+        Button("- Row", () => { if (grid.Rows.Count > 2 && grid.SelectedRows.Count == 1) grid.Rows.RemoveAt(grid.SelectedRows[0].Index); });
+        Button("↑", () => Move(-1)); Button("↓", () => Move(1));
+        Button("Save / Αποθήκευση", () => Save(false));
+        Button("Save as / Αντίγραφο", () => Save(true));
+        Button("Preview / Προβολή", () => { Collect(); using var f = new OpsisCustomWidgetWindow(_layout); f.ShowDialog(this); });
+        Controls.Add(grid); Controls.Add(tools);
+    }
+
     private static Label Caption(string text) => new()
     {
         Text = text, AutoSize = true, TextAlign = ContentAlignment.MiddleLeft,
@@ -189,6 +238,19 @@ public sealed class OpsisWidgetVisualDesignerForm : Form
 
     private void Collect()
     {
+        if (_composite != null)
+        {
+            _composite.EndEdit();
+            _layout.Rows = _composite.Rows.Cast<DataGridViewRow>().Select(r =>
+            {
+                if (!int.TryParse(Convert.ToString(r.Cells[3].Value), out int size)) throw new InvalidDataException("Invalid row font size.");
+                return new OpsisWidgetDesigner.Row(Convert.ToString(r.Cells[0].Value) ?? "", Convert.ToString(r.Cells[1].Value) ?? "",
+                    Convert.ToString(r.Cells[2].Value) ?? "", size);
+            }).ToArray();
+            _layout.Width = (int)_compositeWidth!.Value; _layout.Height = (int)_compositeHeight!.Value;
+            _layout.OpacityPercent = (int)_opacity.Value;
+            OpsisWidgetDesigner.Validate(_layout); return;
+        }
         _layout.ContentXPercent = (int)_x.Value;
         _layout.ContentYPercent = (int)_y.Value;
         _layout.FontSize = (int)_fontSize.Value;
@@ -218,19 +280,8 @@ public sealed class OpsisWidgetVisualDesignerForm : Form
                 var ok = new Button { Text = "Save", DialogResult = DialogResult.OK, Left = 225, Top = 54, Width = 105 };
                 dialog.Controls.Add(field); dialog.Controls.Add(ok); dialog.AcceptButton = ok;
                 if (dialog.ShowDialog(this) != DialogResult.OK) return;
-                var copy = OpsisWidgetDesigner.Read(_originalName);
+                var copy = OpsisWidgetDesigner.Copy(_layout);
                 copy.Name = field.Text.Trim();
-                copy.Binding = _layout.Binding;
-                copy.Text = _layout.Text;
-                copy.AccentHex = _layout.AccentHex;
-                copy.FontSize = _layout.FontSize;
-                copy.Width = _layout.Width;
-                copy.Height = _layout.Height;
-                copy.OpacityPercent = _layout.OpacityPercent;
-                copy.AlwaysOnTop = _layout.AlwaysOnTop;
-                copy.ContentXPercent = _layout.ContentXPercent;
-                copy.ContentYPercent = _layout.ContentYPercent;
-                copy.ShowWidgetBorder = _layout.ShowWidgetBorder;
                 OpsisWidgetDesigner.Save(copy);
             }
             else OpsisWidgetDesigner.Update(_originalName, _layout);

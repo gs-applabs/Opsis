@@ -328,6 +328,23 @@ public sealed partial class MainWindow
             }));
 
         AddButtonGrid(widgetCard,
+            (StudioText("Import widget JSON", "Εισαγωγή widget JSON"), (_, _) =>
+            {
+                using var picker = new OpenFileDialog { Filter = "Opsis Widget (*.json)|*.json", CheckFileExists = true };
+                if (picker.ShowDialog(this) != DialogResult.OK) return;
+                try { var layout = OpsisWidgetDesigner.ReadPortable(picker.FileName); OpsisWidgetDesigner.Save(layout); RefreshWidgets(); widgetPicker.SelectedItem = layout.Name; }
+                catch (Exception ex) { MessageBox.Show(this, ex.Message, "Opsis Widget Studio"); }
+            }),
+            (StudioText("Export widget JSON", "Εξαγωγή widget JSON"), (_, _) =>
+            {
+                if (widgetPicker.SelectedItem is not string name) return;
+                using var picker = new SaveFileDialog { Filter = "Opsis Widget (*.json)|*.json", FileName = name + ".json", OverwritePrompt = false };
+                if (picker.ShowDialog(this) != DialogResult.OK) return;
+                try { OpsisWidgetDesigner.Export(name, picker.FileName); }
+                catch (Exception ex) { MessageBox.Show(this, ex.Message, "Opsis Widget Studio"); }
+            }));
+
+        AddButtonGrid(widgetCard,
             (StudioText("Import Rainmeter INI", "Εισαγωγή Rainmeter INI"), (_, _) =>
             {
                 using var chooser = new OpenFileDialog

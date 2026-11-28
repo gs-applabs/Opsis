@@ -1000,6 +1000,14 @@ try
     File.WriteAllText(multiFile, "[Clock]\nMeasure=Time\n[MeterA]\nMeter=String\nMeasureName=Clock\n[MeterB]\nMeter=String\nText=Welcome");
     OpsisRainmeterSkinImporter.Import(multiFile);
     Check(OpsisWidgetDesigner.Read("Multi Meter").Rows is { Length: 2 }, "composite widget persistence");
+    var compositeCopy = OpsisWidgetDesigner.Copy(OpsisWidgetDesigner.Read("Multi Meter"));
+    compositeCopy.Name = "Composite Copy";
+    compositeCopy.Rows = compositeCopy.Rows!.Reverse().ToArray();
+    OpsisWidgetDesigner.Save(compositeCopy);
+    var exportedWidget = Path.Combine(folder, "portable-widget.json");
+    OpsisWidgetDesigner.Export("Composite Copy", exportedWidget);
+    Check(OpsisWidgetDesigner.ReadPortable(exportedWidget).Rows!.SequenceEqual(compositeCopy.Rows),
+        "R121 composite layout copy and portable JSON roundtrip");
     rejected = false;
     try { OpsisRainmeterSkinImporter.PreviewIni("[MeterA]\nMeter=String\nText=Hello\n[MeterB]\nMeter=String\nText=World\n[Other]\nMeasure=Plugin\nPlugin=RunCommand", "Blocked"); }
     catch (InvalidDataException) { rejected = true; }

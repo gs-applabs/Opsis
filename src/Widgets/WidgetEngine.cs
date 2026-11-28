@@ -2699,7 +2699,11 @@ namespace MotionDesk.Widgets
         private List<WidgetSnapshot>? _suspendedLayout;
         private bool _transitioning;
         public bool SessionSuspended => (RuntimeSessionPolicy.Allowed & SessionBackgroundService.Widgets) == 0;
-        internal static void ReconcileSessionIfCreated() => _instance?.ReconcileSession();
+        internal static void ReconcileSessionIfCreated()
+        {
+            _instance?.ReconcileSession();
+            MotionDesk.UI.OpsisCustomWidgetWindow.ReconcileSession();
+        }
 
         internal static List<WidgetSnapshot> CopyLayout(IEnumerable<WidgetSnapshot> snapshots)
         {

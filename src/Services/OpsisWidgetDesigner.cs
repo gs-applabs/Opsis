@@ -43,6 +43,41 @@ public static class OpsisWidgetDesigner
         return Path.Combine(Folder, name.Trim() + ".json");
     }
 
+    public static Layout Copy(Layout layout)
+    {
+        Validate(layout);
+        return JsonSerializer.Deserialize<Layout>(JsonSerializer.Serialize(layout))!;
+    }
+
+    public static Layout ReadPortable(string path)
+    {
+        if (!Path.GetExtension(path).Equals(".json", StringComparison.OrdinalIgnoreCase) ||
+            !Path.IsPathFullyQualified(path) || path.StartsWith(@"\\", StringComparison.Ordinal))
+            throw new InvalidDataException("Choose a local widget JSON file.");
+        for (string? item = Path.GetFullPath(path); item != null; item = Path.GetDirectoryName(item))
+            if (PackagePaths.IsLink(item)) throw new InvalidDataException("Linked widget files are not supported.");
+        using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
+        var buffer = new byte[32769];
+        int count = stream.ReadAtLeast(buffer, buffer.Length, throwIfEndOfStream: false);
+        if (count > 32768) throw new InvalidDataException("Widget layout too large.");
+        var layout = JsonSerializer.Deserialize<Layout>(buffer.AsSpan(0, count)) ??
+            throw new InvalidDataException("Invalid widget layout.");
+        Validate(layout);
+        return layout;
+    }
+
+    public static void Export(string name, string path)
+    {
+        var layout = Read(name);
+        if (!Path.GetExtension(path).Equals(".json", StringComparison.OrdinalIgnoreCase))
+            throw new InvalidDataException("Choose a JSON destination.");
+        for (string? item = Path.GetDirectoryName(Path.GetFullPath(path)); item != null; item = Path.GetDirectoryName(item))
+            if (PackagePaths.IsLink(item)) throw new InvalidDataException("Linked export path.");
+        using var output = new FileStream(path, FileMode.CreateNew, FileAccess.Write, FileShare.None);
+        JsonSerializer.Serialize(output, layout, new JsonSerializerOptions { WriteIndented = true });
+        output.Flush(true);
+    }
+
     public static void Validate(Layout? layout)
     {
         if (layout == null) throw new InvalidDataException("Null layout.");
@@ -80,7 +115,10 @@ public static class OpsisWidgetDesigner
         {
             Directory.CreateDirectory(Folder);
             var file = FileFor(layout.Name);
+            if (!PackagePaths.IsExistingUnlinkedPath(AppPaths.AppDataFolder, Folder)) throw new InvalidDataException("Linked widget storage.");
             if (File.Exists(file)) throw new IOException("Widget layout name already exists.");
+            if (Directory.EnumerateFiles(Folder, "*.json").Take(250).Count() >= 250)
+                throw new InvalidDataException("Widget layout quota reached.");
             AtomicFile.WriteAllText(file, JsonSerializer.Serialize(layout, new JsonSerializerOptions { WriteIndented = true }));
         }
     }
@@ -88,9 +126,8 @@ public static class OpsisWidgetDesigner
     public static Layout Read(string name)
     {
         var file = FileFor(name);
-        if (new FileInfo(file).Length > 32 * 1024) throw new InvalidDataException("Widget layout too large.");
-        var layout = JsonSerializer.Deserialize<Layout>(AtomicFile.ReadAllText(file))
-            ?? throw new InvalidDataException("Invalid widget layout.");
+        if (!PackagePaths.IsExistingUnlinkedPath(AppPaths.AppDataFolder, file)) throw new InvalidDataException("Missing or linked widget layout.");
+        var layout = ReadPortable(file);
         Validate(layout);
         if (!string.Equals(layout.Name, name.Trim(), StringComparison.Ordinal))
             throw new InvalidDataException("Widget name mismatch.");
@@ -107,6 +144,8 @@ public static class OpsisWidgetDesigner
         {
             var file = FileFor(existingName);
             if (!File.Exists(file)) throw new FileNotFoundException("Widget design not found.", file);
+            if (!PackagePaths.IsExistingUnlinkedPath(AppPaths.AppDataFolder, file)) throw new InvalidDataException("Linked widget layout.");
+            if (JsonSerializer.Serialize(Read(existingName)) == JsonSerializer.Serialize(changed)) return;
             OpsisRecoveryHub.Snapshot("Before updating widget " + existingName);
             AtomicFile.WriteAllText(file, JsonSerializer.Serialize(changed, new JsonSerializerOptions { WriteIndented = true }));
         }
@@ -122,5 +161,15 @@ public static class OpsisWidgetDesigner
                 (int)Math.Round(h * Math.Clamp(yPercent, 0, 100) / 100.0));
     }
 
-    public static void Delete(string name) => File.Delete(FileFor(name));
+    public static void Delete(string name)
+    {
+        lock (Sync)
+        {
+            var file = FileFor(name);
+            if (!File.Exists(file)) return;
+            if (!PackagePaths.IsExistingUnlinkedPath(AppPaths.AppDataFolder, file)) throw new InvalidDataException("Linked widget layout.");
+            OpsisRecoveryHub.Snapshot("Before deleting widget " + name);
+            File.Delete(file);
+        }
+    }
 }

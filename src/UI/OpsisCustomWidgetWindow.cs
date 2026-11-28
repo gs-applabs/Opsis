@@ -14,11 +14,46 @@ public sealed class OpsisCustomWidgetWindow : Form
     private readonly OpsisWidgetDesigner.Layout _layout;
     private readonly Label _content;
     private readonly System.Collections.Generic.List<(Label Label, OpsisWidgetDesigner.Row Row)> _rows = new();
-    private readonly System.Windows.Forms.Timer _refresh = new() { Interval = 1000 };
+    private static readonly HashSet<OpsisCustomWidgetWindow> OpenWindows = new();
+    private static System.Windows.Forms.Timer? _refresh;
+    private readonly bool _dynamic;
+    private bool _hiddenForSession;
+    private bool _registered;
+    private static bool Permitted => RuntimeSessionPolicy.IsPermitted(SessionBackgroundService.Widgets) &&
+        !WindowsUpdateGuard.RequiresReview && !WindowsUpdateGuard.RuntimeHold;
+    private static bool NeedsRefresh => Permitted && OpenWindows.Any(w => !w.IsDisposed && w.Visible && w._dynamic);
+    internal static void ReconcileSession()
+    {
+        foreach (var window in OpenWindows.ToArray())
+        {
+            if (window.IsDisposed) continue;
+            if (!Permitted && window.Visible) { window._hiddenForSession = true; window.Hide(); }
+            else if (Permitted && window._hiddenForSession) { window._hiddenForSession = false; window.Show(); }
+        }
+        SyncRefresh();
+    }
+    private static void SyncRefresh()
+    {
+        if (!NeedsRefresh)
+        {
+            _refresh?.Dispose(); _refresh = null; return;
+        }
+        if (_refresh != null) return;
+        _refresh = new System.Windows.Forms.Timer { Interval = 1000 };
+        _refresh.Tick += (_, _) =>
+        {
+            if (!Permitted) { ReconcileSession(); return; }
+            foreach (var window in OpenWindows.ToArray())
+                if (window.Visible && !window.IsDisposed && window._dynamic) window.UpdateText();
+        };
+        _refresh.Start();
+    }
     public OpsisCustomWidgetWindow(OpsisWidgetDesigner.Layout layout)
     {
-        OpsisWidgetDesigner.Validate(layout);
+        if (!Permitted) throw new InvalidOperationException("Widgets are suspended or compatibility review is required.");
+        layout = OpsisWidgetDesigner.Copy(layout);
         _layout = layout;
+        _dynamic = layout.Rows is { Length: > 0 } rowsData ? rowsData.Any(r => r.Binding != "Text") : layout.Binding != "Text";
         Text = "Opsis Widget — " + layout.Name;
         StartPosition = FormStartPosition.CenterScreen;
         Size = new Size(layout.Width, layout.Height);
@@ -65,9 +100,39 @@ public sealed class OpsisCustomWidgetWindow : Form
             }
             Controls.Add(table); table.BringToFront();
         }
-        _refresh.Tick += (_, _) => UpdateText();
-        Shown += (_, _) => { UpdateText(); if (_rows.Count > 0 ? _rows.Any(x => x.Row.Binding != "Text") : layout.Binding != "Text") _refresh.Start(); };
-        FormClosed += (_, _) => { _refresh.Stop(); _refresh.Dispose(); _content.Font.Dispose(); foreach (var entry in _rows) entry.Label.Font.Dispose(); };
+        Shown += (_, _) =>
+        {
+            if (!_registered) { OpenWindows.Add(this); _registered = true; ThemeManager.Changed += RefreshTheme; }
+            RefreshTheme(); UpdateText(); ReconcileSession();
+        };
+        VisibleChanged += (_, _) => { if (_registered) SyncRefresh(); };
+    }
+
+    private void RefreshTheme()
+    {
+        if (IsDisposed || Disposing) return;
+        var surface = SystemInformation.HighContrast ? SystemColors.Window : UiTheme.Surface;
+        BackColor = surface;
+        _content.BackColor = surface;
+        _content.ForeColor = SystemInformation.HighContrast ? SystemColors.WindowText : TextContrast.Readable(ColorTranslator.FromHtml(_layout.AccentHex), surface);
+        foreach (var (label, row) in _rows)
+        {
+            label.BackColor = surface;
+            if (label.Parent != null) label.Parent.BackColor = surface;
+            label.ForeColor = SystemInformation.HighContrast ? SystemColors.WindowText : TextContrast.Readable(ColorTranslator.FromHtml(row.AccentHex), surface);
+        }
+        Opacity = SystemInformation.HighContrast ? 1 : _layout.OpacityPercent / 100.0;
+    }
+
+    protected override void Dispose(bool disposing)
+    {
+        if (disposing)
+        {
+            if (_registered) { _registered = false; OpenWindows.Remove(this); ThemeManager.Changed -= RefreshTheme; SyncRefresh(); }
+            _content?.Font.Dispose();
+            foreach (var entry in _rows) entry.Label.Font.Dispose();
+        }
+        base.Dispose(disposing);
     }
 
     private void UpdateText()
@@ -75,7 +140,7 @@ public sealed class OpsisCustomWidgetWindow : Form
         try
         {
             var needsSystem = _rows.Count > 0 ? _rows.Any(x => x.Row.Binding is "CPU" or "RAM") : _layout.Binding is "CPU" or "RAM";
-            var system = needsSystem ? AdvancedSystemMonitorService.Instance.GetSnapshot() : default;
+            var system = needsSystem ? SystemMonitorService.Instance.GetSnapshot() : default;
             string Value(string binding, string text) => binding switch
             {
                 "Clock" => DateTime.Now.ToString("HH:mm:ss"),
