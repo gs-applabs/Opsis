@@ -14,11 +14,12 @@ namespace MotionDesk.UI;
 /// </summary>
 public sealed class StartStudioForm : Form
 {
-    private sealed record Shortcut(string Name, string Path, string Group);
+    private readonly System.Threading.CancellationTokenSource _scanCancellation = new();
+    private bool _scanning;
     private readonly TextBox _search = new() { Dock = DockStyle.Top, PlaceholderText = "Search installed shortcuts / Αναζήτηση εφαρμογών…" };
     private readonly ListView _results = new() { Dock = DockStyle.Fill, View = View.Details, FullRowSelect = true, MultiSelect = false };
     private readonly Label _info = new() { Dock = DockStyle.Bottom, Height = 30, TextAlign = System.Drawing.ContentAlignment.MiddleLeft };
-    private List<Shortcut> _entries = new();
+    private List<StartStudioPreferences.Shortcut> _entries = new();
     private HashSet<string> _pinned = new(StringComparer.OrdinalIgnoreCase);
     private readonly CheckBox _pinnedOnly = new() { Text = "Pinned only / Μόνο καρφιτσωμένα", AutoSize = true, Margin = new Padding(7, 10, 10, 6) };
     private readonly Button _pinButton = new() { Text = "Pin / Unpin", Width = 120, Height = 30 };
@@ -88,55 +89,40 @@ public sealed class StartStudioForm : Form
         Controls.Add(_info);
         _pinnedOnly.CheckedChanged += (_, _) => RefreshResults();
         _pinButton.Click += (_, _) => TogglePinned();
-        _refreshButton.Click += (_, _) => LoadShortcuts();
+        _refreshButton.Click += async (_, _) => await LoadShortcutsAsync();
         _startStyle.SelectedIndexChanged += (_, _) => ChangeStartButton();
         _layoutStyle.SelectedIndexChanged += (_, _) => ChangePresentation();
         _groupByFolder.CheckedChanged += (_, _) => ChangePresentation();
         _search.TextChanged += (_, _) => RefreshResults();
         _results.DoubleClick += (_, _) => OpenSelected();
         _results.KeyDown += (_, e) => { if (e.KeyCode == Keys.Enter) { OpenSelected(); e.Handled = true; } };
-        Shown += (_, _) => { LoadShortcuts(); _search.Focus(); };
-        Disposed += (_, _) => _startIcon?.Dispose();
+        Shown += async (_, _) => { _search.Focus(); await LoadShortcutsAsync(); };
+        Disposed += (_, _) => { _scanCancellation.Cancel(); _scanCancellation.Dispose(); _startIcon?.Dispose(); };
     }
 
-    private void LoadShortcuts()
+    private async System.Threading.Tasks.Task LoadShortcutsAsync()
     {
-        var roots = new[]
+        if (_scanning || IsDisposed) return;
+        _scanning = true;
+        _refreshButton.Enabled = _pinButton.Enabled = false;
+        var token = _scanCancellation.Token;
+        try
         {
-            Environment.GetFolderPath(Environment.SpecialFolder.StartMenu),
-            Environment.GetFolderPath(Environment.SpecialFolder.CommonStartMenu)
-        };
-        var items = new List<Shortcut>();
-        foreach (var root in roots.Where(Directory.Exists))
-        {
-            var pending = new Stack<(string Folder, int Depth)>();
-            pending.Push((root, 0));
-            while (pending.Count > 0 && items.Count < 3000)
-            {
-                var (folder, depth) = pending.Pop();
-                try
-                {
-                    foreach (var path in Directory.EnumerateFiles(folder, "*.lnk"))
-                    {
-                        if (items.Count >= 3000) break;
-                        var name = Path.GetFileNameWithoutExtension(path);
-                        var group = Path.GetRelativePath(root, folder);
-                        items.Add(new Shortcut(name, path, group == "." ? "General" : group));
-                    }
-                    if (depth < 6)
-                        foreach (var sub in Directory.EnumerateDirectories(folder))
-                        {
-                            // Do not recurse into directory links or reparse-point loops.
-                            if ((File.GetAttributes(sub) & FileAttributes.ReparsePoint) == 0)
-                                pending.Push((sub, depth + 1));
-                        }
-                }
-                catch (UnauthorizedAccessException) { }
-                catch (IOException) { }
-            }
+            var items = await System.Threading.Tasks.Task.Run(() => StartStudioPreferences.ScanShortcuts(token), token);
+            if (token.IsCancellationRequested || IsDisposed || Disposing) return;
+            _entries = items.OrderBy(x => x.Name, StringComparer.CurrentCultureIgnoreCase).ToList();
         }
-        _entries = items.GroupBy(x => x.Path, StringComparer.OrdinalIgnoreCase)
-            .Select(g => g.First()).OrderBy(x => x.Name, StringComparer.CurrentCultureIgnoreCase).ToList();
+        catch (OperationCanceledException) { return; }
+        catch (Exception ex)
+        {
+            if (!IsDisposed && !Disposing) _info.Text = ex.Message;
+            return;
+        }
+        finally
+        {
+            _scanning = false;
+            if (!IsDisposed && !Disposing) _refreshButton.Enabled = _pinButton.Enabled = true;
+        }
         try
         {
             var preferences = StartStudioPreferences.Read();
@@ -287,7 +273,7 @@ public sealed class StartStudioForm : Form
         if (_results.SelectedItems.Count != 1 || _results.SelectedItems[0].Tag is not string path) return;
         // Only launch shortcuts found in the Start Menu scan, never paths supplied in search text.
         if (!_entries.Any(x => string.Equals(x.Path, path, StringComparison.OrdinalIgnoreCase)) ||
-            !path.EndsWith(".lnk", StringComparison.OrdinalIgnoreCase) || !File.Exists(path)) return;
+            !StartStudioPreferences.CanLaunchShortcut(path)) return;
         try
         {
             Process.Start(new ProcessStartInfo(path) { UseShellExecute = true });

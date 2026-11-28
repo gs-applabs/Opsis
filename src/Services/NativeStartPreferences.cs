@@ -31,7 +31,7 @@ public static class NativeStartPreferences
     private static void CheckWritable()
     {
         if (!IsSupported) throw new PlatformNotSupportedException("Windows 11 is required.");
-        if (SafeModeService.IsSafeMode || WindowsUpdateGuard.RequiresReview)
+        if (SafeModeService.IsSafeMode || WindowsUpdateGuard.RequiresReview || WindowsUpdateGuard.RuntimeHold)
             throw new InvalidOperationException("Windows compatibility review required.");
         var mods = OpsisModCompatibility.ScanCached();
         if (mods.Any(x => x.Risk == "High" ||

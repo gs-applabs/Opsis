@@ -6,9 +6,10 @@ namespace MotionDesk.Widgets;
 
 internal sealed class DesktopLauncher : Form
 {
-    private sealed record Entry(string Name, string Target, IntPtr Window = default)
+    private sealed record Entry(string Name, string Target, IntPtr Window = default, string Group = "", int PinRank = int.MaxValue, bool ShowGroup = false)
     {
-        public override string ToString() => Name;
+        public override string ToString() => (PinRank != int.MaxValue ? "★ " : "") + Name +
+            (ShowGroup && Group.Length > 0 ? "  ·  " + Group : "");
     }
 
     private static DesktopLauncher? _visible;
@@ -153,12 +154,13 @@ internal sealed class DesktopLauncher : Form
             var token = _closing.Token;
             try
             {
-                var entries = await Task.Run(() => ReadEntries(token), token);
+                var entries = await Task.Run(() => ReadEntries(token, startMenu), token);
                 if (token.IsCancellationRequested || IsDisposed) return;
                 _index = entries;
                 Filter();
             }
             catch (OperationCanceledException) { }
+            catch (Exception ex) { if (!IsDisposed && !Disposing) _query.PlaceholderText = ex.Message; }
         };
         FormClosed += (_, _) => { _closing.Cancel(); _closing.Dispose(); };
     }
@@ -192,23 +194,31 @@ internal sealed class DesktopLauncher : Form
     [return: System.Runtime.InteropServices.MarshalAs(System.Runtime.InteropServices.UnmanagedType.Bool)]
     private static extern bool LockWorkStation();
 
-    private static Entry[] ReadEntries(CancellationToken token)
+    private static Entry[] ReadEntries(CancellationToken token, bool startMenu)
     {
         var entries = WinApi.EnumerateAppWindows().Select(window => new Entry(window.Title, window.ExePath, window.Handle)).ToList();
-        foreach (var special in new[] { Environment.SpecialFolder.Programs, Environment.SpecialFolder.CommonPrograms,
-            Environment.SpecialFolder.DesktopDirectory, Environment.SpecialFolder.CommonDesktopDirectory })
+        StartStudioPreferences.Data preferences;
+        try { preferences = StartStudioPreferences.Read(); }
+        catch (Exception ex) { RotatingLogger.Write("Start preferences: " + ex.Message); preferences = new(); }
+        var ranks = preferences.PinnedShortcuts.Select((path, index) => (path, index))
+            .GroupBy(x => x.path, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(g => g.Key, g => g.First().index, StringComparer.OrdinalIgnoreCase);
+        foreach (var shortcut in StartStudioPreferences.ScanShortcuts(token))
+            entries.Add(new Entry(shortcut.Name, shortcut.Path, Group: shortcut.Group,
+                PinRank: ranks.TryGetValue(shortcut.Path, out int rank) ? rank : int.MaxValue,
+                ShowGroup: startMenu && preferences.GroupByFolder));
+        foreach (var special in new[] { Environment.SpecialFolder.DesktopDirectory, Environment.SpecialFolder.CommonDesktopDirectory })
         {
             string root = Environment.GetFolderPath(special);
             if (!Directory.Exists(root)) continue;
-            bool apps = special is Environment.SpecialFolder.Programs or Environment.SpecialFolder.CommonPrograms;
-            var options = new EnumerationOptions { IgnoreInaccessible = true, RecurseSubdirectories = apps, MaxRecursionDepth = 6,
+            var options = new EnumerationOptions { IgnoreInaccessible = true, RecurseSubdirectories = false,
                 AttributesToSkip = FileAttributes.Hidden | FileAttributes.System | FileAttributes.ReparsePoint };
             try
             {
-                foreach (var path in Directory.EnumerateFileSystemEntries(root, apps ? "*.lnk" : "*", options).Take(5000))
+                foreach (var path in Directory.EnumerateFileSystemEntries(root, "*", options).Take(5000))
                 {
                     token.ThrowIfCancellationRequested();
-                    entries.Add(new Entry(apps ? Path.GetFileNameWithoutExtension(path) : Path.GetFileName(path), path));
+                    entries.Add(new Entry(Path.GetFileName(path), path));
                 }
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
@@ -233,7 +243,7 @@ internal sealed class DesktopLauncher : Form
                 return (entry, score: sum);
             })
             .Where(pair => pair.score >= 0)
-            .OrderByDescending(pair => pair.score).ThenByDescending(pair => pair.entry.Window != IntPtr.Zero)
+            .OrderByDescending(pair => pair.score).ThenBy(pair => pair.entry.PinRank).ThenByDescending(pair => pair.entry.Window != IntPtr.Zero)
             .ThenBy(pair => pair.entry.Name, StringComparer.CurrentCultureIgnoreCase).Take(75).Select(pair => pair.entry).ToList();
         if (query.Length > 0 && Path.IsPathFullyQualified(query) && !query.StartsWith(@"\") && (File.Exists(query) || Directory.Exists(query)))
             matches.Insert(0, new Entry(query, query));
@@ -268,6 +278,8 @@ internal sealed class DesktopLauncher : Form
         try
         {
             if (selected.Window != IntPtr.Zero) WinApi.BringToFront(selected.Window);
+            else if (selected.Group.Length > 0 && !StartStudioPreferences.CanLaunchShortcut(selected.Target))
+                throw new InvalidOperationException("Start shortcut is no longer available or is linked.");
             else if (SafeLaunch.Reject(selected.Target) is { } reason)
                 throw new InvalidOperationException(reason);
             else Process.Start(new ProcessStartInfo(selected.Target) { UseShellExecute = true });

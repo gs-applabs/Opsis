@@ -35,6 +35,62 @@ public static class StartStudioPreferences
         }
     }
 
+    internal sealed record Shortcut(string Name, string Path, string Group);
+    private static int _scanBusy;
+    private static string[] Roots() => new[]
+    {
+        Environment.GetFolderPath(Environment.SpecialFolder.StartMenu),
+        Environment.GetFolderPath(Environment.SpecialFolder.CommonStartMenu)
+    }.Where(root => !string.IsNullOrWhiteSpace(root)).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+
+    // Single shared, bounded scan for Studio and the actual Opsis Start launcher.
+    // No persistent index, watchers or background refresh when neither is open.
+    internal static Shortcut[] ScanShortcuts(System.Threading.CancellationToken token)
+    {
+        if (System.Threading.Interlocked.CompareExchange(ref _scanBusy, 1, 0) != 0)
+            throw new InvalidOperationException("A Start shortcut scan is already running. Try again after it completes.");
+        try
+        {
+            var items = new List<Shortcut>();
+            int visited = 0;
+            foreach (var root in Roots())
+            {
+                if (!Directory.Exists(root) || !PackagePaths.IsExistingUnlinkedPath(root, root)) continue;
+                var pending = new Stack<(string Folder, int Depth)>();
+                pending.Push((root, 0));
+                while (pending.Count > 0 && items.Count < 3000 && visited < 20000)
+                {
+                    token.ThrowIfCancellationRequested();
+                    var (folder, depth) = pending.Pop();
+                    try
+                    {
+                        foreach (var entry in Directory.EnumerateFileSystemEntries(folder))
+                        {
+                            token.ThrowIfCancellationRequested();
+                            if (++visited > 20000 || items.Count >= 3000) break;
+                            var attributes = File.GetAttributes(entry);
+                            if ((attributes & (FileAttributes.ReparsePoint | FileAttributes.Hidden | FileAttributes.System)) != 0) continue;
+                            if ((attributes & FileAttributes.Directory) != 0)
+                            {
+                                if (depth < 6) pending.Push((entry, depth + 1));
+                                continue;
+                            }
+                            if (!entry.EndsWith(".lnk", StringComparison.OrdinalIgnoreCase)) continue;
+                            string group = Path.GetRelativePath(root, folder);
+                            items.Add(new Shortcut(Path.GetFileNameWithoutExtension(entry), entry, group == "." ? "General" : group));
+                        }
+                    }
+                    catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
+                }
+            }
+            return items.DistinctBy(x => x.Path, StringComparer.OrdinalIgnoreCase).ToArray();
+        }
+        finally { System.Threading.Volatile.Write(ref _scanBusy, 0); }
+    }
+
+    internal static bool CanLaunchShortcut(string path) => SafePath(path) &&
+        Roots().Any(root => PackagePaths.IsExistingUnlinkedPath(root, path)) && SafeLaunch.IsAllowed(path);
+
     private static readonly object Gate = new();
     private static string Config => Path.Combine(AppPaths.AppDataFolder, "start-studio.json");
 
@@ -44,10 +100,7 @@ public static class StartStudioPreferences
             !Path.IsPathFullyQualified(path) || !path.EndsWith(".lnk", StringComparison.OrdinalIgnoreCase))
             return false;
         var candidate = Path.GetFullPath(path);
-        var roots = new[] {
-            Environment.GetFolderPath(Environment.SpecialFolder.StartMenu),
-            Environment.GetFolderPath(Environment.SpecialFolder.CommonStartMenu)
-        };
+        var roots = Roots();
         return roots.Any(root => candidate.StartsWith(Path.GetFullPath(root).TrimEnd(Path.DirectorySeparatorChar) +
             Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase));
     }
@@ -79,6 +132,7 @@ public static class StartStudioPreferences
         lock (Gate)
         {
             var data = Read();
+            if (data.DisplayStyle == style && data.GroupByFolder == groupByFolder) return;
             data.DisplayStyle = style;
             data.GroupByFolder = groupByFolder;
             Directory.CreateDirectory(Path.GetDirectoryName(Config)!);
@@ -103,10 +157,11 @@ public static class StartStudioPreferences
 
     public static void SetPinned(string path, bool pinned)
     {
-        if (!SafePath(path) || !File.Exists(path)) throw new InvalidOperationException("Shortcut is not in the Windows Start Menu.");
+        if (!SafePath(path) || (pinned && !CanLaunchShortcut(path))) throw new InvalidOperationException("Shortcut is not in the Windows Start Menu.");
         lock (Gate)
         {
             var d = Read();
+            if (d.PinnedShortcuts.Contains(path, StringComparer.OrdinalIgnoreCase) == pinned) return;
             d.PinnedShortcuts.RemoveAll(p => string.Equals(p, path, StringComparison.OrdinalIgnoreCase));
             if (pinned) d.PinnedShortcuts.Add(path);
             if (d.PinnedShortcuts.Count > 250) throw new InvalidOperationException("Maximum 250 pinned shortcuts.");
