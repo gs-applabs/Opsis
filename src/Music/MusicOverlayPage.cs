@@ -338,12 +338,17 @@ internal sealed class MusicOverlayPage : TableLayoutPanel
 
     private void UpdateFromSettings()
     {
-        var settings = getController()?.Settings;
+        var controller = getController();
+        var settings = controller?.Settings;
+        bool permitted = controller?.SessionPermitted == true;
         loading = true;
         try
         {
             enabled.Enabled = settings != null;
             enabled.Checked = settings?.Enabled == true;
+            enabled.Text = settings != null && !permitted
+                ? L("Ενεργοποίηση μουσικού visualizer (αναστολή συνεδρίας)", "Enable music visualizer (session suspended)")
+                : L("Ενεργοποίηση μουσικού visualizer", "Enable music visualizer");
             hideTrackMetadata.Enabled = settings != null;
             hideTrackMetadata.Checked = settings?.HideTrackMetadata == true;
             presets.SelectedIndex = Math.Max(0, Array.FindIndex(VisualPresets.All, preset => preset.Preset == (settings?.Preset ?? VisualPreset.Radial)));
@@ -389,7 +394,7 @@ internal sealed class MusicOverlayPage : TableLayoutPanel
                 swatches[i].FlatAppearance.BorderSize = i == activeSwatch ? 2 : 0;
                 swatches[i].FlatAppearance.BorderColor = swatches[i].ForeColor;
             }
-            preview.Enabled = settings != null;
+            preview.Enabled = settings != null && permitted;
             reset.Enabled = settings != null;
         }
         finally { loading = false; }

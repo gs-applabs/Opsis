@@ -6,6 +6,7 @@ internal static class StudioMusic
 {
     private static DesktopMusicController? controller;
     internal static void Start() => controller ??= new DesktopMusicController();
+    internal static void ReconcileSession() => controller?.ReconcileSession();
 
     internal static void Stop()
     {

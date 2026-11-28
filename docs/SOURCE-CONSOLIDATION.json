@@ -2276,13 +2276,15 @@
       "latest_certified": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
       "latest_audit_run": 46102704472,
       "latest_artifact": 15246756939,
-      "next": "Check R80 full audit 46103939134 and GPU/heap counters. If all seven success CAS R80->R81, then R82/R83/R84/R85 ordered exact-SHA gates. R85 widget desired-layout preservation and tray session bit; live transition/fault injection and remaining runtime owners open. Preserve 100 IDs and B01-B14; no release.",
+      "next": "Check exact R80 full audit GPU/heap evidence, CAS R80->R81 only after 7/7 PASS, then ordered R82/R83/R84/R85/R86 gates. R86 music admission; remaining appearance/shell/hotkeys/plugins and native migration fixtures/rollback. No release.",
       "parent_R79": "835b784e5cdce8fb8eb2134df79c1632366b82a0",
       "parent_R80": "5ad65d13c11262ff9a75b4a5c387bbeb50e40c59",
       "parent_R81": "cae751ab4b21d69996bbacd11bed9a3ae715b3ec",
       "parent_R82": "d1b0542327a5b00606984e9a9f5e31977d688afa",
       "parent_R83": "f7f4625e4da1eae13f6fade5b0551e8d3f9a9f8a",
-      "parent_R84": "f51111de179870bb2c13cdf0b0819155e325adb6"
+      "parent_R84": "f51111de179870bb2c13cdf0b0819155e325adb6",
+      "parent_R85": "b2db4aed2817df69581ee4375dfb468dead189a6",
+      "R86": "R86 adds independent MusicVisualizer session admission. Existing settings controller remains available, persisted Enabled and other settings unchanged by session switch; timer stops, playback generation invalidates stale metadata, active read cancellation and reader disposal, capture/surface Clear via existing owners. Renderer object retained for native script backpressure, host lazy until first render, no second capture/scheduler. Resume only if saved Enabled; explicit preview denied while suspended, settings checkbox distinguishes saved intent. Two deterministic assertions; no Windows build yet. Live audio/GSMTC/WebView transitions, cancellation/disposal failure, renderer cleanup and lock state need actual tests; no guarantee of immediate cancellation of native requests. Independent wallpaper animation unaffected; full Containers-only remains open. R80 at preparation 6/7 PASS, full 46103939134 active. Preserve ordered R80-R86 gates, original 100 IDs and B01-B14, no main merge/release."
     }
   }
 }

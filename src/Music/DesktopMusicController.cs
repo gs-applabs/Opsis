@@ -7,7 +7,8 @@ namespace OpsisMusicOverlay;
 internal sealed class DesktopMusicController : IDisposable
 {
     private static string SettingsPath => Path.Combine(MotionDesk.Services.AppPaths.AppDataFolder, "music-overlay.json");
-    private readonly MediaSessionReader media = new();
+    private MediaSessionReader? media;
+    private CancellationTokenSource? activeReadCancellation;
     private readonly CancellationTokenSource shutdown = new();
     private const int ActiveInterval = 42, IdleInterval = 250, SuspendedInterval = 500, BackpressureInterval = 100;
     private readonly System.Windows.Forms.Timer timer = new() { Interval = IdleInterval };
@@ -30,10 +31,42 @@ internal sealed class DesktopMusicController : IDisposable
         // The overlay selects an isolated input; never change the system loopback.
         SystemEvents.SessionSwitch += SessionSwitched;
         timer.Tick += Tick;
-        if (settings.Enabled) timer.Start();
+        if (CanRun(SessionPermitted, settings.Enabled, false)) timer.Start();
     }
 
     public MusicOverlaySettings Settings => settings;
+    internal bool SessionPermitted => RuntimeSessionPolicy.IsPermitted(SessionBackgroundService.MusicVisualizer);
+    internal static bool CanRun(bool permitted, bool requested, bool preview) => permitted && (requested || preview);
+
+    // Keep the settings controller available without retaining an active capture or reader.
+    // Same surface instance preserves outstanding WebView script backpressure across transitions.
+    internal void ReconcileSession()
+    {
+        if (disposed) return;
+        if (!SessionPermitted)
+        {
+            timer.Stop();
+            try { StopPlayback(); }
+            finally { ReleaseMedia(); }
+        }
+        else if (settings.Enabled)
+        {
+            nextDisplayLookup = nextRead = 0;
+            SetTickInterval(IdleInterval);
+            timer.Start();
+        }
+    }
+
+    private void ReleaseMedia()
+    {
+        try { activeReadCancellation?.Cancel(); }
+        finally
+        {
+            var old = media;
+            media = null;
+            old?.Dispose();
+        }
+    }
 
     public void SetAudioInput(string? deviceId)
     {
@@ -61,7 +94,7 @@ internal sealed class DesktopMusicController : IDisposable
         if (settings.Enabled == enabled) return;
         settings = settings with { Enabled = enabled };
         SaveSettings();
-        if (enabled)
+        if (CanRun(SessionPermitted, enabled, false))
         {
             nextRead = 0;
             timer.Start();
@@ -69,7 +102,8 @@ internal sealed class DesktopMusicController : IDisposable
         else
         {
             timer.Stop();
-            StopPlayback();
+            try { StopPlayback(); }
+            finally { ReleaseMedia(); }
         }
     }
 
@@ -86,10 +120,11 @@ internal sealed class DesktopMusicController : IDisposable
         if (disposed) return;
         var now = Environment.TickCount64;
         bool preview = now < previewUntil;
-        if (!settings.Enabled && !preview)
+        if (!CanRun(SessionPermitted, settings.Enabled, preview))
         {
             timer.Stop();
-            StopPlayback();
+            try { StopPlayback(); }
+            finally { ReleaseMedia(); }
             return;
         }
         if (paused || locked)
@@ -153,11 +188,13 @@ internal sealed class DesktopMusicController : IDisposable
         {
             using var timeout = CancellationTokenSource.CreateLinkedTokenSource(shutdown.Token);
             timeout.CancelAfter(TimeSpan.FromSeconds(2));
-            var current = await media.ReadAsync(timeout.Token);
-            if (!disposed && settings.Enabled && generation == playbackGeneration && !paused && !locked
+            activeReadCancellation = timeout;
+            var reader = media ??= new MediaSessionReader();
+            var current = await reader.ReadAsync(timeout.Token);
+            if (!disposed && SessionPermitted && settings.Enabled && generation == playbackGeneration && !paused && !locked
                 && !timeout.IsCancellationRequested) snapshot = current;
         }
-        finally { reading = false; }
+        finally { activeReadCancellation = null; reading = false; }
     }
 
     public void SetHostPaused(bool value)
@@ -195,7 +232,7 @@ internal sealed class DesktopMusicController : IDisposable
     }
     public void Preview()
     {
-        if (disposed || paused || locked) return;
+        if (disposed || !SessionPermitted || paused || locked) return;
         previewUntil = Environment.TickCount64 + 15000;
         SetTickInterval(ActiveInterval);
         timer.Start();
@@ -281,7 +318,7 @@ internal sealed class DesktopMusicController : IDisposable
         timer.Dispose();
         SystemEvents.SessionSwitch -= SessionSwitched;
         StopAudio();
-        media.Dispose();
+        ReleaseMedia();
         surface.Dispose();
         shutdown.Dispose();
     }

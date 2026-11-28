@@ -18,7 +18,7 @@ internal sealed class WallpaperMusicSurface : IDisposable
     private static readonly string WallpaperFile = JsonSerializer.Serialize(
         new Uri(Path.Combine(AppContext.BaseDirectory, "widgets", "wallpaper", "index.html")).AbsoluteUri);
 
-    private readonly WallpaperHostEngine host = WallpaperHostEngine.Instance;
+    private WallpaperHostEngine? host;
     private CoreWebView2? current;
     private string? cover;
     private byte[]? coverSource;
@@ -46,8 +46,9 @@ internal sealed class WallpaperMusicSurface : IDisposable
         int frameRevision = revision;
         try
         {
-            host.SetMusicSceneRequested(true);
-            var core = host.GetMusicRenderer(screen.DeviceName);
+            var activeHost = host ??= WallpaperHostEngine.Instance;
+            activeHost.SetMusicSceneRequested(true);
+            var core = activeHost.GetMusicRenderer(screen.DeviceName);
             if (core == null) return;
             if (!ReferenceEquals(core, current))
             {
@@ -178,7 +179,7 @@ internal sealed class WallpaperMusicSurface : IDisposable
     {
         revision++;
         ClearDrawing();
-        host.SetMusicSceneRequested(false);
+        host?.SetMusicSceneRequested(false);
     }
 
     public void Dispose()

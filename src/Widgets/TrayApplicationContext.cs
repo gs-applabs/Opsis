@@ -799,6 +799,7 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
             var wallpaper = new ToolStripMenuItem(T("Allow animated wallpaper (keep independent overlays)", "Κινούμενο φόντο (διατήρηση ανεξάρτητων overlays)"));
             var dock = new ToolStripMenuItem(T("Allow DeskStrip", "Επιτρέπεται το DeskStrip"));
             var widgets = new ToolStripMenuItem(T("Allow widgets (retain layout)", "Επιτρέπονται τα widgets (διατήρηση διάταξης)"));
+            var music = new ToolStripMenuItem(T("Allow music visualizer", "Επιτρέπεται το μουσικό visualizer"));
             void Change(SessionBackgroundService flag, Action reconcile)
             {
                 if (SafeModeService.IsSafeMode || System.Threading.Volatile.Read(ref _exitStarted) != 0) return;
@@ -814,13 +815,15 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
             wallpaper.Click += (_, _) => Change(SessionBackgroundService.AnimatedWallpaper, WallpaperHostEngine.ReconcileSessionIfCreated);
             dock.Click += (_, _) => Change(SessionBackgroundService.DeskStrip, DeskStripHostEngine.ReconcileSessionIfCreated);
             widgets.Click += (_, _) => Change(SessionBackgroundService.Widgets, WidgetHostEngine.ReconcileSessionIfCreated);
-            menu.DropDownItems.Add(wallpaper); menu.DropDownItems.Add(dock); menu.DropDownItems.Add(widgets);
+            music.Click += (_, _) => Change(SessionBackgroundService.MusicVisualizer, StudioMusic.ReconcileSession);
+            menu.DropDownItems.Add(wallpaper); menu.DropDownItems.Add(dock); menu.DropDownItems.Add(widgets); menu.DropDownItems.Add(music);
             menu.DropDownOpening += (_, _) =>
             {
                 wallpaper.Checked = RuntimeSessionPolicy.IsPermitted(SessionBackgroundService.AnimatedWallpaper);
                 dock.Checked = RuntimeSessionPolicy.IsPermitted(SessionBackgroundService.DeskStrip);
                 widgets.Checked = RuntimeSessionPolicy.IsPermitted(SessionBackgroundService.Widgets);
-                wallpaper.Enabled = dock.Enabled = widgets.Enabled = !SafeModeService.IsSafeMode;
+                music.Checked = RuntimeSessionPolicy.IsPermitted(SessionBackgroundService.MusicVisualizer);
+                wallpaper.Enabled = dock.Enabled = widgets.Enabled = music.Enabled = !SafeModeService.IsSafeMode;
             };
             return menu;
         }
