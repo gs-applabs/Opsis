@@ -44,7 +44,8 @@ namespace MotionDesk.Widgets
             // never postponed by a settings change. Optional work has demand.
             long untilSafety = ExperienceSafetyIntervalMs - (Environment.TickCount64 - _lastExperienceSafetyCheck);
             int next = (int)Math.Clamp(untilSafety, 1000L,
-                ExperienceCadenceMs(settings.OpsisAutomationsEnabled, settings.ReplaceWindowsTaskbar, WindowsUpdateGuard.RequiresReview));
+                ExperienceCadenceMs(RuntimeSessionPolicy.Allows(SessionBackgroundService.ScheduledAutomations,
+                    settings.OpsisAutomationsEnabled, SafeModeService.IsSafeMode), settings.ReplaceWindowsTaskbar, WindowsUpdateGuard.RequiresReview));
             if (_experienceTimer.Interval != next) _experienceTimer.Interval = next;
         }
         private bool _compatibilityIsolationApplied;
@@ -126,6 +127,9 @@ namespace MotionDesk.Widgets
             // Opsis' own help entries: ONE welcome guide and ONE family window for the whole suite (plugins do not offer them when hosted: PluginHost.IsHostOwnedEntry)
             contextMenu.Items.Add(LocalizationManager.T("Tray.Welcome"), null, (s, e) => FamilyWindows.ShowWelcome());
             contextMenu.Items.Add(LocalizationManager.T("Tray.Family"), null, (s, e) => FamilyWindows.ShowFamily());
+            // These are reversible, session-only filters over the saved
+            // preferences. They do not silently change startup/profile data.
+            contextMenu.Items.Add(BuildSessionBackgroundMenu());
             // plugins that are installed but not approved yet (user-writable folder): one click asks again
             _pluginApprovalItem = new ToolStripMenuItem { Visible = false };
             _pluginApprovalItem.Click += (s, e) => AskPluginApproval();
@@ -275,7 +279,12 @@ namespace MotionDesk.Widgets
             // Build fingerprint is read only every 15 minutes; no Windows file hashing in the timer.
             if (!safeMode)
             {
-                try { if (!reviewRequired && AppSettings.Peek().OpsisAutomationsEnabled) OpsisAutomationStudio.ExecuteDue(true); }
+                try
+                {
+                    if (!reviewRequired && RuntimeSessionPolicy.Allows(SessionBackgroundService.ScheduledAutomations,
+                        AppSettings.Peek().OpsisAutomationsEnabled, SafeModeService.IsSafeMode))
+                        OpsisAutomationStudio.ExecuteDue(true);
+                }
                 catch (Exception e) { RotatingLogger.Write("Automation startup: " + e.Message); }
                 _experienceTimer.Tick += (_, _) =>
                 {
@@ -288,7 +297,8 @@ namespace MotionDesk.Widgets
                             _lastExperienceSafetyCheck = now;
                             if (WindowsUpdateGuard.EvaluateStartup()) IsolateShellForUpdate();
                             // Opsis-only accent; no work for disabled accent extraction.
-                            if (settings.WallpaperAccentEnabled)
+                            if (RuntimeSessionPolicy.Allows(SessionBackgroundService.PeriodicWallpaperAccent,
+                                settings.WallpaperAccentEnabled, SafeModeService.IsSafeMode))
                             {
                                 try { WallpaperAccentEngine.RefreshIfChanged(); }
                                 catch (Exception e) { RotatingLogger.WriteRecurring(RotatingLogger.RecurringSource.WallpaperAccent, "Wallpaper accent refresh: " + e.Message); }
@@ -298,7 +308,8 @@ namespace MotionDesk.Widgets
                         else if (!_compatibilityIsolationApplied)
                         {
                             if (settings.ReplaceWindowsTaskbar) ReplacementTaskbar.RefreshSettings();
-                            if (settings.OpsisAutomationsEnabled) OpsisAutomationStudio.ExecuteDue(false);
+                            if (RuntimeSessionPolicy.Allows(SessionBackgroundService.ScheduledAutomations,
+                                settings.OpsisAutomationsEnabled, SafeModeService.IsSafeMode)) OpsisAutomationStudio.ExecuteDue(false);
                         }
                     }
                     catch (Exception e) { RotatingLogger.WriteRecurring(RotatingLogger.RecurringSource.Experience, "Opsis experience check: " + e.Message); }
@@ -714,7 +725,71 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
 
         // Called every 5 s: CPU or memory >= 90% for 12 consecutive ticks (one minute) -> one tray balloon, then a 10-minute pause
         internal static (bool DockRestore, bool UsageAlerts) SelectOptionalServices(AppSettings settings, bool safeMode) =>
-            (!safeMode && settings.RestoreWindowsAfterDocking, !safeMode && settings.UsageAlertsEnabled);
+            SelectOptionalServices(settings, safeMode, RuntimeSessionPolicy.Allowed);
+
+        internal static (bool DockRestore, bool UsageAlerts) SelectOptionalServices(AppSettings settings, bool safeMode,
+            SessionBackgroundService allowed) =>
+            (RuntimeSessionPolicy.Allows(allowed, SessionBackgroundService.DockRestore, settings.RestoreWindowsAfterDocking, safeMode),
+             RuntimeSessionPolicy.Allows(allowed, SessionBackgroundService.UsageAlerts, settings.UsageAlertsEnabled, safeMode));
+
+        private ToolStripMenuItem BuildSessionBackgroundMenu()
+        {
+            string T(string en, string el) => MainWindow.StudioText(en, el);
+            var menu = new ToolStripMenuItem(T("Background services · this session", "Υπηρεσίες παρασκηνίου · αυτή η συνεδρία"));
+            var hint = new ToolStripMenuItem(T("Allow only if enabled in saved settings", "Επιτρέπονται μόνο αν είναι ενεργές στις ρυθμίσεις")) { Enabled = false };
+            menu.DropDownItems.Add(hint);
+            var entries = new (SessionBackgroundService Flag, string Title, Func<AppSettings, bool> Saved)[]
+            {
+                (SessionBackgroundService.DockRestore, T("Restore windows after docking", "Επαναφορά παραθύρων μετά από σύνδεση οθόνης"), s => s.RestoreWindowsAfterDocking),
+                (SessionBackgroundService.UsageAlerts, T("CPU/RAM alerts", "Ειδοποιήσεις CPU/RAM"), s => s.UsageAlertsEnabled),
+                (SessionBackgroundService.DiscordPresence, T("Discord presence", "Παρουσία Discord"), s => s.DiscordPresenceEnabled),
+                (SessionBackgroundService.ScheduledAutomations, T("Scheduled automations", "Προγραμματισμένοι αυτοματισμοί"), s => s.OpsisAutomationsEnabled),
+                (SessionBackgroundService.PeriodicWallpaperAccent, T("Periodic wallpaper accent", "Περιοδική ανανέωση χρώματος φόντου"), s => s.WallpaperAccentEnabled)
+            };
+            var items = new List<(ToolStripMenuItem Item, SessionBackgroundService Flag, Func<AppSettings, bool> Saved)>();
+            foreach (var entry in entries)
+            {
+                var item = new ToolStripMenuItem(entry.Title);
+                item.Click += (_, _) =>
+                {
+                    if (SafeModeService.IsSafeMode || System.Threading.Volatile.Read(ref _exitStarted) != 0) return;
+                    RuntimeSessionPolicy.SetAllowed(entry.Flag, (RuntimeSessionPolicy.Allowed & entry.Flag) == 0);
+                    RefreshSessionBackgroundServices();
+                };
+                items.Add((item, entry.Flag, entry.Saved));
+                menu.DropDownItems.Add(item);
+            }
+            menu.DropDownItems.Add(new ToolStripSeparator());
+            var allow = new ToolStripMenuItem(T("Use saved selections", "Χρήση αποθηκευμένων επιλογών"));
+            var pause = new ToolStripMenuItem(T("Suspend these five services", "Αναστολή αυτών των πέντε υπηρεσιών"));
+            void Change(SessionBackgroundService mask)
+            {
+                if (SafeModeService.IsSafeMode || System.Threading.Volatile.Read(ref _exitStarted) != 0) return;
+                RuntimeSessionPolicy.SetAllowed(mask);
+                RefreshSessionBackgroundServices();
+            }
+            allow.Click += (_, _) => Change(SessionBackgroundService.All);
+            pause.Click += (_, _) => Change(SessionBackgroundService.None);
+            menu.DropDownItems.Add(allow); menu.DropDownItems.Add(pause);
+            menu.DropDownOpening += (_, _) =>
+            {
+                var s = AppSettings.Peek();
+                bool safe = SafeModeService.IsSafeMode;
+                var mask = RuntimeSessionPolicy.Allowed;
+                foreach (var (item, flag, saved) in items)
+                {
+                    item.Checked = (mask & flag) != 0;
+                    item.Enabled = !safe;
+                    item.ToolTipText = safe ? T("Safe mode", "Ασφαλής λειτουργία") :
+                        !saved(s) ? T("Off in saved settings", "Ανενεργή στις αποθηκευμένες ρυθμίσεις") :
+                        (mask & flag) == 0 ? T("Suspended for this session", "Σε αναστολή για αυτή τη συνεδρία") :
+                        T("Allowed for this session; other safety checks still apply", "Επιτρέπεται στη συνεδρία· ισχύουν οι έλεγχοι ασφαλείας");
+                }
+                allow.Enabled = !safe && mask != SessionBackgroundService.All;
+                pause.Enabled = !safe && mask != SessionBackgroundService.None;
+            };
+            return menu;
+        }
 
         private void QueueOptionalRefresh()
         {
@@ -736,6 +811,16 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
         }
 
         private void RefreshOptionalServices()
+        {
+            RefreshSessionBackgroundServices();
+            BackdropContrast.Refresh();
+            WallpaperHostEngine.RefreshOptionalIfCreated();
+            RefreshDesktopMenuPipe();
+            PluginHost.Instance.HoldIfGloballyDisabled();
+            AppActivity.RequestRefresh();
+        }
+
+        private void RefreshSessionBackgroundServices()
         {
             var desired = SelectOptionalServices(AppSettings.Peek(), SafeModeService.IsSafeMode);
             try
@@ -759,10 +844,6 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                 }
             }
             catch (Exception ex) { System.Diagnostics.Debug.WriteLine(ex); }
-            BackdropContrast.Refresh();
-            WallpaperHostEngine.RefreshOptionalIfCreated();
-            RefreshDesktopMenuPipe();
-            PluginHost.Instance.HoldIfGloballyDisabled();
             DiscordPresence.Instance.Apply();
             RefreshExperienceCadence();
             AppActivity.RequestRefresh();
@@ -793,7 +874,8 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
         {
             try
             {
-                if (!AppSettings.Load().UsageAlertsEnabled) { _cpuHighTicks = _ramHighTicks = 0; return; }
+                if (!RuntimeSessionPolicy.Allows(SessionBackgroundService.UsageAlerts, AppSettings.Peek().UsageAlertsEnabled, SafeModeService.IsSafeMode))
+                { _cpuHighTicks = _ramHighTicks = 0; return; }
                 var m = SystemMonitorService.Instance.GetSnapshot();
                 double ramPct = m.TotalMemoryMb > 0 ? (m.TotalMemoryMb - m.AvailableMemoryMb) / m.TotalMemoryMb * 100.0 : 0;
                 _cpuHighTicks = m.CpuPercent >= 90 ? _cpuHighTicks + 1 : 0;

@@ -85,7 +85,8 @@ public sealed class DiscordPresence : IDisposable
     public void Apply()
     {
         var s = AppSettings.Peek();
-        if (!ShouldRun(s.DiscordPresenceEnabled, s.DiscordApplicationId, SafeModeService.IsSafeMode))
+        if (!ShouldRun(RuntimeSessionPolicy.Allows(SessionBackgroundService.DiscordPresence, s.DiscordPresenceEnabled,
+            SafeModeService.IsSafeMode), s.DiscordApplicationId, SafeModeService.IsSafeMode))
         { Stop(); return; }
         string id = s.DiscordApplicationId.Trim();
         if (_session?.Id == id && _timer != null) return;
@@ -109,7 +110,9 @@ public sealed class DiscordPresence : IDisposable
     private void Push()
     {
         var session = _session;
-        if (session == null || Interlocked.Exchange(ref _busy, 1) != 0) return;
+        if (session == null || !RuntimeSessionPolicy.Allows(SessionBackgroundService.DiscordPresence,
+            AppSettings.Peek().DiscordPresenceEnabled, SafeModeService.IsSafeMode) ||
+            Interlocked.Exchange(ref _busy, 1) != 0) return;
         if (!session.Begin()) { Volatile.Write(ref _busy, 0); return; }
         try
         {

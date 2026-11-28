@@ -194,6 +194,22 @@ try
         !GlassService.MayRetireManager(0, false, 30000, true) &&
         GlassService.MayRetireManager(0, false, 30000, false),
         "R82 shared glass manager retires only after idle grace and no active pane/demand/diagnostic hold");
+    var sessionMask = SessionBackgroundService.DockRestore | SessionBackgroundService.DiscordPresence;
+    Check(RuntimeSessionPolicy.Allows(sessionMask, SessionBackgroundService.DockRestore, true, false) &&
+        RuntimeSessionPolicy.Allows(sessionMask, SessionBackgroundService.DiscordPresence, true, false) &&
+        !RuntimeSessionPolicy.Allows(sessionMask, SessionBackgroundService.UsageAlerts, true, false),
+        "R83 session mask permits independent selected services to coexist");
+    Check(!RuntimeSessionPolicy.Allows(SessionBackgroundService.All, SessionBackgroundService.UsageAlerts, false, false) &&
+        !RuntimeSessionPolicy.Allows(SessionBackgroundService.All, SessionBackgroundService.UsageAlerts, true, true) &&
+        !RuntimeSessionPolicy.Allows(SessionBackgroundService.All, SessionBackgroundService.None, true, false) &&
+        !RuntimeSessionPolicy.Allows(SessionBackgroundService.All, (SessionBackgroundService)128, true, false),
+        "R83 session selection cannot bypass saved opt-in, safe mode or known capabilities");
+    var sessionPrefs = new AppSettings { RestoreWindowsAfterDocking = true, UsageAlertsEnabled = true };
+    Check(MotionDesk.Widgets.TrayApplicationContext.SelectOptionalServices(sessionPrefs, false, SessionBackgroundService.DockRestore) == (true, false) &&
+        MotionDesk.Widgets.TrayApplicationContext.SelectOptionalServices(sessionPrefs, false, SessionBackgroundService.None) == (false, false) &&
+        MotionDesk.Widgets.TrayApplicationContext.SelectOptionalServices(sessionPrefs, false, SessionBackgroundService.All) == (true, true) &&
+        sessionPrefs.RestoreWindowsAfterDocking && sessionPrefs.UsageAlertsEnabled,
+        "R83 reversible session filters leave persisted preferences unchanged");
     var opt = new AppSettings { RestoreWindowsAfterDocking = false, UsageAlertsEnabled = false };
     Check(MotionDesk.Widgets.TrayApplicationContext.SelectOptionalServices(opt, false) == (false, false),
         "R65 disabled optional tray services have no timer demand");
