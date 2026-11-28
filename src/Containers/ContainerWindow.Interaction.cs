@@ -355,6 +355,27 @@ internal sealed partial class ContainerWindow
         Dirty();
     }
 
+    private ToolTip? _transferPathTip;
+    private void ShowTransferPathPreview(DragEventArgs e)
+    {
+        if (!CanWritePortal || PortalDirectory is not { } target ||
+            e.Effect == DragDropEffects.None ||
+            e.Data?.GetData(DataFormats.FileDrop) is not string[] paths || paths.Length == 0)
+            return;
+        bool remote = IsNetworkPath(target);
+        if (!paths.Any(p => IsNetworkPath(p) != remote)) return;
+        static string ShortPath(string path) => path.Length <= 220 ? path : path[..100] + "…" + path[^100..];
+        var text = MainWindow.StudioText("Local/network transfer — review paths before release", "Τοπική/δικτυακή μεταφορά — έλεγχος πριν την απόθεση") +
+            Environment.NewLine + MainWindow.StudioText("From: ", "Από: ") +
+            string.Join(Environment.NewLine, paths.Take(3).Select(ShortPath)) +
+            (paths.Length > 3 ? Environment.NewLine + $"… +{paths.Length - 3}" : "") +
+            Environment.NewLine + MainWindow.StudioText("To: ", "Προς: ") + ShortPath(target);
+        _transferPathTip ??= new ToolTip { ShowAlways = true };
+        var local = PointToClient(new Point(e.X, e.Y));
+        _transferPathTip.Show(text, this, new Point(Math.Max(0, local.X + 12), Math.Max(0, local.Y + 20)), 8000);
+    }
+    private void HideTransferPathPreview() => _transferPathTip?.Hide(this);
+
     private void DropEffectFor(DragEventArgs e)
     {
         if (e.Data?.GetDataPresent(DataFormats.FileDrop) != true) { e.Effect = DragDropEffects.None; return; }

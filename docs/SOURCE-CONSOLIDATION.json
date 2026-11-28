@@ -1260,9 +1260,9 @@
     "canonical_history": "docs/SOURCE-CONSOLIDATION.md",
     "classification": "Source present = named source anchor, not complete feature; partial = related code/history; review = no sufficient evidence. No item release-certified by this audit.",
     "counts": {
-      "PARTIAL_OR_RELATED_EVIDENCE": 11,
+      "PARTIAL_OR_RELATED_EVIDENCE": 10,
       "REVIEW_REQUIRED": 2,
-      "SOURCE_PRESENT_RUNTIME_GATE_OPEN": 82,
+      "SOURCE_PRESENT_RUNTIME_GATE_OPEN": 83,
       "QA_ONLY": 5
     },
     "proposals": [
@@ -1332,7 +1332,7 @@
         "pass": "MP05/07",
         "status": "PARTIAL_OR_RELATED_EVIDENCE",
         "evidencePath": "docs/SOURCE-CONSOLIDATION.md",
-        "evidence": "R57 privacy check before audio allocation; verify all notifications and metadata",
+        "evidence": "R57 privacy check before audio allocation; verify all notifications and metadata R101 adds native media/notification widget presentation guards before and after async reads, clears private data on settings save/location/visibility, detaches subscription on dispose; audit all remaining widget/plugin/third-party paths. Windows OS/third-party notifications outside Opsis control.",
         "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
         "releaseCertified": false
       },
@@ -1353,16 +1353,6 @@
         "status": "REVIEW_REQUIRED",
         "evidencePath": "src/Services/WorkspaceProfileService.cs; src/UI/MainWindow.cs",
         "evidence": "WorkspaceProfile holds settings, wallpaper, widgets and monitors; timed workspace preview and AutoTile preview separate. No pre-application list of app windows affected by profile found. Establish actual window-placement owner before implementing.",
-        "sourceReviewedAt": "2d812cbc0970767c9aac7b991ede10c9a7218787",
-        "releaseCertified": false
-      },
-      {
-        "id": 60,
-        "requirement": "Ένδειξη διαδρομής πριν από σύρσιμο μεταξύ τοπικού και δικτυακού φακέλου.",
-        "pass": "MP04",
-        "status": "PARTIAL_OR_RELATED_EVIDENCE",
-        "evidencePath": "src/Containers/ContainerWindow.Interaction.cs",
-        "evidence": "TransferFiles checks local/network boundary and confirms source/destination before writing, not proven before drag begins. Reuse existing path prompt.",
         "sourceReviewedAt": "2d812cbc0970767c9aac7b991ede10c9a7218787",
         "releaseCertified": false
       },
@@ -1407,7 +1397,7 @@
       "latest_certified": "5ad65d13c11262ff9a75b4a5c387bbeb50e40c59",
       "latest_audit_run": 46103939134,
       "latest_artifact": 15247381558,
-      "next": "Use global_scope plus active 100 IDs, always report all outstanding domains. Easy-to-hard: G02–G04 first; then M/L packages. Retain source-present/QA separately. Final cumulative tests only.",
+      "next": "Continue G02–G04 (easy), then G05 onward by difficulty, all project scope in global_scope; 12 original active + global packages; final cumulative validation only.",
       "parent_R79": "835b784e5cdce8fb8eb2134df79c1632366b82a0",
       "parent_R80": "5ad65d13c11262ff9a75b4a5c387bbeb50e40c59",
       "parent_R81": "cae751ab4b21d69996bbacd11bed9a3ae715b3ec",
@@ -1457,7 +1447,9 @@
       "parent_R98a": "ff72eb8ce07139e93ea5bd3ab08625c7ce440e0c",
       "R99": "R99 gap-only partial requirements: 6 IDs moved from active to source-present QA (10,12,19,54,62,86); #12 original declaration/consent scope, actual SDK2 isolation still separate legacy P0. Existing diagnostic service now supports memory-only preview and chronological redacted CPU/activity timeline before optional explicit export. Tab Extra persists per-tab filters and recent 30-day/specific tag option; old filter inherited. Palette all entries have real assigned keyboard shortcut or explicit Enter in palette. Reduced motion stops arbitrary uncooperative iframe; static fallback, no claims of capturing last frame. #9 retains static image on pause but actual last-frame freeze for arbitrary pages missing; #90 visible disabled buttons no artificial 12 limit, exact reasons still partial. Six source-present rows not certified; 13 active remain (11 partial,2 review). No compilation or tests, no intermediate CI. Native presentation privacy, diagnostic UI export, scene rendering and tab preservation need final tests or additional work. All 100 IDs and distinct legacy backlog preserved.",
       "parent_R99": "d5a2a1b296f79492fa67b97d9925cd25ff697a91",
-      "R100": "R100: user explicitly requires ALL project backlog every time, easy-to-hard, not just original 100. Added global scope ledger with 23 grouped work packages mapped to 100 IDs, B01-B14, waves, SDK/X/C and historical handoff; old detailed ledgers retained, not counted as duplicate work. G01 folder colour implemented through existing IconAtlas: native ColorDialog, generated multi-resolution ICO, same folder icon method; preserves unrelated INI sections, journals original bytes/attributes before modification, restore only for known backup, refuses externally changed INI and linked/system/nonlocal folders. Existing arbitrary icon picker uses same path; safe mode/compatibility hold respected. Two source assertions prepared, no compilation/runtime. Conservative limitations: unsupported ANSI encoding rejected; same-user filesystem races and actual Windows icon refresh/restore not certified; recovery backup and generated icons retained intentionally. Old global roadmap scope includes 13 active original-100 rows (11 partial,2 review); 87 archived QA. G01 is source-present, not tested. No new plugin needed for this pass; connected GitHub used. More global work remains; inaccessible original asset bytes and cross-repo/runtime evidence explicitly tracked."
+      "R100": "R100: user explicitly requires ALL project backlog every time, easy-to-hard, not just original 100. Added global scope ledger with 23 grouped work packages mapped to 100 IDs, B01-B14, waves, SDK/X/C and historical handoff; old detailed ledgers retained, not counted as duplicate work. G01 folder colour implemented through existing IconAtlas: native ColorDialog, generated multi-resolution ICO, same folder icon method; preserves unrelated INI sections, journals original bytes/attributes before modification, restore only for known backup, refuses externally changed INI and linked/system/nonlocal folders. Existing arbitrary icon picker uses same path; safe mode/compatibility hold respected. Two source assertions prepared, no compilation/runtime. Conservative limitations: unsupported ANSI encoding rejected; same-user filesystem races and actual Windows icon refresh/restore not certified; recovery backup and generated icons retained intentionally. Old global roadmap scope includes 13 active original-100 rows (11 partial,2 review); 87 archived QA. G01 is source-present, not tested. No new plugin needed for this pass; connected GitHub used. More global work remains; inaccessible original asset bytes and cross-repo/runtime evidence explicitly tracked.",
+      "parent_R100": "d954a89511e2a3a9cdc31a4e05907d6124d104a7",
+      "R101": "R101 easy-to-hard global work: fixed folder restore hash acceptance for null pending/last values and made journal constructor explicit; native media and notification widgets use current presentation monitor IDs, guard async data reads and clear on setting/move/visibility changes, unsubscribe on disposal; no new background timer. #40 remains partial until other paths reviewed. Added on-demand local/network drag path tooltip on target entry before drop, existing pre-write confirmation retained, dispose on close; #60 source-present -> QA. Source only, no runtime/compiler tests. 12 original active /88 archived, 23 global packages retained. Actual OLE tooltip visibility, privacy UI transitions, and folder restore require Windows tests. No release."
     },
     "last_source_crosscheck": {
       "base_reviewed": "2d812cbc0970767c9aac7b991ede10c9a7218787",
@@ -2442,10 +2434,20 @@
         "evidence": "Existing reduced-motion policy for waves/video/atmosphere; arbitrary iframe stopped rather than claiming CSS controls its contents. Static fallback under reduced motion. Signature frame may also be stopped if not ready; resume restores selected page. Real WebView test pending.",
         "sourceReviewedAt": "ff72eb8ce07139e93ea5bd3ab08625c7ce440e0c",
         "releaseCertified": false
+      },
+      {
+        "id": 60,
+        "requirement": "Ένδειξη διαδρομής πριν από σύρσιμο μεταξύ τοπικού και δικτυακού φακέλου.",
+        "pass": "MP04",
+        "status": "SOURCE_PRESENT_RUNTIME_GATE_OPEN",
+        "evidencePath": "src/Containers/ContainerWindow.Interaction.cs; src/Containers/ContainerWindow.cs",
+        "evidence": "R101 shows existing local/network source/destination paths on drag enter before drop, retains separate pre-write confirmation. Tooltip allocated on demand and disposed with container; OLE drag tooltip visibility and mapped-drive cases require real Windows QA.",
+        "sourceReviewedAt": "d954a89511e2a3a9cdc31a4e05907d6124d104a7",
+        "releaseCertified": false
       }
     ],
     "active_counts": {
-      "PARTIAL_OR_RELATED_EVIDENCE": 11,
+      "PARTIAL_OR_RELATED_EVIDENCE": 10,
       "REVIEW_REQUIRED": 2
     },
     "active_backlog_policy": "Only incomplete or unresolved implementation requirements in proposals. Source-present and test-only rows in archived_qa, not active development. Archive is not release certification. All 100 IDs remain unique across both arrays. Reopen archived row only on concrete missing source or failed test.",
@@ -2484,7 +2486,7 @@
           "status": "PARTIAL",
           "aliases": "100:40,60,62; B02/B09",
           "requirement": "Ιδιωτικότητα native media/notification widgets και drag path preview",
-          "evidence": "Existing presentation monitor settings/balloon/overlay gate; native widgets still need same admission; existing transfer prompt; 62 already in QA."
+          "evidence": "R101 native media/notification widgets now guard and clear on excluded monitor; remaining other private widgets/plugin/third-party boundary review. Drag path tooltip + confirmation source present (#60 QA); #62 QA."
         },
         {
           "id": "G04",
@@ -2658,12 +2660,11 @@
         40,
         41,
         50,
-        60,
         83,
         90,
         95
       ],
-      "original_100_archived": 87
+      "original_100_archived": 88
     }
   }
 }

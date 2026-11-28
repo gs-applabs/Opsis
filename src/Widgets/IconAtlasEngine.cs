@@ -73,6 +73,7 @@ namespace MotionDesk.Widgets
         private const int IniLimit = 65536;
         private sealed class FolderOriginal
         {
+            public FolderOriginal() { }
             public string Folder { get; set; } = "";
             public byte[]? Original { get; set; }
             public int IniAttributes { get; set; }
@@ -233,7 +234,9 @@ namespace MotionDesk.Widgets
                     if (!string.Equals(backup.Folder, folder, StringComparison.OrdinalIgnoreCase) || backup.Original?.Length > IniLimit)
                         throw new InvalidDataException("Folder icon backup does not match.");
                     var hash = Digest(current);
-                    if (hash != Digest(backup.Original) && hash != backup.LastHash && hash != backup.PendingHash)
+                    if (hash != Digest(backup.Original) &&
+                        (backup.LastHash == null || hash != backup.LastHash) &&
+                        (backup.PendingHash == null || hash != backup.PendingHash))
                         throw new IOException("desktop.ini changed outside Opsis. No settings were overwritten.");
                 }
                 if (string.IsNullOrEmpty(icoPath))

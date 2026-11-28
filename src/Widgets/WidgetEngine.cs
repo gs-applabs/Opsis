@@ -343,6 +343,33 @@ namespace MotionDesk.Widgets
                 _ = InitializeWebViewAsync();
         }
 
+        private Action? _presentationPrivacyChanged;
+        private bool OnPresentationMonitor()
+        {
+            var ids = AppSettings.Peek().PresentationMonitorIds;
+            if (ids == null || ids.Count == 0) return false;
+            var screen = Screen.FromControl(this);
+            if (ids.Any(id => string.Equals(id, screen.DeviceName, StringComparison.OrdinalIgnoreCase))) return true;
+            var monitor = MonitorTopologyService.ForDevice(screen.DeviceName)?.Id;
+            return monitor != null && ids.Any(id => string.Equals(id, monitor, StringComparison.OrdinalIgnoreCase));
+        }
+        private void ObservePresentationPrivacy(Action refresh)
+        {
+            _presentationPrivacyChanged = () =>
+            {
+                if (IsDisposed || Disposing || !IsHandleCreated) return;
+                if (InvokeRequired)
+                {
+                    try { BeginInvoke((Action)(() => { if (!IsDisposed && !Disposing) refresh(); })); }
+                    catch (InvalidOperationException) { }
+                }
+                else refresh();
+            };
+            AppSettings.SettingsSaved += _presentationPrivacyChanged;
+            LocationChanged += (_, _) => { if (!IsDisposed && !Disposing) refresh(); };
+            VisibleChanged += (_, _) => { if (!IsDisposed && !Disposing) refresh(); };
+        }
+
         private System.Windows.Forms.Timer? _weatherAnimation;
         private AudioSpectrumService? _audioSpectrum;
         private void ActivityChanged(bool _) => UpdateNativeTimers();
@@ -360,6 +387,8 @@ namespace MotionDesk.Widgets
             if (disposing)
             {
                 AppActivity.FullscreenChanged -= ActivityChanged;
+                if (_presentationPrivacyChanged != null) AppSettings.SettingsSaved -= _presentationPrivacyChanged;
+                _presentationPrivacyChanged = null;
                 _audioSpectrum?.Dispose();
                 _audioSpectrum = null;
                 _weatherAnimation?.Dispose();
@@ -1519,22 +1548,36 @@ namespace MotionDesk.Widgets
             area.BringToFront();
 
             WinRTMediaControl.GlobalSystemMediaTransportControlsSession? session = null;
+            bool HidePrivate()
+            {
+                if (!OnPresentationMonitor()) return false;
+                session = null;
+                titleLabel.Text = artistLabel.Text = "";
+                titleLabel.Visible = artistLabel.Visible = controlsRow.Visible = false;
+                statusLabel.Text = MainWindow.StudioText("Hidden on presentation display", "Κρυφό στην οθόνη παρουσίασης");
+                statusLabel.Visible = true;
+                return true;
+            }
+            ObservePresentationPrivacy(() => HidePrivate());
 
             async System.Threading.Tasks.Task RefreshAsync()
             {
                 try
                 {
+                    if (HidePrivate()) return;
                     var mgr = await WinRTMediaControl.GlobalSystemMediaTransportControlsSessionManager.RequestAsync();
+                    if (IsDisposed || HidePrivate()) return;
                     session = mgr.GetCurrentSession();
-                    if (IsDisposed) return;
                     if (session == null)
                     {
+                        statusLabel.Text = LocalizationManager.T("WidgetText.MediaNone");
                         statusLabel.Visible = true; titleLabel.Visible = false; artistLabel.Visible = false; controlsRow.Visible = false;
                         return;
                     }
-                    var props = await session.TryGetMediaPropertiesAsync();
-                    var playback = session.GetPlaybackInfo();
-                    if (IsDisposed) return;
+                    var current = session;
+                    var props = await current.TryGetMediaPropertiesAsync();
+                    if (IsDisposed || HidePrivate() || !ReferenceEquals(current, session)) return;
+                    var playback = current.GetPlaybackInfo();
                     statusLabel.Visible = false; titleLabel.Visible = true; artistLabel.Visible = true; controlsRow.Visible = true;
                     titleLabel.Text = props.Title ?? "";
                     artistLabel.Text = props.Artist ?? "";
@@ -1599,11 +1642,21 @@ namespace MotionDesk.Widgets
             }
 
             bool accessGranted = false;
+            bool HidePrivate()
+            {
+                if (!OnPresentationMonitor()) return false;
+                list.Visible = false; DisposeChildren(list);
+                statusLabel.Text = MainWindow.StudioText("Hidden on presentation display", "Κρυφό στην οθόνη παρουσίασης");
+                statusLabel.Visible = true;
+                return true;
+            }
+            ObservePresentationPrivacy(() => HidePrivate());
 
             async System.Threading.Tasks.Task RefreshAsync()
             {
                 try
                 {
+                    if (HidePrivate()) return;
                     if (!accessGranted)
                     {
                         var access = await listener.RequestAccessAsync();
@@ -1616,8 +1669,9 @@ namespace MotionDesk.Widgets
                             return;
                         }
                     }
+                    if (IsDisposed || HidePrivate()) return;
                     var notifications = await listener.GetNotificationsAsync(WinRTNotifications.NotificationKinds.Toast);
-                    if (IsDisposed) return;
+                    if (IsDisposed || HidePrivate()) return;
                     if (notifications.Count == 0)
                     {
                         statusLabel.Text = LocalizationManager.T("WidgetText.NotificationsEmpty");

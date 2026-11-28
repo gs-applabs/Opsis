@@ -1271,12 +1271,13 @@ namespace MotionDesk.Containers
             _dropActive = true;
             if (DragLog.Count < 400) DragLog.Add("enter allowed=" + e.AllowedEffect + " formats=" + string.Join(",", e.Data?.GetFormats() ?? Array.Empty<string>()));
             DropEffectFor(e);
-            if (e.Effect != DragDropEffects.None) ExpandForDrop();
+            if (e.Effect != DragDropEffects.None) { ExpandForDrop(); ShowTransferPathPreview(e); }
         }
         protected override void OnDragOver(DragEventArgs e) { base.OnDragOver(e); DropEffectFor(e); }
         protected override void OnDragLeave(EventArgs e)
         {
             base.OnDragLeave(e);
+            HideTransferPathPreview();
             _dropActive = false;
             EndDropExpansion();
         }
@@ -1284,6 +1285,7 @@ namespace MotionDesk.Containers
         protected override void OnDragDrop(DragEventArgs e)
         {
             base.OnDragDrop(e);
+            HideTransferPathPreview();
             _dropActive = false;
             // End on the next message turn, after the drag/drop operation has finished.
             // This also covers a successful drop (which need not raise DragLeave).
@@ -1335,7 +1337,7 @@ namespace MotionDesk.Containers
 
         protected override void Dispose(bool disposing)
         {
-            if (disposing) { CancelTabDrag(); _tabDragKeys?.Dispose(); _hoverTimer.Dispose(); _scrollTimer?.Dispose(); _watch?.Dispose(); _portalTimer.Dispose(); _repaint.Stop(); _repaint.Dispose(); _pane?.Dispose(); _surface.Dispose(); _icons.Dispose(); }
+            if (disposing) { _transferPathTip?.Dispose(); _transferPathTip = null; CancelTabDrag(); _tabDragKeys?.Dispose(); _hoverTimer.Dispose(); _scrollTimer?.Dispose(); _watch?.Dispose(); _portalTimer.Dispose(); _repaint.Stop(); _repaint.Dispose(); _pane?.Dispose(); _surface.Dispose(); _icons.Dispose(); }
             base.Dispose(disposing);
         }
     }
