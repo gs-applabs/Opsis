@@ -555,6 +555,7 @@ namespace MotionDesk.Widgets
             Hold(ReplacementTaskbar.Stop, "taskbar");
             Hold(WindowRulesEngine.Instance.Stop, "window rules");
             Hold(AutoTileService.Stop, "auto tile");
+            Hold(ZoneSnapEngine.Stop, "zone hooks");
             Hold(_hotCorners.Stop, "hot corners");
             Hold(MotionDesk.UI.OpsisCursorFx.Stop, "cursor effects");
             Hold(() => MotionDesk.Appearance.AppearanceService.Instance.Stop(), "appearance");
@@ -804,6 +805,7 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
             var autoTile = new ToolStripMenuItem(T("Allow automatic window tiling", "Αυτόματη διάταξη παραθύρων"));
             var adaptive = new ToolStripMenuItem(T("Allow adaptive performance sampling", "Δειγματοληψία προσαρμοστικής απόδοσης"));
             var taskbar = new ToolStripMenuItem(T("Allow Opsis replacement taskbar", "Επιτρέπεται η taskbar του Opsis"));
+            var zones = new ToolStripMenuItem(T("Allow automatic zone snapping", "Επιτρέπεται η αυτόματη προσκόλληση σε ζώνες"));
             void Change(SessionBackgroundService flag, Action reconcile)
             {
                 if (SafeModeService.IsSafeMode || System.Threading.Volatile.Read(ref _exitStarted) != 0) return;
@@ -841,7 +843,16 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                 if (WindowsUpdateGuard.RequiresReview || WindowsUpdateGuard.RuntimeHold || _compatibilityIsolationApplied) return;
                 Change(SessionBackgroundService.ReplacementTaskbar, () => { ReplacementTaskbar.RefreshSettings(); RefreshExperienceCadence(); });
             };
-            menu.DropDownItems.Add(autoTile); menu.DropDownItems.Add(adaptive); menu.DropDownItems.Add(taskbar);
+            zones.Click += (_, _) =>
+            {
+                if (WindowsUpdateGuard.RequiresReview || WindowsUpdateGuard.RuntimeHold || _compatibilityIsolationApplied) return;
+                Change(SessionBackgroundService.ZoneSnap, () =>
+                {
+                    if (RuntimeSessionPolicy.IsPermitted(SessionBackgroundService.ZoneSnap)) ZoneSnapEngine.Start();
+                    else ZoneSnapEngine.Stop();
+                });
+            };
+            menu.DropDownItems.Add(autoTile); menu.DropDownItems.Add(adaptive); menu.DropDownItems.Add(taskbar); menu.DropDownItems.Add(zones);
             menu.DropDownOpening += (_, _) =>
             {
                 wallpaper.Checked = RuntimeSessionPolicy.IsPermitted(SessionBackgroundService.AnimatedWallpaper);
@@ -856,6 +867,8 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                 adaptive.Enabled = !SafeModeService.IsSafeMode;
                 taskbar.Checked = RuntimeSessionPolicy.IsPermitted(SessionBackgroundService.ReplacementTaskbar);
                 taskbar.Enabled = !SafeModeService.IsSafeMode && !WindowsUpdateGuard.RequiresReview && !WindowsUpdateGuard.RuntimeHold && !_compatibilityIsolationApplied;
+                zones.Checked = RuntimeSessionPolicy.IsPermitted(SessionBackgroundService.ZoneSnap);
+                zones.Enabled = !SafeModeService.IsSafeMode && !WindowsUpdateGuard.RequiresReview && !WindowsUpdateGuard.RuntimeHold && !_compatibilityIsolationApplied;
                 wallpaper.Enabled = dock.Enabled = widgets.Enabled = music.Enabled = !SafeModeService.IsSafeMode;
             };
             return menu;

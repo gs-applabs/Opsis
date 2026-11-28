@@ -56,6 +56,12 @@ try
         !UpdateCheckService.IsReleaseAssetUrl(releaseAsset+"?other=1","v3.0.0.3200","OpsisSetup.exe") &&
         !UpdateCheckService.IsReleaseAssetUrl(releaseAsset,"v3.0.0.3200","OpsisSetup.exe.sha256"),
         "P0 update assets bound to exact release tag and filename");
+    Check(VerifiedRollbackService.ValidDigest(new string('a',64)) && !VerifiedRollbackService.ValidDigest(null) && !VerifiedRollbackService.ValidDigest(new string('z',64)) &&
+        VerifiedRollbackService.ArchiveName("3.0.0.3200",new string('A',64)) != VerifiedRollbackService.ArchiveName("3.0.0.3200",new string('B',64)),
+        "P0 rollback archive names isolate different verified contents");
+    Check(RuntimeSessionPolicy.Allows(SessionBackgroundService.ZoneSnap, SessionBackgroundService.ZoneSnap, true, false) &&
+        !RuntimeSessionPolicy.Allows(SessionBackgroundService.AutoTile, SessionBackgroundService.ZoneSnap, true, false),
+        "P0 zone snapping independent of automatic tiling");
     var noDemand = AppActivity.SelectDemand(false,false,false,false,false,false,false,false,false,false);
     var dockDemand = AppActivity.SelectDemand(false,false,false,false,false,false,false,false,true,false);
     var widgetDemand = AppActivity.SelectDemand(false,true,false,false,false,false,false,false,false,false);
@@ -265,7 +271,7 @@ try
     Check(!RuntimeSessionPolicy.Allows(SessionBackgroundService.All, SessionBackgroundService.UsageAlerts, false, false) &&
         !RuntimeSessionPolicy.Allows(SessionBackgroundService.All, SessionBackgroundService.UsageAlerts, true, true) &&
         !RuntimeSessionPolicy.Allows(SessionBackgroundService.All, SessionBackgroundService.None, true, false) &&
-        !RuntimeSessionPolicy.Allows(SessionBackgroundService.All, (SessionBackgroundService)8192, true, false),
+        !RuntimeSessionPolicy.Allows(SessionBackgroundService.All, (SessionBackgroundService)16384, true, false),
         "R83 session selection cannot bypass saved opt-in, safe mode or known capabilities");
     var sessionPrefs = new AppSettings { RestoreWindowsAfterDocking = true, UsageAlertsEnabled = true };
     Check(MotionDesk.Widgets.TrayApplicationContext.SelectOptionalServices(sessionPrefs, false, SessionBackgroundService.DockRestore) == (true, false) &&

@@ -67,9 +67,13 @@ namespace MotionDesk.Widgets
         private static bool _overlayIsMagnetic;
         private static MagneticRegion _currentMagneticRegion = MagneticRegion.None;
 
+        private static bool _acceptEvents;
+        private static bool Admission => MotionDesk.Services.RuntimeSessionPolicy.IsPermitted(MotionDesk.Services.SessionBackgroundService.ZoneSnap) &&
+            !MotionDesk.Services.WindowsUpdateGuard.RequiresReview && !MotionDesk.Services.WindowsUpdateGuard.RuntimeHold;
+
         public static void Start()
         {
-            if (_hookId != IntPtr.Zero) return;
+            if (!Admission || _hookId != IntPtr.Zero) return;
             _callback = OnWinEvent;
             // WINEVENT_OUTOFCONTEXT: δουλεύει μέσα σε managed (.NET) κώδικα χωρίς να χρειάζεται
             // native DLL injection στις διεργασίες-στόχους — απλά απαιτεί το thread που κάλεσε
@@ -78,18 +82,22 @@ namespace MotionDesk.Widgets
             // εγγραφή hook, αφού είναι διαδοχικές σταθερές (0x000A, 0x000B).
             _hookId = SetWinEventHook(EVENT_SYSTEM_MOVESIZESTART, EVENT_SYSTEM_MOVESIZEEND,
                 IntPtr.Zero, _callback, 0, 0, WINEVENT_OUTOFCONTEXT);
+            _acceptEvents = _hookId != IntPtr.Zero;
+            if (!_acceptEvents) _callback = null;
         }
 
         public static void Stop()
         {
-            if (_hookId == IntPtr.Zero) return;
-            UnhookWinEvent(_hookId);
-            _hookId = IntPtr.Zero;
-            _callback = null;
+            _acceptEvents = false;
+            // Retain the delegate and hook identity if native unhook fails.
+            // Never install a second hook over one whose ownership is uncertain.
+            bool unhooked = _hookId == IntPtr.Zero || UnhookWinEvent(_hookId);
+            if (unhooked) { _hookId = IntPtr.Zero; _callback = null; }
             StopTracking();
             _pollTimer?.Dispose(); _pollTimer = null;
             _overlay?.Dispose(); _overlay = null;
             _overlayScreen = null;
+            if (!unhooked) throw new InvalidOperationException("Zone snap hook removal failed; restart Opsis before resuming.");
         }
 
         private static bool IsShiftDown() => (GetAsyncKeyState(VK_SHIFT) & 0x8000) != 0;
@@ -100,7 +108,7 @@ namespace MotionDesk.Widgets
             {
                 // idObject/idChild != 0 σημαίνει κάποιο εσωτερικό UI στοιχείο (κουμπί, scrollbar…)
                 // που μπήκε σε move/size, όχι ολόκληρο παράθυρο — αγνοείται.
-                if (idObject != 0 || idChild != 0 || hwnd == IntPtr.Zero) return;
+                if (!_acceptEvents || hWinEventHook != _hookId || !Admission || idObject != 0 || idChild != 0 || hwnd == IntPtr.Zero) return;
 
                 if (eventType == EVENT_SYSTEM_MOVESIZESTART)
                 {
@@ -139,7 +147,7 @@ namespace MotionDesk.Widgets
 
         private static void OnPollTick()
         {
-            if (_draggedWindow == IntPtr.Zero || !IsWindowVisible(_draggedWindow))
+            if (!_acceptEvents || !Admission || _draggedWindow == IntPtr.Zero || !IsWindowVisible(_draggedWindow))
             {
                 StopTracking();
                 return;
@@ -174,6 +182,7 @@ namespace MotionDesk.Widgets
             _pollTimer?.Stop();
             try
             {
+                if (!_acceptEvents || !Admission) return;
                 // Το πλέγμα ζωνών (Shift) κουμπώνει μόνο αν το Shift είναι ΑΚΟΜΑ πατημένο στο
                 // άφημα (όπως πριν)· το μαγνητικό snap (χωρίς Shift) κουμπώνει όποτε δείχνει
                 // προεπισκόπηση, χωρίς όρο για το Shift — αυτό είναι το "πάντα ενεργό" κομμάτι.
