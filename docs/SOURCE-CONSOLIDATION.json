@@ -1601,6 +1601,16 @@
           "src/Widgets/TrayApplicationContext.cs",
           "tests/Opsis.ExperienceSmoke/Program.cs"
         ]
+      },
+      "r108": {
+        "base_sha": "1b9b2242667cf34fb67425fa27844e8a8f1873f3",
+        "summary": "R108 G07/G11: opt-in saved DeferPluginsUntilRequested setting, default false for existing installations; tray startup skips PluginHost.StartAll (discovery, trust hashing, DLL construction, pending removal sweep) until explicit confirmation using existing host and trust/approval path. Saved enable/disable IDs are preserved, global disable/restart and compatibility holds take precedence. Deferred load and approval refresh existing sidebar/page owner; no new scheduler or loader. Disabled plugin DLLs may still load for management after explicit start; no per-package constructor isolation or true Containers-only startup. Actual build/runtime and performance measurement pending; 23 roadmap groups retained.",
+        "paths": [
+          "src/Services/AppSettings.cs",
+          "src/Services/PluginHost.cs",
+          "src/Widgets/TrayApplicationContext.cs",
+          "src/UI/MainWindow.cs"
+        ]
       }
     },
     "development_rule": {
@@ -2500,7 +2510,7 @@
     "active_backlog_policy": "Only incomplete or unresolved implementation requirements in proposals. Source-present and test-only rows in archived_qa, not active development. Archive is not release certification. All 100 IDs remain unique across both arrays. Reopen archived row only on concrete missing source or failed test.",
     "global_scope": {
       "rule": "## ΜΟΝΙΜΟΣ ΚΑΝΟΝΑΣ — ΠΑΝΤΑ ΟΛΕΣ ΟΙ ΕΚΚΡΕΜΟΤΗΤΕΣ, ΟΧΙ ΜΟΝΟ ΟΙ 100\n\nΚάθε ερώτηση του χρήστη για «εκκρεμότητες», «συνέχισε», «τι μένει» αφορά **ολόκληρο το OPSIS Desktop Customization 3.0.0.3200**: αρχικές 100, παλαιότερο roadmap/διορθώσεις, P0–P6, B01–B14, UI/Glass, Shell, Containers, SDK/plugins/companion compatibility, wallpapers/εικόνες/intro/ήχο, ανεξάρτητο add-on, installers, migration/rollback, διανομή, τελικές δοκιμές. Ποτέ μόνο ένα υποσύνολο χωρίς ρητό αίτημα. Το σύνολο παραμένει ενιαίο με σταθερά IDs, alias προς παλιά IDs, συγκεκριμένο owner/κενό και κατάσταση. **Εφαρμογή από τις ευκολότερες προς τις δυσκολότερες**, με ασφάλεια ως προϋπόθεση και χωρίς να ξαναγράφεται έτοιμη λειτουργία. Αρχείο ιστορικού/QA δεν αποτελεί ενεργό backlog. Ελέγχεται κάθε φορά ο τελευταίος ακριβής σωρευτικός SHA και η διασταύρωση με ιστορικές συνομιλίες, handoffs, πραγματικούς callers/UI/ρυθμίσεις, plugins και αρχεία. Ανεπαρκή ή μη προσβάσιμα τεκμήρια καταγράφονται ως blockers, όχι ως ολοκληρωμένα. Ο χρήστης δεν πρέπει να ξαναρωτήσει για ξεχασμένα υποσύνολα. Χρήση συνδεδεμένου GitHub για πραγματικές αλλαγές· πρόσθετα μόνο αν καλύπτουν πραγματική δυνατότητα που λείπει. Όλα τα tests στο τέλος, Inno Setup, καμία πρόωρη έκδοση.",
-      "source_sha": "887d123e0f72714dfafc7d7a27b0b939bb13ef0b",
+      "source_sha": "1b9b2242667cf34fb67425fa27844e8a8f1873f3",
       "scope_sources": [
         "docs/SOURCE-CONSOLIDATION.md B01–B14",
         "docs/REMAINING-TASKS-3.0.0.3200.md (all waves, SDK1–4, X1–16 and C1–12)",
@@ -2565,7 +2575,7 @@
           "status": "PARTIAL",
           "aliases": "B03/MP2F",
           "requirement": "Full / Custom / Containers-only, reversible ownership lifecycle, minimal host",
-          "evidence": "18 session gates present; no full startup mode or comprehensive stop/restart. Preserve saved choices. R105: DeskFlip reuses desktop-hotkey admission and closes on teardown/focus loss; native Alt+Tab unchanged. R106: reversible bulk suspend/restore of existing 18 session gates, changed-owner reconciliation; no new startup mode or measurements. R107: toolbar and automatic workspace wallpaper gates, total 20; explicit workspace observation preserved. Actual tests pending."
+          "evidence": "18 session gates present; no full startup mode or comprehensive stop/restart. Preserve saved choices. R105: DeskFlip reuses desktop-hotkey admission and closes on teardown/focus loss; native Alt+Tab unchanged. R106: reversible bulk suspend/restore of existing 18 session gates, changed-owner reconciliation; no new startup mode or measurements. R107: toolbar and automatic workspace wallpaper gates, total 20; explicit workspace observation preserved. Actual tests pending. R108: opt-in deferred plugin discovery/load using existing host, saved choices and approval policy; per-plugin constructor isolation and full startup mode pending."
         },
         {
           "id": "G08",
@@ -2597,7 +2607,7 @@
           "status": "PARTIAL",
           "aliases": "B08; SDK1/3/4; C10/C11; 100:97",
           "requirement": "Plugin SDK negotiation/dependencies, lifecycle/update/rollback/validator/samples/event bus, cross-app Crawler/Chronologio/Appearance/Media Suite compatibility",
-          "evidence": "Legacy API 1.0.0.0, single host, hash/consent present; full dependency resolver, updates/SDK and real E2E pending."
+          "evidence": "Legacy API 1.0.0.0, single host, hash/consent present; full dependency resolver, updates/SDK and real E2E pending. R108: opt-in deferred plugin discovery/load using existing host, saved choices and approval policy; per-plugin constructor isolation and full startup mode pending."
         },
         {
           "id": "G12",

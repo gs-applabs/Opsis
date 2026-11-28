@@ -349,9 +349,13 @@ namespace MotionDesk.Services
         public event Action? Changed;
 
         /// <summary>Φορτώνει και ξεκινά όλα τα plugin. Πρέπει να κληθεί στο UI thread.</summary>
+        internal bool CanStartDeferred => !_started && !_globalHoldUntilRestart && !_compatibilitySuspended &&
+            !WindowsUpdateGuard.RequiresReview && !WindowsUpdateGuard.RuntimeHold &&
+            !SafeModeService.IsSafeMode && AppSettings.Peek().PluginsEnabled;
+
         public void StartAll()
         {
-            if (_started || _compatibilitySuspended || WindowsUpdateGuard.RequiresReview || WindowsUpdateGuard.RuntimeHold) return;
+            if (_started || _globalHoldUntilRestart || _compatibilitySuspended || WindowsUpdateGuard.RequiresReview || WindowsUpdateGuard.RuntimeHold) return;
             _started = true;
             SweepPendingRemovals();
             if (!AppSettings.Peek().PluginsEnabled || SafeModeService.IsSafeMode) { _globalHoldUntilRestart = true; return; }

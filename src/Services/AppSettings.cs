@@ -80,6 +80,8 @@ namespace MotionDesk.Services
 
         // Μηχανισμός plugin (φάκελος "plugins"): false = κανένα plugin δεν φορτώνεται (π.χ. για διάγνωση προβλήματος).
         public bool PluginsEnabled { get; set; } = true;
+        // Opt-in: defer discovery, trust hashing and DLL construction until an explicit tray command.
+        public bool DeferPluginsUntilRequested { get; set; }
         // Προσωπικά presets του ισοσταθμιστή 10 ζωνών (Audio Enhancement) + το τελευταίο ενεργό.
         public List<AudioEqProfile> CustomEqProfiles { get; set; } = new();
         public string? ActiveEqProfile { get; set; }

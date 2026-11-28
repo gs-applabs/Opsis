@@ -297,6 +297,12 @@ namespace MotionDesk.UI
         // οικογένειας με το ήδη τεκμηριωμένο "ΟΧΙ using στο ContextMenuStrip" bug pattern αυτού
         // του project. Το BeginInvoke αναβάλλει την ανακατασκευή μέχρι να ξετυλιχτεί πλήρως το
         // τρέχον event πρώτα.
+        internal void RefreshPluginNavigation()
+        {
+            if (IsDisposed || Disposing || !IsHandleCreated) return;
+            OnThemeOrLanguageChanged(); // existing deferred sidebar/page rebuild
+        }
+
         private void OnThemeOrLanguageChanged()
         {
             if (IsDisposed) return;
@@ -4883,7 +4889,13 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
 
             // ---- plugins (π.χ. News Crawler): ιδιότητες, βοήθεια, οδηγίες, ιστορικό και άδεια ζουν ΕΔΩ, όχι στη σελίδα του plugin
             var pluginInfos = Services.PluginHost.Instance.GetAboutInfos();
-            if (pluginInfos.Count == 0) AddText(pluginCard, StudioText("No loaded plugins.", "Δεν υπάρχουν φορτωμένα plugins."));
+            if (pluginInfos.Count == 0)
+            {
+                AddText(pluginCard, StudioText("No loaded plugins.", "Δεν υπάρχουν φορτωμένα plugins."));
+                if (AppSettings.Peek().DeferPluginsUntilRequested)
+                    AddText(pluginCard, StudioText("If deferred at startup, use Load saved plugins now in the tray.",
+                        "Αν αναβλήθηκε η φόρτωση στην εκκίνηση, επιλέξτε Φόρτωση αποθηκευμένων plugins τώρα από το tray."));
+            }
             if (pluginInfos.Count > 0)
             {
                 AddSection(pluginCard, StudioText("Installed plugins", "Εγκατεστημένα plugins"));
@@ -6107,6 +6119,12 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                 var integrations = NewCard(OpsisStrings.T("ui.about.plugins"));
                 integrations.Controls.Add(Checkbox(LocalizationManager.T("Settings.PluginsEnabled"), AppSettings.Load().PluginsEnabled,
                     v => { var a = AppSettings.Load(); a.PluginsEnabled = v; a.Save(); }, restart: true));
+                integrations.Controls.Add(Checkbox(StudioText("Defer plugin loading until requested", "Αναβολή φόρτωσης plugins μέχρι να ζητηθεί"),
+                    AppSettings.Load().DeferPluginsUntilRequested,
+                    v => { var a = AppSettings.Load(); a.DeferPluginsUntilRequested = v; a.Save(); },
+                    StudioText("After restart, use Load saved plugins now in the tray. No plugin discovery or DLL loading before that command.",
+                        "Μετά την επανεκκίνηση, επιλέξτε Φόρτωση αποθηκευμένων plugins τώρα από το tray. Δεν προηγείται αναζήτηση ή φόρτωση DLL."),
+                    restart: true));
                 var integrationsAdvanced = new StudioAdvancedSection();
                 {
                     // (plan 2.1.1: the "default look of plugins" setting was removed - plugins always follow the Opsis theme; the Crawler bars follow Windows by their own rule)

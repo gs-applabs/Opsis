@@ -18,6 +18,7 @@ namespace MotionDesk.Widgets
         private readonly HotkeyManager _hotkeys = new(); // mandatory recovery/show-window shortcut
         private HotkeyManager? _optionalHotkeys;
         private bool _desktopServicesReady;
+        private bool _pluginsDeferredAtStartup;
         private HotkeyManager? _containerHotkeys;
         private System.Windows.Forms.Timer? _startupHealthyTimer, _pluginApprovalTimer;
         private DockWindowRestorer? _dockRestorer;
@@ -101,7 +102,13 @@ namespace MotionDesk.Widgets
             // (the approval question is NOT asked while starting: see PluginHost.ConsiderFolder / ResolvePending)
             if (!safeMode)
             {
-                if (!reviewRequired) { PluginHost.Instance.StartAll(); SchedulePluginApproval(); }
+                if (!reviewRequired)
+                {
+                    var startupSettings = AppSettings.Peek();
+                    _pluginsDeferredAtStartup = startupSettings.PluginsEnabled && startupSettings.DeferPluginsUntilRequested;
+                    if (!_pluginsDeferredAtStartup) { PluginHost.Instance.StartAll(); SchedulePluginApproval(); }
+                    else RotatingLogger.Write("Plugin discovery and assembly loading deferred until explicitly requested.");
+                }
                 else RotatingLogger.Write("Optional plugins held until Windows build compatibility review and Opsis restart.");
                 try { if (!reviewRequired) MotionDesk.Appearance.AppearanceService.Instance.Start(); }
                 catch (Exception e) { RotatingLogger.Write("Appearance service: " + e.Message); }
@@ -133,6 +140,39 @@ namespace MotionDesk.Widgets
             // preferences. They do not silently change startup/profile data.
             contextMenu.Items.Add(BuildSessionBackgroundMenu());
             contextMenu.Items.Add(BuildSessionDesktopMenu());
+            var startDeferredPlugins = new ToolStripMenuItem(MainWindow.StudioText("Load saved plugins now", "Φόρτωση αποθηκευμένων plugins τώρα"));
+            startDeferredPlugins.Visible = _pluginsDeferredAtStartup;
+            startDeferredPlugins.Click += (_, _) =>
+            {
+                if (!_pluginsDeferredAtStartup || _compatibilityIsolationApplied ||
+                    System.Threading.Volatile.Read(ref _exitStarted) != 0 || !PluginHost.Instance.CanStartDeferred) return;
+                // Untrusted packages still follow the existing approval path.
+                if (MessageBox.Show(MainWindow.StudioText("Discover and load plugins using the existing trust rules? Disabled plugins may still have their DLL loaded for management.",
+                    "Να γίνει αναζήτηση και φόρτωση plugins με τους υπάρχοντες κανόνες εμπιστοσύνης; Τα απενεργοποιημένα plugins ενδέχεται να φορτώσουν DLL για διαχείριση."),
+                    "OPSIS", MessageBoxButtons.YesNo, MessageBoxIcon.Question, MessageBoxDefaultButton.Button2) != DialogResult.Yes) return;
+                try
+                {
+                    if (!PluginHost.Instance.CanStartDeferred || _compatibilityIsolationApplied ||
+                        System.Threading.Volatile.Read(ref _exitStarted) != 0) return;
+                    PluginHost.Instance.StartAll();
+                    _pluginsDeferredAtStartup = false;
+                    startDeferredPlugins.Visible = false;
+                    UpdatePluginApprovalItem();
+                    SchedulePluginApproval();
+                    _mainWindow?.RefreshPluginNavigation();
+                }
+                catch (Exception ex)
+                {
+                    RotatingLogger.Write("Deferred plugin startup: " + ex.Message);
+                    MessageBox.Show(ex.Message, "OPSIS", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                }
+            };
+            contextMenu.Items.Add(startDeferredPlugins);
+            contextMenu.Opening += (_, _) =>
+            {
+                startDeferredPlugins.Visible = _pluginsDeferredAtStartup;
+                startDeferredPlugins.Enabled = !_compatibilityIsolationApplied && PluginHost.Instance.CanStartDeferred;
+            };
             // plugins that are installed but not approved yet (user-writable folder): one click asks again
             _pluginApprovalItem = new ToolStripMenuItem { Visible = false };
             _pluginApprovalItem.Click += (s, e) => AskPluginApproval();
@@ -591,6 +631,7 @@ namespace MotionDesk.Widgets
                 return true;
             });
             UpdatePluginApprovalItem();
+            _mainWindow?.RefreshPluginNavigation();
         }
 
         // Privacy boundary for our own Windows toast/balloon messages. Windows and
