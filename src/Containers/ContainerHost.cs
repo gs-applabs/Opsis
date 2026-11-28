@@ -327,7 +327,7 @@ namespace MotionDesk.Containers
                     "Opsis · Layout history", MessageBoxButtons.YesNo, MessageBoxIcon.Question,
                     MessageBoxDefaultButton.Button2) != DialogResult.Yes) return;
             Flush(); Backup(force: true);
-            var previous = _layoutHistory.Pop(id);
+            var previous = _layoutHistory.Peek(id);
             if (previous == null) return;
             _service.Update(doc =>
             {
@@ -336,6 +336,7 @@ namespace MotionDesk.Containers
                 else doc.Containers.Add(previous);
                 return true;
             });
+            _layoutHistory.Consume(id);
             _layoutHistory.Save();
             ReplaceOrganizationWindows(c => c.Id == id);
         }

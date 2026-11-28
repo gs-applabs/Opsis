@@ -1624,6 +1624,16 @@
           "src/UI/MainWindow.cs",
           "tests/Opsis.ExperienceSmoke/Program.cs"
         ]
+      },
+      "r110": {
+        "base_sha": "3636044696b72d7ee233863b031049136c5551b0",
+        "summary": "R110 G08/G05: existing FileTransferJournal refuses overlapping copy/move/undo instead of accumulating queued work, bounds optional undo fingerprint to 10000 entries/2 GiB/64 directory depth, reads bounded bytes and retains same hash format for normal inputs. Oversized or unverifiable transfers still proceed with explicit no-undo notice. ContainerLayoutHistory now checks restored identity, peeks before model update, consumes only after update returns, evicts oldest history by UTF-8 byte budget and preserves newest groups; no new storage owner. Actual migration fixtures, remote transfer and crash recovery, full Containers-only startup, tests and other groups remain open. No Windows build/tests.",
+        "paths": [
+          "src/Containers/FileTransferJournal.cs",
+          "src/Containers/ContainerWindow.Interaction.cs",
+          "src/Containers/ContainerLayoutHistory.cs",
+          "src/Containers/ContainerHost.cs"
+        ]
       }
     },
     "development_rule": {
@@ -2523,7 +2533,7 @@
     "active_backlog_policy": "Only incomplete or unresolved implementation requirements in proposals. Source-present and test-only rows in archived_qa, not active development. Archive is not release certification. All 100 IDs remain unique across both arrays. Reopen archived row only on concrete missing source or failed test.",
     "global_scope": {
       "rule": "## ΜΟΝΙΜΟΣ ΚΑΝΟΝΑΣ — ΠΑΝΤΑ ΟΛΕΣ ΟΙ ΕΚΚΡΕΜΟΤΗΤΕΣ, ΟΧΙ ΜΟΝΟ ΟΙ 100\n\nΚάθε ερώτηση του χρήστη για «εκκρεμότητες», «συνέχισε», «τι μένει» αφορά **ολόκληρο το OPSIS Desktop Customization 3.0.0.3200**: αρχικές 100, παλαιότερο roadmap/διορθώσεις, P0–P6, B01–B14, UI/Glass, Shell, Containers, SDK/plugins/companion compatibility, wallpapers/εικόνες/intro/ήχο, ανεξάρτητο add-on, installers, migration/rollback, διανομή, τελικές δοκιμές. Ποτέ μόνο ένα υποσύνολο χωρίς ρητό αίτημα. Το σύνολο παραμένει ενιαίο με σταθερά IDs, alias προς παλιά IDs, συγκεκριμένο owner/κενό και κατάσταση. **Εφαρμογή από τις ευκολότερες προς τις δυσκολότερες**, με ασφάλεια ως προϋπόθεση και χωρίς να ξαναγράφεται έτοιμη λειτουργία. Αρχείο ιστορικού/QA δεν αποτελεί ενεργό backlog. Ελέγχεται κάθε φορά ο τελευταίος ακριβής σωρευτικός SHA και η διασταύρωση με ιστορικές συνομιλίες, handoffs, πραγματικούς callers/UI/ρυθμίσεις, plugins και αρχεία. Ανεπαρκή ή μη προσβάσιμα τεκμήρια καταγράφονται ως blockers, όχι ως ολοκληρωμένα. Ο χρήστης δεν πρέπει να ξαναρωτήσει για ξεχασμένα υποσύνολα. Χρήση συνδεδεμένου GitHub για πραγματικές αλλαγές· πρόσθετα μόνο αν καλύπτουν πραγματική δυνατότητα που λείπει. Όλα τα tests στο τέλος, Inno Setup, καμία πρόωρη έκδοση.",
-      "source_sha": "1ac7af055c879ee72044ba335fa1aed77fbe2f9f",
+      "source_sha": "3636044696b72d7ee233863b031049136c5551b0",
       "scope_sources": [
         "docs/SOURCE-CONSOLIDATION.md B01–B14",
         "docs/REMAINING-TASKS-3.0.0.3200.md (all waves, SDK1–4, X1–16 and C1–12)",
@@ -2572,7 +2582,7 @@
           "status": "PARTIAL",
           "aliases": "100:1,9,24,38,41,50; B01/B04/B10/B12",
           "requirement": "Μετρήσεις CPU, last-frame remote, πραγματικό triptych, portrait density, preview ζωνών/profile windows",
-          "evidence": "Existing audit, renderer, zone and profile owners; no duplicate sampling/renderer; distinguish actual implementation vs tests. R106: reversible bulk suspend/restore of existing 18 session gates, changed-owner reconciliation; no new startup mode or measurements. R107: toolbar and automatic workspace wallpaper gates, total 20; explicit workspace observation preserved. Actual tests pending. R109: reduced startup mask before governor and independent weather overlay gate; no runtime validation or true containers-only host."
+          "evidence": "Existing audit, renderer, zone and profile owners; no duplicate sampling/renderer; distinguish actual implementation vs tests. R106: reversible bulk suspend/restore of existing 18 session gates, changed-owner reconciliation; no new startup mode or measurements. R107: toolbar and automatic workspace wallpaper gates, total 20; explicit workspace observation preserved. Actual tests pending. R109: reduced startup mask before governor and independent weather overlay gate; no runtime validation or true containers-only host. R110: bounded optional transfer undo, single-flight transfers, safer container layout history restore; runtime/migration fixtures pending."
         },
         {
           "id": "G06",
@@ -2596,7 +2606,7 @@
           "status": "PARTIAL",
           "aliases": "B02; X13; 100:16,20,17,54; C1",
           "requirement": "Native Containers legacy migration/recovery, dirty layout, spacers, porting, local/remote transfers, Fences behavior",
-          "evidence": "Existing native host and importer/atomic storage; actual legacy fixture and complete no-loss migration/restore pending."
+          "evidence": "Existing native host and importer/atomic storage; actual legacy fixture and complete no-loss migration/restore pending. R110: bounded optional transfer undo, single-flight transfers, safer container layout history restore; runtime/migration fixtures pending."
         },
         {
           "id": "G09",

@@ -6,22 +6,28 @@ namespace MotionDesk.Containers;
 internal sealed class FileTransferJournal
 {
     private const int HistoryLimit = 25;
+    private const int FingerprintEntryLimit = 10000;
+    private const long FingerprintByteLimit = 2L * 1024 * 1024 * 1024;
+    private const int FingerprintDepthLimit = 64;
     private readonly List<List<Entry>> _history = [];
     private readonly SemaphoreSlim _operation = new(1, 1);
     private sealed record Entry(string Source, string Target, bool Move, bool Directory, string Stamp);
     internal sealed record Outcome(int Completed, int WithoutUndo, string[] Warnings);
-    internal bool CanUndo { get { lock (_history) return _history.Count > 0; } }
+    internal bool CanUndo { get { lock (_history) return _history.Count > 0 && _operation.CurrentCount != 0; } }
+    private static Outcome Busy() => new(0, 0, ["A file transfer or undo is already running. / Εκτελείται ήδη μεταφορά ή αναίρεση."]);
 
     internal async Task<Outcome> TransferAsync(IEnumerable<string> paths, string folder, bool move)
     {
-        await _operation.WaitAsync().ConfigureAwait(false);
+        if (!await _operation.WaitAsync(0).ConfigureAwait(false)) return Busy();
         try { return await Task.Run(() => Transfer(paths, folder, move)).ConfigureAwait(false); }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException)
+        { return new(0, 0, [ex.Message]); }
         finally { _operation.Release(); }
     }
 
     internal async Task<Outcome> UndoAsync(Action<string, bool> recycle)
     {
-        await _operation.WaitAsync().ConfigureAwait(false);
+        if (!await _operation.WaitAsync(0).ConfigureAwait(false)) return Busy();
         try { return await Task.Run(() => Undo(recycle)).ConfigureAwait(false); }
         finally { _operation.Release(); }
     }
@@ -173,26 +179,47 @@ internal sealed class FileTransferJournal
         try
         {
             using var hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
+            int entries = 0;
+            long totalBytes = 0;
+            void CountEntry() { if (++entries > FingerprintEntryLimit) throw new IOException("Undo fingerprint entry quota exceeded."); }
             void Append(string value) => hash.AppendData(Encoding.UTF8.GetBytes(value + "\0"));
             void AddFile(FileInfo file)
             {
                 RejectLink(file);
                 using var stream = file.Open(FileMode.Open, FileAccess.Read, FileShare.Read);
-                Append(file.Length.ToString(System.Globalization.CultureInfo.InvariantCulture));
-                hash.AppendData(SHA256.HashData(stream));
-            }
-            void AddDirectory(DirectoryInfo folder)
-            {
-                RejectLink(folder);
-                foreach (var item in folder.EnumerateFileSystemInfos().OrderBy(item => item.Name, StringComparer.Ordinal))
+                long length = stream.Length;
+                if (length > FingerprintByteLimit - totalBytes) throw new IOException("Undo fingerprint byte quota exceeded.");
+                totalBytes += length;
+                Append(length.ToString(System.Globalization.CultureInfo.InvariantCulture));
+                using var fileHash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
+                var buffer = new byte[64 * 1024];
+                long remaining = length;
+                while (remaining > 0)
                 {
+                    int read = stream.Read(buffer, 0, (int)Math.Min(buffer.Length, remaining));
+                    if (read == 0) throw new IOException("File changed during fingerprint.");
+                    fileHash.AppendData(buffer, 0, read);
+                    remaining -= read;
+                }
+                if (stream.ReadByte() != -1) throw new IOException("File changed during fingerprint.");
+                hash.AppendData(fileHash.GetHashAndReset());
+            }
+            void AddDirectory(DirectoryInfo folder, int depth)
+            {
+                if (depth > FingerprintDepthLimit) throw new IOException("Undo fingerprint depth quota exceeded.");
+                RejectLink(folder);
+                var children = folder.EnumerateFileSystemInfos().Take(FingerprintEntryLimit - entries + 1).ToArray();
+                if (children.Length > FingerprintEntryLimit - entries) throw new IOException("Undo fingerprint entry quota exceeded.");
+                foreach (var item in children.OrderBy(item => item.Name, StringComparer.Ordinal))
+                {
+                    CountEntry();
                     Append(Path.GetRelativePath(path, item.FullName));
                     Append(item is DirectoryInfo ? "folder" : "file");
-                    if (item is DirectoryInfo child) AddDirectory(child);
+                    if (item is DirectoryInfo child) AddDirectory(child, depth + 1);
                     else AddFile((FileInfo)item);
                 }
             }
-            if (directory) AddDirectory(new DirectoryInfo(path));
+            if (directory) AddDirectory(new DirectoryInfo(path), 0);
             else AddFile(new FileInfo(path));
             return Convert.ToHexString(hash.GetHashAndReset());
         }

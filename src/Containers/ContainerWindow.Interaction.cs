@@ -165,7 +165,7 @@ internal sealed partial class ContainerWindow
             string label = MainWindow.StudioText("File transfer", "Μεταφορά αρχείων");
             string message = string.Join(Environment.NewLine, result.Warnings);
             if (result.WithoutUndo > 0) message += Environment.NewLine + MainWindow.StudioText(
-                "Some files moved without an undo record.", "Για ορισμένα αρχεία δεν δημιουργήθηκε ιστορικό αναίρεσης.");
+                "Some files were transferred without an undo record (large, linked, inaccessible or changed content).", "Ορισμένα αρχεία μεταφέρθηκαν χωρίς ιστορικό αναίρεσης (μεγάλα, συνδεδεμένα, μη προσβάσιμα ή τροποποιημένα δεδομένα).");
             MessageBox.Show(this, message.Trim(), label, MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
         RefreshPortal();

@@ -24,30 +24,46 @@ internal sealed class ContainerLayoutHistory
         catch (Exception ex) when (ex is JsonException or IOException or UnauthorizedAccessException) { }
     }
 
-    public bool Has(string id) => entries.TryGetValue(id, out var states) && states.Count > 0;
+    public bool Has(string id) => entries.TryGetValue(id, out var states) && states is { Count: > 0 };
 
     public void Remember(Container model)
     {
         var json = JsonSerializer.Serialize(model);
         if (json.Length > 64_000) return;
-        if (!entries.TryGetValue(model.Id, out var states)) entries[model.Id] = states = [];
+        if (!entries.TryGetValue(model.Id, out var states) || states == null) states = [];
+        // Reinsert to maintain oldest-to-newest dictionary order for eviction.
+        entries.Remove(model.Id);
+        entries[model.Id] = states;
         if (states.Count > 0 && states[^1] == json) return;
         states.Add(json);
         while (states.Count > EntriesPerContainer) states.RemoveAt(0);
         dirty = true;
     }
 
-    public Container? Pop(string id)
+    public Container? Peek(string id)
     {
         if (!Has(id)) return null;
         var states = entries[id];
         while (states.Count > 0)
         {
-            var value = states[^1]; states.RemoveAt(states.Count - 1); dirty = true;
-            try { return JsonSerializer.Deserialize<Container>(value); }
-            catch (JsonException) { }
+            var value = states[^1];
+            try
+            {
+                var model = JsonSerializer.Deserialize<Container>(value);
+                if (model != null && string.Equals(model.Id, id, StringComparison.OrdinalIgnoreCase)) return model;
+            }
+            catch (Exception ex) when (ex is JsonException or ArgumentNullException) { }
+            states.RemoveAt(states.Count - 1); dirty = true;
         }
         return null;
+    }
+
+    public void Consume(string id)
+    {
+        if (!Has(id)) return;
+        var states = entries[id];
+        states.RemoveAt(states.Count - 1);
+        dirty = true;
     }
 
     public void Save()
@@ -57,11 +73,15 @@ internal sealed class ContainerLayoutHistory
         foreach (var key in entries.Keys.ToList())
         {
             var items = entries[key];
-            if (items.Count == 0) entries.Remove(key);
+            if (items == null || items.Count == 0) entries.Remove(key);
         }
-        foreach (var key in entries.Keys.Skip(50).ToArray()) entries.Remove(key);
+        foreach (var key in entries.Keys.Take(Math.Max(0, entries.Count - 50)).ToArray()) entries.Remove(key);
         var json = JsonSerializer.Serialize(entries);
-        if (json.Length > MaxFileBytes) return;
+        while (System.Text.Encoding.UTF8.GetByteCount(json) > MaxFileBytes && entries.Count > 0)
+        {
+            entries.Remove(entries.Keys.First());
+            json = JsonSerializer.Serialize(entries);
+        }
         try { AtomicFile.WriteAllText(path, json); dirty = false; }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
     }
