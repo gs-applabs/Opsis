@@ -799,9 +799,22 @@ try
         // Explorer capture is bounded: a Shell automation that never answers times out instead of freezing the UI
         var clock = System.Diagnostics.Stopwatch.StartNew();
         bool timedOut = false;
-        try { ExplorerSessionStore.Capture(() => { System.Threading.Thread.Sleep(60000); return Array.Empty<string>(); }, 300); }
-        catch (TimeoutException) { timedOut = true; }
-        Check(timedOut && clock.ElapsedMilliseconds < 5000, "Explorer capture times out instead of hanging");
+        using var releaseCapture = new System.Threading.ManualResetEventSlim(false);
+        try
+        {
+            try { ExplorerSessionStore.Capture(() => { releaseCapture.Wait(); return Array.Empty<string>(); }, 300); }
+            catch (TimeoutException) { timedOut = true; }
+            Check(timedOut && clock.ElapsedMilliseconds < 5000, "Explorer capture times out instead of hanging");
+            bool busy = false;
+            try { ExplorerSessionStore.Capture(() => Array.Empty<string>(), 300); }
+            catch (InvalidOperationException) { busy = true; }
+            Check(busy, "R111 timed-out worker prevents another Explorer capture");
+        }
+        finally
+        {
+            releaseCapture.Set();
+            Check(System.Threading.SpinWait.SpinUntil(() => !ExplorerSessionStore.CaptureBusy, 3000), "R111 capture gate released after worker exits");
+        }
         bool sta = false;
         ExplorerSessionStore.Capture(() => { sta = System.Threading.Thread.CurrentThread.GetApartmentState() == System.Threading.ApartmentState.STA; return Array.Empty<string>(); }, 3000);
         Check(sta, "Explorer capture runs on an STA worker");

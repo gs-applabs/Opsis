@@ -31,6 +31,8 @@ public static class ExplorerSessionStore
 
     /// <summary>Longest time the UI waits for the Shell automation: an Explorer that does not answer must never freeze Opsis.</summary>
     public const int CaptureTimeoutMs = 5000;
+    private static int _captureBusy;
+    internal static bool CaptureBusy => System.Threading.Volatile.Read(ref _captureBusy) != 0;
 
     /// <summary>Captures the open Explorer folders on a dedicated, short-lived STA thread bounded by <see cref="CaptureTimeoutMs"/>.</summary>
     public static string[] Capture() => Capture(CaptureCore, CaptureTimeoutMs);
@@ -38,16 +40,29 @@ public static class ExplorerSessionStore
     /// <summary>Runs <paramref name="work"/> on a background STA thread and gives up after <paramref name="timeoutMs"/> (the thread is abandoned, never joined for ever).</summary>
     public static string[] Capture(Func<string[]> work, int timeoutMs)
     {
-        if (SafeModeService.IsSafeMode || WindowsUpdateGuard.RequiresReview)
+        if (SafeModeService.IsSafeMode || WindowsUpdateGuard.RequiresReview || WindowsUpdateGuard.RuntimeHold)
             throw new InvalidOperationException("Compatibility review required.");
+        ArgumentNullException.ThrowIfNull(work);
+        if (timeoutMs <= 0 || timeoutMs > CaptureTimeoutMs) throw new ArgumentOutOfRangeException(nameof(timeoutMs));
+        if (System.Threading.Interlocked.CompareExchange(ref _captureBusy, 1, 0) != 0)
+            throw new InvalidOperationException("A previous Explorer capture is still running.");
         string[]? result = null; Exception? failure = null;
         var thread = new System.Threading.Thread(() =>
         {
             try { result = work(); }
             catch (Exception e) { failure = e; }
+            finally { System.Threading.Volatile.Write(ref _captureBusy, 0); }
         }) { IsBackground = true, Name = "Opsis Explorer capture" };
-        thread.SetApartmentState(System.Threading.ApartmentState.STA);
-        thread.Start();
+        try
+        {
+            thread.SetApartmentState(System.Threading.ApartmentState.STA);
+            thread.Start();
+        }
+        catch
+        {
+            System.Threading.Volatile.Write(ref _captureBusy, 0);
+            throw;
+        }
         if (!thread.Join(timeoutMs)) throw new TimeoutException("Explorer did not answer within " + timeoutMs / 1000 + " s.");
         if (failure != null) System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(failure).Throw();
         return result ?? Array.Empty<string>();
@@ -111,11 +126,12 @@ public static class ExplorerSessionStore
     // There is no supported public API to guarantee tabs on every Windows build.
     public static int Restore(IEnumerable<string> paths)
     {
-        if (SafeModeService.IsSafeMode || WindowsUpdateGuard.RequiresReview)
+        if (SafeModeService.IsSafeMode || WindowsUpdateGuard.RequiresReview || WindowsUpdateGuard.RuntimeHold)
             throw new InvalidOperationException("Compatibility review required.");
         int opened = 0;
         foreach (var folder in Normalize(paths))
         {
+            if (SafeModeService.IsSafeMode || WindowsUpdateGuard.RequiresReview || WindowsUpdateGuard.RuntimeHold) break;
             if (!Directory.Exists(folder)) continue;
             var start = new ProcessStartInfo(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "explorer.exe")) { UseShellExecute = false };
             start.ArgumentList.Add(folder);

@@ -87,13 +87,33 @@ public sealed class OpsisExplorerStudioForm : Form
             void Display(string[] paths) { folders.Items.Clear(); foreach (var path in paths) folders.Items.Add(path, true); }
             string[] SelectedFolders() => folders.CheckedItems.Cast<string>().ToArray();
             void TryAction(Action action) { try { action(); } catch (Exception err) { MessageBox.Show(dialog, err.Message, "Opsis"); } }
-            capture.Click += (_, _) => TryAction(() => Display(ExplorerSessionStore.Capture()));
+            async Task RunSessionAction(Func<Task> action)
+            {
+                capture.Enabled = save.Enabled = load.Enabled = restoreSession.Enabled = false;
+                try { await action(); }
+                catch (Exception err) { if (!dialog.IsDisposed && !dialog.Disposing) MessageBox.Show(dialog, err.Message, "Opsis"); }
+                finally
+                {
+                    if (!dialog.IsDisposed && !dialog.Disposing)
+                        capture.Enabled = save.Enabled = load.Enabled = restoreSession.Enabled = true;
+                }
+            }
+            capture.Click += async (_, _) => await RunSessionAction(async () =>
+            {
+                var paths = await Task.Run(ExplorerSessionStore.Capture);
+                if (!dialog.IsDisposed && !dialog.Disposing) Display(paths);
+            });
             save.Click += (_, _) => TryAction(() => ExplorerSessionStore.Save(SelectedFolders()));
             load.Click += (_, _) => TryAction(() => Display(ExplorerSessionStore.Read()));
-            restoreSession.Click += (_, _) =>
+            restoreSession.Click += async (_, _) =>
             {
                 if (MessageBox.Show(dialog, "Open selected local folders? Explorer decides window/tab placement.", "Opsis", MessageBoxButtons.YesNo) != DialogResult.Yes) return;
-                TryAction(() => MessageBox.Show(dialog, ExplorerSessionStore.Restore(SelectedFolders()) + " folders requested."));
+                var selected = SelectedFolders();
+                await RunSessionAction(async () =>
+                {
+                    int opened = await Task.Run(() => ExplorerSessionStore.Restore(selected));
+                    if (!dialog.IsDisposed && !dialog.Disposing) MessageBox.Show(dialog, opened + " folders requested.");
+                });
             };
             footerSession.Controls.AddRange([capture, save, load, restoreSession]);
             dialog.Controls.Add(folders); dialog.Controls.Add(footerSession);
@@ -144,14 +164,16 @@ public sealed class OpsisExplorerStudioForm : Form
             try
             {
                 OpsisRecoveryHub.Snapshot("Before Explorer Studio preference changes");
-                ExplorerViewProfiles.BackupIfMissing();
-                ExplorerViewProfiles.ApplyOption("HideFileExt", _extensions.Checked ? 0 : 1);
-                ExplorerViewProfiles.ApplyOption("Hidden", _hidden.Checked ? 1 : 2);
-                ExplorerViewProfiles.ApplyOption("UseCompactMode", _compact.Checked ? 1 : 0);
-                ExplorerViewProfiles.ApplyOption("LaunchTo", _home.SelectedIndex == 0 ? 1 : 2);
-                ExplorerViewProfiles.ApplyOption("ShowStatusBar", _statusBar.Checked ? 1 : 0);
-                ExplorerViewProfiles.ApplyOption("ShowSyncProviderNotifications", _sync.Checked ? 1 : 0);
-                ExplorerViewProfiles.ApplyOption("ShowPreviewHandlers", _handlers.Checked ? 1 : 0);
+                ExplorerViewProfiles.ApplyOptions(new Dictionary<string, int>
+                {
+                    ["HideFileExt"] = _extensions.Checked ? 0 : 1,
+                    ["Hidden"] = _hidden.Checked ? 1 : 2,
+                    ["UseCompactMode"] = _compact.Checked ? 1 : 0,
+                    ["LaunchTo"] = _home.SelectedIndex == 0 ? 1 : 2,
+                    ["ShowStatusBar"] = _statusBar.Checked ? 1 : 0,
+                    ["ShowSyncProviderNotifications"] = _sync.Checked ? 1 : 0,
+                    ["ShowPreviewHandlers"] = _handlers.Checked ? 1 : 0
+                });
                 MessageBox.Show(this, "Explorer settings applied. Some changes may appear in the next Explorer window.",
                     "Opsis Explorer", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }

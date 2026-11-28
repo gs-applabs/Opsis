@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text.Json;
 using Microsoft.Win32;
 
@@ -53,25 +54,15 @@ namespace MotionDesk.Services
             if (values.Count == originalCount) return;
             var folder = Path.GetDirectoryName(BackupPath)!;
             Directory.CreateDirectory(folder);
-            var temp = BackupPath + ".tmp";
-            try
-            {
-                File.WriteAllText(temp, JsonSerializer.Serialize(values, new JsonSerializerOptions { WriteIndented = true }));
-                File.Move(temp, BackupPath, true);
-            }
-            finally { if (File.Exists(temp)) File.Delete(temp); }
+            AtomicFile.WriteAllText(BackupPath, JsonSerializer.Serialize(values, new JsonSerializerOptions { WriteIndented = true }));
         }
 
         public static void ApplyProductivity()
         {
-            CheckWritable();
-            BackupIfMissing();
-            // Keep changes limited to supported HKCU Explorer preferences.
-            SetDword(AdvancedPath, "HideFileExt", 0); // show all file extensions
-            SetDword(AdvancedPath, "Hidden", 1);      // show hidden items
-            SetDword(AdvancedPath, "UseCompactMode", 1);
-            SetDword(AdvancedPath, "LaunchTo", 1);    // This PC
-            NotifyExplorer();
+            ApplyOptions(new Dictionary<string, int>
+            {
+                ["HideFileExt"] = 0, ["Hidden"] = 1, ["UseCompactMode"] = 1, ["LaunchTo"] = 1
+            });
         }
 
         /// <summary>Read one of the explicitly supported Explorer settings.</summary>
@@ -102,7 +93,7 @@ namespace MotionDesk.Services
 
         private static void CheckWritable()
         {
-            if (SafeModeService.IsSafeMode || WindowsUpdateGuard.RequiresReview) throw new InvalidOperationException("Windows compatibility review required.");
+            if (SafeModeService.IsSafeMode || WindowsUpdateGuard.RequiresReview || WindowsUpdateGuard.RuntimeHold) throw new InvalidOperationException("Windows compatibility review required.");
             foreach (var mod in OpsisModCompatibility.ScanCached())
                 if (mod.Risk == "High" || mod.Product.StartsWith("Windhawk: ", StringComparison.Ordinal) && mod.Area == "Explorer")
                     throw new InvalidOperationException("Competing Explorer customization detected: " + mod.Product);
@@ -110,11 +101,64 @@ namespace MotionDesk.Services
 
         public static void ApplyOption(string name, int value)
         {
-            if (!IsValid(name, value)) throw new ArgumentOutOfRangeException(nameof(value));
+            ApplyOptions(new Dictionary<string, int> { [name] = value });
+        }
+
+        // Validate the entire selection before any write. Preserve exact prior
+        // value presence, not the display default; one Shell notification per batch.
+        public static void ApplyOptions(IReadOnlyDictionary<string, int> options)
+        {
+            ArgumentNullException.ThrowIfNull(options);
+            var requested = options.ToArray();
+            if (requested.Length > Entries.Length || requested.Any(x => !IsValid(x.Key, x.Value)))
+                throw new ArgumentException("Unsupported Explorer preference.", nameof(options));
             CheckWritable();
-            if (ReadOption(name) == value) return;
+            var before = new List<ValueSnapshot>();
+            using (var read = Registry.CurrentUser.OpenSubKey(AdvancedPath))
+            {
+                foreach (var (name, value) in requested)
+                {
+                    var raw = read?.GetValue(name);
+                    if (raw != null && raw is not int) throw new InvalidOperationException("Unexpected registry value type: " + name);
+                    if (ReadOption(name) == value) continue;
+                    before.Add(new ValueSnapshot { Path = AdvancedPath, Name = name, Exists = raw is int, Value = raw is int i ? i : 0 });
+                }
+            }
+            if (before.Count == 0) return;
             BackupIfMissing();
-            SetDword(AdvancedPath, name, value);
+            using var key = Registry.CurrentUser.CreateSubKey(AdvancedPath, true)
+                ?? throw new InvalidOperationException("Cannot open Explorer preferences.");
+            var applied = new List<ValueSnapshot>();
+            try
+            {
+                foreach (var prior in before)
+                {
+                    if (WindowsUpdateGuard.RequiresReview || WindowsUpdateGuard.RuntimeHold || SafeModeService.IsSafeMode)
+                        throw new InvalidOperationException("Compatibility review required.");
+                    int value = requested.First(x => x.Key == prior.Name).Value;
+                    if (!Equals(key.GetValue(prior.Name), prior.Exists ? (object)prior.Value : null))
+                        throw new InvalidOperationException("Explorer preference changed outside Opsis: " + prior.Name);
+                    applied.Add(prior);
+                    key.SetValue(prior.Name, value, RegistryValueKind.DWord);
+                    if (!Equals(key.GetValue(prior.Name), value)) throw new IOException("Explorer preference could not be verified: " + prior.Name);
+                }
+            }
+            catch (Exception failure)
+            {
+                var errors = new List<Exception> { failure };
+                foreach (var prior in applied.AsEnumerable().Reverse())
+                {
+                    try
+                    {
+                        if (prior.Exists) key.SetValue(prior.Name, prior.Value, RegistryValueKind.DWord);
+                        else key.DeleteValue(prior.Name, false);
+                    }
+                    catch (Exception rollback) { errors.Add(rollback); }
+                }
+                NotifyExplorer();
+                if (errors.Count > 1) throw new AggregateException("Explorer settings update and rollback failed; original backup retained.", errors);
+                throw;
+            }
             NotifyExplorer();
         }
 

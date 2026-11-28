@@ -103,7 +103,7 @@ namespace MotionDesk.Services
 
         private static void CheckWritable()
         {
-            if (!IsWindows11 || SafeModeService.IsSafeMode || WindowsUpdateGuard.RequiresReview)
+            if (!IsWindows11 || SafeModeService.IsSafeMode || WindowsUpdateGuard.RequiresReview || WindowsUpdateGuard.RuntimeHold)
                 throw new InvalidOperationException("Windows compatibility review required.");
             foreach (var mod in OpsisModCompatibility.ScanCached())
                 if (mod.Risk == "High" || mod.Product.StartsWith("Windhawk: ", StringComparison.Ordinal) && mod.Area == "Taskbar")

@@ -1634,6 +1634,17 @@
           "src/Containers/ContainerLayoutHistory.cs",
           "src/Containers/ContainerHost.cs"
         ]
+      },
+      "r111": {
+        "base_sha": "b7e09a4ae7464dc469d205e5d648343119e4a79f",
+        "summary": "R111 G09/G05/G14: Explorer capture now permits one STA worker globally, retaining the gate after timeout until actual worker exit; capture and folder opening run off the UI thread, disable duplicate dialog actions, ignore late results after closure. Explorer seven preferences use one validated batch, exact prior presence, readback, rollback on failure and one Shell notification; productivity preset shares owner; original backup uses AtomicFile. Explorer and Taskbar explicit edits also honor RuntimeHold. New smoke assertions for timeout/busy/release; no build or runtime tests. Rollback is best effort, not a registry transaction; native Start/Explorer styling, full Taskbar and remaining roadmap open.",
+        "paths": [
+          "src/Services/ExplorerSessionStore.cs",
+          "src/Services/ExplorerViewProfiles.cs",
+          "src/Services/TaskbarViewProfiles.cs",
+          "src/UI/OpsisExplorerStudioForm.cs",
+          "tests/Opsis.ExperienceSmoke/Program.cs"
+        ]
       }
     },
     "development_rule": {
@@ -2533,7 +2544,7 @@
     "active_backlog_policy": "Only incomplete or unresolved implementation requirements in proposals. Source-present and test-only rows in archived_qa, not active development. Archive is not release certification. All 100 IDs remain unique across both arrays. Reopen archived row only on concrete missing source or failed test.",
     "global_scope": {
       "rule": "## ΜΟΝΙΜΟΣ ΚΑΝΟΝΑΣ — ΠΑΝΤΑ ΟΛΕΣ ΟΙ ΕΚΚΡΕΜΟΤΗΤΕΣ, ΟΧΙ ΜΟΝΟ ΟΙ 100\n\nΚάθε ερώτηση του χρήστη για «εκκρεμότητες», «συνέχισε», «τι μένει» αφορά **ολόκληρο το OPSIS Desktop Customization 3.0.0.3200**: αρχικές 100, παλαιότερο roadmap/διορθώσεις, P0–P6, B01–B14, UI/Glass, Shell, Containers, SDK/plugins/companion compatibility, wallpapers/εικόνες/intro/ήχο, ανεξάρτητο add-on, installers, migration/rollback, διανομή, τελικές δοκιμές. Ποτέ μόνο ένα υποσύνολο χωρίς ρητό αίτημα. Το σύνολο παραμένει ενιαίο με σταθερά IDs, alias προς παλιά IDs, συγκεκριμένο owner/κενό και κατάσταση. **Εφαρμογή από τις ευκολότερες προς τις δυσκολότερες**, με ασφάλεια ως προϋπόθεση και χωρίς να ξαναγράφεται έτοιμη λειτουργία. Αρχείο ιστορικού/QA δεν αποτελεί ενεργό backlog. Ελέγχεται κάθε φορά ο τελευταίος ακριβής σωρευτικός SHA και η διασταύρωση με ιστορικές συνομιλίες, handoffs, πραγματικούς callers/UI/ρυθμίσεις, plugins και αρχεία. Ανεπαρκή ή μη προσβάσιμα τεκμήρια καταγράφονται ως blockers, όχι ως ολοκληρωμένα. Ο χρήστης δεν πρέπει να ξαναρωτήσει για ξεχασμένα υποσύνολα. Χρήση συνδεδεμένου GitHub για πραγματικές αλλαγές· πρόσθετα μόνο αν καλύπτουν πραγματική δυνατότητα που λείπει. Όλα τα tests στο τέλος, Inno Setup, καμία πρόωρη έκδοση.",
-      "source_sha": "3636044696b72d7ee233863b031049136c5551b0",
+      "source_sha": "b7e09a4ae7464dc469d205e5d648343119e4a79f",
       "scope_sources": [
         "docs/SOURCE-CONSOLIDATION.md B01–B14",
         "docs/REMAINING-TASKS-3.0.0.3200.md (all waves, SDK1–4, X1–16 and C1–12)",
@@ -2582,7 +2593,7 @@
           "status": "PARTIAL",
           "aliases": "100:1,9,24,38,41,50; B01/B04/B10/B12",
           "requirement": "Μετρήσεις CPU, last-frame remote, πραγματικό triptych, portrait density, preview ζωνών/profile windows",
-          "evidence": "Existing audit, renderer, zone and profile owners; no duplicate sampling/renderer; distinguish actual implementation vs tests. R106: reversible bulk suspend/restore of existing 18 session gates, changed-owner reconciliation; no new startup mode or measurements. R107: toolbar and automatic workspace wallpaper gates, total 20; explicit workspace observation preserved. Actual tests pending. R109: reduced startup mask before governor and independent weather overlay gate; no runtime validation or true containers-only host. R110: bounded optional transfer undo, single-flight transfers, safer container layout history restore; runtime/migration fixtures pending."
+          "evidence": "Existing audit, renderer, zone and profile owners; no duplicate sampling/renderer; distinguish actual implementation vs tests. R106: reversible bulk suspend/restore of existing 18 session gates, changed-owner reconciliation; no new startup mode or measurements. R107: toolbar and automatic workspace wallpaper gates, total 20; explicit workspace observation preserved. Actual tests pending. R109: reduced startup mask before governor and independent weather overlay gate; no runtime validation or true containers-only host. R110: bounded optional transfer undo, single-flight transfers, safer container layout history restore; runtime/migration fixtures pending. R111: bounded Explorer capture, asynchronous UI, validated preference batch with rollback, RuntimeHold for Explorer/Taskbar; runtime pending."
         },
         {
           "id": "G06",
@@ -2614,7 +2625,7 @@
           "status": "PARTIAL",
           "aliases": "B04; wave1 1–3,8–12,16–20; wave2 4–7,11,17; X3/X4/X11",
           "requirement": "Start Studio, native Taskbar/tray/clock, Explorer preferences/tabs/command bar/context menu, per-app and per-monitor rules",
-          "evidence": "Existing start launcher, taskbar four edges/floating/segmented/dynamic/gestures, Explorer session, icon atlas. Review only gaps; full native Start/Explorer advanced missing."
+          "evidence": "Existing start launcher, taskbar four edges/floating/segmented/dynamic/gestures, Explorer session, icon atlas. Review only gaps; full native Start/Explorer advanced missing. R111: bounded Explorer capture, asynchronous UI, validated preference batch with rollback, RuntimeHold for Explorer/Taskbar; runtime pending."
         },
         {
           "id": "G10",
@@ -2654,7 +2665,7 @@
           "status": "PARTIAL",
           "aliases": "B07; X13; 100:15/16/20/92/93/99; C2",
           "requirement": "Windows update guard, originals/restore point, verified rollback provenance, dependency and ImageSharp advisory review, signing last/free if feasible",
-          "evidence": "Existing guard/atomic archives; real restore and trusted provenance not certified. Inno unchanged, no forced OS writes. R104: bounded package traversal/trust hashing, no runtime certification."
+          "evidence": "Existing guard/atomic archives; real restore and trusted provenance not certified. Inno unchanged, no forced OS writes. R104: bounded package traversal/trust hashing, no runtime certification. R111: bounded Explorer capture, asynchronous UI, validated preference batch with rollback, RuntimeHold for Explorer/Taskbar; runtime pending."
         },
         {
           "id": "G15",
