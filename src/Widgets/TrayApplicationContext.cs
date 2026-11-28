@@ -801,6 +801,8 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
             var widgets = new ToolStripMenuItem(T("Allow widgets (retain layout)", "Επιτρέπονται τα widgets (διατήρηση διάταξης)"));
             var music = new ToolStripMenuItem(T("Allow music visualizer", "Επιτρέπεται το μουσικό visualizer"));
             var appearance = new ToolStripMenuItem(T("Allow automatic appearance and live effects", "Αυτόματη εμφάνιση και ζωντανά εφέ"));
+            var autoTile = new ToolStripMenuItem(T("Allow automatic window tiling", "Αυτόματη διάταξη παραθύρων"));
+            var adaptive = new ToolStripMenuItem(T("Allow adaptive performance sampling", "Δειγματοληψία προσαρμοστικής απόδοσης"));
             void Change(SessionBackgroundService flag, Action reconcile)
             {
                 if (SafeModeService.IsSafeMode || System.Threading.Volatile.Read(ref _exitStarted) != 0) return;
@@ -826,7 +828,14 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                     if (svc.Started) svc.SetSessionAllowed(RuntimeSessionPolicy.IsPermitted(SessionBackgroundService.AppearanceAutomatic));
                 });
             };
+            autoTile.Click += (_, _) =>
+            {
+                if (WindowsUpdateGuard.RequiresReview || _compatibilityIsolationApplied) return;
+                Change(SessionBackgroundService.AutoTile, AutoTileService.RefreshSettings);
+            };
+            adaptive.Click += (_, _) => Change(SessionBackgroundService.AdaptiveSampling, PerformanceGovernor.ReconcileSession);
             menu.DropDownItems.Add(wallpaper); menu.DropDownItems.Add(dock); menu.DropDownItems.Add(widgets); menu.DropDownItems.Add(music); menu.DropDownItems.Add(appearance);
+            menu.DropDownItems.Add(autoTile); menu.DropDownItems.Add(adaptive);
             menu.DropDownOpening += (_, _) =>
             {
                 wallpaper.Checked = RuntimeSessionPolicy.IsPermitted(SessionBackgroundService.AnimatedWallpaper);
@@ -835,6 +844,10 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                 music.Checked = RuntimeSessionPolicy.IsPermitted(SessionBackgroundService.MusicVisualizer);
                 appearance.Checked = RuntimeSessionPolicy.IsPermitted(SessionBackgroundService.AppearanceAutomatic) && !MotionDesk.Appearance.AppearanceService.Instance.AutomaticSessionSuspended;
                 appearance.Enabled = !SafeModeService.IsSafeMode && !WindowsUpdateGuard.RequiresReview && !_compatibilityIsolationApplied && MotionDesk.Appearance.AppearanceService.Instance.Started && MotionDesk.Appearance.AppearanceService.Instance.EngineActive;
+                autoTile.Checked = RuntimeSessionPolicy.IsPermitted(SessionBackgroundService.AutoTile);
+                autoTile.Enabled = !SafeModeService.IsSafeMode && !WindowsUpdateGuard.RequiresReview && !_compatibilityIsolationApplied;
+                adaptive.Checked = RuntimeSessionPolicy.IsPermitted(SessionBackgroundService.AdaptiveSampling);
+                adaptive.Enabled = !SafeModeService.IsSafeMode;
                 wallpaper.Enabled = dock.Enabled = widgets.Enabled = music.Enabled = !SafeModeService.IsSafeMode;
             };
             return menu;

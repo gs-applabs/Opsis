@@ -179,12 +179,17 @@ internal static class AutoTileService
         return restored;
     }
 
+    internal static bool AllowsAutomatic(bool saved, bool permitted, bool review, bool hold) => saved && permitted && !review && !hold;
+
+    private static bool AutomaticAllowed => AllowsAutomatic(AppSettings.Peek().AutoTileEnabled,
+        RuntimeSessionPolicy.IsPermitted(SessionBackgroundService.AutoTile), WindowsUpdateGuard.RequiresReview, WindowsUpdateGuard.RuntimeHold);
+
     internal static void RefreshSettings()
     {
         _timer?.Dispose();
         _timer = null;
         Previous.Clear();
-        if (!AppSettings.Load().AutoTileEnabled || SafeModeService.IsSafeMode || WindowsUpdateGuard.RequiresReview) { AppActivity.RequestRefresh(); return; }
+        if (!AutomaticAllowed) { AppActivity.RequestRefresh(); return; }
         _timer = new System.Windows.Forms.Timer { Interval = 1300 };
         _timer.Tick += (_, _) => Apply();
         _timer.Start();
@@ -201,7 +206,7 @@ internal static class AutoTileService
 
     internal static void Apply(bool force = false)
     {
-        if (WindowsUpdateGuard.RuntimeHold || (force && WindowsUpdateGuard.RequiresReview)) return;
+        if (WindowsUpdateGuard.RuntimeHold || (force && WindowsUpdateGuard.RequiresReview) || (!force && !AutomaticAllowed)) return;
         if (force)
         {
             // One undo stack per explicit user action; automatic tiling is never stacked.

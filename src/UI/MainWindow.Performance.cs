@@ -15,6 +15,8 @@ namespace MotionDesk.UI
             panel.Controls.Add(SettingsView.Checkbox(LocalizationManager.T("Perf.Dynamic"), AppSettings.Load().PerfDynamic,
                 v => { var a = AppSettings.Load(); a.PerfDynamic = v; a.Save(); PerformanceGovernor.RaiseChanged(); },
                 LocalizationManager.T("Perf.DynamicDesc")));
+            if (!PerformanceGovernor.SessionSamplingAllowed)
+                AddText(panel, StudioText("Adaptive sampling suspended for this session; the current reduction is retained while the saved adaptive profile is eligible.", "Η προσαρμοστική δειγματοληψία είναι σε αναστολή· διατηρείται η τρέχουσα μείωση ποιότητας όσο ισχύει το αποθηκευμένο προσαρμοστικό προφίλ."));
             AddText(panel, LocalizationManager.T("Perf.PerFeature"));
             string[] labels =
             {

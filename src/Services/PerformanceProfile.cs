@@ -137,6 +137,10 @@ namespace MotionDesk.Services
         internal static bool NeedsSampler(bool enabled, HardwareTier tier, bool safeMode) =>
             enabled && tier != HardwareTier.Low && !safeMode;
 
+        internal static bool SessionSamplingAllowed => RuntimeSessionPolicy.IsPermitted(SessionBackgroundService.AdaptiveSampling);
+        internal static void ReconcileSession() => RefreshSampler();
+        internal static int DropWithoutSampler(int currentDrop, bool eligible) => eligible ? currentDrop : 0;
+
         /// <summary>Feeds one sample (called by the sampling timer, or by tests through <see cref="Step"/>).</summary>
         public static void Feed(LoadSample s, DateTime now)
         {
@@ -145,7 +149,7 @@ namespace MotionDesk.Services
             {
                 before = Lower(HardwareProfileService.CurrentTier, _drop);
                 if (!Enabled) { _drop = 0; _pressureSince = _calmSince = null; }
-                else _drop = Step(_drop, HardwareProfileService.CurrentTier, s, now, ref _pressureSince, ref _calmSince);
+                else if (SessionSamplingAllowed) _drop = Step(_drop, HardwareProfileService.CurrentTier, s, now, ref _pressureSince, ref _calmSince);
                 after = Lower(HardwareProfileService.CurrentTier, _drop);
             }
             if (before != after) EffectiveChanged?.Invoke(after);
@@ -195,11 +199,15 @@ namespace MotionDesk.Services
             {
                 if (!_started) return;
                 tier = HardwareProfileService.CurrentTier;
-                if (!NeedsSampler(Enabled, tier, SafeModeService.IsSafeMode))
+                bool eligible = NeedsSampler(Enabled, tier, SafeModeService.IsSafeMode);
+                if (!eligible || !SessionSamplingAllowed)
                 {
                     if (_timer != null) { _generation++; _timer.Dispose(); _timer = null; }
-                    changed = _drop != 0;
-                    _drop = 0; _pressureSince = _calmSince = null;
+                    // A session pause must not raise quality while the machine is under pressure.
+                    // Only a genuinely disabled/forced/low-tier profile resets the drop.
+                    int retained = DropWithoutSampler(_drop, eligible);
+                    changed = _drop != retained;
+                    _drop = retained; _pressureSince = _calmSince = null;
                 }
                 else if (_timer == null)
                 {
@@ -215,7 +223,7 @@ namespace MotionDesk.Services
             if (Interlocked.Exchange(ref _sampling, 1) != 0) return;
             try
             {
-                lock (Sync) { if (!_started || generation != _generation || !Enabled) return; }
+                lock (Sync) { if (!_started || generation != _generation || !Enabled || !SessionSamplingAllowed) return; }
                 var m = SystemMonitorService.Instance.GetSnapshot();
                 double ram = m.TotalMemoryMb > 0 ? (m.TotalMemoryMb - m.AvailableMemoryMb) / m.TotalMemoryMb * 100.0 : 0;
                 var p = System.Windows.Forms.SystemInformation.PowerStatus;
@@ -224,7 +232,7 @@ namespace MotionDesk.Services
                 HardwareTier before, after;
                 lock (Sync)
                 {
-                    if (!_started || generation != _generation || !Enabled) return;
+                    if (!_started || generation != _generation || !Enabled || !SessionSamplingAllowed) return;
                     var tier = HardwareProfileService.CurrentTier;
                     before = Lower(tier, _drop);
                     _drop = Step(_drop, tier, new LoadSample(m.CpuPercent, null, ram, onBattery, low),
