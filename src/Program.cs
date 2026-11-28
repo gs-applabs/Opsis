@@ -285,7 +285,7 @@ namespace MotionDesk
             Services.PerformanceGovernor.EffectiveChanged += t =>
             {
                 Services.RotatingLogger.Write("Performance: effective tier is now " + t);
-                try { MotionDesk.Widgets.WallpaperHostEngine.Instance.PushPerf(); } catch (Exception) { }
+                try { MotionDesk.Widgets.WallpaperHostEngine.QueuePerfIfCreated(); } catch (Exception) { }
             };
 
             // Ξ¤ΞΏ .NET 5+ Ξ΄ΞµΞ½ Ο€ΞµΟΞΉΞ»Ξ±ΞΌΞ²Ξ¬Ξ½ΞµΞΉ Ο€Ξ»Ξ­ΞΏΞ½ Ο„ΞΉΟ‚ legacy ΞΊΟ‰Ξ΄ΞΉΞΊΞΏΟƒΞµΞ»Ξ―Ξ΄ΞµΟ‚ (Ο€.Ο‡. 737 Ξ³ΞΉΞ± ΞµΞ»Ξ»Ξ·Ξ½ΞΉΞΊΞ¬

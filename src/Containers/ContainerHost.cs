@@ -15,6 +15,24 @@ namespace MotionDesk.Containers
         private readonly Control _ui;                                   // a control created on the UI thread, used to marshal pipe-thread events
         private readonly Dictionary<string, ContainerWindow> _windows = new();
         private readonly Dictionary<string, Container> _dirty = new();
+        private HashSet<string>? _persistedReferences;
+
+        private static IEnumerable<string> References(Container c) =>
+            c.Items.Concat(c.Tabs.SelectMany(tab => tab.Items)).Select(item => item.Path);
+
+        // A stored snapshot can change by IPC or rules without an ItemRemoved
+        // event. Release originals only after the durable layout changes.
+        private void ReconcileReleasedOriginals(IEnumerable<Container> stored)
+        {
+            var next = stored.SelectMany(References).ToHashSet(StringComparer.OrdinalIgnoreCase);
+            var previous = _persistedReferences;
+            _persistedReferences = next;
+            if (previous == null || previous.SetEquals(next)) return;
+            var retained = next.Concat(_dirty.Values.SelectMany(References))
+                .Concat(_windows.Values.Where(w => !w.IsDisposed).SelectMany(w => References(w.Model)));
+            if (MotionDesk.Widgets.DesktopIconVisibilityEngine.RestoreOriginalsForPaths(previous.Except(next, StringComparer.OrdinalIgnoreCase), retained) > 0)
+                MotionDesk.Widgets.DesktopIconVisibilityEngine.Instance.ApplyKeepSettings();
+        }
         private readonly ContainerLayoutHistory _layoutHistory = new();
         private readonly System.Windows.Forms.Timer _layoutHistorySave = new() { Interval = 4000 };
         private readonly System.Windows.Forms.Timer _save = new() { Interval = 400 };
@@ -25,7 +43,26 @@ namespace MotionDesk.Containers
         private PipeServer? _pipe;
         private bool _syncing, _quickHidden;
         private volatile bool _disposed;
+        private bool _hasEnabledRules;
+        internal bool HasActivityRules => !_disposed && _hasEnabledRules;
+        private void UpdateActivityRuleDemand(bool enabled)
+        {
+            if (enabled && !_disposed)
+            {
+                if (!_rules.Enabled) _rules.Start();
+            }
+            else
+            {
+                _rules.Stop();
+                _activeRules.Clear();
+            }
+            if (_hasEnabledRules == enabled) return;
+            _hasEnabledRules = enabled;
+            MotionDesk.Services.AppActivity.RequestRefresh();
+        }
         private int _saveFailures;
+        private const int PendingSync = 1, PendingLook = 2, PendingMonitor = 4;
+        private int _pendingUi;
         internal event Action<string, string>? ContainerRenamed;
         internal event Action<string>? ContainerDeleted;
         internal event Action? WorkspacePreviewChanged;
@@ -44,11 +81,11 @@ namespace MotionDesk.Containers
             catch { _ui.Dispose(); throw; }
             try
             {
-            _service.Mutated += () => { if (!_disposed && _ui.IsHandleCreated && !_ui.IsDisposed) try { _ui.BeginInvoke(Sync); } catch (Exception) { } };
+            _service.Mutated += OnServiceMutated;
             _save.Tick += (_, _) => FlushFromTimer();
             _layoutHistorySave.Tick += (_, _) => { _layoutHistorySave.Stop(); RunTimerAction("layout history", () => _layoutHistory.Save()); };
-            _rules.Tick += (_, _) => RunTimerAction("rules", EvaluateRules); _rules.Start();
-            _z.Tick += (_, _) => RunTimerAction("z-order", ReseatZOrder); _z.Start();
+            _rules.Tick += (_, _) => RunTimerAction("rules", EvaluateRules);
+            _z.Tick += (_, _) => RunTimerAction("z-order", ReseatZOrder);
             if (pipeName != null) { _pipe = new PipeServer(pipeName, new HostApi(this)); _pipe.Start(); }
             Microsoft.Win32.SystemEvents.DisplaySettingsChanged += OnDisplayChanged;
             // live settings: a change of the global look (theme / tint / glass / performance tier / language) repaints the open windows, debounced into one repaint
@@ -97,7 +134,25 @@ namespace MotionDesk.Containers
 
         private readonly System.Windows.Forms.Timer _look = new() { Interval = 150 };
         private void OnTierChanged(MotionDesk.Services.HardwareTier _) => OnLookChanged();
-        private void OnLookChanged() { if (!_disposed && _ui.IsHandleCreated && !_ui.IsDisposed) try { _ui.BeginInvoke(() => { if (_disposed) return; _look.Stop(); _look.Start(); }); } catch (Exception) { } }
+        private void OnServiceMutated() => QueueUi(PendingSync);
+        private void OnLookChanged() => QueueUi(PendingLook);
+
+        // One queued UI callback for a burst of service/theme/display notifications.
+        private void QueueUi(int flags)
+        {
+            if (_disposed || !_ui.IsHandleCreated || _ui.IsDisposed) return;
+            if (Interlocked.Or(ref _pendingUi, flags) != 0) return;
+            try { _ui.BeginInvoke((Action)DrainUi); }
+            catch (InvalidOperationException) { Interlocked.Exchange(ref _pendingUi, 0); }
+        }
+        private void DrainUi()
+        {
+            int flags = Interlocked.Exchange(ref _pendingUi, 0);
+            if (_disposed) return;
+            if ((flags & PendingSync) != 0) RunTimerAction("sync", Sync);
+            if ((flags & PendingLook) != 0) { _look.Stop(); _look.Start(); }
+            if ((flags & PendingMonitor) != 0) { _monitorTimer.Stop(); _monitorTimer.Start(); }
+        }
 
         /// <summary>Changes one container through the service and shows it at once (flushes pending window changes first so nothing is overwritten).</summary>
         public void Apply(string id, Func<Container, bool> change)
@@ -164,10 +219,9 @@ namespace MotionDesk.Containers
             if (remaining.Any(c => c.Id == id)) return false;
             Sync();
 
-            static IEnumerable<string> References(Container c) =>
-                c.Items.Concat(c.Tabs.SelectMany(tab => tab.Items)).Select(item => item.Path);
-            var released = References(container).Except(remaining.SelectMany(References), StringComparer.OrdinalIgnoreCase);
-            if (MotionDesk.Widgets.DesktopIconVisibilityEngine.RestoreOriginalsForPaths(released) > 0)
+            var retained = remaining.SelectMany(References);
+            var released = References(container).Except(retained, StringComparer.OrdinalIgnoreCase);
+            if (MotionDesk.Widgets.DesktopIconVisibilityEngine.RestoreOriginalsForPaths(released, retained) > 0)
                 MotionDesk.Widgets.DesktopIconVisibilityEngine.Instance.ApplyKeepSettings();
             ContainerDeleted?.Invoke(id);
             return true;
@@ -185,8 +239,13 @@ namespace MotionDesk.Containers
                     case "focus":
                     {
                         var id = args["id"]?.ToString() ?? "";
-                        _h._ui.Invoke(() => { if (_h._windows.TryGetValue(id, out var w)) w.FocusForKeyboard(); });
-                        return new System.Text.Json.Nodes.JsonObject { ["focused"] = _h._windows.ContainsKey(id) };
+                        bool focused = _h._ui.Invoke(() =>
+                        {
+                            if (_h._disposed || !_h._windows.TryGetValue(id, out var w) || w.IsDisposed) return false;
+                            w.FocusForKeyboard();
+                            return true;
+                        });
+                        return new System.Text.Json.Nodes.JsonObject { ["focused"] = focused };
                     }
                     case "toggle-all":
                     {
@@ -295,7 +354,9 @@ namespace MotionDesk.Containers
             if (_disposed || _syncing) return; _syncing = true;
             try
             {
-                var doc = _service.Snapshot(); var want = doc.Containers.Where(c => !c.Hidden && (!_quickHidden || c.ExcludeFromQuickHide)).ToDictionary(c => c.Id);
+                var doc = _service.Snapshot();
+                UpdateActivityRuleDemand(doc.Rules.Any(r => r.Enabled));
+                var want = doc.Containers.Where(c => !c.Hidden && (!_quickHidden || c.ExcludeFromQuickHide)).ToDictionary(c => c.Id);
                 // Closing a temporarily hidden window must not discard unsaved geometry/items.
                 var existingIds = doc.Containers.Select(c => c.Id).ToHashSet();
                 foreach (var id in _windows.Keys.Where(k => !want.ContainsKey(k)).ToList())
@@ -332,7 +393,10 @@ namespace MotionDesk.Containers
                     _windows[id] = w; w.Show();
                     added = true;
                 }
+                if (_windows.Count == 0) _z.Stop();
+                else if (!_z.Enabled) _z.Start();
                 if (added) ReseatZOrder();
+                ReconcileReleasedOriginals(doc.Containers);
             }
             finally { _syncing = false; }
         }
@@ -349,9 +413,9 @@ namespace MotionDesk.Containers
                 foreach (var (id, window) in _windows)
                     if (!window.IsDisposed) models[id] = window.Model;
                 models[source.Model.Id] = source.Model;
-                bool stillReferenced = models.Values.Any(c => c.Items.Concat(c.Tabs.SelectMany(t => t.Items))
-                    .Any(item => string.Equals(item.Path, path, StringComparison.OrdinalIgnoreCase)));
-                if (!stillReferenced && MotionDesk.Widgets.DesktopIconVisibilityEngine.RestoreOriginalsForPaths(new[] { path }) > 0)
+                var retained = models.Values.SelectMany(References).ToArray();
+                bool stillReferenced = retained.Contains(path, StringComparer.OrdinalIgnoreCase);
+                if (!stillReferenced && MotionDesk.Widgets.DesktopIconVisibilityEngine.RestoreOriginalsForPaths(new[] { path }, retained) > 0)
                     MotionDesk.Widgets.DesktopIconVisibilityEngine.Instance.ApplyKeepSettings();
             }
             catch (Exception ex)
@@ -377,14 +441,17 @@ namespace MotionDesk.Containers
         public void ReseatZOrder()
         {
             if (KeepOnTopForTests || _peeking) { foreach (var w in _windows.Values) if (w.IsHandleCreated && w.Visible && !w.TopMost) w.TopMost = true; return; }
-            DesktopZOrder.PlaceGroup(_windows.Values.Where(window => window.IsHandleCreated && window.Visible)
-                .Select(window => window.Handle).ToHashSet());
+            if (_windows.Count == 0) return;
+            var visible = _windows.Values.Where(window => window.IsHandleCreated && window.Visible)
+                .Select(window => window.Handle).ToHashSet();
+            if (visible.Count != 0) DesktopZOrder.PlaceGroup(visible);
         }
 
         /// <summary>Phase 5: rules (monitor count, process running, time of day, fullscreen app) are evaluated every 3 s, edge-triggered; cheap when there are none.</summary>
         public void EvaluateRules()
         {
             var rules = _service.Snapshot().Rules.Where(r => r.Enabled).ToList();
+            UpdateActivityRuleDemand(rules.Count != 0);
             if (rules.Count == 0) { _activeRules.Clear(); return; }
             var procs = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             if (rules.Any(r => r.When == RuleWhen.ProcessRunning))
@@ -438,7 +505,18 @@ namespace MotionDesk.Containers
         {
             if (_disposed) return;
             try { action(); }
-            catch (Exception ex) { try { MotionDesk.Services.RotatingLogger.Write("Container timer " + name + ": " + ex.Message); } catch { } }
+            catch (Exception ex)
+            {
+                try
+                {
+                    // Preserve sync and persistence failures unthrottled.
+                    if (name is "rules" or "z-order" or "restyle")
+                        MotionDesk.Services.RotatingLogger.WriteRecurring(MotionDesk.Services.RotatingLogger.RecurringSource.ContainerTimer,
+                            "Container timer " + name + ": " + ex.Message);
+                    else MotionDesk.Services.RotatingLogger.Write("Container timer " + name + ": " + ex.Message);
+                }
+                catch { }
+            }
         }
 
         private void FlushFromTimer()
@@ -453,17 +531,13 @@ namespace MotionDesk.Containers
             }
         }
 
-        private void OnDisplayChanged(object? sender, EventArgs args)
-        {
-            if (_disposed || !_ui.IsHandleCreated || _ui.IsDisposed) return;
-            try { _ui.BeginInvoke(() => { if (_disposed) return; _monitorTimer.Stop(); _monitorTimer.Start(); }); }
-            catch (InvalidOperationException) { }
-        }
+        private void OnDisplayChanged(object? sender, EventArgs args) => QueueUi(PendingMonitor);
 
         public void Dispose()
         {
             if (_disposed) return;
             _disposed = true;
+            MotionDesk.Services.AppActivity.RequestRefresh();
             void Step(string name, Action action)
             {
                 MotionDesk.Services.HangTrace.Mark("containers shutdown begin: " + name);
@@ -472,6 +546,8 @@ namespace MotionDesk.Containers
                 finally { MotionDesk.Services.HangTrace.Mark("containers shutdown end: " + name); }
             }
             Step("stop timers", () => { _save.Stop(); _rules.Stop(); _z.Stop(); _look.Stop(); _layoutHistorySave.Stop(); _monitorTimer.Stop(); _peekTimer.Stop(); });
+            Step("unsubscribe mutations", () => _service.Mutated -= OnServiceMutated);
+            Interlocked.Exchange(ref _pendingUi, 0);
             Step("unsubscribe display", () => Microsoft.Win32.SystemEvents.DisplaySettingsChanged -= OnDisplayChanged);
             Step("unsubscribe theme", () => { MotionDesk.UI.ThemeManager.Changed -= OnLookChanged; MotionDesk.UI.ThemeManager.Repainted -= OnLookChanged; });
             Step("unsubscribe settings", () => { MotionDesk.Services.HardwareProfileService.ProfileChanged -= OnTierChanged; MotionDesk.Services.LocalizationManager.Changed -= OnLookChanged; });

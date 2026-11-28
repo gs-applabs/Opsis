@@ -1250,5 +1250,1035 @@
       "reason": "Git three-way conflict",
       "method": "R53: exposed SignatureGlass in canonical theme selector, existing DesktopMaterials.ApplySignature with default-No confirmation, guarded shared button gradient. Retained existing AppWindowIcon static brand and stopped pulse (user requires exact asset), existing persisted DeskFlip style picker supersedes incoming one-shot layout commands. No duplicate controls. UI runtime certification pending."
     }
-  ]
+  ],
+  "feature_audit": {
+    "version": "R79",
+    "target": "3.0.0.3200",
+    "source_reviewed_at": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+    "original_proposals": "ROADMAP-100-EL.md",
+    "legacy_backlog": "docs/REMAINING-TASKS-3.0.0.3200.md",
+    "canonical_history": "docs/SOURCE-CONSOLIDATION.md",
+    "classification": "Source present = named source anchor, not complete feature; partial = related code/history; review = no sufficient evidence. No item release-certified by this audit.",
+    "counts": {
+      "PARTIAL_OR_RELATED_EVIDENCE": 31,
+      "REVIEW_REQUIRED": 43,
+      "SOURCE_PRESENT_RUNTIME_GATE_OPEN": 26
+    },
+    "proposals": [
+      {
+        "id": 1,
+        "requirement": "Δείκτης CPU ανά λειτουργία, με ξεχωριστή ένδειξη για τις διεργασίες WebView2.",
+        "pass": "MP02/03",
+        "status": "PARTIAL_OR_RELATED_EVIDENCE",
+        "evidencePath": "src/Services/UiResourceAudit.cs",
+        "evidence": "Describe medianHostCpuCorePercent/medianWebViewCpuCorePercent; no per-feature exclusive attribution",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 2,
+        "requirement": "Καταγραφή του 95ου και 99ου εκατοστημορίου χρόνου καρέ ανά οθόνη.",
+        "pass": "MP02/03",
+        "status": "REVIEW_REQUIRED",
+        "evidencePath": null,
+        "evidence": "Measure actual per-monitor p95/p99 frame reporting and test evidence",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 3,
+        "requirement": "Μέτρηση του χρόνου από το κλικ μέχρι το πρώτο ζωγραφισμένο καρέ της σελίδας.",
+        "pass": "MP02/03",
+        "status": "SOURCE_PRESENT_RUNTIME_GATE_OPEN",
+        "evidencePath": "src/Services/UiResourceAudit.cs",
+        "evidence": "MeasurePagePaint and navigation firstPaintMs; click-to-first-paint needs real UI proof",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 4,
+        "requirement": "Σύγκριση private bytes μετά από επαναλαμβανόμενο άνοιγμα και κλείσιμο κάθε widget.",
+        "pass": "MP02/03",
+        "status": "SOURCE_PRESENT_RUNTIME_GATE_OPEN",
+        "evidencePath": "src/Services/UiResourceAudit.cs",
+        "evidence": "widgetDeltas from before/closed samples; repeat/stress proof pending",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 5,
+        "requirement": "Εντοπισμός αύξησης GDI και USER handles μετά από αλλαγές skin.",
+        "pass": "MP02/03",
+        "status": "SOURCE_PRESENT_RUNTIME_GATE_OPEN",
+        "evidencePath": "src/Services/UiResourceAudit.cs",
+        "evidence": "skinDeltas, GdiObjects/UserObjects; long-run gate open",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 6,
+        "requirement": "Μία κοινή δειγματοληψία αισθητήρων για όλα τα widgets και τις οθόνες.",
+        "pass": "MP02/03",
+        "status": "SOURCE_PRESENT_RUNTIME_GATE_OPEN",
+        "evidencePath": "src/Services/GpuMonitorService.cs",
+        "evidence": "RequestSample and one ReadSensors worker; native driver proof pending; R80 negative retry and nonactivating GPU audit (source only).",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 7,
+        "requirement": "Αναστολή σχεδίασης χωριστά στην οθόνη που καλύπτεται από παιχνίδι.",
+        "pass": "MP02/03",
+        "status": "SOURCE_PRESENT_RUNTIME_GATE_OPEN",
+        "evidencePath": "src/Services/AppActivity.cs",
+        "evidence": "IsPausedFor per screen, coverage and fullscreenDevice; multi-monitor tests pending",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 8,
+        "requirement": "Αυτόματη μείωση ανάλυσης του wallpaper όταν υπερβαίνεται ο στόχος χρόνου καρέ.",
+        "pass": "MP02/03",
+        "status": "REVIEW_REQUIRED",
+        "evidencePath": null,
+        "evidence": "Verify adaptive wallpaper resolution based on measured frame budget",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 9,
+        "requirement": "Πάγωμα του τελευταίου καρέ σε απομακρυσμένη συνεδρία με δυνατότητα εξαίρεσης.",
+        "pass": "MP02/03",
+        "status": "PARTIAL_OR_RELATED_EVIDENCE",
+        "evidencePath": "src/Services/AppActivity.cs",
+        "evidence": "remote pause state; verify last-frame freeze and override",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 10,
+        "requirement": "Προβολή χρονογραμμής που συσχετίζει αιχμές CPU με αλλαγή σκηνής ή φόρτωση πρόσθετου.",
+        "pass": "MP02/03",
+        "status": "PARTIAL_OR_RELATED_EVIDENCE",
+        "evidencePath": "src/Services/UiResourceAudit.cs",
+        "evidence": "Activity/Mark, cpuSpikes, relatedEvent; verify visual timeline and provider events",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 11,
+        "requirement": "Προεπισκόπηση των αρχείων ενός πακέτου wallpaper πριν από την εισαγωγή.",
+        "pass": "MP01/04/06/09",
+        "status": "SOURCE_PRESENT_RUNTIME_GATE_OPEN",
+        "evidencePath": "src/Services/WallpaperPackages.cs",
+        "evidence": "Inspect returns Files/UncompressedBytes/EntryPoint/ScriptCount; verify UI preview",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 12,
+        "requirement": "Δήλωση δικαιωμάτων ανά πρόσθετο για δίκτυο, ήχο και πρόσβαση σε τοπικά αρχεία.",
+        "pass": "MP01/04/06/09",
+        "status": "PARTIAL_OR_RELATED_EVIDENCE",
+        "evidencePath": "src/Services/PluginCapabilityManifest.cs",
+        "evidence": "Read/Summary network/audio/local files declaration; enforce consent/SDK2 separately",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 13,
+        "requirement": "Ανακλητή συναίνεση ανά τοπικό web widget για τη λήψη στοιχείων συστήματος.",
+        "pass": "MP01/04/06/09",
+        "status": "SOURCE_PRESENT_RUNTIME_GATE_OPEN",
+        "evidencePath": "src/Services/WidgetConsentStore.cs",
+        "evidence": "Fingerprint/Allowed/Grant/Revoke; verify control and revocation enforcement",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 14,
+        "requirement": "Εμφάνιση εκδότη και κατάστασης υπογραφής στο παράθυρο εγκατάστασης πρόσθετου.",
+        "pass": "MP01/04/06/09",
+        "status": "REVIEW_REQUIRED",
+        "evidencePath": null,
+        "evidence": "Verify publisher/signature on install UI; do not infer from AuthenticodeVerifier filename",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 15,
+        "requirement": "Έλεγχος ακεραιότητας του update πριν από αντικατάσταση αρχείων.",
+        "pass": "MP01/04/06/09",
+        "status": "REVIEW_REQUIRED",
+        "evidencePath": null,
+        "evidence": "Verify integrity enforcement before actual update replacement",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 16,
+        "requirement": "Επαναφορά προηγούμενης έκδοσης αν το νέο προφίλ αποτύχει να ανοίξει.",
+        "pass": "MP01/04/06/09",
+        "status": "PARTIAL_OR_RELATED_EVIDENCE",
+        "evidencePath": "tests/Opsis.ExperienceSmoke/Program.cs",
+        "evidence": "failed recovery cannot modify live settings; real rollback test pending",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 17,
+        "requirement": "Αναίρεση μαζικής μετακίνησης εικονιδίων με αποθήκευση της αρχικής θέσης.",
+        "pass": "MP01/04/06/09",
+        "status": "PARTIAL_OR_RELATED_EVIDENCE",
+        "evidencePath": "src/Widgets/DesktopIconVisibilityEngine.cs",
+        "evidence": "bulk undo/positions and original journal; Explorer fixture test pending",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 18,
+        "requirement": "Προσωρινή απομόνωση συγκεκριμένου πρόσθετου μετά από διαδοχικές αστοχίες.",
+        "pass": "MP01/04/06/09",
+        "status": "SOURCE_PRESENT_RUNTIME_GATE_OPEN",
+        "evidencePath": "src/Services/PluginFailureQuarantine.cs",
+        "evidence": "IsQuarantined/RecordFailure/Clear; verify thresholds and runtime recovery; R81 gates callbacks and blocks in-process replacement after failed Stop (source only).",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 19,
+        "requirement": "Εξαγωγή διαγνωστικών με προεπισκόπηση και απόκρυψη ονομάτων αρχείων και τοποθεσίας.",
+        "pass": "MP01/04/06/09",
+        "status": "REVIEW_REQUIRED",
+        "evidencePath": null,
+        "evidence": "Verify redacted export preview and path/location redaction",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 20,
+        "requirement": "Έλεγχος επαναφοράς μετά από διακοπή ρεύματος την ώρα αποθήκευσης προφίλ.",
+        "pass": "MP01/04/06/09",
+        "status": "PARTIAL_OR_RELATED_EVIDENCE",
+        "evidencePath": "src/Services/AtomicFile.cs",
+        "evidence": "durable staged JSON, recovery and E2E crash stage; run interrupted-write test",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 21,
+        "requirement": "Επικάλυψη της ανιχνευμένης γραμμής ουρανού στην προεπισκόπηση.",
+        "pass": "MP08",
+        "status": "PARTIAL_OR_RELATED_EVIDENCE",
+        "evidencePath": "src/UI/SkylineMaskEditorForm.cs",
+        "evidence": "mask editor source present; verify overlay in preview",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 22,
+        "requirement": "Διόρθωση της μάσκας με πινέλο ανά φωτογραφία.",
+        "pass": "MP08",
+        "status": "PARTIAL_OR_RELATED_EVIDENCE",
+        "evidencePath": "src/UI/SkylineMaskEditorForm.cs",
+        "evidence": "OpenFor editor; verify brush vs actual control behavior",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 23,
+        "requirement": "Αποθήκευση της μάσκας με αποτύπωμα εικόνας ώστε να μην εφαρμόζεται σε άλλη λήψη.",
+        "pass": "MP08",
+        "status": "SOURCE_PRESENT_RUNTIME_GATE_OPEN",
+        "evidencePath": "src/UI/SkylineMaskEditorForm.cs",
+        "evidence": "SHA256.HashData and saved Sha256 match; verify mismatch rejection",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 24,
+        "requirement": "Ταυτόχρονη προεπισκόπηση χαραυγής, μεσημεριού και νύχτας.",
+        "pass": "MP08",
+        "status": "PARTIAL_OR_RELATED_EVIDENCE",
+        "evidencePath": "src/UI/WeatherTriptychForm.cs",
+        "evidence": "three graded panel render path; verify actual scene rather than illustration",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 25,
+        "requirement": "Επιλογή σημείου ενδιαφέροντος για την περικοπή σε κατακόρυφη οθόνη.",
+        "pass": "MP08",
+        "status": "REVIEW_REQUIRED",
+        "evidencePath": null,
+        "evidence": "Verify persisted portrait crop point and scene rendering",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 26,
+        "requirement": "Ομαλή μετάβαση στον τελευταίο διαθέσιμο καιρό όταν χαθεί η σύνδεση.",
+        "pass": "MP08",
+        "status": "PARTIAL_OR_RELATED_EVIDENCE",
+        "evidencePath": "docs/SOURCE-CONSOLIDATION.md",
+        "evidence": "R50 coordinate-keyed weather cache; exact offline transition test pending",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 27,
+        "requirement": "Ένδειξη ηλικίας και πηγής των δεδομένων καιρού επάνω στο widget.",
+        "pass": "MP08",
+        "status": "PARTIAL_OR_RELATED_EVIDENCE",
+        "evidencePath": "docs/SOURCE-CONSOLIDATION.md",
+        "evidence": "R50 configured weather location/source and white text; actual age/source verification",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 28,
+        "requirement": "Ανεξάρτητος έλεγχος έντασης για βροχή στο τζάμι και βροχή στο τοπίο.",
+        "pass": "MP08",
+        "status": "REVIEW_REQUIRED",
+        "evidencePath": null,
+        "evidence": "Verify separate scene and glass rain intensity control",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 29,
+        "requirement": "Διαδρομή ήλιου και σελήνης με βάση ημερομηνία και γεωγραφικό πλάτος.",
+        "pass": "MP08",
+        "status": "REVIEW_REQUIRED",
+        "evidencePath": null,
+        "evidence": "Verify astronomical date/latitude moon/sun path",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 30,
+        "requirement": "Έλεγχος αναγνωσιμότητας ρολογιού στην πραγματική θέση του πάνω στη φωτογραφία.",
+        "pass": "MP08",
+        "status": "PARTIAL_OR_RELATED_EVIDENCE",
+        "evidencePath": "docs/SOURCE-CONSOLIDATION.md",
+        "evidence": "R50 fixed white text and weather-priority music geometry; actual contrast on photos pending",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 31,
+        "requirement": "Αναγνώριση διάταξης οθονών μετά τη σύνδεση docking station.",
+        "pass": "MP05/07",
+        "status": "SOURCE_PRESENT_RUNTIME_GATE_OPEN",
+        "evidencePath": "src/Services/MonitorTopologyService.cs",
+        "evidence": "Current/Fingerprint/Remember/Known and DockWindowRestorer",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 32,
+        "requirement": "Πανοραμικό φόντο μόνο σε επιλεγμένο ζεύγος οθονών.",
+        "pass": "MP05/07",
+        "status": "REVIEW_REQUIRED",
+        "evidencePath": null,
+        "evidence": "Verify selective monitor pair panorama",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 33,
+        "requirement": "Αντιστάθμιση πλαισίων για πανοραμικές εικόνες.",
+        "pass": "MP05/07",
+        "status": "REVIEW_REQUIRED",
+        "evidencePath": null,
+        "evidence": "Verify bezel compensation",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 34,
+        "requirement": "Σταθερή θέση widget σε οθόνες με διαφορετικό DPI.",
+        "pass": "MP05/07",
+        "status": "PARTIAL_OR_RELATED_EVIDENCE",
+        "evidencePath": "src/Services/MonitorTopologyService.cs",
+        "evidence": "stable IDs and DPI; verify widget position restore",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 35,
+        "requirement": "Προεπισκόπηση προφίλ με χρονόμετρο επαναφοράς.",
+        "pass": "MP05/07",
+        "status": "REVIEW_REQUIRED",
+        "evidencePath": null,
+        "evidence": "Verify timed preview and automatic rollback",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 36,
+        "requirement": "Κανόνες προφίλ ανά συνδεδεμένο τροφοδοτικό και στάθμη μπαταρίας.",
+        "pass": "MP05/07",
+        "status": "REVIEW_REQUIRED",
+        "evidencePath": null,
+        "evidence": "Verify power/battery profile rule action, not just adaptive power tier",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 37,
+        "requirement": "Επαναφορά παραθύρων στην αρχική οθόνη μετά από προσωρινή αποσύνδεση.",
+        "pass": "MP05/07",
+        "status": "SOURCE_PRESENT_RUNTIME_GATE_OPEN",
+        "evidencePath": "src/Services/MonitorTopologyService.cs",
+        "evidence": "DockWindowRestorer remembered placements and monitor IDs; reconnect test pending",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 38,
+        "requirement": "Διαφορετική πυκνότητα πληροφοριών σε κατακόρυφη δευτερεύουσα οθόνη.",
+        "pass": "MP05/07",
+        "status": "REVIEW_REQUIRED",
+        "evidencePath": null,
+        "evidence": "Verify portrait-specific information density",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 39,
+        "requirement": "Μεταφορά προφίλ σε άλλο PC με χειροκίνητη αντιστοίχιση οθονών.",
+        "pass": "MP05/07",
+        "status": "SOURCE_PRESENT_RUNTIME_GATE_OPEN",
+        "evidencePath": "src/Services/WorkspaceProfileService.cs",
+        "evidence": "PreviewPortableMonitors/import mapping; ProfileMonitorMappingDialog",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 40,
+        "requirement": "Εξαίρεση οθόνης παρουσίασης από προσωπικές ειδοποιήσεις και στοιχεία πολυμέσων.",
+        "pass": "MP05/07",
+        "status": "PARTIAL_OR_RELATED_EVIDENCE",
+        "evidencePath": "docs/SOURCE-CONSOLIDATION.md",
+        "evidence": "R57 privacy check before audio allocation; verify all notifications and metadata",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 41,
+        "requirement": "Προεπισκόπηση ζώνης με το πληκτρολόγιο πριν από τη μετακίνηση.",
+        "pass": "MP05",
+        "status": "PARTIAL_OR_RELATED_EVIDENCE",
+        "evidencePath": "src/Widgets/ZoneLayoutEditorForm.cs",
+        "evidence": "preview keyboard arrows/home/end; verify window move preview",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 42,
+        "requirement": "Αναίρεση τελευταίας ομαδικής τακτοποίησης παραθύρων.",
+        "pass": "MP05",
+        "status": "REVIEW_REQUIRED",
+        "evidencePath": null,
+        "evidence": "Verify undo batch window arrangement",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 43,
+        "requirement": "Κανόνες αντιστοίχισης εφαρμογής και τύπου εγγράφου σε ζώνη.",
+        "pass": "MP05",
+        "status": "REVIEW_REQUIRED",
+        "evidencePath": null,
+        "evidence": "Verify app/document rule and conflict with AutoTile",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 44,
+        "requirement": "Προσωρινή επέκταση παραθύρου σε δύο γειτονικές ζώνες.",
+        "pass": "MP05",
+        "status": "REVIEW_REQUIRED",
+        "evidencePath": null,
+        "evidence": "Verify spanning two adjacent zones",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 45,
+        "requirement": "Αλλαγή μεγέθους δύο γειτονικών ζωνών από κοινό όριο.",
+        "pass": "MP05",
+        "status": "REVIEW_REQUIRED",
+        "evidencePath": null,
+        "evidence": "Verify shared divider resizing",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 46,
+        "requirement": "Διατάξεις ειδικά για κατακόρυφη εργασία κώδικα και τεκμηρίωσης.",
+        "pass": "MP05",
+        "status": "REVIEW_REQUIRED",
+        "evidencePath": null,
+        "evidence": "Verify portrait code/document presets",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 47,
+        "requirement": "Εξαγωγή διάταξης σε αναγνώσιμο JSON με προεπισκόπηση εισαγωγής.",
+        "pass": "MP05",
+        "status": "PARTIAL_OR_RELATED_EVIDENCE",
+        "evidencePath": "src/Widgets/ZoneLayoutEditorForm.cs",
+        "evidence": "imported layout and preview panel; verify JSON export/import",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 48,
+        "requirement": "Επαναφορά ομάδας εφαρμογών με σωστή σειρά εκκίνησης.",
+        "pass": "MP05",
+        "status": "PARTIAL_OR_RELATED_EVIDENCE",
+        "evidencePath": "src/Widgets/DeskStripWindow.cs",
+        "evidence": "LaunchGroups settings; actual ordered restore not established",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 49,
+        "requirement": "Εξαιρέσεις για διαλόγους, παλέτες εργαλείων και προσωρινά παράθυρα.",
+        "pass": "MP05",
+        "status": "REVIEW_REQUIRED",
+        "evidencePath": null,
+        "evidence": "Verify dialog/palette/temp-window exclusion",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 50,
+        "requirement": "Προεπισκόπηση των παραθύρων που θα μετακινηθούν όταν αλλάξει προφίλ.",
+        "pass": "MP05",
+        "status": "REVIEW_REQUIRED",
+        "evidencePath": null,
+        "evidence": "Verify profile movement preview",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 51,
+        "requirement": "Προσομοίωση κανόνα ταξινόμησης πριν μετακινηθεί αρχείο.",
+        "pass": "MP04",
+        "status": "PARTIAL_OR_RELATED_EVIDENCE",
+        "evidencePath": "src/Containers/ContainerHost.Organization.cs",
+        "evidence": "SaveFileRules/RefreshOrganization; verify dry-run with no actual file movement",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 52,
+        "requirement": "Εντοπισμός σύγκρουσης όταν δύο κανόνες διεκδικούν το ίδιο αρχείο.",
+        "pass": "MP04",
+        "status": "REVIEW_REQUIRED",
+        "evidencePath": null,
+        "evidence": "Verify rule conflict detection before any mutation",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 53,
+        "requirement": "Προβολή φακέλου ως container με παρακολούθηση μόνο όσο είναι ορατό.",
+        "pass": "MP04",
+        "status": "PARTIAL_OR_RELATED_EVIDENCE",
+        "evidencePath": "src/Containers/ContainerWindow.cs",
+        "evidence": "portal source and RefreshPortal; visibility-only watcher test",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 54,
+        "requirement": "Φίλτρο καρτέλας κατά τύπο, ημερομηνία ή ετικέτα.",
+        "pass": "MP04",
+        "status": "REVIEW_REQUIRED",
+        "evidencePath": null,
+        "evidence": "Verify all three tab filter modes",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 55,
+        "requirement": "Άμεση αναζήτηση σε όλα τα containers με μετάβαση στο αποτέλεσμα.",
+        "pass": "MP04",
+        "status": "REVIEW_REQUIRED",
+        "evidencePath": null,
+        "evidence": "Locate and exercise SpotSearch route; inventory alone insufficient",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 56,
+        "requirement": "Προσωρινή ανάπτυξη κλειστού container κατά τη μεταφορά αρχείου.",
+        "pass": "MP04",
+        "status": "REVIEW_REQUIRED",
+        "evidencePath": null,
+        "evidence": "Verify collapsed-container temporary expansion on drag",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 57,
+        "requirement": "Επισήμανση συντομεύσεων με ανύπαρκτο προορισμό και μαζική επιδιόρθωση.",
+        "pass": "MP04",
+        "status": "SOURCE_PRESENT_RUNTIME_GATE_OPEN",
+        "evidencePath": "src/Containers/ContainerHost.cs",
+        "evidence": "InspectBrokenShortcutsAsync calls InspectAndRepairAsync; verify repair controls",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 58,
+        "requirement": "Κάδος πρόσφατων αλλαγών διάταξης με επαναφορά ανά container.",
+        "pass": "MP04",
+        "status": "SOURCE_PRESENT_RUNTIME_GATE_OPEN",
+        "evidencePath": "src/Containers/ContainerHost.cs",
+        "evidence": "_layoutHistory.Remember/Save and previous container restore; fault test",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 59,
+        "requirement": "Αντιγραφή διάταξης container σε δεύτερο workspace χωρίς αντιγραφή των αρχείων.",
+        "pass": "MP04",
+        "status": "SOURCE_PRESENT_RUNTIME_GATE_OPEN",
+        "evidencePath": "src/Containers/ContainerHost.Organization.cs",
+        "evidence": "CopyContainerIntoLayout/CopyContainerIntoNewLayout; verify no files copied",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 60,
+        "requirement": "Ένδειξη διαδρομής πριν από σύρσιμο μεταξύ τοπικού και δικτυακού φακέλου.",
+        "pass": "MP04",
+        "status": "REVIEW_REQUIRED",
+        "evidencePath": null,
+        "evidence": "Verify path indication before local/network drag",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 61,
+        "requirement": "Ελληνική αναζήτηση χωρίς τόνους και με εναλλακτική πληκτρολόγηση Greeklish.",
+        "pass": "MP05/07",
+        "status": "PARTIAL_OR_RELATED_EVIDENCE",
+        "evidencePath": "src/Widgets/DesktopLauncher.cs",
+        "evidence": "Score delegates SearchLanguage.Score; verify accent and Greeklish behavior",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 62,
+        "requirement": "Εμφάνιση της συντόμευσης δίπλα σε κάθε αποτέλεσμα εντολής.",
+        "pass": "MP05/07",
+        "status": "REVIEW_REQUIRED",
+        "evidencePath": null,
+        "evidence": "Verify shortcut label for each command",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 63,
+        "requirement": "Ιστορικό εντολών με τοπική διαγραφή ανά εγγραφή.",
+        "pass": "MP05/07",
+        "status": "SOURCE_PRESENT_RUNTIME_GATE_OPEN",
+        "evidencePath": "src/Services/CommandHistoryStore.cs",
+        "evidence": "RecentIds/RecordUse/Remove; verify UI deletion",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 64,
+        "requirement": "Καρφίτσωμα αναζήτησης ως έτοιμης ενέργειας στο dock.",
+        "pass": "MP05/07",
+        "status": "REVIEW_REQUIRED",
+        "evidencePath": null,
+        "evidence": "Verify pinned search action, not normal dock app pin",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 65,
+        "requirement": "Προεπισκόπηση εγγράφου από τον εκκινητή χωρίς εκκίνηση εφαρμογής.",
+        "pass": "MP05/07",
+        "status": "SOURCE_PRESENT_RUNTIME_GATE_OPEN",
+        "evidencePath": "src/Widgets/DesktopLauncher.cs",
+        "evidence": "F3 PreviewSelection/QuickLookPreview.Show; verify supported docs",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 66,
+        "requirement": "Ομαδοποίηση πολλών παραθύρων της ίδιας εφαρμογής στο DeskStrip.",
+        "pass": "MP05/07",
+        "status": "PARTIAL_OR_RELATED_EVIDENCE",
+        "evidencePath": "src/Widgets/DeskStripWindow.cs",
+        "evidence": "running apps/previews and item key; grouping behavior test",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 67,
+        "requirement": "Προσαρμογή σειράς εικονιδίων χωριστά για κάθε οθόνη.",
+        "pass": "MP05/07",
+        "status": "SOURCE_PRESENT_RUNTIME_GATE_OPEN",
+        "evidencePath": "src/Widgets/DeskStripWindow.cs",
+        "evidence": "MonitorPinnedOrder persisted; verify independent monitor order; R81 mirror timer only for AllMonitors (source, runtime gate open).",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 68,
+        "requirement": "Ένδειξη ενεργού workspace δίπλα στο dock.",
+        "pass": "MP05/07",
+        "status": "SOURCE_PRESENT_RUNTIME_GATE_OPEN",
+        "evidencePath": "src/Widgets/DeskStripWindow.cs",
+        "evidence": "ShowWorkspaceLabel/UpdateWorkspaceLabel",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 69,
+        "requirement": "Κατάλογος συγκρούσεων καθολικών συντομεύσεων με δοκιμή νέου συνδυασμού.",
+        "pass": "MP05/07",
+        "status": "PARTIAL_OR_RELATED_EVIDENCE",
+        "evidencePath": "src/Widgets/DesktopLauncher.cs",
+        "evidence": "HotkeyDiagnosticDialog.Open; verify actual conflict and new combination test",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 70,
+        "requirement": "Εναλλακτική συμπαγής προβολή εντολών για μικρή ανάλυση.",
+        "pass": "MP05/07",
+        "status": "REVIEW_REQUIRED",
+        "evidencePath": null,
+        "evidence": "Verify compact command view at small resolution",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 71,
+        "requirement": "Κοινό πλέγμα στοίχισης για ρολόι, καιρό και system monitor.",
+        "pass": "MP02/06/07",
+        "status": "REVIEW_REQUIRED",
+        "evidencePath": null,
+        "evidence": "Verify common widget snap grid",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 72,
+        "requirement": "Προσωρινό ξεκλείδωμα όλων των widgets με αντίστροφη μέτρηση.",
+        "pass": "MP02/06/07",
+        "status": "REVIEW_REQUIRED",
+        "evidencePath": null,
+        "evidence": "Verify temporary unlock countdown",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 73,
+        "requirement": "Προσαρμογή συχνότητας ανανέωσης ανά widget.",
+        "pass": "MP02/06/07",
+        "status": "PARTIAL_OR_RELATED_EVIDENCE",
+        "evidencePath": "docs/SOURCE-CONSOLIDATION.md",
+        "evidence": "R63 adaptive music cadence and R72 activity demand; per-widget controls not certified",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 74,
+        "requirement": "Σήμανση μη διαθέσιμου αισθητήρα αντί για πλασματική μηδενική τιμή.",
+        "pass": "MP02/06/07",
+        "status": "SOURCE_PRESENT_RUNTIME_GATE_OPEN",
+        "evidencePath": "src/Services/GpuMonitorService.cs",
+        "evidence": "nullable sensor values; UI unknown display still needs verification; R80 unavailable GPU negative result cached 5 minutes, driver fixture pending.",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 75,
+        "requirement": "Επιλογή συγκεκριμένης GPU σε σύστημα με ενσωματωμένα και διακριτά γραφικά.",
+        "pass": "MP02/06/07",
+        "status": "SOURCE_PRESENT_RUNTIME_GATE_OPEN",
+        "evidencePath": "src/Widgets/WidgetEngine.cs",
+        "evidence": "SystemMonitorGpuIndex and GpuStep; physical multi-GPU test",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 76,
+        "requirement": "Απεικόνιση τάσης θερμοκρασίας σε κυλιόμενο διάστημα.",
+        "pass": "MP02/06/07",
+        "status": "REVIEW_REQUIRED",
+        "evidencePath": null,
+        "evidence": "Verify rolling temperature/voltage chart and bounded buffer",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 77,
+        "requirement": "Σταθερό αναγνωριστικό κάρτας δικτύου όταν αλλάξει το όνομα σύνδεσης.",
+        "pass": "MP02/06/07",
+        "status": "SOURCE_PRESENT_RUNTIME_GATE_OPEN",
+        "evidencePath": "src/Services/AdvancedSystemMonitorService.cs",
+        "evidence": "stable NetworkInterface.Id and removes retired adapters",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 78,
+        "requirement": "Επιλογή συσκευής εισόδου του visualizer ξεχωριστά από την προεπιλεγμένη έξοδο.",
+        "pass": "MP02/06/07",
+        "status": "REVIEW_REQUIRED",
+        "evidencePath": null,
+        "evidence": "Verify independent visualizer input and output device controls",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 79,
+        "requirement": "Προσωρινή απόκρυψη τίτλου τραγουδιού σε κοινή χρήση οθόνης.",
+        "pass": "MP02/06/07",
+        "status": "PARTIAL_OR_RELATED_EVIDENCE",
+        "evidencePath": "docs/SOURCE-CONSOLIDATION.md",
+        "evidence": "R57 presentation privacy before capture; actual screenshare privacy test",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 80,
+        "requirement": "Ομαλή επιστροφή του visualizer μετά από αποσύνδεση Bluetooth.",
+        "pass": "MP02/06/07",
+        "status": "REVIEW_REQUIRED",
+        "evidencePath": null,
+        "evidence": "Verify Bluetooth disconnect/reconnect visualizer recovery",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 81,
+        "requirement": "Δείγμα κουμπιού σε κανονική κατάσταση, hover, πάτημα, εστίαση και απενεργοποίηση στον επεξεργαστή θέματος.",
+        "pass": "MP07",
+        "status": "REVIEW_REQUIRED",
+        "evidencePath": null,
+        "evidence": "Verify all control states in theme editor",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 82,
+        "requirement": "Προεπισκόπηση θέματος με τις μεγαλύτερες μεταφρασμένες λεζάντες.",
+        "pass": "MP07",
+        "status": "REVIEW_REQUIRED",
+        "evidencePath": null,
+        "evidence": "Verify longest localized captions layout",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 83,
+        "requirement": "Ελάχιστη αντίθεση κειμένου κατά την επιλογή προσαρμοσμένου χρώματος.",
+        "pass": "MP07",
+        "status": "REVIEW_REQUIRED",
+        "evidencePath": null,
+        "evidence": "Verify contrast minimum during custom color selection",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 84,
+        "requirement": "Ορατή σειρά πλοήγησης με Tab στον επεξεργαστή διάταξης.",
+        "pass": "MP07",
+        "status": "PARTIAL_OR_RELATED_EVIDENCE",
+        "evidencePath": "src/Widgets/ZoneLayoutEditorForm.cs",
+        "evidence": "keyboard preview; complete Tab navigation unverified",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 85,
+        "requirement": "Αναγγελία αλλαγής ενεργού προφίλ μέσω αναγνώστη οθόνης.",
+        "pass": "MP07",
+        "status": "REVIEW_REQUIRED",
+        "evidencePath": null,
+        "evidence": "Verify screen-reader profile change announcement",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 86,
+        "requirement": "Εφαρμογή της ρύθμισης μειωμένης κίνησης και στα web wallpapers.",
+        "pass": "MP07",
+        "status": "PARTIAL_OR_RELATED_EVIDENCE",
+        "evidencePath": "docs/SOURCE-CONSOLIDATION.md",
+        "evidence": "R49 reduced motion music and Athens gate; general web wallpapers verify",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 87,
+        "requirement": "Ξεχωριστή κλίμακα γραμματοσειράς για το dock και τις κάρτες.",
+        "pass": "MP07",
+        "status": "SOURCE_PRESENT_RUNTIME_GATE_OPEN",
+        "evidencePath": "src/Widgets/DeskStripWindow.cs",
+        "evidence": "LabelFontScalePercent independent from cards; UI behavior verify",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 88,
+        "requirement": "Αυτόματη επιλογή accent από το φόντο με προεπισκόπηση πριν από εφαρμογή.",
+        "pass": "MP07",
+        "status": "PARTIAL_OR_RELATED_EVIDENCE",
+        "evidencePath": "src/Widgets/TrayApplicationContext.cs",
+        "evidence": "WallpaperAccentEngine.RefreshIfChanged opt-in; actual preview verify",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 89,
+        "requirement": "Προεπισκόπηση από δεξιά προς τα αριστερά για αραβική μετάφραση.",
+        "pass": "MP07",
+        "status": "REVIEW_REQUIRED",
+        "evidencePath": null,
+        "evidence": "Verify RTL theme preview",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 90,
+        "requirement": "Επεξήγηση του λόγου που ένα κουμπί είναι ανενεργό μέσα στην ίδια σελίδα.",
+        "pass": "MP07",
+        "status": "REVIEW_REQUIRED",
+        "evidencePath": null,
+        "evidence": "Verify in-page disabled reason catalog",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 91,
+        "requirement": "Ένας πίνακας έκδοσης για app, installer, βοήθεια και ενημερώσεις.",
+        "pass": "MP09/07/06",
+        "status": "REVIEW_REQUIRED",
+        "evidencePath": null,
+        "evidence": "Verify version matrix app/installer/help/update on exact final SHA",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 92,
+        "requirement": "Δοκιμή της υπάρχουσας σελίδας εξαρτήσεων σε Windows με μόνο .NET 10, με .NET 11, χωρίς WebView2 και με ακύρωση λήψης. Και τα δύο branches έχουν έλεγχο runtime.",
+        "pass": "MP09/07/06",
+        "status": "PARTIAL_OR_RELATED_EVIDENCE",
+        "evidencePath": "docs/REMAINING-TASKS-3.0.0.3200.md",
+        "evidence": "old dependency matrix retained; real install scenarios not certified",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 93,
+        "requirement": "Επαλήθευση του νέου εναλλακτικού κλασικού μενού σε Windows χωρίς Visual C++ Build Tools. Δοκιμή και των πέντε εντολών και της μετάβασης στο εγγενές μενού μετά από πλήρες build.",
+        "pass": "MP09/07/06",
+        "status": "REVIEW_REQUIRED",
+        "evidencePath": null,
+        "evidence": "R81 exact-executable fallback cleanup source; native/fallback five commands and side-by-side test still open.",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 94,
+        "requirement": "Σύντομη προβολή νέων λειτουργιών μόνο στην πρώτη εκκίνηση μετά από αναβάθμιση.",
+        "pass": "MP09/07/06",
+        "status": "PARTIAL_OR_RELATED_EVIDENCE",
+        "evidencePath": "docs/SOURCE-CONSOLIDATION.md",
+        "evidence": "R48 first steps/help; upgrade-only tour not established",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 95,
+        "requirement": "Θεματική βοήθεια από κάθε κουμπί με F1.",
+        "pass": "MP09/07/06",
+        "status": "PARTIAL_OR_RELATED_EVIDENCE",
+        "evidencePath": "docs/SOURCE-CONSOLIDATION.md",
+        "evidence": "R48 F1 route; per-control topic coverage not established",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 96,
+        "requirement": "Αναζήτηση στη βοήθεια με συνώνυμα των ελληνικών ονομασιών.",
+        "pass": "MP09/07/06",
+        "status": "REVIEW_REQUIRED",
+        "evidencePath": null,
+        "evidence": "Verify Greek synonyms in Help, not just launcher search",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 97,
+        "requirement": "Κατάλογος συμβατότητας επεκτάσεων ανά branch. Πρώτα News Crawler και Appearance, που αναφέρονται στον παλιό installer, με έκδοση API και διαδρομή εγκατάστασης για κάθε πακέτο.",
+        "pass": "MP09/07/06",
+        "status": "SOURCE_PRESENT_RUNTIME_GATE_OPEN",
+        "evidencePath": "src/Services/PluginCompatibilityCatalog.cs",
+        "evidence": "Read/Probe entries; Appearance runtime still unverified",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 98,
+        "requirement": "Εξαγωγή αναφοράς build με ακριβές στάδιο αποτυχίας και έκδοση εργαλείων.",
+        "pass": "MP09/07/06",
+        "status": "SOURCE_PRESENT_RUNTIME_GATE_OPEN",
+        "evidencePath": "docs/SOURCE-CONSOLIDATION.md",
+        "evidence": "R57 verify-windows-rc.ps1 evidence; R75 build diagnostics artifact",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 99,
+        "requirement": "Δύο δοκιμές με αποθηκευμένες ρυθμίσεις: αναβάθμιση εντός του τρέχοντος branch και χωριστή εγκατάσταση δίπλα στην 2.4.6.1. Έλεγχος καταλόγου, autostart, απεγκατάστασης και εκκίνησης όσο τρέχει το άλλο branch.",
+        "pass": "MP09/07/06",
+        "status": "REVIEW_REQUIRED",
+        "evidencePath": null,
+        "evidence": "Real 2.8 upgrade and parallel 2.4.6.1 installer isolation",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      },
+      {
+        "id": 100,
+        "requirement": "Προαιρετική καταγραφή συνεδρίας διάγνωσης με αυτόματο τερματισμό και τοπικό αρχείο.",
+        "pass": "MP09/07/06",
+        "status": "SOURCE_PRESENT_RUNTIME_GATE_OPEN",
+        "evidencePath": "src/Services/DiagnosticSessionService.cs",
+        "evidence": "Start(destination,duration), Cancel, Finished; verify bounded local recording",
+        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "releaseCertified": false
+      }
+    ],
+    "handoff": {
+      "active_branch": "integration/opsis-unified-source-r27",
+      "active_when_prepared": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+      "parent_R77": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+      "main": "76615c1f2661816f1645f65e87ed6223d0dcdbeb",
+      "review_pr": 18,
+      "ci_only_never_merge": 20,
+      "latest_certified": "1bbb82b2bcd660674ee92a8f1c59bc463caea8be",
+      "latest_audit_run": 46100848383,
+      "latest_artifact": 15245119446,
+      "next": "Check R77 full audit 46102704472 and split host/WebView data. If all seven success CAS R77 -> R80 (ahead 2/behind 0) to test GPU/heap separately. R81 staged atop R80; promote after R80 gates. Continue demand lifecycle, SDK2 and native migration gates. No main merge/release.",
+      "parent_R79": "835b784e5cdce8fb8eb2134df79c1632366b82a0",
+      "parent_R80": "5ad65d13c11262ff9a75b4a5c387bbeb50e40c59"
+    }
+  }
 }

@@ -154,7 +154,54 @@ namespace MotionDesk.Widgets
             catch (Exception) { return false; }
         }
 
-        private static List<SavedIconPos> LoadOriginals() { try { return File.Exists(OriginalsStatePath) ? JsonSerializer.Deserialize<List<SavedIconPos>>(File.ReadAllText(OriginalsStatePath)) ?? new() : new(); } catch (Exception) { return new(); } }
+        private static readonly object OriginalsGate = new();
+
+        private static List<SavedIconPos> LoadOriginals()
+        {
+            // An unreadable recovery journal is NOT an empty journal. Never
+            // discard uncertain recovery positions by starting another hide.
+            if (!File.Exists(OriginalsStatePath)) return new();
+            var saved = JsonSerializer.Deserialize<List<SavedIconPos>>(File.ReadAllText(OriginalsStatePath))
+                ?? throw new IOException("Desktop original recovery journal is null.");
+            if (saved.Any(x => x == null || string.IsNullOrWhiteSpace(x.Name)) ||
+                saved.Select(x => x.Name).Distinct(StringComparer.OrdinalIgnoreCase).Count() != saved.Count)
+                throw new IOException("Desktop original recovery journal is ambiguous.");
+            return saved;
+        }
+
+        // Explorer may show a shortcut or a file without its extension.
+        // Never hide an alias which identifies more than one filesystem entry.
+        internal static HashSet<string> UniqueIconNames(IEnumerable<string> requested, IEnumerable<string> desktopEntries)
+        {
+            var owners = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            var ambiguous = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var path in desktopEntries.Distinct(StringComparer.OrdinalIgnoreCase))
+                foreach (var alias in IconNames(path))
+                {
+                    if (owners.TryGetValue(alias, out var owner) &&
+                        !string.Equals(owner, path, StringComparison.OrdinalIgnoreCase)) ambiguous.Add(alias);
+                    else owners[alias] = path;
+                }
+            var want = requested.ToHashSet(StringComparer.OrdinalIgnoreCase);
+            return owners.Where(p => want.Contains(p.Value) && !ambiguous.Contains(p.Key))
+                .Select(p => p.Key).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        }
+
+        internal static HashSet<string> ReleasedIconNames(IEnumerable<string> released, IEnumerable<string> retained)
+        {
+            var names = released.SelectMany(IconNames).ToHashSet(StringComparer.OrdinalIgnoreCase);
+            names.ExceptWith(retained.SelectMany(IconNames));
+            return names;
+        }
+
+        private static string[] DesktopEntries()
+        {
+            var directories = new[] { Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory),
+                Environment.GetFolderPath(Environment.SpecialFolder.CommonDesktopDirectory) };
+            return directories.Where(d => !string.IsNullOrWhiteSpace(d) && Directory.Exists(d))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .SelectMany(Directory.EnumerateFileSystemEntries).Select(Path.GetFullPath).ToArray();
+        }
 
         private static void WithDesktopList(Action<IntPtr, IntPtr, int> work)
         {
@@ -208,22 +255,33 @@ namespace MotionDesk.Widgets
         /// <summary>Hides the desktop icons of the given files (only files that really are on the desktop). Returns how many were hidden.</summary>
         public static int HideOriginals(IEnumerable<string> paths)
         {
-            var want = paths.Where(IsOnDesktop).SelectMany(IconNames).ToHashSet(StringComparer.OrdinalIgnoreCase); if (want.Count == 0) return 0;
+            lock (OriginalsGate) return HideOriginalsLocked(paths);
+        }
+
+        private static int HideOriginalsLocked(IEnumerable<string> paths)
+        {
             int hidden = 0;
             try
             {
+                var requested = paths.Where(IsOnDesktop).Select(Path.GetFullPath).ToArray();
+                if (requested.Length == 0) return 0;
+                var want = UniqueIconNames(requested, DesktopEntries());
+                if (want.Count == 0) return 0;
                 var saved = LoadOriginals();
                 WithDesktopList((hp, list, count) =>
                 {
                     var batch = new List<SavedIconPos>();
                     var known = saved.Select(x => x.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
+                    var names = Enumerable.Range(0, count).Select(i => GetItemTextRemote(hp, list, i)).ToArray();
+                    var unique = names.Where(n => !string.IsNullOrWhiteSpace(n)).GroupBy(n => n, StringComparer.OrdinalIgnoreCase)
+                        .Where(g => g.Count() == 1).Select(g => g.Key).ToHashSet(StringComparer.OrdinalIgnoreCase);
                     for (int i = 0; i < count; i++)
                     {
-                        var name = GetItemTextRemote(hp, list, i);
-                        if (!want.Contains(name) || known.Contains(name)) continue;
-                        var pos = GetItemPositionRemote(hp, list, i);
-                        if (pos.X <= -5000) continue;
-                        batch.Add(new SavedIconPos { Index = i, Name = name, X = pos.X, Y = pos.Y });
+                        var name = names[i];
+                        if (!want.Contains(name) || known.Contains(name) || !unique.Contains(name)) continue;
+                        var pos = ReadItemPosition(hp, list, i);
+                        if (pos == null || pos.Value.X <= -5000) continue;
+                        batch.Add(new SavedIconPos { Index = i, Name = name, X = pos.Value.X, Y = pos.Value.Y });
                         known.Add(name);
                     }
                     if (batch.Count == 0) return;
@@ -258,30 +316,46 @@ namespace MotionDesk.Widgets
         public static int RestoreOriginals(string? onlyPath = null) =>
             RestoreOriginalsByName(onlyPath == null ? null : IconNames(onlyPath).ToHashSet(StringComparer.OrdinalIgnoreCase));
 
-        internal static int RestoreOriginalsForPaths(IEnumerable<string> paths) =>
-            RestoreOriginalsByName(paths.Where(IsOnDesktop).SelectMany(IconNames).ToHashSet(StringComparer.OrdinalIgnoreCase));
+        internal static int RestoreOriginalsForPaths(IEnumerable<string> paths, IEnumerable<string>? retained = null) =>
+            RestoreOriginalsByName(ReleasedIconNames(paths.Where(IsOnDesktop),
+                (retained ?? Array.Empty<string>()).Where(IsOnDesktop)));
 
         private static int RestoreOriginalsByName(HashSet<string>? only)
         {
+            lock (OriginalsGate) return RestoreOriginalsLocked(only);
+        }
+
+        private static int RestoreOriginalsLocked(HashSet<string>? only)
+        {
             if (only is { Count: 0 }) return 0;
-            var saved = LoadOriginals(); if (saved.Count == 0) return 0;
             int back = 0;
             try
             {
+                var saved = LoadOriginals(); if (saved.Count == 0) return 0;
                 WithDesktopList((hp, list, count) =>
                 {
+                    var names = Enumerable.Range(0, count).Select(i => GetItemTextRemote(hp, list, i)).ToArray();
+                    var unique = names.Where(n => !string.IsNullOrWhiteSpace(n)).GroupBy(n => n, StringComparer.OrdinalIgnoreCase)
+                        .Where(g => g.Count() == 1).Select(g => g.Key).ToHashSet(StringComparer.OrdinalIgnoreCase);
                     for (int i = 0; i < count; i++)
                     {
-                        var name = GetItemTextRemote(hp, list, i);
+                        var name = names[i];
+                        if (!unique.Contains(name) || (only != null && !only.Contains(name))) continue;
                         var sv = saved.FirstOrDefault(x => string.Equals(x.Name, name, StringComparison.OrdinalIgnoreCase));
-                        if (sv == null || (only != null && !only.Contains(name))) continue;
+                        if (sv == null) continue;
+                        // Verify the live index again. An already visible icon
+                        // may have been restored/moved by the user or Explorer.
+                        if (!string.Equals(GetItemTextRemote(hp, list, i), name, StringComparison.OrdinalIgnoreCase)) continue;
+                        var pos = ReadItemPosition(hp, list, i);
+                        if (pos == null) continue;
+                        if (pos.Value.X > -5000) { saved.Remove(sv); continue; }
                         if (SetItemPositionRemote(list, i, sv.X, sv.Y)) { saved.Remove(sv); back++; }
                     }
                 });
                 if (saved.Count == 0) { try { File.Delete(OriginalsStatePath); } catch (Exception) { } }
                 else MotionDesk.Services.AtomicFile.WriteAllText(OriginalsStatePath, JsonSerializer.Serialize(saved));
             }
-            catch (Exception) { }
+            catch (Exception ex) { MotionDesk.Services.RotatingLogger.Write("Desktop original recovery deferred: " + ex.Message); }
             return back;
         }
 

@@ -211,7 +211,7 @@ namespace MotionDesk.UI
         public static void RefreshOpsisAccent()
         {
             Current = Resolve(AppSettings.Load().ThemeMode);
-            Changed?.Invoke();
+            RaiseChangedTraced();
         }
 
         // Κάθε widget

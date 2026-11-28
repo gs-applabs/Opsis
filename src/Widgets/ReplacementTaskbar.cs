@@ -9,6 +9,7 @@ internal sealed class ReplacementTaskbar : Form
 {
     private static readonly Dictionary<string, ReplacementTaskbar> Bars = new(StringComparer.OrdinalIgnoreCase);
     private static System.Windows.Forms.Timer? _timer;
+    internal static bool ActivityDemand => _timer != null;
     private static HotkeyManager? _shortcut;
     private static long _windowsTrayUntil;
     private static WinApi.AppWindow[] _windows = [];
@@ -92,6 +93,7 @@ internal sealed class ReplacementTaskbar : Form
             _timer = new System.Windows.Forms.Timer { Interval = 950 };
             _timer.Tick += (_, _) => RefreshBars();
             _timer.Start();
+            AppActivity.RequestRefresh();
             ThemeManager.Changed += RefreshBars;
             VirtualWorkspaces.Changed += MoveToActiveWorkspace;
             _shortcut = new HotkeyManager();
@@ -118,6 +120,7 @@ internal sealed class ReplacementTaskbar : Form
         foreach (var bar in Bars.Values) bar.Dispose();
         Bars.Clear();
         _windows = [];
+        AppActivity.RequestRefresh();
     }
 
     private static void MoveToActiveWorkspace()

@@ -87,6 +87,9 @@ namespace MotionDesk.Widgets
             _hookId = IntPtr.Zero;
             _callback = null;
             StopTracking();
+            _pollTimer?.Dispose(); _pollTimer = null;
+            _overlay?.Dispose(); _overlay = null;
+            _overlayScreen = null;
         }
 
         private static bool IsShiftDown() => (GetAsyncKeyState(VK_SHIFT) & 0x8000) != 0;

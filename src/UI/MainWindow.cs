@@ -105,7 +105,8 @@ namespace MotionDesk.UI
         private readonly System.Collections.Generic.Dictionary<string, NavButton> _navButtons = new();
         private readonly System.Collections.Generic.Dictionary<string, Action> _pageBuilders = new();
         private string _currentPageKey = "Dashboard";
-        private readonly HotkeyManager _hotkeys;
+        private readonly HotkeyManager? _hotkeys;
+        private readonly bool _hostedByTray;
 
         private const int DWMWA_USE_IMMERSIVE_DARK_MODE = 20;
         [System.Runtime.InteropServices.DllImport("dwmapi.dll")]
@@ -125,8 +126,11 @@ namespace MotionDesk.UI
             RefreshMainWindowBackdrop();
         }
 
-        public MainWindow()
+        public MainWindow() : this(false) { }
+
+        internal MainWindow(bool hostedByTray)
         {
+            _hostedByTray = hostedByTray;
             // Διορθώνει "λευκά τετραγωνάκια" κατά την αλλαγή σκουρότητας θέματος: η πλήρης
             // ανακατασκευή σελίδας/sidebar σε κάθε ThemeManager.Changed (OnThemeOrLanguageChanged)
             // κάνει Controls.Clear()+Add() σε πολλά containers — χωρίς DoubleBuffered στο ίδιο το
@@ -151,7 +155,7 @@ namespace MotionDesk.UI
             string currentVersion = Services.AppVersion.Short;
             bool announceUpgrade = !string.IsNullOrWhiteSpace(previousVersion) &&
                 !string.Equals(previousVersion, currentVersion, StringComparison.Ordinal);
-            if (!string.Equals(previousVersion, currentVersion, StringComparison.Ordinal))
+            if (!announceUpgrade && !string.Equals(previousVersion, currentVersion, StringComparison.Ordinal))
             {
                 appSettings.LastSeenAppVersion = currentVersion;
                 appSettings.Save();
@@ -167,6 +171,10 @@ namespace MotionDesk.UI
                     string intro = StudioText($"Opsis upgraded to {currentVersion}.", $"Το Opsis αναβαθμίστηκε στην {currentVersion}.");
                     MessageBox.Show(this, intro + Environment.NewLine + Environment.NewLine + notes,
                         "Opsis · " + currentVersion, MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    // Do not mark the update read during a background-only start.
+                    var seen = AppSettings.Load();
+                    seen.LastSeenAppVersion = currentVersion;
+                    seen.Save();
                 }));
             }
             UiTheme.ApplyScale(appSettings.UiScalePercent);
@@ -208,27 +216,15 @@ namespace MotionDesk.UI
             _statusTimer = new System.Windows.Forms.Timer { Interval = 5000 };
             _statusTimer.Tick += (_, _) => UpdateStatus();
             _statusTimer.Enabled = Visible && WindowState != FormWindowState.Minimized;
-            _hotkeys = new HotkeyManager();
-            _hotkeys.RegisterCtrlAlt('G', ToggleGamingMode);
-            _hotkeys.RegisterCtrlAlt('M', ShowAndActivate);
-            // ΝΕΟ, στα πρότυπα του FancyWM (ζητήθηκε ρητά): μετακινεί το τρέχον ενεργό παράθυρο
-            // στη γειτονική DeskZone προς αυτή την κατεύθυνση, χωρίς ποντίκι. Ctrl+Alt+Shift (όχι
-            // απλό Ctrl+Alt) — το απλό Ctrl+Alt+βελάκι βρέθηκε ήδη δεσμευμένο σε αυτό το μηχάνημα
-            // από τον οδηγό γραφικών (περιστροφή οθόνης), επιβεβαιωμένο με αποτυχημένο RegisterHotKey.
-            _hotkeys.RegisterCtrlAltShift(Keys.Left, () => ZoneSnapEngine.MoveForegroundWindowToZone(ZoneSnapEngine.ZoneDirection.Left));
-            _hotkeys.RegisterCtrlAltShift(Keys.Right, () => ZoneSnapEngine.MoveForegroundWindowToZone(ZoneSnapEngine.ZoneDirection.Right));
-            _hotkeys.RegisterCtrlAltShift(Keys.Up, () => ZoneSnapEngine.MoveForegroundWindowToZone(ZoneSnapEngine.ZoneDirection.Up));
-            _hotkeys.RegisterCtrlAltShift(Keys.Down, () => ZoneSnapEngine.MoveForegroundWindowToZone(ZoneSnapEngine.ZoneDirection.Down));
-            // ΝΕΟ ("πλήρες σετ πληκτρολογίου FancyWM", task tracker t27): Ctrl+Shift+βελάκι (χωρίς
-            // Alt) μετακινεί μόνο την ΕΣΤΙΑΣΗ στη γειτονική ζώνη, χωρίς να μετακινήσει κανένα παράθυρο.
-            _hotkeys.RegisterCtrlShift(Keys.Left, () => ZoneSnapEngine.FocusAdjacentZone(ZoneSnapEngine.ZoneDirection.Left));
-            _hotkeys.RegisterCtrlShift(Keys.Right, () => ZoneSnapEngine.FocusAdjacentZone(ZoneSnapEngine.ZoneDirection.Right));
-            _hotkeys.RegisterCtrlShift(Keys.Up, () => ZoneSnapEngine.FocusAdjacentZone(ZoneSnapEngine.ZoneDirection.Up));
-            _hotkeys.RegisterCtrlShift(Keys.Down, () => ZoneSnapEngine.FocusAdjacentZone(ZoneSnapEngine.ZoneDirection.Down));
+            if (!_hostedByTray)
+            {
+                _hotkeys = new HotkeyManager();
+                RegisterDesktopHotkeys(_hotkeys, ToggleGamingMode, ShowAndActivate, !SafeModeService.IsSafeMode);
+            }
 
             ThemeManager.UiContext = System.Threading.SynchronizationContext.Current;
             AnimationsSettingChanged += UpdateAnimationTimers;
-            WorkspaceProfileService.ExitSaveDone = false;
+            if (!_hostedByTray) WorkspaceProfileService.ExitSaveDone = false;
             WorkspaceProfileService.ProfileActivated += AnnounceActiveProfile;
             Controls.Add(_profileLive);
             _profileLive.BringToFront();
@@ -240,12 +236,15 @@ namespace MotionDesk.UI
             // Χαμηλού-κόστους hook, τρέχει σε όλη τη διάρκεια ζωής της εφαρμογής — δεν κάνει
             // τίποτα εκτός αν ο χρήστης κρατάει Shift ενώ σέρνει ένα παράθυρο (βλ. ZoneSnapEngine).
             // After an update, show the Version History once (the first time the window is shown with a new version)
-            ZoneSnapEngine.AllowOwnWindow = h => IsHandleCreated && h == Handle;
-            ZoneSnapEngine.Start();
+            if (!_hostedByTray && !SafeModeService.IsSafeMode)
+            {
+                ZoneSnapEngine.AllowOwnWindow = h => IsHandleCreated && h == Handle;
+                ZoneSnapEngine.Start();
+            }
 
             FormClosed += (_, _) =>
             {
-                if (!WorkspaceProfileService.ExitSaveDone) { try { WorkspaceProfileService.Save("Last Session"); } catch { } }
+                if (!_hostedByTray) { try { WorkspaceProfileService.SaveLastSessionOnce(); } catch { } }
                 AnimationsSettingChanged -= UpdateAnimationTimers;
                 WorkspaceProfileService.ProfileActivated -= AnnounceActiveProfile;
                 _studioNavTips?.Dispose();
@@ -253,27 +252,17 @@ namespace MotionDesk.UI
                 ThemeManager.Repainted -= OnThemeRepainted;
                 LocalizationManager.Changed -= OnThemeOrLanguageChanged;
                 SystemEvents.UserPreferenceChanged -= OnWindowsPreferenceChanged;
-                ZoneSnapEngine.Stop();
+                if (!_hostedByTray) { ZoneSnapEngine.Stop(); ZoneSnapEngine.AllowOwnWindow = null; }
                 _statusTimer.Dispose();
                 _opacitySaveTimer.Dispose();
                 _brandPulseTimer?.Dispose();
                 _sidebarAnimTimer?.Dispose();
                 _headerWaveTimer?.Dispose();
-                _hotkeys.Dispose();
+                _hotkeys?.Dispose();
             };
 
             ShowDashboard();
-            var saved = AppSettings.Load();
-            // Safe mode (v2.0 handoff, Φάση 1 §S): η "Last Session" περιέχει ακριβώς τα widgets/
-            // DeskContainers/wallpaper που ίσως προκάλεσαν τα διαδοχικά crashes — δεν επαναφέρεται.
-            if (!SafeModeService.IsSafeMode && saved.RestoreLastSession && WorkspaceProfileService.ListProfiles().Contains("Last Session", StringComparer.OrdinalIgnoreCase))
-            {
-                try { WorkspaceProfileService.Load("Last Session"); } catch { }
-            }
-            else if (saved.ShowSystemMonitor && !WidgetHostEngine.Instance.GetActiveWidgets().Any(w => w.WidgetId == "sysmon"))
-            {
-                WidgetHostEngine.Instance.SpawnWidget("sysmon", 100, 100, 300, 200);
-            }
+            if (!_hostedByTray) WorkspaceProfileService.RestoreStartupSession();
             // A failed startup profile can offer a known, SHA-256-verified
             // previous installer. It never starts automatically and only after
             // explicit user approval; otherwise the app stays in safe mode.
@@ -522,9 +511,9 @@ namespace MotionDesk.UI
                 return;
             }
             // Πραγματικό κλείσιμο (έξοδος/shutdown): αποθήκευση ΤΩΡΑ, όσο τα widgets ζουν ακόμα.
-            if (!WorkspaceProfileService.ExitSaveDone)
+            if (!_hostedByTray || e.CloseReason != CloseReason.UserClosing)
             {
-                try { WorkspaceProfileService.Save("Last Session"); WorkspaceProfileService.ExitSaveDone = true; } catch { }
+                try { WorkspaceProfileService.SaveLastSessionOnce(); } catch { }
             }
             SaveWindowPlacement();
             base.OnFormClosing(e);
@@ -1187,6 +1176,21 @@ namespace MotionDesk.UI
             _content.ResumeLayout();
             if (samePage && control is ScrollableControl target)
                 BeginInvoke(new Action(() => { if (!target.IsDisposed) target.AutoScrollPosition = new Point(0, keepY); }));
+        }
+
+        internal static void RegisterDesktopHotkeys(HotkeyManager keys, Action toggleGaming, Action showWindow, bool optionalAllowed)
+        {
+            keys.RegisterCtrlAlt('M', showWindow);
+            if (!optionalAllowed) return;
+            keys.RegisterCtrlAlt('G', toggleGaming);
+            keys.RegisterCtrlAltShift(Keys.Left, () => ZoneSnapEngine.MoveForegroundWindowToZone(ZoneSnapEngine.ZoneDirection.Left));
+            keys.RegisterCtrlAltShift(Keys.Right, () => ZoneSnapEngine.MoveForegroundWindowToZone(ZoneSnapEngine.ZoneDirection.Right));
+            keys.RegisterCtrlAltShift(Keys.Up, () => ZoneSnapEngine.MoveForegroundWindowToZone(ZoneSnapEngine.ZoneDirection.Up));
+            keys.RegisterCtrlAltShift(Keys.Down, () => ZoneSnapEngine.MoveForegroundWindowToZone(ZoneSnapEngine.ZoneDirection.Down));
+            keys.RegisterCtrlShift(Keys.Left, () => ZoneSnapEngine.FocusAdjacentZone(ZoneSnapEngine.ZoneDirection.Left));
+            keys.RegisterCtrlShift(Keys.Right, () => ZoneSnapEngine.FocusAdjacentZone(ZoneSnapEngine.ZoneDirection.Right));
+            keys.RegisterCtrlShift(Keys.Up, () => ZoneSnapEngine.FocusAdjacentZone(ZoneSnapEngine.ZoneDirection.Up));
+            keys.RegisterCtrlShift(Keys.Down, () => ZoneSnapEngine.FocusAdjacentZone(ZoneSnapEngine.ZoneDirection.Down));
         }
 
         private void ShowAndActivate()
@@ -4472,8 +4476,12 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
             return true;
         }
 
-        private bool _gamingModeActive;
-        private void ToggleGamingMode() => LoadProfileFromQuickButton(_gamingModeActive ? "Work" : "Gaming", true);
+        private static bool _gamingModeActive;
+        internal void ToggleGamingMode() => LoadProfileFromQuickButton(_gamingModeActive ? "Work" : "Gaming", true);
+        internal static void ToggleGamingWithoutWindow()
+        {
+            if (WorkspaceProfileService.Load(_gamingModeActive ? "Work" : "Gaming")) _gamingModeActive = !_gamingModeActive;
+        }
         private void LoadProfileFromQuickButton(string profile, bool toggle = false)
         {
             if (WorkspaceProfileService.Load(profile)) { if (toggle) _gamingModeActive = !_gamingModeActive; _statusLabel.Text = string.Format(LocalizationManager.T("Automation.ProfileLoadedStatus"), profile); }
@@ -4488,6 +4496,7 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
         // έπιασε ζωντανά ("το ιστορικό μένει στην 1.9.0"). Πρόσθεσε ΚΑΙ εδώ τη νέα έκδοση.
         private static readonly (string Version, string Date)[] HistoricalVersions =
         {
+            ("2.8.0.2511", "2026-11"), ("2.8.0.2510", "2026-11"), ("2.8.0.2500", "2026-11"),
             ("2.7.7.2402", "2026-11"), ("2.7.6.2401", "2026-11"), ("2.7.5.2400", "2026-11"), ("2.6.0-studio.23", "2026-11"), ("2.6.0-studio.22", "2026-11"), ("2.6.0-studio.21", "2026-11"), ("2.6.0-studio.20", "2026-11"), ("2.6.0-studio.19", "2026-11"), ("2.6.0", "2026-11"), ("2.4.6.1", "2026-11"), ("2.4.6", "2026-11"), ("2.4.5", "2026-11"), ("2.4.4", "2026-11"), ("2.4.3", "2026-11"), ("2.4.2", "2026-11"), ("2.4.1", "2026-11"), ("2.4.0", "2026-11"), ("2.3.1", "2026-10"), ("2.3.0", "2026-10"), ("2.2.6", "2026-10"), ("2.2.5", "2026-10"), ("2.2.0", "2026-10"), ("2.1.3", "2026-10"), ("2.1.2", "2026-10"), ("2.1.1", "2026-10"), ("2.1.0", "2026-10"), ("2.0.0", "2026-10"), ("1.9.12", "2026-10"), ("1.9.11", "2026-10"), ("1.9.10", "2026-10"), ("1.9.9", "2026-10"), ("1.9.8", "2026-10"), ("1.9.7", "2026-10"), ("1.9.6", "2026-10"), ("1.9.5", "2026-10"), ("1.9.4", "2026-10"), ("1.9.3", "2026-10"), ("1.9.2", "2026-10"), ("1.9.1", "2026-10"), ("1.9.0", "2026-10"), ("1.8.9", "2026-10"), ("1.8.8", "2026-10"), ("1.8.7", "2026-10"), ("1.8.6", "2026-10"), ("1.8.5", "2026-10"), ("1.7.8", "2026-10"), ("1.7.6", "2026-10"), ("1.7.5", "2026-10"), ("1.6.8", "2026-10"), ("1.6.2", "2026-10"), ("1.6.1", "2026-10"), ("1.6.0", "2026-09"), ("1.5.0", "2026-09"), ("1.4.1", "2026-09"), ("1.4.0", "2026-09"), ("1.3.0", "2026-09"), ("1.2.9", "2026-09"), ("1.2.8", "2026-09"), ("1.2.7", "2026-09"), ("1.2.6", "2026-09"), ("1.2.5", "2026-09"), ("1.2.4", "2026-09"), ("1.2.3", "2026-09"), ("1.2.2", "2026-09"), ("1.2.1", "2026-09"), ("1.2.0", "2026-09"), ("1.1.2", "2026-09"), ("1.1.1", "2026-09"), ("1.1.0", "2026-09"), ("1.0.0", "2026-09")
         };
 
@@ -4495,7 +4504,7 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
         // VersionHistory follows the compiled version automatically; no separate
         // manually maintained current-version entry or beta label is required.
         private static IReadOnlyList<(string Version, string Date)> VersionHistory =>
-            new[] { (Services.AppVersion.Short, DateTime.UtcNow.ToString("yyyy-MM", System.Globalization.CultureInfo.InvariantCulture)) }
+            new[] { (Services.AppVersion.Short, "") }
             .Concat(HistoricalVersions.Where(v => v.Version != Services.AppVersion.Short)).ToArray();
 
         // "Audio Enhancement" — ζητήθηκε ρητά, εμπνευσμένο από τη ΛΟΓΙΚΗ του FXSound (github.com/

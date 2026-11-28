@@ -13,6 +13,216 @@ void Check(bool condition, string description)
 }
 try
 {
+    Check(!WorkspaceProfileService.MayRestoreSession(true, true, true) &&
+        !WorkspaceProfileService.MayRestoreSession(false, false, true) &&
+        !WorkspaceProfileService.MayRestoreSession(false, true, false) &&
+        WorkspaceProfileService.MayRestoreSession(false, true, true),
+        "R67 startup session restoration respects user preference, existence and safe mode");
+    Check(!WorkspaceProfileService.MaySaveLastSession(true, false) &&
+        !WorkspaceProfileService.MaySaveLastSession(false, true) &&
+        WorkspaceProfileService.MaySaveLastSession(false, false),
+        "R67 safe mode cannot overwrite last good session and exit save is idempotent");
+    Check(!MotionDesk.Widgets.TrayApplicationContext.NeedsDesktopMenuPipe(false, false) &&
+        !MotionDesk.Widgets.TrayApplicationContext.NeedsDesktopMenuPipe(true, true) &&
+        MotionDesk.Widgets.TrayApplicationContext.NeedsDesktopMenuPipe(true, false),
+        "R67 optional desktop menu IPC respects selection and safe mode");
+    Check(!PerformanceGovernor.NeedsSampler(false, HardwareTier.High, false) &&
+        !PerformanceGovernor.NeedsSampler(true, HardwareTier.Low, false) &&
+        !PerformanceGovernor.NeedsSampler(true, HardwareTier.High, true) &&
+        PerformanceGovernor.NeedsSampler(true, HardwareTier.Balanced, false),
+        "R68 governor only samples if adaptive scaling can lower the active hardware tier");
+    Check(!PluginHost.MayRunPlugin(false, false, false, false) &&
+        !PluginHost.MayRunPlugin(true, true, false, false) &&
+        !PluginHost.MayRunPlugin(true, false, true, false) &&
+        !PluginHost.MayRunPlugin(true, false, false, true) &&
+        PluginHost.MayRunPlugin(true, false, false, false),
+        "R68 plugin activation requires global opt-in, individual selection and safety clearance");
+    var noDemand = AppActivity.SelectDemand(false,false,false,false,false,false,false,false,false,false);
+    var dockDemand = AppActivity.SelectDemand(false,false,false,false,false,false,false,false,true,false);
+    var widgetDemand = AppActivity.SelectDemand(false,true,false,false,false,false,false,false,false,false);
+    var taskbarDemand = AppActivity.SelectDemand(false,false,true,false,false,false,false,false,false,false);
+    var wallpaperDemand = AppActivity.SelectDemand(true,false,false,false,false,false,false,false,false,false);
+    var rulesDemand = AppActivity.SelectDemand(false,false,false,false,false,true,false,false,false,false);
+    var diagnosticDemand = AppActivity.SelectDemand(false,false,false,false,false,false,false,false,false,true);
+    Check(!noDemand.Any && dockDemand.Any && !dockDemand.Detailed && !dockDemand.Coverage,
+        "R72 activity sampler off without consumers; dock uses fullscreen only");
+    Check(widgetDemand.Detailed && !widgetDemand.Coverage && taskbarDemand.Detailed && taskbarDemand.Coverage &&
+        wallpaperDemand.Detailed && wallpaperDemand.Coverage && rulesDemand.Detailed && diagnosticDemand.Coverage,
+        "R72 detailed monitoring and coverage follow actual consumer requirements");
+    var retained = MotionDesk.Widgets.WallpaperHostEngine.SelectRetainedRenderers(
+        new[] { ("A", false), ("A", true), ("a", true), ("B", true), ("gone", true), ("B", true) },
+        new[] { "A", "B" });
+    Check(retained.SequenceEqual(new[] { 1, 3 }), "R72 renderer retirement keeps one visible attached candidate per connected display");
+    Check(MotionDesk.Widgets.WallpaperHostEngine.SelectRetainedRenderers(
+        new[] { ("A", false), ("gone", true) }, new[] { "A" }).Length == 0,
+        "R72 no hidden or disconnected renderer is retained");
+    Check(!DiscordPresence.ShouldRun(false, "123456789012345", false) &&
+        !DiscordPresence.ShouldRun(true, "123456789012345", true) &&
+        !DiscordPresence.ShouldRun(true, "invalid", false) &&
+        DiscordPresence.ShouldRun(true, "123456789012345", false),
+        "R73 Discord IPC only runs on explicit selection and valid identity outside safe mode");
+    Check(!DiscordPresence.ValidFrameLength(0) && !DiscordPresence.ValidFrameLength(-1) &&
+        !DiscordPresence.ValidFrameLength((1 << 20) + 1) && DiscordPresence.ValidFrameLength(1 << 20),
+        "R73 IPC frames have a strict allocation bound");
+    using (var ready = JsonDocument.Parse("{\"evt\":\"READY\"}"))
+    using (var reply = JsonDocument.Parse("{\"nonce\":\"a\"}"))
+    {
+        Check(DiscordPresence.MatchesResponse(ready.RootElement, null) &&
+            !DiscordPresence.MatchesResponse(ready.RootElement, "a") &&
+            DiscordPresence.MatchesResponse(reply.RootElement, "a") &&
+            !DiscordPresence.MatchesResponse(reply.RootElement, "b"),
+            "R73 IPC waits for READY or the matching command response");
+    }
+    Check(!GpuMonitorService.ShouldReleaseIdle(29999, false) &&
+        !GpuMonitorService.ShouldReleaseIdle(30000, true) &&
+        GpuMonitorService.ShouldReleaseIdle(30000, false),
+        "R74 GPU resources retire only after idle deadline and no in-flight sample");
+    Check(AtomicFile.LockStripe(Path.Combine(folder, "A.json")) ==
+        AtomicFile.LockStripe(Path.Combine(folder, "a.json")) &&
+        Enumerable.Range(0, 4096).Select(i => AtomicFile.LockStripe(Path.Combine(folder, i + ".json"))).All(i => i >= 0 && i < 128),
+        "R74 atomic settings lock table stays bounded and case-insensitive");
+    Check(SystemMonitorService.CalculateCpuPercent(100, 200, 300, 150, 300, 400, 0) == 75 &&
+        SystemMonitorService.CalculateCpuPercent(100, 200, 300, 90, 190, 290, 75) == 0 &&
+        SystemMonitorService.CalculateCpuPercent(100, 200, 300, 100, 200, 300, 42) == 42,
+        "R74 CPU counter reset and unchanged samples do not generate false load");
+    var repeatBudget = new RotatingLogger.RepeatBudget();
+    Check(repeatBudget.Accept(0, out var firstSuppressed) && firstSuppressed == 0 &&
+        !repeatBudget.Accept(1, out _) && !repeatBudget.Accept(59999, out _) &&
+        repeatBudget.Accept(60000, out var repeated) && repeated == 2,
+        "R75 recurring log budget records first error and aggregates repeated failures at minute boundary");
+    Check(new RotatingLogger.RepeatBudget().Accept(1, out _),
+        "R75 independent diagnostic sources have independent budgets");
+    var snapshotPath = Path.Combine(folder, "r75-snapshot-test.png");
+    File.WriteAllBytes(snapshotPath, new byte[] { 1, 2, 3 });
+    File.SetLastWriteTimeUtc(snapshotPath, new DateTime(2020, 1, 1, 0, 0, 0, DateTimeKind.Utc));
+    var snapshotStamp = File.GetLastWriteTimeUtc(snapshotPath);
+    using (var image = new MemoryStream())
+    {
+        image.Write(new byte[] { 1, 2, 3 });
+        Check(MotionDesk.Widgets.WallpaperWindow.PublishSnapshotAsync(image, snapshotPath, () => true).GetAwaiter().GetResult() &&
+            File.GetLastWriteTimeUtc(snapshotPath) == snapshotStamp,
+            "R75 unchanged snapshot does not rewrite the existing image");
+        image.Position = 0;
+        image.Write(new byte[] { 4, 5, 6 });
+        int approvals = 0;
+        Check(!MotionDesk.Widgets.WallpaperWindow.PublishSnapshotAsync(image, snapshotPath, () => ++approvals < 3).GetAwaiter().GetResult() &&
+            File.ReadAllBytes(snapshotPath).SequenceEqual(new byte[] { 1, 2, 3 }) &&
+            !Directory.EnumerateFiles(folder, "*.capture").Any(),
+            "R75 invalidated capture preserves previous image and cleans staging");
+        Check(MotionDesk.Widgets.WallpaperWindow.PublishSnapshotAsync(image, snapshotPath, () => true).GetAwaiter().GetResult() &&
+            File.ReadAllBytes(snapshotPath).SequenceEqual(new byte[] { 4, 5, 6 }),
+            "R75 valid changed snapshot replaces previous image atomically");
+    }
+    var migrationDir = Path.Combine(folder, "migration-fixture");
+    Directory.CreateDirectory(migrationDir);
+    var migrationSource = Path.Combine(migrationDir, "source.json");
+    var migrationTarget = Path.Combine(migrationDir, "target.json");
+    var migrationTemp = Path.Combine(migrationDir, "publish.tmp");
+    File.WriteAllText(migrationSource, "{\"layout\":1}");
+    string migrationHash = MotionDesk.Containers.NativeMigration.Hash(migrationSource);
+    MotionDesk.Containers.NativeMigration.PublishStagedFile(migrationSource, migrationTarget, migrationHash, migrationTemp);
+    Check(File.ReadAllText(migrationTarget) == "{\"layout\":1}" && !File.Exists(migrationTemp),
+        "R76 migration publishes verified payload without leaving temporary file");
+    File.SetLastWriteTimeUtc(migrationTarget, new DateTime(2020,1,1,0,0,0,DateTimeKind.Utc));
+    var migrationStamp = File.GetLastWriteTimeUtc(migrationTarget);
+    MotionDesk.Containers.NativeMigration.PublishStagedFile(migrationSource, migrationTarget, migrationHash, migrationTemp);
+    Check(File.GetLastWriteTimeUtc(migrationTarget) == migrationStamp,
+        "R76 migration retry is idempotent and does not rewrite matching snapshot");
+    File.WriteAllText(migrationTarget, "{\"user\":true}");
+    bool migrationCollision = false;
+    try { MotionDesk.Containers.NativeMigration.PublishStagedFile(migrationSource, migrationTarget, migrationHash, migrationTemp); }
+    catch (IOException) { migrationCollision = true; }
+    Check(migrationCollision && File.ReadAllText(migrationTarget) == "{\"user\":true}",
+        "R76 migration refuses to overwrite a user's existing snapshot");
+    bool migrationTamper = false;
+    File.WriteAllText(migrationSource, "{\"layout\":2}");
+    try { MotionDesk.Containers.NativeMigration.PublishStagedFile(migrationSource, migrationTarget, migrationHash, migrationTemp); }
+    catch (IOException) { migrationTamper = true; }
+    Check(migrationTamper && File.ReadAllText(migrationTarget) == "{\"user\":true}" && !File.Exists(migrationTemp),
+        "R76 corrupted staged payload cannot publish");
+    Check(MotionDesk.Containers.NativeMigration.ValidSnapshotName("Default.json") &&
+        !MotionDesk.Containers.NativeMigration.ValidSnapshotName("../Default.json") &&
+        !MotionDesk.Containers.NativeMigration.ValidSnapshotName("Default.exe"),
+        "R76 migration only accepts safe snapshot filenames");
+    var iconEntries = new[] { Path.Combine(folder,"user","Shared.txt"), Path.Combine(folder,"public","Shared.lnk"),
+        Path.Combine(folder,"user","Unique.txt") };
+    var uniqueIcons = MotionDesk.Widgets.DesktopIconVisibilityEngine.UniqueIconNames(new[] { iconEntries[0], iconEntries[2] }, iconEntries);
+    Check(!uniqueIcons.Contains("Shared") && uniqueIcons.Contains("Shared.txt") && uniqueIcons.Contains("Unique"),
+        "R77 ambiguous Explorer alias never hides another desktop file");
+    Check(MotionDesk.Widgets.DesktopIconVisibilityEngine.ReleasedIconNames(new[] { iconEntries[0] }, new[] { iconEntries[1] })
+        .SetEquals(new[] { "Shared.txt" }),
+        "R77 shared display alias remains protected while another reference exists");
+    Check(MotionDesk.Widgets.DesktopIconVisibilityEngine.ReleasedIconNames(new[] { iconEntries[0] },
+        new[] { iconEntries[0].ToUpperInvariant() }).Count == 0,
+        "R77 shared references are case insensitive");
+    Check(MotionDesk.Widgets.TrayApplicationContext.ExperienceCadenceMs(false, false, false) == 900000 &&
+        MotionDesk.Widgets.TrayApplicationContext.ExperienceCadenceMs(true, false, false) == 60000 &&
+        MotionDesk.Widgets.TrayApplicationContext.ExperienceCadenceMs(false, true, false) == 60000 &&
+        MotionDesk.Widgets.TrayApplicationContext.ExperienceCadenceMs(false, false, true) == 60000,
+        "R79 experience timer uses safety-only cadence when optional consumers are off");
+    Check(GpuMonitorService.NextProbeDelayMs(true) == 1500 &&
+        GpuMonitorService.NextProbeDelayMs(false) == 300000,
+        "R80 unavailable GPU sensor probe has demand-only five minute retry budget");
+    var gpuAudit = GpuMonitorService.Instance.AuditState();
+    Check(!gpuAudit.Sampling && gpuAudit.OpenAttempts == 0 && gpuAudit.CachedAdapters == 0,
+        "R80 diagnostics do not initialize GPU sensors or trigger sampling");
+    Check(!MotionDesk.Widgets.DeskStripHostEngine.NeedsMirrorMonitor(false, true) &&
+        !MotionDesk.Widgets.DeskStripHostEngine.NeedsMirrorMonitor(true, false) &&
+        MotionDesk.Widgets.DeskStripHostEngine.NeedsMirrorMonitor(true, true),
+        "R81 DeskStrip mirror polling needs an enabled multi-monitor dock");
+    Check(PluginHost.MayDispatch(true, false, false, true) &&
+        !PluginHost.MayDispatch(false, false, false, true) &&
+        !PluginHost.MayDispatch(true, true, false, true) &&
+        !PluginHost.MayDispatch(true, false, true, true) &&
+        !PluginHost.MayDispatch(true, false, false, false),
+        "R81 retired, stopped, failed or held plugin cannot dispatch");
+    var ownMenuExe = Path.Combine(folder, "Opsis.exe");
+    Check(DesktopMenu.OwnsClassicFallback($"\"{ownMenuExe}\" --desktop-action new-container", ownMenuExe) &&
+        !DesktopMenu.OwnsClassicFallback($"\"{Path.Combine(folder, "other", "Opsis.exe")}\" --desktop-action new-container", ownMenuExe) &&
+        !DesktopMenu.OwnsClassicFallback(null, ownMenuExe),
+        "R81 classic desktop fallback cleanup checks executable ownership");
+    var opt = new AppSettings { RestoreWindowsAfterDocking = false, UsageAlertsEnabled = false };
+    Check(MotionDesk.Widgets.TrayApplicationContext.SelectOptionalServices(opt, false) == (false, false),
+        "R65 disabled optional tray services have no timer demand");
+    opt.RestoreWindowsAfterDocking = true;
+    Check(MotionDesk.Widgets.TrayApplicationContext.SelectOptionalServices(opt, false) == (true, false),
+        "R65 docking restore selection does not enable usage alerts");
+    opt.UsageAlertsEnabled = true;
+    Check(MotionDesk.Widgets.TrayApplicationContext.SelectOptionalServices(opt, false) == (true, true) &&
+        MotionDesk.Widgets.TrayApplicationContext.SelectOptionalServices(opt, true) == (false, false),
+        "R65 explicit selections are held in safe mode");
+    Check(!MotionDesk.UI.BackdropContrast.NeedsSampling(true, true, false) &&
+        !MotionDesk.UI.BackdropContrast.NeedsSampling(false, true, true) &&
+        !MotionDesk.UI.BackdropContrast.NeedsSampling(true, false, true) &&
+        MotionDesk.UI.BackdropContrast.NeedsSampling(true, true, true),
+        "R65 backdrop sampler needs transparent visible widgets and user opt-in");
+    Check(!VirtualWorkspaces.NeedsPolling(0, 0) && VirtualWorkspaces.NeedsPolling(1, 0) &&
+        VirtualWorkspaces.NeedsPolling(0, 1),
+        "R65 desktop polling needs a saved assignment or an open observer");
+    Check(!MotionDesk.Widgets.WallpaperHostEngine.NeedsScene(false, false, false) &&
+        MotionDesk.Widgets.WallpaperHostEngine.NeedsScene(true, false, false) &&
+        MotionDesk.Widgets.WallpaperHostEngine.NeedsScene(false, true, false) &&
+        MotionDesk.Widgets.WallpaperHostEngine.NeedsScene(false, false, true),
+        "R66 renderer demand is retained by any selected scene consumer");
+    Check(!MotionDesk.Widgets.WallpaperHostEngine.NeedsAutoMute(false, true, true) &&
+        !MotionDesk.Widgets.WallpaperHostEngine.NeedsAutoMute(true, false, true) &&
+        !MotionDesk.Widgets.WallpaperHostEngine.NeedsAutoMute(true, true, false) &&
+        MotionDesk.Widgets.WallpaperHostEngine.NeedsAutoMute(true, true, true),
+        "R66 audio detector demand requires active audio wallpaper and auto mute");
+    Check(!MotionDesk.Widgets.WallpaperHostEngine.NeedsLockScreenSync(false, true, "snapshot.png") &&
+        !MotionDesk.Widgets.WallpaperHostEngine.NeedsLockScreenSync(true, false, "snapshot.png") &&
+        !MotionDesk.Widgets.WallpaperHostEngine.NeedsLockScreenSync(true, true, null) &&
+        MotionDesk.Widgets.WallpaperHostEngine.NeedsLockScreenSync(true, true, "snapshot.png"),
+        "R66 lock screen timer needs scene, opt-in and snapshot destination");
+    Check(!MotionDesk.Widgets.WallpaperHostEngine.NeedsSchedule(false, true) &&
+        !MotionDesk.Widgets.WallpaperHostEngine.NeedsSchedule(true, false) &&
+        MotionDesk.Widgets.WallpaperHostEngine.NeedsSchedule(true, true),
+        "R66 schedule timer needs enabled schedule and active rules");
+    Check(OpsisMusicOverlay.DesktopMusicController.SelectTickInterval(false, true, true) == 42 &&
+        OpsisMusicOverlay.DesktopMusicController.SelectTickInterval(false, true, false) == 100 &&
+        OpsisMusicOverlay.DesktopMusicController.SelectTickInterval(false, false, false) == 250 &&
+        OpsisMusicOverlay.DesktopMusicController.SelectTickInterval(true, true, true) == 500,
+        "R63 music cadence throttles idle, backpressure and suspension while preserving active rendering");
     Check(MotionDesk.UI.OpsisStartButtonArt.Styles.Length == 11 &&
         MotionDesk.UI.OpsisStartButtonArt.IsValid("Opsis Glass") &&
         !MotionDesk.UI.OpsisStartButtonArt.IsValid("not-a-design"),

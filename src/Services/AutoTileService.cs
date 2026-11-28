@@ -6,6 +6,7 @@ namespace MotionDesk.Services;
 internal static class AutoTileService
 {
     private static System.Windows.Forms.Timer? _timer;
+    internal static bool ActivityDemand => _timer != null;
     private static readonly Dictionary<string, string> Previous = new(StringComparer.OrdinalIgnoreCase);
     private static Dictionary<IntPtr, Rectangle>? _undoManual;
 
@@ -183,10 +184,11 @@ internal static class AutoTileService
         _timer?.Dispose();
         _timer = null;
         Previous.Clear();
-        if (!AppSettings.Load().AutoTileEnabled || SafeModeService.IsSafeMode || WindowsUpdateGuard.RequiresReview) return;
+        if (!AppSettings.Load().AutoTileEnabled || SafeModeService.IsSafeMode || WindowsUpdateGuard.RequiresReview) { AppActivity.RequestRefresh(); return; }
         _timer = new System.Windows.Forms.Timer { Interval = 1300 };
         _timer.Tick += (_, _) => Apply();
         _timer.Start();
+        AppActivity.RequestRefresh();
     }
 
     internal static void Stop()
@@ -194,6 +196,7 @@ internal static class AutoTileService
         _timer?.Dispose();
         _timer = null;
         Previous.Clear();
+        AppActivity.RequestRefresh();
     }
 
     internal static void Apply(bool force = false)

@@ -15,6 +15,8 @@ internal static class VirtualWorkspaces
     private static Guid _applied;
     private static Guid[] _knownDesktops = [];
     private static IVirtualDesktopManager? _manager;
+    private static bool _started;
+    private static int _observers;
     internal static event Action? Changed;
 
     private sealed class State
@@ -28,29 +30,73 @@ internal static class VirtualWorkspaces
 
     internal static void Start()
     {
-        if (_timer != null) return;
+        if (_started || SafeModeService.IsSafeMode) return;
+        _started = true;
         try
         {
             if (File.Exists(Store)) _state = JsonSerializer.Deserialize<State>(AtomicFile.ReadAllText(Store)) ?? new();
         }
         catch (Exception ex) when (ex is IOException or JsonException or UnauthorizedAccessException)
         { RotatingLogger.Write("Workspaces: " + ex.Message); }
+        RefreshPolling();
+    }
+
+    internal static bool NeedsPolling(int assignments, int observers) => assignments > 0 || observers > 0;
+
+    private static void RefreshPolling()
+    {
+        if (!_started || !NeedsPolling(_state.Wallpapers.Count, _observers))
+        {
+            _timer?.Dispose(); _timer = null;
+            _knownDesktops = [];
+            ReleaseManagerIfIdle();
+            return;
+        }
+        if (_timer != null) return;
         _timer = new System.Windows.Forms.Timer { Interval = 950 };
         _timer.Tick += (_, _) => Tick();
         _timer.Start();
         Tick();
     }
 
+    internal static void BeginObservation()
+    {
+        if (SafeModeService.IsSafeMode) return;
+        _observers++;
+        Start();
+        RefreshPolling();
+    }
+
+    internal static void EndObservation()
+    {
+        if (_observers > 0) _observers--;
+        RefreshPolling();
+    }
+
     internal static void Stop()
     {
+        _started = false;
+        _observers = 0;
         _timer?.Dispose();
         _timer = null;
         _switchTimer?.Dispose();
         _switchTimer = null;
         _applied = Guid.Empty;
         _knownDesktops = [];
-        if (_manager != null) Marshal.FinalReleaseComObject(_manager);
-        _manager = null;
+        ReleaseManager();
+    }
+
+    private static void ReleaseManager()
+    {
+        var manager = _manager; _manager = null;
+        if (manager == null) return;
+        try { Marshal.FinalReleaseComObject(manager); }
+        catch (Exception ex) { System.Diagnostics.Debug.WriteLine(ex); }
+    }
+
+    private static void ReleaseManagerIfIdle()
+    {
+        if (_timer == null && _switchTimer == null) ReleaseManager();
     }
 
     internal static Guid[] DesktopIds()
@@ -84,6 +130,7 @@ internal static class VirtualWorkspaces
                 return id;
         }
         catch (Exception ex) when (ex is COMException or InvalidCastException) { }
+        finally { ReleaseManagerIfIdle(); }
         var desktops = DesktopIds();
         return desktops.Length == 1 ? desktops[0] : Guid.Empty;
     }
@@ -108,6 +155,7 @@ internal static class VirtualWorkspaces
         if (name.Trim().Length > 0) _state.Names[id] = name.Trim();
         _applied = id;
         Persist();
+        RefreshPolling();
         Changed?.Invoke();
         return true;
     }
@@ -118,6 +166,7 @@ internal static class VirtualWorkspaces
         _state.Names.Remove(id);
         Persist();
         if (_applied == id && _state.Fallback is { } fallback) ApplyWallpaper(fallback);
+        RefreshPolling();
         Changed?.Invoke();
     }
 
@@ -147,6 +196,7 @@ internal static class VirtualWorkspaces
             {
                 timer.Dispose();
                 if (ReferenceEquals(_switchTimer, timer)) _switchTimer = null;
+                ReleaseManagerIfIdle();
                 return;
             }
             previous = current;
@@ -172,7 +222,7 @@ internal static class VirtualWorkspaces
                 try
                 {
                     if (_state.Wallpapers.TryGetValue(id, out var wallpaper)) ApplyWallpaper(wallpaper);
-                    else if (_state.Fallback is { } fallback && (previous == Guid.Empty || _state.Wallpapers.ContainsKey(previous)))
+                    else if (_state.Wallpapers.Count > 0 && _state.Fallback is { } fallback && (previous == Guid.Empty || _state.Wallpapers.ContainsKey(previous)))
                         ApplyWallpaper(fallback);
                 }
                 catch

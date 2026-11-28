@@ -252,10 +252,16 @@ namespace MotionDesk.Services
             }
         }
 
+        internal static event Action? SettingsSaved;
+
         public void Save()
         {
             Store().Save(this);
             lock (PeekLock) _peek = null;
+            // A successful persistent write must not become a reported failure
+            // merely because an optional runtime listener failed.
+            try { SettingsSaved?.Invoke(); }
+            catch (Exception ex) { System.Diagnostics.Debug.WriteLine(ex); }
         }
     }
 
