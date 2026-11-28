@@ -40,6 +40,8 @@ namespace MotionDesk.Services
         public System.Collections.Generic.Dictionary<string, string>? PerfFeatureTier { get; set; }
         public bool ShowSystemMonitor { get; set; }
         public bool RestoreLastSession { get; set; } = true;
+        // Opt-in startup admission only; never clear the user's saved feature choices.
+        public bool ReducedStartup { get; set; }
         public bool MinimizeToTray { get; set; } = true;
         // DeskZones: applications (process names, without .exe) whose windows are never snapped (e.g. media players, games)
         public List<string> ZoneExcludedApps { get; set; } = new();

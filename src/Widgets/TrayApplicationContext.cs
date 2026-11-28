@@ -71,6 +71,7 @@ namespace MotionDesk.Widgets
             // 30s επιτυχούς λειτουργίας (one-shot timer πιο κάτω), όχι αμέσως, ώστε ένα crash λίγο
             // μετά την εκκίνηση να εξακολουθεί να μετράει.
             bool safeMode = SafeModeService.IsSafeMode;
+            bool reducedStartup = AppSettings.Peek().ReducedStartup;
             bool reviewRequired = false;
             try
             {
@@ -105,12 +106,21 @@ namespace MotionDesk.Widgets
                 if (!reviewRequired)
                 {
                     var startupSettings = AppSettings.Peek();
-                    _pluginsDeferredAtStartup = startupSettings.PluginsEnabled && startupSettings.DeferPluginsUntilRequested;
+                    _pluginsDeferredAtStartup = startupSettings.PluginsEnabled && (startupSettings.DeferPluginsUntilRequested || reducedStartup);
                     if (!_pluginsDeferredAtStartup) { PluginHost.Instance.StartAll(); SchedulePluginApproval(); }
                     else RotatingLogger.Write("Plugin discovery and assembly loading deferred until explicitly requested.");
                 }
                 else RotatingLogger.Write("Optional plugins held until Windows build compatibility review and Opsis restart.");
-                try { if (!reviewRequired) MotionDesk.Appearance.AppearanceService.Instance.Start(); }
+                try
+                {
+                    if (!reviewRequired)
+                    {
+                        var appearance = MotionDesk.Appearance.AppearanceService.Instance;
+                        if (!RuntimeSessionPolicy.IsPermitted(SessionBackgroundService.AppearanceAutomatic))
+                            appearance.SetSessionAllowed(false);
+                        appearance.Start();
+                    }
+                }
                 catch (Exception e) { RotatingLogger.Write("Appearance service: " + e.Message); }
             }
             // Start-up before the other start-up apps: switched on ONCE after the first run when Start with Windows is on (Settings can turn it off; never repeated)
@@ -299,7 +309,7 @@ namespace MotionDesk.Widgets
             // χρήστης το απενεργοποίησε ρητά (DeskZones page, "AppSettings.QuickHideDoubleClickEnabled").
             _taskbarWatcher.ExplorerRestarted += () =>
             {
-                try { if (!WindowsUpdateGuard.RequiresReview) GlassBlur.SetTaskbarTranslucency(WindowsSystemSettings.GetTransparencyEffectsEnabled()); }
+                try { if (!WindowsUpdateGuard.RequiresReview && !WindowsUpdateGuard.RuntimeHold && RuntimeSessionPolicy.IsPermitted(SessionBackgroundService.AppearanceAutomatic)) GlassBlur.SetTaskbarTranslucency(WindowsSystemSettings.GetTransparencyEffectsEnabled()); }
                 catch (Exception) { } // σιωπηλό fallback — ζητήθηκε ρητά, βλ. E2
             };
 
@@ -397,7 +407,7 @@ namespace MotionDesk.Widgets
                 // The clock/date/temperature overlay keeps working over the normal Windows wallpaper when the animated wallpaper is off
                 WallpaperHostEngine.Instance.UpdateOverlayOnly();
 
-                CheckLockScreenFollowsWallpaper();
+                if (!reducedStartup) CheckLockScreenFollowsWallpaper();
             }
 
             // The tray owns startup restoration and desktop shortcuts. The management
@@ -423,7 +433,7 @@ namespace MotionDesk.Widgets
                 // "--page <key>": ανοίγει κατευθείαν σε μια σελίδα (χρήσιμο για δοκιμές και συντομεύσεις), π.χ. --page plugin:OpsisNewsCrawler
                 var cmd = Environment.GetCommandLineArgs();
                 int pageArg = Array.FindIndex(cmd, a => a.Equals("--page", StringComparison.OrdinalIgnoreCase));
-                using var intro = pageArg < 0 && !safeMode ? CreateStartupIntro() : null;
+                using var intro = pageArg < 0 && !safeMode && !reducedStartup ? CreateStartupIntro() : null;
                 intro?.Show();
                 intro?.Refresh();
                 ShowMainWindow(pageArg >= 0 && pageArg + 1 < cmd.Length ? cmd[pageArg + 1] : null);
@@ -867,6 +877,7 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
             Apply(SessionBackgroundService.DesktopToolbar, DesktopToolbar.RefreshSettings);
             Apply(SessionBackgroundService.VirtualWorkspaceWallpaper, VirtualWorkspaces.ReconcileSession);
             Apply(SessionBackgroundService.AnimatedWallpaper, WallpaperHostEngine.ReconcileSessionIfCreated);
+            Apply(SessionBackgroundService.IndependentWeatherOverlay, WallpaperHostEngine.ReconcileIndependentOverlayIfCreated);
             Apply(SessionBackgroundService.DeskStrip, DeskStripHostEngine.ReconcileSessionIfCreated);
             Apply(SessionBackgroundService.Widgets, WidgetHostEngine.ReconcileSessionIfCreated);
             Apply(SessionBackgroundService.MusicVisualizer, StudioMusic.ReconcileSession);
@@ -899,7 +910,7 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
         {
             string T(string en, string el) => MainWindow.StudioText(en, el);
             var menu = new ToolStripMenuItem(T("Desktop services · this session", "Υπηρεσίες επιφάνειας εργασίας · αυτή η συνεδρία"));
-            var reduced = new ToolStripMenuItem(T("Suspend 20 optional service groups", "Αναστολή 20 προαιρετικών ομάδων υπηρεσιών"));
+            var reduced = new ToolStripMenuItem(T("Suspend 21 optional service groups", "Αναστολή 21 προαιρετικών ομάδων υπηρεσιών"));
             var restore = new ToolStripMenuItem(T("Restore previous session selections", "Επαναφορά προηγούμενων επιλογών συνεδρίας"));
             var full = new ToolStripMenuItem(T("Allow all saved selections", "Επιτρέπονται όλες οι αποθηκευμένες επιλογές"));
             reduced.ToolTipText = T("Keeps containers, recovery UI, plugins and other ungated services unchanged. Not an isolated containers-only mode.",
@@ -926,6 +937,9 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
             menu.DropDownItems.Add(restore);
             menu.DropDownItems.Add(full);
             menu.DropDownItems.Add(new ToolStripSeparator());
+            var weatherOverlay = new ToolStripMenuItem(T("Allow independent weather/clock overlay", "Επιτρέπεται ανεξάρτητο overlay καιρού/ρολογιού"));
+            weatherOverlay.Click += (_, _) => ApplySessionMask(RuntimeSessionPolicy.Allowed ^ SessionBackgroundService.IndependentWeatherOverlay);
+            menu.DropDownItems.Add(weatherOverlay);
             var toolbar = new ToolStripMenuItem(T("Allow desktop toolbar", "Επιτρέπεται η γραμμή εργαλείων επιφάνειας εργασίας"));
             var workspaces = new ToolStripMenuItem(T("Allow automatic virtual desktop wallpapers", "Αυτόματα φόντα εικονικών επιφανειών εργασίας"));
             toolbar.Click += (_, _) => ApplySessionMask(RuntimeSessionPolicy.Allowed ^ SessionBackgroundService.DesktopToolbar);
@@ -1005,6 +1019,8 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                 reduced.Enabled = presetAllowed && RuntimeSessionPolicy.Allowed != SessionBackgroundService.None;
                 restore.Enabled = presetAllowed && _beforeReducedSession.HasValue;
                 full.Enabled = presetAllowed && RuntimeSessionPolicy.Allowed != SessionBackgroundService.All;
+                weatherOverlay.Checked = RuntimeSessionPolicy.IsPermitted(SessionBackgroundService.IndependentWeatherOverlay);
+                weatherOverlay.Enabled = presetAllowed;
                 toolbar.Checked = RuntimeSessionPolicy.IsPermitted(SessionBackgroundService.DesktopToolbar);
                 workspaces.Checked = RuntimeSessionPolicy.IsPermitted(SessionBackgroundService.VirtualWorkspaceWallpaper);
                 toolbar.Enabled = workspaces.Enabled = presetAllowed;

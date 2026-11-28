@@ -280,6 +280,7 @@ namespace MotionDesk
             Services.RotatingLogger.Write($"Startup: SafeMode={Services.SafeModeService.IsSafeMode} (shift={Services.SafeModeService.TriggeredByShift}, failedStartups={Services.SafeModeService.ConsecutiveFailedStartups})");
             Services.RotatingLogger.Write($"Hardware: tier={Services.HardwareProfileService.CurrentTier}, cores={Environment.ProcessorCount}");
             try { Services.RotatingLogger.Write("Hardware detail: " + Services.HardwareInfo.Detect()); } catch (Exception) { }
+            Services.RuntimeSessionPolicy.SetAllowed(Services.RuntimeSessionPolicy.StartupMask(Services.AppSettings.Peek().ReducedStartup));
             Services.PerformanceGovernor.Start();
             Services.PluginUiStyle.Publish();
             Services.PerformanceGovernor.EffectiveChanged += t =>
@@ -297,7 +298,8 @@ namespace MotionDesk
             // Sync Ξ· Taskbar translucency (GlassBlur.SetTaskbarTranslucency) ΞΌΞµ Ο„Ξ·Ξ½ Ο„ΟΞ­Ο‡ΞΏΟ…ΟƒΞ± Ο„ΞΉΞΌΞ® Ο„ΞΏΟ…
             // Windows "Ξ•Ο†Ξ­ Ξ΄ΞΉΞ±Ο†Ξ¬Ξ½ΞµΞΉΞ±Ο‚" ΟƒΟ„Ξ·Ξ½ ΞµΞΊΞΊΞ―Ξ½Ξ·ΟƒΞ· β€” Ο‡Ο‰ΟΞ―Ο‚ Ξ±Ο…Ο„Ο, Ο„ΞΏ blur Ο„Ξ·Ο‚ Taskbar ΞΈΞ± ΞµΟ†Ξ±ΟΞΌΞΏΞ¶ΟΟ„Ξ±Ξ½
             // ΞΌΟΞ½ΞΏ Ξ±Ο†ΞΏΟ ΞΏ Ο‡ΟΞ®ΟƒΟ„Ξ·Ο‚ ΟƒΞ²Ξ®ΟƒΞµΞΉ/ΞΎΞ±Ξ½Ξ±Ο„ΟƒΞµΞΊΞ¬ΟΞµΞΉ Ο„ΞΏ checkbox ΟƒΟ„ΞΉΟ‚ Ξ΅Ο…ΞΈΞΌΞ―ΟƒΞµΞΉΟ‚ ΞΌΞ―Ξ± Ο†ΞΏΟΞ¬.
-            try { MotionDesk.UI.GlassBlur.SetTaskbarTranslucency(Services.WindowsSystemSettings.GetTransparencyEffectsEnabled()); } catch (Exception) { }
+            if (Services.RuntimeSessionPolicy.IsPermitted(Services.SessionBackgroundService.AppearanceAutomatic))
+                try { MotionDesk.UI.GlassBlur.SetTaskbarTranslucency(Services.WindowsSystemSettings.GetTransparencyEffectsEnabled()); } catch (Exception) { }
 
             ApplicationConfiguration.Initialize();
             MotionDesk.UI.SecondaryWindowStyler.Install();

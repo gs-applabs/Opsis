@@ -28,13 +28,15 @@ internal enum SessionBackgroundService
     DesktopHotkeys = 131072,
     DesktopToolbar = 262144,
     VirtualWorkspaceWallpaper = 524288,
+    IndependentWeatherOverlay = 1048576,
     Background = DockRestore | UsageAlerts | DiscordPresence | ScheduledAutomations | PeriodicWallpaperAccent,
-    All = Background | AnimatedWallpaper | DeskStrip | Widgets | MusicVisualizer | AppearanceAutomatic | AutoTile | AdaptiveSampling | ReplacementTaskbar | ZoneSnap | HotCorners | WindowRules | CursorEffects | DesktopHotkeys | DesktopToolbar | VirtualWorkspaceWallpaper
+    All = Background | AnimatedWallpaper | DeskStrip | Widgets | MusicVisualizer | AppearanceAutomatic | AutoTile | AdaptiveSampling | ReplacementTaskbar | ZoneSnap | HotCorners | WindowRules | CursorEffects | DesktopHotkeys | DesktopToolbar | VirtualWorkspaceWallpaper | IndependentWeatherOverlay
 }
 
 internal static class RuntimeSessionPolicy
 {
     private static int _allowed = (int)SessionBackgroundService.All;
+    internal static SessionBackgroundService StartupMask(bool reduced) => reduced ? SessionBackgroundService.None : SessionBackgroundService.All;
     internal static SessionBackgroundService Allowed => (SessionBackgroundService)Volatile.Read(ref _allowed);
 
     // Reject undefined/zero service requests rather than accidentally

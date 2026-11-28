@@ -4892,7 +4892,7 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
             if (pluginInfos.Count == 0)
             {
                 AddText(pluginCard, StudioText("No loaded plugins.", "Δεν υπάρχουν φορτωμένα plugins."));
-                if (AppSettings.Peek().DeferPluginsUntilRequested)
+                if (AppSettings.Peek().DeferPluginsUntilRequested || AppSettings.Peek().ReducedStartup)
                     AddText(pluginCard, StudioText("If deferred at startup, use Load saved plugins now in the tray.",
                         "Αν αναβλήθηκε η φόρτωση στην εκκίνηση, επιλέξτε Φόρτωση αποθηκευμένων plugins τώρα από το tray."));
             }
@@ -6110,6 +6110,12 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                 startup.Controls.Add(Checkbox(LocalizationManager.T("Settings.StartEarly"), StartupTask.IsEnabled(), v => System.Threading.Tasks.Task.Run(() => StartupTask.Set(v)), LocalizationManager.T("Settings.StartEarlyDesc")));
                 startup.Controls.Add(Checkbox(LocalizationManager.T("Settings.RestoreLastSession"), AppSettings.Load().RestoreLastSession,
                     v => { var a = AppSettings.Load(); a.RestoreLastSession = v; a.Save(); }));
+                startup.Controls.Add(Checkbox(StudioText("Reduced startup (optional services suspended)", "Ελαφριά εκκίνηση (αναστολή προαιρετικών υπηρεσιών)"),
+                    AppSettings.Load().ReducedStartup,
+                    v => { var a = AppSettings.Load(); a.ReducedStartup = v; a.Save(); },
+                    StudioText("After restart, use the tray service controls to allow selected groups. Plugins load only on request. Containers and ungated services retain their settings.",
+                        "Μετά την επανεκκίνηση, ενεργοποιήστε τις επιθυμητές ομάδες από το tray. Τα plugins φορτώνονται κατόπιν αιτήματος. Τα containers και οι λοιπές υπηρεσίες διατηρούν τις ρυθμίσεις τους."),
+                    restart: true));
                 startup.Controls.Add(Checkbox(LocalizationManager.T("Settings.EnableAnimations"), AppSettings.Load().EnableAnimations,
                     v => { var a = AppSettings.Load(); a.EnableAnimations = v; a.Save(); AnimationsSettingChanged?.Invoke(); }));
                 startup.Controls.Add(Checkbox(LocalizationManager.T("Settings.MinimizeToTray"), AppSettings.Load().MinimizeToTray,

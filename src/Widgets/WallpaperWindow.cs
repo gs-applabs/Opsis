@@ -1374,6 +1374,7 @@ namespace MotionDesk.Widgets
         private bool Active => !_exiting && (AnimationActive || _overlayOnly);
         internal static bool AllowsAnimatedScene(bool requested, bool allowed) => requested && allowed;
         internal static void ReconcileSessionIfCreated() => _instance?.ReconcileSession();
+        internal static void ReconcileIndependentOverlayIfCreated() => _instance?.UpdateOverlayOnly();
 
         private void ReconcileSession()
         {
@@ -1743,7 +1744,8 @@ namespace MotionDesk.Widgets
         {
             if (_exiting) return;
             var s = WallpaperSettings.Load();
-            bool want = !AnimationActive && NeedsScene(false, s.WeatherShowInfo && s.InfoOnAllModes, _musicSceneRequested);
+            bool weatherAllowed = RuntimeSessionPolicy.IsPermitted(SessionBackgroundService.IndependentWeatherOverlay);
+            bool want = !AnimationActive && NeedsScene(false, weatherAllowed && s.WeatherShowInfo && s.InfoOnAllModes, _musicSceneRequested);
             bool changed = want != _overlayOnly;
             _overlayOnly = want;
             if (!Active)

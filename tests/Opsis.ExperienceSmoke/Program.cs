@@ -342,7 +342,7 @@ try
     Check(!RuntimeSessionPolicy.Allows(SessionBackgroundService.All, SessionBackgroundService.UsageAlerts, false, false) &&
         !RuntimeSessionPolicy.Allows(SessionBackgroundService.All, SessionBackgroundService.UsageAlerts, true, true) &&
         !RuntimeSessionPolicy.Allows(SessionBackgroundService.All, SessionBackgroundService.None, true, false) &&
-        !RuntimeSessionPolicy.Allows(SessionBackgroundService.All, (SessionBackgroundService)1048576, true, false),
+        !RuntimeSessionPolicy.Allows(SessionBackgroundService.All, (SessionBackgroundService)2097152, true, false),
         "R83 session selection cannot bypass saved opt-in, safe mode or known capabilities");
     var sessionPrefs = new AppSettings { RestoreWindowsAfterDocking = true, UsageAlertsEnabled = true };
     Check(MotionDesk.Widgets.TrayApplicationContext.SelectOptionalServices(sessionPrefs, false, SessionBackgroundService.DockRestore) == (true, false) &&
@@ -350,6 +350,12 @@ try
         MotionDesk.Widgets.TrayApplicationContext.SelectOptionalServices(sessionPrefs, false, SessionBackgroundService.All) == (true, true) &&
         sessionPrefs.RestoreWindowsAfterDocking && sessionPrefs.UsageAlertsEnabled,
         "R83 reversible session filters leave persisted preferences unchanged");
+    Check(RuntimeSessionPolicy.StartupMask(true) == SessionBackgroundService.None &&
+        RuntimeSessionPolicy.StartupMask(false) == SessionBackgroundService.All,
+        "R109 reduced startup changes admission only");
+    Check(RuntimeSessionPolicy.Allows(SessionBackgroundService.IndependentWeatherOverlay, SessionBackgroundService.IndependentWeatherOverlay, true, false) &&
+        !RuntimeSessionPolicy.Allows(SessionBackgroundService.AnimatedWallpaper, SessionBackgroundService.IndependentWeatherOverlay, true, false),
+        "R109 independent weather overlay admission");
     var desktopMask = SessionBackgroundService.All & ~SessionBackgroundService.Background;
     Check(RuntimeSessionPolicy.ReplaceBackground(desktopMask, true) == SessionBackgroundService.All &&
         RuntimeSessionPolicy.ReplaceBackground(SessionBackgroundService.All, false) == desktopMask &&

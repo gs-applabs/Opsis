@@ -1611,6 +1611,19 @@
           "src/Widgets/TrayApplicationContext.cs",
           "src/UI/MainWindow.cs"
         ]
+      },
+      "r109": {
+        "base_sha": "1ac7af055c879ee72044ba335fa1aed77fbe2f9f",
+        "summary": "R109 G07/G05/G19: opt-in ReducedStartup persisted in existing AppSettings (default false). Initial session mask set before PerformanceGovernor.Start; 21 admission flags including new independent weather/clock overlay, using existing WallpaperHostEngine; reduced startup defers plugins, suppresses automatic appearance/initial and Explorer-restart taskbar blur, skips intro and lock-screen drift prompt. Last Session restoration still reads and retains suspended widget/wallpaper intent via existing owners. Existing containers, recovery UI, quick-hide and other ungated services remain unchanged; not a true Containers-only host. Full admission is manually reversible from tray; plugins still separately explicit. Two smoke assertions added, no compile/runtime tests; actual resource use and all 23 global groups remain tracked.",
+        "paths": [
+          "src/Services/AppSettings.cs",
+          "src/Services/RuntimeSessionPolicy.cs",
+          "src/Program.cs",
+          "src/Widgets/TrayApplicationContext.cs",
+          "src/Widgets/WallpaperWindow.cs",
+          "src/UI/MainWindow.cs",
+          "tests/Opsis.ExperienceSmoke/Program.cs"
+        ]
       }
     },
     "development_rule": {
@@ -2510,7 +2523,7 @@
     "active_backlog_policy": "Only incomplete or unresolved implementation requirements in proposals. Source-present and test-only rows in archived_qa, not active development. Archive is not release certification. All 100 IDs remain unique across both arrays. Reopen archived row only on concrete missing source or failed test.",
     "global_scope": {
       "rule": "## ΜΟΝΙΜΟΣ ΚΑΝΟΝΑΣ — ΠΑΝΤΑ ΟΛΕΣ ΟΙ ΕΚΚΡΕΜΟΤΗΤΕΣ, ΟΧΙ ΜΟΝΟ ΟΙ 100\n\nΚάθε ερώτηση του χρήστη για «εκκρεμότητες», «συνέχισε», «τι μένει» αφορά **ολόκληρο το OPSIS Desktop Customization 3.0.0.3200**: αρχικές 100, παλαιότερο roadmap/διορθώσεις, P0–P6, B01–B14, UI/Glass, Shell, Containers, SDK/plugins/companion compatibility, wallpapers/εικόνες/intro/ήχο, ανεξάρτητο add-on, installers, migration/rollback, διανομή, τελικές δοκιμές. Ποτέ μόνο ένα υποσύνολο χωρίς ρητό αίτημα. Το σύνολο παραμένει ενιαίο με σταθερά IDs, alias προς παλιά IDs, συγκεκριμένο owner/κενό και κατάσταση. **Εφαρμογή από τις ευκολότερες προς τις δυσκολότερες**, με ασφάλεια ως προϋπόθεση και χωρίς να ξαναγράφεται έτοιμη λειτουργία. Αρχείο ιστορικού/QA δεν αποτελεί ενεργό backlog. Ελέγχεται κάθε φορά ο τελευταίος ακριβής σωρευτικός SHA και η διασταύρωση με ιστορικές συνομιλίες, handoffs, πραγματικούς callers/UI/ρυθμίσεις, plugins και αρχεία. Ανεπαρκή ή μη προσβάσιμα τεκμήρια καταγράφονται ως blockers, όχι ως ολοκληρωμένα. Ο χρήστης δεν πρέπει να ξαναρωτήσει για ξεχασμένα υποσύνολα. Χρήση συνδεδεμένου GitHub για πραγματικές αλλαγές· πρόσθετα μόνο αν καλύπτουν πραγματική δυνατότητα που λείπει. Όλα τα tests στο τέλος, Inno Setup, καμία πρόωρη έκδοση.",
-      "source_sha": "1b9b2242667cf34fb67425fa27844e8a8f1873f3",
+      "source_sha": "1ac7af055c879ee72044ba335fa1aed77fbe2f9f",
       "scope_sources": [
         "docs/SOURCE-CONSOLIDATION.md B01–B14",
         "docs/REMAINING-TASKS-3.0.0.3200.md (all waves, SDK1–4, X1–16 and C1–12)",
@@ -2559,7 +2572,7 @@
           "status": "PARTIAL",
           "aliases": "100:1,9,24,38,41,50; B01/B04/B10/B12",
           "requirement": "Μετρήσεις CPU, last-frame remote, πραγματικό triptych, portrait density, preview ζωνών/profile windows",
-          "evidence": "Existing audit, renderer, zone and profile owners; no duplicate sampling/renderer; distinguish actual implementation vs tests. R106: reversible bulk suspend/restore of existing 18 session gates, changed-owner reconciliation; no new startup mode or measurements. R107: toolbar and automatic workspace wallpaper gates, total 20; explicit workspace observation preserved. Actual tests pending."
+          "evidence": "Existing audit, renderer, zone and profile owners; no duplicate sampling/renderer; distinguish actual implementation vs tests. R106: reversible bulk suspend/restore of existing 18 session gates, changed-owner reconciliation; no new startup mode or measurements. R107: toolbar and automatic workspace wallpaper gates, total 20; explicit workspace observation preserved. Actual tests pending. R109: reduced startup mask before governor and independent weather overlay gate; no runtime validation or true containers-only host."
         },
         {
           "id": "G06",
@@ -2575,7 +2588,7 @@
           "status": "PARTIAL",
           "aliases": "B03/MP2F",
           "requirement": "Full / Custom / Containers-only, reversible ownership lifecycle, minimal host",
-          "evidence": "18 session gates present; no full startup mode or comprehensive stop/restart. Preserve saved choices. R105: DeskFlip reuses desktop-hotkey admission and closes on teardown/focus loss; native Alt+Tab unchanged. R106: reversible bulk suspend/restore of existing 18 session gates, changed-owner reconciliation; no new startup mode or measurements. R107: toolbar and automatic workspace wallpaper gates, total 20; explicit workspace observation preserved. Actual tests pending. R108: opt-in deferred plugin discovery/load using existing host, saved choices and approval policy; per-plugin constructor isolation and full startup mode pending."
+          "evidence": "18 session gates present; no full startup mode or comprehensive stop/restart. Preserve saved choices. R105: DeskFlip reuses desktop-hotkey admission and closes on teardown/focus loss; native Alt+Tab unchanged. R106: reversible bulk suspend/restore of existing 18 session gates, changed-owner reconciliation; no new startup mode or measurements. R107: toolbar and automatic workspace wallpaper gates, total 20; explicit workspace observation preserved. Actual tests pending. R108: opt-in deferred plugin discovery/load using existing host, saved choices and approval policy; per-plugin constructor isolation and full startup mode pending. R109: reduced startup mask before governor and independent weather overlay gate; no runtime validation or true containers-only host."
         },
         {
           "id": "G08",
@@ -2671,7 +2684,7 @@
           "status": "PARTIAL",
           "aliases": "B09/B10/B12; X14/X16; W1/W2",
           "requirement": "Realistic photo-first Weather, glass/refraction/HDR/SDR, GPU effects, scene transitions, Ancient Athens/Rome/landmarks",
-          "evidence": "Preserve 2.5D high fidelity, no primitive landscape or fake HDR; actual GPU/visual QA."
+          "evidence": "Preserve 2.5D high fidelity, no primitive landscape or fake HDR; actual GPU/visual QA. R109: reduced startup mask before governor and independent weather overlay gate; no runtime validation or true containers-only host."
         },
         {
           "id": "G20",
