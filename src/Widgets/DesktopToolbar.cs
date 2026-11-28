@@ -126,7 +126,7 @@ internal sealed class DesktopToolbar : Form
     {
         var widget = WidgetHostEngine.Instance.GetActiveWidgets().FirstOrDefault(item => item.WidgetId == id && !item.IsDisposed);
         if (widget != null) { widget.Show(); widget.BringToFront(); return; }
-        WidgetHostEngine.Instance.SpawnWidget(id, Left + 18, Bottom + 12, width, height);
+        WidgetHostEngine.Instance.RequestWidget(id, Left + 18, Bottom + 12, width, height);
     }
 
     protected override bool ShowWithoutActivation => true;

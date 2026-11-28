@@ -798,6 +798,7 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
             var menu = new ToolStripMenuItem(T("Desktop services · this session", "Υπηρεσίες επιφάνειας εργασίας · αυτή η συνεδρία"));
             var wallpaper = new ToolStripMenuItem(T("Allow animated wallpaper (keep independent overlays)", "Κινούμενο φόντο (διατήρηση ανεξάρτητων overlays)"));
             var dock = new ToolStripMenuItem(T("Allow DeskStrip", "Επιτρέπεται το DeskStrip"));
+            var widgets = new ToolStripMenuItem(T("Allow widgets (retain layout)", "Επιτρέπονται τα widgets (διατήρηση διάταξης)"));
             void Change(SessionBackgroundService flag, Action reconcile)
             {
                 if (SafeModeService.IsSafeMode || System.Threading.Volatile.Read(ref _exitStarted) != 0) return;
@@ -812,12 +813,14 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
             }
             wallpaper.Click += (_, _) => Change(SessionBackgroundService.AnimatedWallpaper, WallpaperHostEngine.ReconcileSessionIfCreated);
             dock.Click += (_, _) => Change(SessionBackgroundService.DeskStrip, DeskStripHostEngine.ReconcileSessionIfCreated);
-            menu.DropDownItems.Add(wallpaper); menu.DropDownItems.Add(dock);
+            widgets.Click += (_, _) => Change(SessionBackgroundService.Widgets, WidgetHostEngine.ReconcileSessionIfCreated);
+            menu.DropDownItems.Add(wallpaper); menu.DropDownItems.Add(dock); menu.DropDownItems.Add(widgets);
             menu.DropDownOpening += (_, _) =>
             {
                 wallpaper.Checked = RuntimeSessionPolicy.IsPermitted(SessionBackgroundService.AnimatedWallpaper);
                 dock.Checked = RuntimeSessionPolicy.IsPermitted(SessionBackgroundService.DeskStrip);
-                wallpaper.Enabled = dock.Enabled = !SafeModeService.IsSafeMode;
+                widgets.Checked = RuntimeSessionPolicy.IsPermitted(SessionBackgroundService.Widgets);
+                wallpaper.Enabled = dock.Enabled = widgets.Enabled = !SafeModeService.IsSafeMode;
             };
             return menu;
         }

@@ -2629,6 +2629,7 @@ namespace MotionDesk.Widgets
         public double? RelativeY { get; set; }
         public int MonitorWidth { get; set; }
         public int MonitorHeight { get; set; }
+        internal WidgetSnapshot Copy() => (WidgetSnapshot)MemberwiseClone();
     }
 
     public class WidgetHostEngine
@@ -2637,6 +2638,78 @@ namespace MotionDesk.Widgets
         public static WidgetHostEngine Instance => _instance ??= new WidgetHostEngine();
 
         private readonly List<WidgetWindow> _activeWidgets = new();
+        // Non-null while suspended or when a resume failed. A plain data
+        // snapshot owns no HWND, WebView, timer, audio stream or plugin instance.
+        private List<WidgetSnapshot>? _suspendedLayout;
+        private bool _transitioning;
+        public bool SessionSuspended => (RuntimeSessionPolicy.Allowed & SessionBackgroundService.Widgets) == 0;
+        internal static void ReconcileSessionIfCreated() => _instance?.ReconcileSession();
+
+        internal static List<WidgetSnapshot> CopyLayout(IEnumerable<WidgetSnapshot> snapshots)
+        {
+            var result = new List<WidgetSnapshot>();
+            var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var snapshot in snapshots)
+            {
+                if (snapshot == null || string.IsNullOrWhiteSpace(snapshot.WidgetId)) continue;
+                ValidateWidgetId(snapshot.WidgetId);
+                if (seen.Add(snapshot.WidgetId)) result.Add(snapshot.Copy());
+            }
+            return result;
+        }
+
+        private static void ValidateWidgetId(string id)
+        {
+            if (string.IsNullOrWhiteSpace(id) || id != Path.GetFileName(id) ||
+                id.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0 || id is "." or "..")
+                throw new ArgumentException("Invalid widget identity.");
+        }
+
+        public bool HasRequestedWidget(string id) =>
+            _suspendedLayout?.Any(s => string.Equals(s.WidgetId, id, StringComparison.OrdinalIgnoreCase)) == true ||
+            _activeWidgets.Any(w => !w.IsDisposed && string.Equals(w.WidgetId, id, StringComparison.OrdinalIgnoreCase));
+
+        private void ReconcileSession()
+        {
+            if (_transitioning) throw new InvalidOperationException("Widget transition already in progress.");
+            _transitioning = true;
+            try
+            {
+                if (SessionSuspended)
+                {
+                    // Capture before closing anything. If capture itself fails,
+                    // restore admission; otherwise retain the full recovery list.
+                    try { _suspendedLayout ??= CopyLayout(CaptureLiveSnapshots()); }
+                    catch
+                    {
+                        RuntimeSessionPolicy.SetAllowed(SessionBackgroundService.Widgets, true);
+                        throw;
+                    }
+                    CloseLiveWidgets();
+                    return;
+                }
+                if (_suspendedLayout == null) return;
+                try
+                {
+                    CloseLiveWidgets(); // also retry any previous failed close
+                    RestoreLiveSnapshots(_suspendedLayout, persist: false);
+                    _suspendedLayout = null; // commit only after every widget opened
+                }
+                catch
+                {
+                    RuntimeSessionPolicy.SetAllowed(SessionBackgroundService.Widgets, false);
+                    try { CloseLiveWidgets(); }
+                    catch (Exception ex) { System.Diagnostics.Debug.WriteLine(ex); }
+                    throw; // retain the original layout for a subsequent retry/save
+                }
+            }
+            finally
+            {
+                _transitioning = false;
+                AppActivity.RequestRefresh();
+            }
+        }
+
         internal static bool HasVisibleWidgets => _instance?._activeWidgets.Any(w => !w.IsDisposed && w.Visible && w.IsHandleCreated) == true;
         private DateTime _temporaryUnlockUntilUtc;
         public bool TemporarilyUnlocked => DateTime.UtcNow < _temporaryUnlockUntilUtc;
@@ -2652,7 +2725,10 @@ namespace MotionDesk.Widgets
 
         public IReadOnlyCollection<WidgetWindow> GetActiveWidgets() => _activeWidgets;
 
-        public IReadOnlyList<WidgetSnapshot> GetSnapshots() => _activeWidgets
+        public IReadOnlyList<WidgetSnapshot> GetSnapshots() =>
+            _suspendedLayout != null ? CopyLayout(_suspendedLayout) : CaptureLiveSnapshots();
+
+        private IReadOnlyList<WidgetSnapshot> CaptureLiveSnapshots() => _activeWidgets
             .Where(w => !w.IsDisposed)
             .Select(w => {
                 var screen = Screen.FromControl(w);
@@ -2668,35 +2744,113 @@ namespace MotionDesk.Widgets
 
         public void RestoreSnapshots(IEnumerable<WidgetSnapshot> snapshots)
         {
-            CloseAll();
-            foreach (var snapshot in snapshots.Where(s => !string.IsNullOrWhiteSpace(s.WidgetId)))
+            // Materialize/validate before changing the current layout. The
+            // profile service can use GetSnapshots for its existing rollback.
+            var desired = CopyLayout(snapshots);
+            CloseLiveWidgets();
+            if (SessionSuspended)
+            {
+                _suspendedLayout = desired;
+                return;
+            }
+            RestoreLiveSnapshots(desired, persist: true);
+            _suspendedLayout = null;
+        }
+
+        internal static Rectangle ResolveSnapshotBounds(WidgetSnapshot snapshot, Rectangle area)
+        {
+            int width = Math.Clamp(snapshot.Width, 160, Math.Max(160, area.Width));
+            int height = Math.Clamp(snapshot.Height, 100, Math.Max(100, area.Height));
+            int x = snapshot.RelativeX is double rx && double.IsFinite(rx) ? area.Left + (int)Math.Round(Math.Clamp(rx,0,1)*area.Width) : snapshot.X;
+            int y = snapshot.RelativeY is double ry && double.IsFinite(ry) ? area.Top + (int)Math.Round(Math.Clamp(ry,0,1)*area.Height) : snapshot.Y;
+            return new Rectangle(Math.Clamp(x,area.Left,Math.Max(area.Left,area.Right-width)),
+                Math.Clamp(y,area.Top,Math.Max(area.Top,area.Bottom-height)), width, height);
+        }
+
+        private void RestoreLiveSnapshots(IEnumerable<WidgetSnapshot> snapshots, bool persist)
+        {
+            foreach (var snapshot in snapshots)
             {
                 var match = MonitorTopologyService.Match(snapshot.MonitorId, snapshot.MonitorDevice, snapshot.MonitorWidth, snapshot.MonitorHeight);
-                var area = match?.WorkingArea ?? Screen.PrimaryScreen?.WorkingArea ?? SystemInformation.VirtualScreen;
-                var width = Math.Max(160, snapshot.Width); var height = Math.Max(100, snapshot.Height);
-                var x = snapshot.RelativeX is double rx && double.IsFinite(rx) ? area.Left + (int)Math.Round(Math.Clamp(rx,0,1)*area.Width) : snapshot.X;
-                var y = snapshot.RelativeY is double ry && double.IsFinite(ry) ? area.Top + (int)Math.Round(Math.Clamp(ry,0,1)*area.Height) : snapshot.Y;
-                x = Math.Clamp(x,area.Left,Math.Max(area.Left,area.Right-width));
-                y = Math.Clamp(y,area.Top,Math.Max(area.Top,area.Bottom-height));
-                var widget = SpawnWidget(snapshot.WidgetId, x, y, width, height);
-                widget.Location = new Point(x,y);
-                widget.IsLocked = snapshot.IsLocked;
-                widget.SaveWidgetState();
+                var area = match?.WorkingArea ?? Screen.FromRectangle(new Rectangle(snapshot.X, snapshot.Y, 1, 1)).WorkingArea;
+                var bounds = ResolveSnapshotBounds(snapshot, area);
+                // Apply the stored size AND position before Show; the widget's
+                // own config loader must not override a workspace snapshot.
+                var widget = SpawnCore(snapshot.WidgetId, bounds.X, bounds.Y, bounds.Width, bounds.Height,
+                    persistStartup: persist, snapshotBounds: bounds, locked: snapshot.IsLocked);
+                if (persist) widget.SaveWidgetState();
             }
+        }
+
+        private void CloseLiveWidgets()
+        {
+            Exception? failure = null;
+            foreach (var widget in _activeWidgets.ToArray())
+            {
+                if (widget.IsDisposed) continue;
+                try { widget.Close(); }
+                catch (Exception ex) { failure ??= ex; }
+            }
+            _activeWidgets.RemoveAll(w => w.IsDisposed);
+            BackdropContrast.Refresh();
+            AppActivity.RequestRefresh();
+            if (failure != null || _activeWidgets.Count != 0)
+                throw new InvalidOperationException("A widget could not close. The layout has been retained; retry or restart Opsis.", failure);
         }
 
         public void CloseAll()
         {
-            foreach (var widget in new List<WidgetWindow>(_activeWidgets))
-                if (!widget.IsDisposed) widget.Close();
-            _activeWidgets.Clear();
-            BackdropContrast.Refresh();
-            AppActivity.RequestRefresh();
+            CloseLiveWidgets();
+            _suspendedLayout = SessionSuspended ? new List<WidgetSnapshot>() : null;
+        }
+
+        public void CloseWidget(string id)
+        {
+            foreach (var widget in _activeWidgets.Where(w => !w.IsDisposed &&
+                string.Equals(w.WidgetId,id,StringComparison.OrdinalIgnoreCase)).ToArray())
+            {
+                widget.Close();
+                if (!widget.IsDisposed) throw new InvalidOperationException("Widget close was cancelled.");
+            }
+            _suspendedLayout?.RemoveAll(s => string.Equals(s.WidgetId,id,StringComparison.OrdinalIgnoreCase));
+        }
+
+        // UI requests remain meaningful while the session is suspended, but
+        // cannot create a hidden live widget as a substitute for a snapshot.
+        public void RequestWidget(string widgetId, int x, int y, int width, int height)
+        {
+            ValidateWidgetId(widgetId);
+            if (!SessionSuspended) { SpawnWidget(widgetId, x, y, width, height); return; }
+            _suspendedLayout ??= CopyLayout(CaptureLiveSnapshots());
+            if (HasRequestedWidget(widgetId)) return;
+            var snapshot = new WidgetSnapshot { WidgetId = widgetId, X = x, Y = y, Width = width, Height = height };
+            var path = Path.Combine(AppPaths.AppDataFolder, "widgets", widgetId + "_config.json");
+            try
+            {
+                if (File.Exists(path) && JsonSerializer.Deserialize<WidgetState>(AtomicFile.ReadAllText(path)) is { } saved)
+                {
+                    snapshot.X = saved.X; snapshot.Y = saved.Y;
+                    if (saved.Width > 120 && saved.Height > 80)
+                    { snapshot.Width = saved.Width; snapshot.Height = saved.Height; }
+                    snapshot.IsLocked = saved.IsLocked;
+                }
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException)
+            { System.Diagnostics.Debug.WriteLine(ex); }
+            _suspendedLayout.Add(snapshot);
         }
 
         public WidgetWindow SpawnWidget(string widgetId, int x, int y, int width, int height)
         {
-            var existing = _activeWidgets.Find(w => w.WidgetId == widgetId);
+            if (SessionSuspended) throw new InvalidOperationException("Widgets are suspended for this session. Use the tray to resume them.");
+            return SpawnCore(widgetId, x, y, width, height, persistStartup: true);
+        }
+
+        private WidgetWindow SpawnCore(string widgetId, int x, int y, int width, int height, bool persistStartup,
+            Rectangle? snapshotBounds = null, bool? locked = null)
+        {
+            ValidateWidgetId(widgetId);
+            var existing = _activeWidgets.Find(w => string.Equals(w.WidgetId, widgetId, StringComparison.OrdinalIgnoreCase));
             if (existing != null && !existing.IsDisposed)
             {
                 existing.BringToFront();
@@ -2706,16 +2860,31 @@ namespace MotionDesk.Widgets
             // Ένα ενεργό widget πρέπει να ξαναγυρίζει αυτόματα στην επόμενη εκκίνηση των Windows
             // (ζητήθηκε ρητά) — το --background flag (StartupManager.SetStartup) φροντίζει ήδη
             // ώστε αυτή η αυτόματη εκκίνηση να μην αναδύει το κύριο παράθυρο.
-            if (!StartupManager.IsStartupEnabled()) StartupManager.SetStartup(true);
+            if (persistStartup && !StartupManager.IsStartupEnabled()) StartupManager.SetStartup(true);
 
             var widgetWindow = new WidgetWindow(widgetId, x, y, width, height);
             _activeWidgets.Add(widgetWindow);
             widgetWindow.VisibleChanged += (_, _) => { BackdropContrast.Refresh(); AppActivity.RequestRefresh(); };
             widgetWindow.FormClosed += (s, e) => { _activeWidgets.Remove(widgetWindow); BackdropContrast.Refresh(); AppActivity.RequestRefresh(); };
-            widgetWindow.Show();
-            BackdropContrast.Refresh();
-            AppActivity.RequestRefresh();
-            return widgetWindow;
+            try
+            {
+                if (snapshotBounds is Rectangle bounds) widgetWindow.Bounds = bounds;
+                if (locked is bool value) widgetWindow.IsLocked = value;
+                widgetWindow.Show();
+                BackdropContrast.Refresh();
+                AppActivity.RequestRefresh();
+                return widgetWindow;
+            }
+            catch
+            {
+                try { widgetWindow.Close(); }
+                finally
+                {
+                    if (!widgetWindow.IsDisposed) widgetWindow.Dispose();
+                    _activeWidgets.Remove(widgetWindow);
+                }
+                throw;
+            }
         }
     }
 }

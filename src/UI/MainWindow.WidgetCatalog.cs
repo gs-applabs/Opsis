@@ -26,7 +26,7 @@ public sealed partial class MainWindow
         {
             if (list.SelectedItem is not WidgetCatalog.Package package) return;
             var area = Screen.FromControl(this).WorkingArea;
-            WidgetHostEngine.Instance.SpawnWidget(package.Key, area.Left + 40, area.Top + 60, package.Manifest.Width, package.Manifest.Height);
+            WidgetHostEngine.Instance.RequestWidget(package.Key, area.Left + 40, area.Top + 60, package.Manifest.Width, package.Manifest.Height);
         }, 165, true));
         actions.Controls.Add(StudioButton(StudioText("Install ZIP…", "Εγκατάσταση ZIP…"), () =>
         {
@@ -41,7 +41,7 @@ public sealed partial class MainWindow
             if (list.SelectedItem is not WidgetCatalog.Package { BuiltIn: false } package) return;
             ApplySetting(package.Manifest.Name, () =>
             {
-                WidgetHostEngine.Instance.GetActiveWidgets().FirstOrDefault(widget => widget.WidgetId == package.Key)?.Close();
+                WidgetHostEngine.Instance.CloseWidget(package.Key);
                 WidgetCatalog.Remove(package);
                 Reload();
             });

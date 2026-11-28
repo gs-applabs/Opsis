@@ -1328,30 +1328,30 @@ namespace MotionDesk.UI
             int ww = wds.WidgetDefaultWidth, wh = wds.WidgetDefaultHeight;
             AddSection(panel, LocalizationManager.T("Widgets.SectionDesktopWidgets"));
             AddIconButtonGrid(panel,
-                ("SystemMonitor", LocalizationManager.T("Widgets.SystemMonitor"), (_, _) => WidgetHostEngine.Instance.SpawnWidget("sysmon", 100, 100, ww, wh)),
-                ("Clock", LocalizationManager.T("Widgets.Clock"), (_, _) => WidgetHostEngine.Instance.SpawnWidget("clock", 450, 100, ww, wh)),
-                ("Network", LocalizationManager.T("Widgets.Network"), (_, _) => WidgetHostEngine.Instance.SpawnWidget("network", 100, 350, ww, wh)),
-                ("AudioVisualizer", LocalizationManager.T("Widgets.AudioVisualizer"), (_, _) => WidgetHostEngine.Instance.SpawnWidget("audio", 450, 350, ww, wh)),
-                ("Weather", LocalizationManager.T("Widgets.Weather"), (_, _) => WidgetHostEngine.Instance.SpawnWidget("weather", 800, 100, ww, wh)),
-                ("Disk", LocalizationManager.T("Widgets.Disk"), (_, _) => WidgetHostEngine.Instance.SpawnWidget("disk", 800, 350, ww, wh)),
-                ("Settings", LocalizationManager.T("Widgets.QuickSettings"), (_, _) => WidgetHostEngine.Instance.SpawnWidget("quicksettings", 1100, 100, ww, wh)),
+                ("SystemMonitor", LocalizationManager.T("Widgets.SystemMonitor"), (_, _) => WidgetHostEngine.Instance.RequestWidget("sysmon", 100, 100, ww, wh)),
+                ("Clock", LocalizationManager.T("Widgets.Clock"), (_, _) => WidgetHostEngine.Instance.RequestWidget("clock", 450, 100, ww, wh)),
+                ("Network", LocalizationManager.T("Widgets.Network"), (_, _) => WidgetHostEngine.Instance.RequestWidget("network", 100, 350, ww, wh)),
+                ("AudioVisualizer", LocalizationManager.T("Widgets.AudioVisualizer"), (_, _) => WidgetHostEngine.Instance.RequestWidget("audio", 450, 350, ww, wh)),
+                ("Weather", LocalizationManager.T("Widgets.Weather"), (_, _) => WidgetHostEngine.Instance.RequestWidget("weather", 800, 100, ww, wh)),
+                ("Disk", LocalizationManager.T("Widgets.Disk"), (_, _) => WidgetHostEngine.Instance.RequestWidget("disk", 800, 350, ww, wh)),
+                ("Settings", LocalizationManager.T("Widgets.QuickSettings"), (_, _) => WidgetHostEngine.Instance.RequestWidget("quicksettings", 1100, 100, ww, wh)),
                 // Πλήρες σύνολο widgets - τα υπόλοιπα 4: quick-settings
                 // (ήδη πάνω, "Settings"), notifications, media/now-playing, calendar, Bluetooth.
-                ("Media", LocalizationManager.T("Widgets.Media"), (_, _) => WidgetHostEngine.Instance.SpawnWidget("media", 1100, 350, ww, wh)),
-                ("Notifications", LocalizationManager.T("Widgets.Notifications"), (_, _) => WidgetHostEngine.Instance.SpawnWidget("notifications", 100, 600, ww, wh)),
-                ("Calendar", LocalizationManager.T("Widgets.Calendar"), (_, _) => WidgetHostEngine.Instance.SpawnWidget("calendar", 450, 600, ww, wh)),
-                ("Bluetooth", LocalizationManager.T("Widgets.Bluetooth"), (_, _) => WidgetHostEngine.Instance.SpawnWidget("bluetooth", 800, 600, ww, wh)));
+                ("Media", LocalizationManager.T("Widgets.Media"), (_, _) => WidgetHostEngine.Instance.RequestWidget("media", 1100, 350, ww, wh)),
+                ("Notifications", LocalizationManager.T("Widgets.Notifications"), (_, _) => WidgetHostEngine.Instance.RequestWidget("notifications", 100, 600, ww, wh)),
+                ("Calendar", LocalizationManager.T("Widgets.Calendar"), (_, _) => WidgetHostEngine.Instance.RequestWidget("calendar", 450, 600, ww, wh)),
+                ("Bluetooth", LocalizationManager.T("Widgets.Bluetooth"), (_, _) => WidgetHostEngine.Instance.RequestWidget("bluetooth", 800, 600, ww, wh)));
 
             // Μετακινήθηκε εδώ από τις γενικές Ρυθμίσεις (ζητήθηκε ρητά "διάσπαρτες ρυθμίσεις που
             // μπορούν να μπουν στις αντίστοιχες καρτέλες") - το θέμα widgets/containers και το
             // προεπιλεγμένο μέγεθος νέων widgets αφορούν ΑΠΟΚΛΕΙΣΤΙΚΑ αυτή τη σελίδα.
             AddSection(panel, LocalizationManager.T("Settings.SectionWidgetsContainers"));
             panel.Controls.Add(SettingsView.Checkbox(LocalizationManager.T("Settings.ShowSystemMonitorWidget"),
-                AppSettings.Load().ShowSystemMonitor || WidgetHostEngine.Instance.GetActiveWidgets().Any(w => w.WidgetId == "sysmon"),
+                AppSettings.Load().ShowSystemMonitor || WidgetHostEngine.Instance.HasRequestedWidget("sysmon"),
                 v =>
                 {
-                    if (v) WidgetHostEngine.Instance.SpawnWidget("sysmon", 100, 100, ww, wh);
-                    else WidgetHostEngine.Instance.GetActiveWidgets().FirstOrDefault(w => w.WidgetId == "sysmon")?.Close();
+                    if (v) WidgetHostEngine.Instance.RequestWidget("sysmon", 100, 100, ww, wh);
+                    else WidgetHostEngine.Instance.CloseWidget("sysmon");
                     var a = AppSettings.Load(); a.ShowSystemMonitor = v; a.Save();
                 }));
             panel.Controls.Add(SettingsView.BuildWidgetsThemeRow());
@@ -1412,19 +1412,39 @@ namespace MotionDesk.UI
             // ορατού flicker στο WinForms. Τώρα συγκρίνεται μια φθηνή "υπογραφή" (id+lock state)
             // και η ανοικοδόμηση γίνεται ΜΟΝΟ όταν κάτι πραγματικά άλλαξε.
             (WidgetWindow Window, bool Locked)[]? lastWidgets = null;
+            string? lastSuspended = null;
             void RefreshActiveList()
             {
                 var active = WidgetHostEngine.Instance.GetActiveWidgets()
                     .Where(window => !window.IsDisposed).Select(window => (Window: window, Locked: window.IsLocked)).ToArray();
-                if (lastWidgets != null && lastWidgets.SequenceEqual(active)) return;
+                var host = WidgetHostEngine.Instance;
+                string suspended = host.SessionSuspended
+                    ? string.Join("|", host.GetSnapshots().Select(s => s.WidgetId))
+                    : "";
+                string signature = host.SessionSuspended ? "paused:" + suspended : "active";
+                if (lastWidgets != null && lastWidgets.SequenceEqual(active) && signature == lastSuspended) return;
                 lastWidgets = active;
+                lastSuspended = signature;
 
                 // Ίδια διόρθωση scroll-reset με το RefreshPinnedApps (DeskStrip)/topLabel (Performance):
                 // το Controls.Clear()+rebuild μέσα σε AutoScroll container επαναφέρει σιωπηλά στην κορυφή.
                 var savedScroll = panel.AutoScrollPosition;
                 activeList.SuspendLayout();
                 DisposeChildren(activeList);
-                if (active.Length == 0)
+                if (host.SessionSuspended)
+                {
+                    activeList.Controls.Add(new Label { AutoSize = true, MaximumSize = new Size(480, 0),
+                        Text = StudioText("Widgets suspended for this session. Resume from the tray.", "Τα widgets είναι σε αναστολή για αυτή τη συνεδρία. Επαναφορά από το tray."),
+                        ForeColor = UiTheme.TextMuted, Font = UiTheme.FontBody });
+                    foreach (var snapshot in host.GetSnapshots())
+                    {
+                        string id = snapshot.WidgetId;
+                        var pending = new Button { AutoSize = true, Text = id + " · " + StudioText("Remove from layout", "Αφαίρεση από τη διάταξη") };
+                        pending.Click += (_, _) => { host.CloseWidget(id); RefreshActiveList(); };
+                        activeList.Controls.Add(pending);
+                    }
+                }
+                else if (active.Length == 0)
                 {
                     activeList.Controls.Add(new Label { AutoSize = true, Text = LocalizationManager.T("Common.NoActiveWidgets"), ForeColor = UiTheme.TextMuted, Font = UiTheme.FontBody });
                 }

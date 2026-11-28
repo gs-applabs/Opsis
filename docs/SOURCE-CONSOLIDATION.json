@@ -1601,7 +1601,7 @@
         "pass": "MP05/07",
         "status": "PARTIAL_OR_RELATED_EVIDENCE",
         "evidencePath": "src/Services/MonitorTopologyService.cs",
-        "evidence": "stable IDs and DPI; verify widget position restore",
+        "evidence": "stable IDs and DPI; verify widget position restore; R85 preserves widget monitor anchors, size and position during session suspension; runtime gate open.",
         "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
         "releaseCertified": false
       },
@@ -2276,12 +2276,13 @@
       "latest_certified": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
       "latest_audit_run": 46102704472,
       "latest_artifact": 15246756939,
-      "next": "Check R80 full audit 46103939134 exact SHA and GPU/heap evidence. Promote R81 CAS after all seven success, then R82/R83/R84 in order. R84 adds wallpaper/DeskStrip session admission; Widgets transactional snapshots and remaining runtime owners still open. Keep original IDs and asset blockers, no release.",
+      "next": "Check R80 full audit 46103939134 and GPU/heap counters. If all seven success CAS R80->R81, then R82/R83/R84/R85 ordered exact-SHA gates. R85 widget desired-layout preservation and tray session bit; live transition/fault injection and remaining runtime owners open. Preserve 100 IDs and B01-B14; no release.",
       "parent_R79": "835b784e5cdce8fb8eb2134df79c1632366b82a0",
       "parent_R80": "5ad65d13c11262ff9a75b4a5c387bbeb50e40c59",
       "parent_R81": "cae751ab4b21d69996bbacd11bed9a3ae715b3ec",
       "parent_R82": "d1b0542327a5b00606984e9a9f5e31977d688afa",
-      "parent_R83": "f7f4625e4da1eae13f6fade5b0551e8d3f9a9f8a"
+      "parent_R83": "f7f4625e4da1eae13f6fade5b0551e8d3f9a9f8a",
+      "parent_R84": "f51111de179870bb2c13cdf0b0819155e325adb6"
     }
   }
 }

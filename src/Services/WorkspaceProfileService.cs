@@ -62,8 +62,8 @@ public static class WorkspaceProfileService
         {
             try { Load("Last Session"); } catch (Exception ex) { System.Diagnostics.Debug.WriteLine(ex); }
         }
-        else if (saved.ShowSystemMonitor && !WidgetHostEngine.Instance.GetActiveWidgets().Any(w => w.WidgetId == "sysmon"))
-            WidgetHostEngine.Instance.SpawnWidget("sysmon", 100, 100, 300, 200);
+        else if (saved.ShowSystemMonitor && !WidgetHostEngine.Instance.HasRequestedWidget("sysmon"))
+            WidgetHostEngine.Instance.RequestWidget("sysmon", 100, 100, 300, 200);
     }
 
     internal static void SaveLastSessionOnce()

@@ -202,7 +202,7 @@ try
     Check(!RuntimeSessionPolicy.Allows(SessionBackgroundService.All, SessionBackgroundService.UsageAlerts, false, false) &&
         !RuntimeSessionPolicy.Allows(SessionBackgroundService.All, SessionBackgroundService.UsageAlerts, true, true) &&
         !RuntimeSessionPolicy.Allows(SessionBackgroundService.All, SessionBackgroundService.None, true, false) &&
-        !RuntimeSessionPolicy.Allows(SessionBackgroundService.All, (SessionBackgroundService)128, true, false),
+        !RuntimeSessionPolicy.Allows(SessionBackgroundService.All, (SessionBackgroundService)256, true, false),
         "R83 session selection cannot bypass saved opt-in, safe mode or known capabilities");
     var sessionPrefs = new AppSettings { RestoreWindowsAfterDocking = true, UsageAlertsEnabled = true };
     Check(MotionDesk.Widgets.TrayApplicationContext.SelectOptionalServices(sessionPrefs, false, SessionBackgroundService.DockRestore) == (true, false) &&
@@ -210,7 +210,7 @@ try
         MotionDesk.Widgets.TrayApplicationContext.SelectOptionalServices(sessionPrefs, false, SessionBackgroundService.All) == (true, true) &&
         sessionPrefs.RestoreWindowsAfterDocking && sessionPrefs.UsageAlertsEnabled,
         "R83 reversible session filters leave persisted preferences unchanged");
-    var desktopMask = SessionBackgroundService.AnimatedWallpaper | SessionBackgroundService.DeskStrip;
+    var desktopMask = SessionBackgroundService.AnimatedWallpaper | SessionBackgroundService.DeskStrip | SessionBackgroundService.Widgets;
     Check(RuntimeSessionPolicy.ReplaceBackground(desktopMask, true) == SessionBackgroundService.All &&
         RuntimeSessionPolicy.ReplaceBackground(SessionBackgroundService.All, false) == desktopMask &&
         RuntimeSessionPolicy.ReplaceBackground(SessionBackgroundService.None, true) == SessionBackgroundService.Background,
@@ -219,6 +219,22 @@ try
         !MotionDesk.Widgets.WallpaperHostEngine.AllowsAnimatedScene(true, false) &&
         !MotionDesk.Widgets.WallpaperHostEngine.AllowsAnimatedScene(false, true),
         "R84 animation session admission is separate from requested wallpaper state");
+    var widgetFixture = new MotionDesk.Widgets.WidgetSnapshot { WidgetId = "clock", X = 24, Y = 40, Width = 320, Height = 180, IsLocked = true, MonitorId = "m1" };
+    var widgetPlan = MotionDesk.Widgets.WidgetHostEngine.CopyLayout(new[] { widgetFixture, new MotionDesk.Widgets.WidgetSnapshot { WidgetId = "CLOCK" } });
+    widgetFixture.Width = 999;
+    Check(widgetPlan.Count == 1 && widgetPlan[0].Width == 320 && widgetPlan[0].IsLocked && widgetPlan[0].MonitorId == "m1",
+        "R85 retained widget layout copies geometry and lock state and avoids duplicate identities");
+    var widgetBounds = MotionDesk.Widgets.WidgetHostEngine.ResolveSnapshotBounds(widgetPlan[0], new System.Drawing.Rectangle(0,0,1000,700));
+    Check(widgetBounds == new System.Drawing.Rectangle(24,40,320,180),
+        "R85 restores both dimensions and position from retained widget snapshot");
+    var mappedWidget = new MotionDesk.Widgets.WidgetSnapshot { WidgetId = "clock", Width = 400, Height = 200, RelativeX = 0.9, RelativeY = 0.9 };
+    Check(MotionDesk.Widgets.WidgetHostEngine.ResolveSnapshotBounds(mappedWidget, new System.Drawing.Rectangle(-800,0,800,600)) ==
+        new System.Drawing.Rectangle(-400,400,400,200),
+        "R85 retained widget geometry clamps to the available monitor");
+    bool invalidWidgetId = false;
+    try { MotionDesk.Widgets.WidgetHostEngine.CopyLayout(new[] { new MotionDesk.Widgets.WidgetSnapshot { WidgetId = "../other" } }); }
+    catch (ArgumentException) { invalidWidgetId = true; }
+    Check(invalidWidgetId, "R85 invalid widget identity rejected before layout mutation");
     var opt = new AppSettings { RestoreWindowsAfterDocking = false, UsageAlertsEnabled = false };
     Check(MotionDesk.Widgets.TrayApplicationContext.SelectOptionalServices(opt, false) == (false, false),
         "R65 disabled optional tray services have no timer demand");
