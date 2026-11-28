@@ -6132,6 +6132,60 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                     StudioText("After restart, use Load saved plugins now in the tray. No plugin discovery or DLL loading before that command.",
                         "Μετά την επανεκκίνηση, επιλέξτε Φόρτωση αποθηκευμένων plugins τώρα από το tray. Δεν προηγείται αναζήτηση ή φόρτωση DLL."),
                     restart: true));
+                var packageSelection = NewHoverButton(StudioText("Select plugin packages for startup", "Επιλογή πακέτων plugins για εκκίνηση"), () =>
+                {
+                    using var dialog = new Form
+                    {
+                        Text = StudioText("Plugin packages — startup selection", "Πακέτα plugins — επιλογή εκκίνησης"),
+                        StartPosition = FormStartPosition.CenterParent,
+                        ClientSize = new Size(740, 410), MinimumSize = new Size(480, 300)
+                    };
+                    var list = new CheckedListBox { Dock = DockStyle.Fill, CheckOnClick = true, HorizontalScrollbar = true };
+                    var note = new Label { Dock = DockStyle.Top, Height = 85, Padding = new Padding(8),
+                        Text = StudioText("Checked packages may load after restart, subject to approval and global plugin settings. Unchecked packages are excluded before DLL loading. Already loaded code requires restart. This list is metadata only.",
+                            "Τα επιλεγμένα πακέτα μπορούν να φορτωθούν μετά την επανεκκίνηση, με έγκριση και τις γενικές ρυθμίσεις. Τα μη επιλεγμένα αποκλείονται πριν τη φόρτωση DLL. Για ήδη φορτωμένο κώδικα απαιτείται επανεκκίνηση. Η λίστα αφορά μόνο μεταδεδομένα.") };
+                    var save = new Button { Dock = DockStyle.Bottom, Height = 38, Enabled = false,
+                        Text = StudioText("Save for next restart", "Αποθήκευση για επανεκκίνηση") };
+                    dialog.Controls.Add(list); dialog.Controls.Add(note); dialog.Controls.Add(save);
+                    string[] paths = Array.Empty<string>();
+                    dialog.Shown += async (_, _) =>
+                    {
+                        try
+                        {
+                            var found = await Task.Run(() => PluginHost.EnumerateCandidateFolders()
+                                .Where(p => Directory.EnumerateFiles(p.Folder, "*Plugin.dll").Take(1).Any())
+                                .Select(p => PluginHost.PackageIdentity(p.Folder))
+                                .Distinct(StringComparer.OrdinalIgnoreCase).Take(251).ToArray());
+                            if (dialog.IsDisposed || dialog.Disposing) return;
+                            if (found.Length > 250) note.Text += " · " + StudioText("First 250 packages shown.", "Εμφανίζονται τα πρώτα 250 πακέτα.");
+                            paths = found.Take(250).OrderBy(x => x, StringComparer.OrdinalIgnoreCase).ToArray();
+                            var excluded = AppSettings.Peek().ExcludedPluginFolders;
+                            foreach (var path in paths) list.Items.Add(path, !PluginHost.IsPackageExcluded(path, excluded));
+                            save.Enabled = paths.Length > 0;
+                        }
+                        catch (Exception ex) { if (!dialog.IsDisposed && !dialog.Disposing) note.Text = ex.Message; }
+                    };
+                    save.Click += (_, _) =>
+                    {
+                        try
+                        {
+                            var a = AppSettings.Load();
+                            var next = new System.Collections.Generic.HashSet<string>(a.ExcludedPluginFolders ?? new(), StringComparer.OrdinalIgnoreCase);
+                            for (int i = 0; i < paths.Length; i++)
+                            {
+                                string path = paths[i];
+                                next.RemoveWhere(candidate => PluginHost.IsPackageExcluded(path, new[] { candidate }));
+                                if (!list.GetItemChecked(i)) next.Add(path);
+                            }
+                            a.ExcludedPluginFolders = next;
+                            a.Save();
+                            dialog.Close();
+                        }
+                        catch (Exception ex) { MessageBox.Show(dialog, ex.Message, "Opsis"); }
+                    };
+                    dialog.ShowDialog(this);
+                });
+                integrations.Controls.Add(packageSelection);
                 var integrationsAdvanced = new StudioAdvancedSection();
                 {
                     // (plan 2.1.1: the "default look of plugins" setting was removed - plugins always follow the Opsis theme; the Crawler bars follow Windows by their own rule)

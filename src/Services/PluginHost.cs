@@ -663,8 +663,31 @@ namespace MotionDesk.Services
         public IReadOnlyList<PluginTrustRequest> PendingApprovals { get { lock (_pending) return _pending.ToList(); } }
 
         /// <summary>Loads a folder if its root is trusted or its exact content is approved; otherwise remembers it as pending. Returns true when it was loaded.</summary>
+        internal static string PackageIdentity(string folder)
+        {
+            if (string.IsNullOrWhiteSpace(folder) || !Path.IsPathFullyQualified(folder) ||
+                folder.StartsWith(@"\\", StringComparison.Ordinal) || folder.Length > 2048)
+                throw new ArgumentException("Expected a local package folder.", nameof(folder));
+            return Path.TrimEndingDirectorySeparator(Path.GetFullPath(folder));
+        }
+
+        internal static bool IsPackageExcluded(string folder, IEnumerable<string>? excluded)
+        {
+            if (excluded == null) return false;
+            string identity = PackageIdentity(folder);
+            foreach (var candidate in excluded)
+            {
+                try { if (string.Equals(PackageIdentity(candidate), identity, StringComparison.OrdinalIgnoreCase)) return true; }
+                catch (Exception ex) when (ex is ArgumentException or IOException or NotSupportedException) { }
+            }
+            return false;
+        }
+
+        private static bool PackageExcluded(string folder) => IsPackageExcluded(folder, AppSettings.Peek().ExcludedPluginFolders);
+
         internal bool ConsiderFolder(string folder, bool trustedRoot)
         {
+            if (PackageExcluded(folder)) { Log("Plugin package excluded by user: " + folder); return false; }
             PluginCapabilityManifest.RequireCompatibleApi(folder);
             var requested = PluginCapabilityManifest.Read(folder); // malformed declaration fails before assembly loading
             // Protected legacy packages keep their established admission path.
@@ -681,6 +704,7 @@ namespace MotionDesk.Services
                     return false;
                 }
             }
+            if (PackageExcluded(folder)) return false;
             (FolderLoader ?? LoadFolder)(folder);
             return true;
         }
@@ -701,6 +725,11 @@ namespace MotionDesk.Services
             int approved = 0;
             foreach (var req in PendingApprovals)
             {
+                if (PackageExcluded(req.Folder))
+                {
+                    lock (_pending) _pending.RemoveAll(p => string.Equals(p.Folder, req.Folder, StringComparison.OrdinalIgnoreCase));
+                    continue;
+                }
                 try
                 {
                     PluginCapabilityManifest.RequireCompatibleApi(req.Folder);
@@ -725,6 +754,11 @@ namespace MotionDesk.Services
                         continue;
                     }
                     if (_globalHoldUntilRestart || _compatibilitySuspended || WindowsUpdateGuard.RequiresReview || SafeModeService.IsSafeMode || !AppSettings.Peek().PluginsEnabled || WindowsUpdateGuard.RuntimeHold) break;
+                    if (PackageExcluded(req.Folder))
+                    {
+                        lock (_pending) _pending.RemoveAll(p => string.Equals(p.Folder, req.Folder, StringComparison.OrdinalIgnoreCase));
+                        continue;
+                    }
                     PluginCapabilityManifest.RequireCompatibleApi(req.Folder);
                     var granted = PluginCapabilityManifest.Read(req.Folder);
                     if (!granted.SequenceEqual(PluginCapabilityManifest.NormalizeCapabilities(req.RequestedCapabilities)))
@@ -815,6 +849,7 @@ namespace MotionDesk.Services
 
         internal void LoadFolder(string folder)
         {
+            if (PackageExcluded(folder)) return;
             PluginCapabilityManifest.RequireCompatibleApi(folder);
             _ = PluginCapabilityManifest.Read(folder);
             if (IsReplacedByBuiltIn(folder)) { Log($"Plugin folder '{Path.GetFileName(folder)}' skipped: its features are built into Opsis 2.6.0"); return; }

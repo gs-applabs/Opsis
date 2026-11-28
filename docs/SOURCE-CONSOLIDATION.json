@@ -1700,6 +1700,16 @@
           "src/UI/OpsisTaskbarDesignerForm.cs",
           "tests/Opsis.ExperienceSmoke/Program.cs"
         ]
+      },
+      "r117": {
+        "base_sha": "bc4e240e84bc7ef885da99bbed7604092aee9928",
+        "summary": "R117 G07/G11/G18: explicit per-package startup exclusions stored in existing AppSettings; canonical local path comparison, skip before SDK/permission read/trust prompts/loader, recheck pending approval before grant and load. Settings dialog lists candidate DLL packages without loading assemblies; unchecked packages excluded, unlisted preferences preserved; loaded code only unloads on restart. Legacy ABI unchanged; default empty exclusions preserve prior behavior. Two smoke assertions prepared. SDK2 isolated worker/dependency negotiation/update/rollback still open; package admission is not isolation or authentication. No build/runtime tests; 23 groups retained.",
+        "paths": [
+          "src/Services/AppSettings.cs",
+          "src/Services/PluginHost.cs",
+          "src/UI/MainWindow.cs",
+          "tests/Opsis.ExperienceSmoke/Program.cs"
+        ]
       }
     },
     "development_rule": {
@@ -2599,7 +2609,7 @@
     "active_backlog_policy": "Only incomplete or unresolved implementation requirements in proposals. Source-present and test-only rows in archived_qa, not active development. Archive is not release certification. All 100 IDs remain unique across both arrays. Reopen archived row only on concrete missing source or failed test.",
     "global_scope": {
       "rule": "## ΜΟΝΙΜΟΣ ΚΑΝΟΝΑΣ — ΠΑΝΤΑ ΟΛΕΣ ΟΙ ΕΚΚΡΕΜΟΤΗΤΕΣ, ΟΧΙ ΜΟΝΟ ΟΙ 100\n\nΚάθε ερώτηση του χρήστη για «εκκρεμότητες», «συνέχισε», «τι μένει» αφορά **ολόκληρο το OPSIS Desktop Customization 3.0.0.3200**: αρχικές 100, παλαιότερο roadmap/διορθώσεις, P0–P6, B01–B14, UI/Glass, Shell, Containers, SDK/plugins/companion compatibility, wallpapers/εικόνες/intro/ήχο, ανεξάρτητο add-on, installers, migration/rollback, διανομή, τελικές δοκιμές. Ποτέ μόνο ένα υποσύνολο χωρίς ρητό αίτημα. Το σύνολο παραμένει ενιαίο με σταθερά IDs, alias προς παλιά IDs, συγκεκριμένο owner/κενό και κατάσταση. **Εφαρμογή από τις ευκολότερες προς τις δυσκολότερες**, με ασφάλεια ως προϋπόθεση και χωρίς να ξαναγράφεται έτοιμη λειτουργία. Αρχείο ιστορικού/QA δεν αποτελεί ενεργό backlog. Ελέγχεται κάθε φορά ο τελευταίος ακριβής σωρευτικός SHA και η διασταύρωση με ιστορικές συνομιλίες, handoffs, πραγματικούς callers/UI/ρυθμίσεις, plugins και αρχεία. Ανεπαρκή ή μη προσβάσιμα τεκμήρια καταγράφονται ως blockers, όχι ως ολοκληρωμένα. Ο χρήστης δεν πρέπει να ξαναρωτήσει για ξεχασμένα υποσύνολα. Χρήση συνδεδεμένου GitHub για πραγματικές αλλαγές· πρόσθετα μόνο αν καλύπτουν πραγματική δυνατότητα που λείπει. Όλα τα tests στο τέλος, Inno Setup, καμία πρόωρη έκδοση. PERMANENT SELF-CONTAINED CORE REQUIREMENT (user, 2026-11-28): all Opsis capabilities and prerequisites must ship inside the core/installer except explicitly approved dependencies. Windhawk, Rainmeter, StartAllBack and other separately installed customization applications are reference/interoperability only, never prerequisites for claiming a feature complete. Optional feature parity must be implemented in existing Opsis owners or a justified internal owner, demand-loaded, reversible, no duplicate host. Native shell surface parity remains open when only a companion/overlay or Windows Settings shortcut exists. Legacy external CLI bridge retained as dormant source for historical compatibility/recovery and schema tests, not exposed by normal personalization UI; not counted as implementation. No automatic third-party installation, no unsupported native injection. DeskStrip remains the dock/pin owner; Taskbar shares pins and must yield to dock geometry, never implement a second independent dock or overwrite its settings.",
-      "source_sha": "d3af8188b076929560b7d6a095ee2c8c1d0c513c",
+      "source_sha": "bc4e240e84bc7ef885da99bbed7604092aee9928",
       "scope_sources": [
         "docs/SOURCE-CONSOLIDATION.md B01–B14",
         "docs/REMAINING-TASKS-3.0.0.3200.md (all waves, SDK1–4, X1–16 and C1–12)",
@@ -2664,7 +2674,7 @@
           "status": "PARTIAL",
           "aliases": "B03/MP2F",
           "requirement": "Full / Custom / Containers-only, reversible ownership lifecycle, minimal host",
-          "evidence": "18 session gates present; no full startup mode or comprehensive stop/restart. Preserve saved choices. R105: DeskFlip reuses desktop-hotkey admission and closes on teardown/focus loss; native Alt+Tab unchanged. R106: reversible bulk suspend/restore of existing 18 session gates, changed-owner reconciliation; no new startup mode or measurements. R107: toolbar and automatic workspace wallpaper gates, total 20; explicit workspace observation preserved. Actual tests pending. R108: opt-in deferred plugin discovery/load using existing host, saved choices and approval policy; per-plugin constructor isolation and full startup mode pending. R109: reduced startup mask before governor and independent weather overlay gate; no runtime validation or true containers-only host."
+          "evidence": "18 session gates present; no full startup mode or comprehensive stop/restart. Preserve saved choices. R105: DeskFlip reuses desktop-hotkey admission and closes on teardown/focus loss; native Alt+Tab unchanged. R106: reversible bulk suspend/restore of existing 18 session gates, changed-owner reconciliation; no new startup mode or measurements. R107: toolbar and automatic workspace wallpaper gates, total 20; explicit workspace observation preserved. Actual tests pending. R108: opt-in deferred plugin discovery/load using existing host, saved choices and approval policy; per-plugin constructor isolation and full startup mode pending. R109: reduced startup mask before governor and independent weather overlay gate; no runtime validation or true containers-only host. R117 explicit pre-load package exclusions and settings selection; isolation, SDK2 and runtime pending."
         },
         {
           "id": "G08",
@@ -2696,7 +2706,7 @@
           "status": "PARTIAL",
           "aliases": "B08; SDK1/3/4; C10/C11; 100:97",
           "requirement": "Plugin SDK negotiation/dependencies, lifecycle/update/rollback/validator/samples/event bus, cross-app Crawler/Chronologio/Appearance/Media Suite compatibility",
-          "evidence": "Legacy API 1.0.0.0, single host, hash/consent present; full dependency resolver, updates/SDK and real E2E pending. R108: opt-in deferred plugin discovery/load using existing host, saved choices and approval policy; per-plugin constructor isolation and full startup mode pending."
+          "evidence": "Legacy API 1.0.0.0, single host, hash/consent present; full dependency resolver, updates/SDK and real E2E pending. R108: opt-in deferred plugin discovery/load using existing host, saved choices and approval policy; per-plugin constructor isolation and full startup mode pending. R117 explicit pre-load package exclusions and settings selection; isolation, SDK2 and runtime pending."
         },
         {
           "id": "G12",
@@ -2752,7 +2762,7 @@
           "status": "PARTIAL",
           "aliases": "SDK2; B08; X13",
           "requirement": "Actual restricted out-of-process SDK2 worker, authenticated bounded IPC, cancellation and ownership",
-          "evidence": "Current consent controls admission only, not Windows permission sandbox; isolated ABI negotiation still denied until implemented."
+          "evidence": "Current consent controls admission only, not Windows permission sandbox; isolated ABI negotiation still denied until implemented. R117 explicit pre-load package exclusions and settings selection; isolation, SDK2 and runtime pending."
         },
         {
           "id": "G19",

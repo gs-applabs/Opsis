@@ -41,6 +41,26 @@ try
         !PluginCapabilityManifest.SupportsApi(2,2) && !PluginCapabilityManifest.SupportsApi(0,1) && !PluginCapabilityManifest.SupportsApi(1,0),
         "P0 SDK negotiation retains legacy API and rejects unsupported ranges");
     var sdkFixture = Path.Combine(folder, "sdk-fixture"); Directory.CreateDirectory(sdkFixture);
+    Check(PluginHost.IsPackageExcluded(sdkFixture, new[] { sdkFixture.ToUpperInvariant() + Path.DirectorySeparatorChar }) &&
+        !PluginHost.IsPackageExcluded(sdkFixture, new[] { sdkFixture + "-other" }) &&
+        !PluginHost.IsPackageExcluded(sdkFixture, null), "R117 exact package exclusions, case insensitive and legacy default");
+    var previousExcluded = AppSettings.Load();
+    previousExcluded.ExcludedPluginFolders.Add(sdkFixture);
+    previousExcluded.Save();
+    try
+    {
+        var excludedHost = new PluginHost();
+        bool loadedExcluded = false;
+        excludedHost.FolderLoader = _ => loadedExcluded = true;
+        Check(!excludedHost.ConsiderFolder(sdkFixture, true) && !loadedExcluded && excludedHost.PendingApprovals.Count == 0,
+            "R117 excluded protected package bypasses loading and approval");
+    }
+    finally
+    {
+        var clearExcluded = AppSettings.Load();
+        clearExcluded.ExcludedPluginFolders.Remove(sdkFixture);
+        clearExcluded.Save();
+    }
     PluginCapabilityManifest.RequireCompatibleApi(sdkFixture);
     var sdkHashBefore = PluginTrust.HashFolder(sdkFixture);
     File.WriteAllText(Path.Combine(sdkFixture, "opsis-sdk.json"), "{\"schemaVersion\":1,\"minApi\":1,\"maxApi\":1,\"execution\":\"trusted-in-process\"}");
