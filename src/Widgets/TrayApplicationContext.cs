@@ -919,6 +919,7 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
             var keys = _optionalHotkeys;
             _optionalHotkeys = null;
             keys?.Dispose();
+            DeskFlipEngine.CloseOverlay();
         }
 
         private void ReconcileDesktopServices()

@@ -227,6 +227,29 @@ namespace MotionDesk.Services
             return found == null ? "Unknown" : PluginCapabilityManifest.Summary(found.Folder);
         }
 
+        // On-demand inspection of the current disk package, not the resident DLL.
+        // One worker globally even when the About page is recreated.
+        private int _publisherInspectionActive;
+        internal async System.Threading.Tasks.Task<string> InspectPluginPublisherAsync(string id)
+        {
+            if (System.Threading.Interlocked.CompareExchange(ref _publisherInspectionActive, 1, 0) != 0)
+                return "Another package inspection is running. / Εκτελείται άλλος έλεγχος πακέτου.";
+            try
+            {
+                var found = Snap().FirstOrDefault(p => p.Plugin.Id == id);
+                if (found == null) return "Plugin no longer available / Το plugin δεν είναι πλέον διαθέσιμο.";
+                string folder = found.Folder;
+                return await System.Threading.Tasks.Task.Run(() =>
+                {
+                    var (publisher, signature) = PluginPublisherInfo.Inspect(folder);
+                    return "Current files on disk; not a verification of loaded bytes or permission isolation. / Τρέχοντα αρχεία δίσκου, όχι έλεγχος φορτωμένου κώδικα ή απομόνωσης."
+                        + Environment.NewLine + Environment.NewLine + "Publisher / Εκδότης:" + Environment.NewLine + publisher
+                        + Environment.NewLine + Environment.NewLine + "Signature / Υπογραφή:" + Environment.NewLine + signature;
+                });
+            }
+            finally { System.Threading.Interlocked.Exchange(ref _publisherInspectionActive, 0); }
+        }
+
         private volatile bool _compatibilitySuspended;
         private volatile bool _globalHoldUntilRestart;
 

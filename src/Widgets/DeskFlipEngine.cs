@@ -43,12 +43,12 @@ public sealed class DeskFlipOverlay : Form
         BackColor = SystemInformation.HighContrast ? SystemColors.Window : Color.FromArgb(20, 35, 49);
         // DeskFlip lists windows from every screen; suppress the entire Opsis
         // overlay while any connected display is marked for presentation.
-        if (MonitorTopologyService.IsPresentationDisplay()) return;
+        if (!DeskFlipEngine.CanOpen()) return;
         _desktop = _style == "Flip 3D" ? CaptureDesktop(Bounds) : null;
         foreach (var window in CandidateWindows())
             _entries.Add(new Entry(window, GetTitle(window), null));
         int front = _entries.FindIndex(e => e.Handle == foreground);
-        _selection = _entries.Count > 1 ? (Math.Max(front, 0) + 1) % _entries.Count : 0;
+        _selection = _entries.Count > 1 && front >= 0 ? (front + 1) % _entries.Count : 0;
         _position = _target = _selection;
         _timer.Tick += (_, _) => Animate();
     }
@@ -60,7 +60,7 @@ public sealed class DeskFlipOverlay : Form
         base.OnShown(e);
         AppSettings.SettingsSaved += OnPrivacyChanged;
         Microsoft.Win32.SystemEvents.DisplaySettingsChanged += OnDisplaySettingsChanged;
-        if (MonitorTopologyService.IsPresentationDisplay()) { Close(); return; }
+        if (!DeskFlipEngine.CanOpen()) { Close(); return; }
         Activate();
         Focus();
         if (_style != "Compact list") _ = PopulateSnapshotsAsync();
@@ -76,7 +76,7 @@ public sealed class DeskFlipOverlay : Form
             catch (InvalidOperationException) { }
             return;
         }
-        if (MonitorTopologyService.IsPresentationDisplay()) Close();
+        if (!DeskFlipEngine.CanOpen()) Close();
     }
 
     // PrintWindow can block even after WM_NULL succeeds. Keep at most one
@@ -91,9 +91,10 @@ public sealed class DeskFlipOverlay : Form
             {
                 var handle = _entries[i].Handle;
                 var image = await System.Threading.Tasks.Task.Run(() => CaptureWindow(handle));
-                if (_closing || IsDisposed || i >= _entries.Count)
+                if (_closing || IsDisposed || i >= _entries.Count || !DeskFlipEngine.CanOpen())
                 {
                     image?.Dispose();
+                    if (!_closing && !IsDisposed) Close();
                     return;
                 }
                 if (image != null)
@@ -105,6 +106,12 @@ public sealed class DeskFlipOverlay : Form
         }
         catch (Exception ex) { RotatingLogger.Write("DeskFlip snapshot worker: " + ex.Message); }
         finally { CaptureGate.Release(); }
+    }
+
+    protected override void OnDeactivate(EventArgs e)
+    {
+        base.OnDeactivate(e);
+        if (!_closing && Visible) Close();
     }
 
     protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
@@ -185,7 +192,7 @@ public sealed class DeskFlipOverlay : Form
         _closing = true;
         var handle = _entries[index].Handle;
         Close();
-        if (!IsWindow(handle)) return;
+        if (!DeskFlipEngine.CanOpen() || !IsWindow(handle)) return;
         if (IsIconic(handle)) ShowWindow(handle, 9);
         SetForegroundWindow(handle);
     }
@@ -442,11 +449,18 @@ public static class DeskFlipEngine
         OpsisModCore.SetOption(ModuleId, "style", style);
     }
 
+    internal static bool CanOpen() =>
+        RuntimeSessionPolicy.IsPermitted(SessionBackgroundService.DesktopHotkeys) &&
+        !WindowsUpdateGuard.RequiresReview && !WindowsUpdateGuard.RuntimeHold &&
+        !MonitorTopologyService.IsPresentationDisplay();
+
+    internal static void CloseOverlay() => _overlay?.Close();
+
     public static void Show()
     {
-        if (MonitorTopologyService.IsPresentationDisplay())
+        if (!CanOpen())
         {
-            _overlay?.Close();
+            CloseOverlay();
             return;
         }
         if (_overlay is { IsDisposed: false } shown)

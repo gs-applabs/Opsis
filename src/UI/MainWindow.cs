@@ -2629,7 +2629,14 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                     }
                     catch (Exception ex) { MessageBox.Show(this, ex.Message, "DeskFlip", MessageBoxButtons.OK, MessageBoxIcon.Warning); }
                 }),
-                (deskFlipGreek ? "Άνοιγμα DeskFlip" : "Open DeskFlip", (_, _) => DeskFlipEngine.Show()));
+                (deskFlipGreek ? "Άνοιγμα DeskFlip" : "Open DeskFlip", (_, _) =>
+                {
+                    if (DeskFlipEngine.CanOpen()) DeskFlipEngine.Show();
+                    else MessageBox.Show(this, deskFlipGreek
+                        ? "Το DeskFlip δεν είναι διαθέσιμο σε ασφαλή λειτουργία, αναστολή συμβατότητας, απενεργοποιημένες συντομεύσεις ή παρουσίαση οθόνης."
+                        : "DeskFlip is unavailable in safe mode, compatibility hold, disabled desktop hotkeys or presentation mode.",
+                        "DeskFlip", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }));
 
             var nativeThemeCard = AddCardSection(panel, StudioText("Native Shell themes (optional provider)", "Εγγενή θέματα Shell (προαιρετικός πάροχος)"));
             AddText(nativeThemeCard, StudioText("Use a compatible existing Windhawk styler to avoid duplicate native hooks. Experimental, requires installed CLI and mod.", "Χρήση συμβατού υπάρχοντος Windhawk styler χωρίς διπλούς μηχανισμούς. Πειραματικό, απαιτεί εγκατεστημένο CLI και mod."));
@@ -4915,6 +4922,25 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                     details.Controls.Add(enableToggle);
                     AddText(details, StudioText("Declared plugin capabilities: ", "Δηλωμένες δυνατότητες plugin: ")
                         + Services.PluginHost.Instance.PluginPermissions(capturedId));
+                    var signatureButton = NewHoverButton(StudioText("Inspect publisher and signature", "Έλεγχος εκδότη και υπογραφής"), () => { });
+                    signatureButton.Click += async (_, _) =>
+                    {
+                        if (!signatureButton.Enabled) return;
+                        signatureButton.Enabled = false;
+                        try
+                        {
+                            string report = await Services.PluginHost.Instance.InspectPluginPublisherAsync(capturedId);
+                            if (!signatureButton.IsDisposed && !IsDisposed && !Disposing)
+                                ShowTextDialog(captured.Name, StudioText("Package signature", "Υπογραφή πακέτου"), report);
+                        }
+                        catch (Exception ex)
+                        {
+                            if (!signatureButton.IsDisposed && !IsDisposed && !Disposing)
+                                MessageBox.Show(this, ex.Message, "Opsis", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        }
+                        finally { if (!signatureButton.IsDisposed) signatureButton.Enabled = true; }
+                    };
+                    details.Controls.Add(signatureButton);
                     var revokeBtn = NewHoverButton(StudioText("Revoke plugin approval", "Ανάκληση έγκρισης plugin"), () =>
                     {
                         if (MessageBox.Show(this, StudioText(
