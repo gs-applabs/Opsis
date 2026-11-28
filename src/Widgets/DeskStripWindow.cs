@@ -625,13 +625,15 @@ namespace MotionDesk.Widgets
             }
             _signaturePane.Sync();
 #else
-            var m = MotionDesk.Services.GlassService.Manager;
-            if (!_wantGpu || m == null || !IsHandleCreated) return;
+            if (!_wantGpu || !IsHandleCreated || IsDisposed || Disposing) return;
             if (!Visible)
             {
-                if (_glassPane >= 0) m.SetPaneVisible(_glassPane, false);
+                if (_glassPane >= 0) GlassService.ExistingManager?.RemovePane(_glassPane);
+                _glassPane = -1;
                 return;
             }
+            var m = GlassService.Manager;
+            if (m == null) return;
             if (_glassPane < 0) _glassPane = m.AddPane(Bounds, MotionDesk.Services.GlassService.Style(20, DesktopSurface.DeskStrip), clickThrough: true);
             else { m.MovePane(_glassPane, Location); m.ResizePane(_glassPane, Size); }
             m.PlaceBelow(_glassPane, Handle);
@@ -1350,9 +1352,7 @@ namespace MotionDesk.Widgets
             };
             _window.OpenDock();
             _window.UpdateSettings(settings => settings.StartEnabled = true);
-            _monitorTimer = new System.Windows.Forms.Timer { Interval = 1000 };
-            _monitorTimer.Tick += (_, _) => ReconcileMonitors();
-            _monitorTimer.Start();
+            RefreshMonitorTimer();
             AppActivity.RequestRefresh();
             PluginHost.Instance.NotifyCrawlerP0EnvironmentChanged();
         }
@@ -1370,15 +1370,50 @@ namespace MotionDesk.Widgets
             _monitorTimer = null;
             var primary = _window;
             _window = null;
-            foreach (var mirror in _mirrors.Values) mirror.Close();
+            var mirrors = _mirrors.Values.ToArray();
             _mirrors.Clear();
-            if (primary is { IsDisposed: false }) primary.Close();
+            foreach (var mirror in mirrors)
+            {
+                mirror.SettingsChanged -= OnSettingsChanged;
+                mirror.Close();
+            }
+            if (primary is { IsDisposed: false })
+            {
+                primary.SettingsChanged -= OnSettingsChanged;
+                primary.Close();
+            }
             AppActivity.RequestRefresh();
+        }
+
+        internal static bool NeedsMirrorMonitor(bool enabled, bool allMonitors) => enabled && allMonitors;
+
+        private void RefreshMonitorTimer()
+        {
+            if (_window is not { IsDisposed: false } primary ||
+                !NeedsMirrorMonitor(primary.Settings.StartEnabled, primary.Settings.AllMonitors))
+            {
+                _monitorTimer?.Dispose(); _monitorTimer = null;
+                return;
+            }
+            if (_monitorTimer != null) return;
+            _monitorTimer = new System.Windows.Forms.Timer { Interval = 1000 };
+            _monitorTimer.Tick += (_, _) => ReconcileMonitors();
+            _monitorTimer.Start();
         }
 
         private void ReconcileMonitors()
         {
             if (_window is not { IsDisposed: false } primary) return;
+            if (!NeedsMirrorMonitor(primary.Settings.StartEnabled, primary.Settings.AllMonitors))
+            {
+                foreach (var mirror in _mirrors.Values.ToArray())
+                {
+                    mirror.SettingsChanged -= OnSettingsChanged;
+                    mirror.Close();
+                }
+                _mirrors.Clear();
+                return;
+            }
             var screens = Screen.AllScreens;
             var main = screens.FirstOrDefault(screen => screen.DeviceName == primary.Settings.Monitor) ??
                 Screen.PrimaryScreen ?? screens.FirstOrDefault();
@@ -1387,12 +1422,19 @@ namespace MotionDesk.Widgets
                 : new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             foreach (var id in _mirrors.Keys.Where(id => !required.Contains(id)).ToArray())
             {
-                _mirrors[id].Close();
+                var mirror = _mirrors[id];
                 _mirrors.Remove(id);
+                mirror.SettingsChanged -= OnSettingsChanged;
+                mirror.Close();
             }
             foreach (var id in required)
             {
-                if (_mirrors.ContainsKey(id)) continue;
+                if (_mirrors.TryGetValue(id, out var existing))
+                {
+                    if (!existing.IsDisposed) continue;
+                    existing.SettingsChanged -= OnSettingsChanged;
+                    _mirrors.Remove(id);
+                }
                 var mirror = new DeskStripWindow(primary.Settings, id);
                 mirror.SettingsChanged += OnSettingsChanged;
                 _mirrors[id] = mirror;
@@ -1403,6 +1445,7 @@ namespace MotionDesk.Widgets
         private void OnSettingsChanged(DeskStripWindow changed)
         {
             ReconcileMonitors();
+            RefreshMonitorTimer();
             if (_window is { IsDisposed: false } primary && !ReferenceEquals(primary, changed))
                 primary.ApplySharedSettings();
             foreach (var peer in _mirrors.Values)

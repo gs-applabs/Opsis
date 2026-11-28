@@ -31,7 +31,10 @@ namespace MotionDesk.Services
         {
             public IOpsisNewsCrawlerPlugin Plugin = null!;
             public string Folder = "";
-            public bool Started;
+            public volatile bool Started;
+            public volatile bool Retired;
+            public volatile bool StopFailed;
+            public Action<string>? NavigationHandler;
         }
 
         private readonly List<Loaded> _plugins = new();
@@ -58,7 +61,55 @@ namespace MotionDesk.Services
             lock (_gate) _plugins.Add(l);
             UiResourceAudit.Mark("plugin-loaded", Path.GetFileName(l.Folder));
         }
-        private void RemoveLoaded(Loaded l) { lock (_gate) _plugins.Remove(l); }
+        private void RemoveLoaded(Loaded l)
+        {
+            l.Retired = true;
+            l.Started = false;
+            lock (_gate) _plugins.Remove(l);
+            DetachNavigation(l);
+        }
+
+        internal static bool MayDispatch(bool started, bool retired, bool stopFailed, bool allowed) =>
+            started && !retired && !stopFailed && allowed;
+
+        private bool CanDispatch(Loaded p) =>
+            p.Started && !p.Retired && !p.StopFailed &&
+            MayDispatch(p.Started, p.Retired, p.StopFailed, CanRun(p.Plugin.Id));
+
+        private void AttachNavigation(Loaded p)
+        {
+            if (p.NavigationHandler != null || p.Retired) return;
+            Action<string> handler = key => { if (CanDispatch(p)) NavigationRequested?.Invoke(key); };
+            p.Plugin.NavigationRequested += handler;
+            p.NavigationHandler = handler;
+        }
+
+        private static void DetachNavigation(Loaded p)
+        {
+            var handler = p.NavigationHandler;
+            p.NavigationHandler = null;
+            if (handler == null) return;
+            try { p.Plugin.NavigationRequested -= handler; }
+            catch (Exception ex) { Log($"Plugin '{p.Plugin.Name}' navigation unsubscribe failed: {ex.Message}"); }
+        }
+
+        // Close the host callback gate BEFORE calling plugin Stop, even if
+        // Stop raises navigation synchronously or fails. Uncertain ownership
+        // must never be treated as permission to start a second instance.
+        private static bool TryStop(Loaded p, string reason)
+        {
+            bool wasStarted = p.Started;
+            p.Started = false;
+            if (p.StopFailed) return false;
+            if (!wasStarted) return true;
+            try { p.Plugin.Stop(); return true; }
+            catch (Exception ex)
+            {
+                p.StopFailed = true;
+                Log($"Plugin '{p.Plugin.Name}' stop failed ({reason}); restart required: {ex.Message}");
+                return false;
+            }
+        }
         private bool _started;
 
         /// <summary>Asked (on the UI thread) before an UNTRUSTED plugin folder is loaded for the first time; returning false skips it. Default: deny.</summary>
@@ -100,8 +151,8 @@ namespace MotionDesk.Services
             return found == null ? "Unknown" : PluginCapabilityManifest.Summary(found.Folder);
         }
 
-        private bool _compatibilitySuspended;
-        private bool _globalHoldUntilRestart;
+        private volatile bool _compatibilitySuspended;
+        private volatile bool _globalHoldUntilRestart;
 
         public void SetPluginEnabled(string id, bool enabled)
         {
@@ -109,18 +160,20 @@ namespace MotionDesk.Services
                 throw new InvalidOperationException("Enable global plugins and restart Opsis before activating this plugin.");
             if (enabled && (_compatibilitySuspended || WindowsUpdateGuard.RequiresReview))
                 throw new InvalidOperationException("Windows compatibility review and Opsis restart required before enabling plugins.");
+            var p = Snap().FirstOrDefault(x => x.Plugin.Id == id);
+            if (enabled && p is { StopFailed: true })
+                throw new InvalidOperationException("The previous plugin stop failed. Restart Opsis before activating it.");
             var settings = AppSettings.Load();
             if (enabled) { settings.DisabledPluginIds.Remove(id); PluginFailureQuarantine.Clear(id); }
             else if (!settings.DisabledPluginIds.Contains(id)) settings.DisabledPluginIds.Add(id);
             settings.Save();
 
-            var p = Snap().FirstOrDefault(x => x.Plugin.Id == id);
             if (p != null)
             {
                 try
                 {
-                    if (enabled && !p.Started && CanRun(id)) { PushLanguage(p.Plugin); PushTheme(p.Plugin); PushHardwareProfile(p.Plugin); p.Plugin.Start(); p.Started = true; }
-                    else if (!enabled && p.Started) { p.Started = false; p.Plugin.Stop(); }
+                    if (enabled && !p.Started && !p.Retired && !p.StopFailed && CanRun(id)) { AttachNavigation(p); PushLanguage(p.Plugin); PushTheme(p.Plugin); PushHardwareProfile(p.Plugin); p.Plugin.Start(); p.Started = true; }
+                    else if (!enabled) { TryStop(p, "toggle"); DetachNavigation(p); }
                 }
                 catch (Exception ex)
                 {
@@ -144,8 +197,12 @@ namespace MotionDesk.Services
             var p = Snap().FirstOrDefault(x => x.Plugin.Id == id);
             if (p == null) return false;
 
-            try { if (p.Started) p.Plugin.Stop(); }
-            catch (Exception ex) { Log($"Plugin '{p.Plugin.Name}' failed to stop before uninstall: {ex.Message}"); }
+            if (!TryStop(p, "uninstall"))
+            {
+                DetachNavigation(p);
+                Changed?.Invoke();
+                return false; // do not delete files while stop is uncertain
+            }
 
             RemoveLoaded(p);
             var settings = AppSettings.Load();
@@ -191,7 +248,7 @@ namespace MotionDesk.Services
             {
                 try
                 {
-                    p.Plugin.NavigationRequested += key => { if (p.Started && CanRun(p.Plugin.Id)) NavigationRequested?.Invoke(key); };
+                    AttachNavigation(p);
                     if (!disabled.Contains(p.Plugin.Id) && CanRun(p.Plugin.Id) && !PluginFailureQuarantine.IsQuarantined(p.Plugin.Id))
                     {
                         PushLanguage(p.Plugin); PushTheme(p.Plugin); PushHardwareProfile(p.Plugin);
@@ -223,17 +280,15 @@ namespace MotionDesk.Services
             _compatibilitySuspended = true;
             foreach (var p in Snap())
             {
-                if (!p.Started) continue;
-                p.Started = false;
-                try { p.Plugin.Stop(); }
-                catch (Exception ex) { Log($"Plugin '{p.Plugin.Name}' failed to stop during compatibility hold: {ex.Message}"); }
+                TryStop(p, "compatibility hold");
+                DetachNavigation(p);
             }
             Changed?.Invoke();
         }
 
-        private void OnThemeChanged() { foreach (var p in Snap().Where(p => p.Started && CanRun(p.Plugin.Id))) PushTheme(p.Plugin); }
-        private void OnLanguageChanged() { foreach (var p in Snap().Where(p => p.Started && CanRun(p.Plugin.Id))) PushLanguage(p.Plugin); }
-        private void OnHardwareChanged(HardwareTier _) { foreach (var p in Snap().Where(p => p.Started && CanRun(p.Plugin.Id))) PushHardwareProfile(p.Plugin); }
+        private void OnThemeChanged() { foreach (var p in Snap().Where(CanDispatch)) PushTheme(p.Plugin); }
+        private void OnLanguageChanged() { foreach (var p in Snap().Where(CanDispatch)) PushLanguage(p.Plugin); }
+        private void OnHardwareChanged(HardwareTier _) { foreach (var p in Snap().Where(CanDispatch)) PushHardwareProfile(p.Plugin); }
 
         // Global enable remains restart-based as advertised by Settings. Disable
         // is immediate; already loaded assemblies stay resident until restart.
@@ -252,12 +307,13 @@ namespace MotionDesk.Services
             HardwareProfileService.ProfileChanged -= OnHardwareChanged;
             foreach (var p in Snap())
             {
-                if (!p.Started) continue;
-                p.Started = false;
-                Log($"Stopping plugin '{p.Plugin.Name}'");
-                try { p.Plugin.Stop(); }
-                catch (Exception ex) { Log($"Plugin '{p.Plugin.Name}' failed to stop: {ex.Message}"); }
-                finally { Log($"Stop returned for plugin '{p.Plugin.Name}'"); }
+                if (p.Started)
+                {
+                    Log($"Stopping plugin '{p.Plugin.Name}'");
+                    TryStop(p, "host shutdown");
+                    Log($"Stop returned for plugin '{p.Plugin.Name}'");
+                }
+                DetachNavigation(p);
             }
         }
 
@@ -268,7 +324,7 @@ namespace MotionDesk.Services
         /// <summary>The desktop widget a started plugin offers to REPLACE a built-in one (for example "calendar"), or null. A plugin that fails is logged and skipped.</summary>
         public PluginWidget? FindWidgetReplacing(string builtInId)
         {
-            foreach (var p in Snap().Where(p => p.Started).ToList())
+            foreach (var p in Snap().Where(CanDispatch).ToList())
             {
                 if (p.Plugin is not IPluginWidgetProvider provider) continue;
                 try
@@ -281,8 +337,8 @@ namespace MotionDesk.Services
                     Log($"Plugin '{p.Plugin.Name}' widgets failed: {ex.Message}");
                     if (PluginFailureQuarantine.RecordFailure(p.Plugin.Id))
                     {
-                        try { p.Plugin.Stop(); } catch (Exception) { }
-                        p.Started = false;
+                        TryStop(p, "quarantine");
+                        DetachNavigation(p);
                         Log($"Plugin '{p.Plugin.Name}' quarantined after three failures; other plugins remain active.");
                     }
                 }
@@ -294,7 +350,7 @@ namespace MotionDesk.Services
         public IReadOnlyList<PluginNavigationItem> GetNavigationItems()
         {
             var items = new List<PluginNavigationItem>();
-            foreach (var p in Snap().Where(p => p.Started))
+            foreach (var p in Snap().Where(CanDispatch))
             {
                 try { items.AddRange(Retry(() => p.Plugin.GetNavigationItems().ToList())); }
                 catch (Exception ex) { Log($"Plugin '{p.Plugin.Name}' navigation failed: {ex.Message}"); }
@@ -322,7 +378,7 @@ namespace MotionDesk.Services
         public IReadOnlyList<(string PluginName, IReadOnlyList<PluginMenuItem> Items)> GetTrayMenuGroups()
         {
             var groups = new List<(string, IReadOnlyList<PluginMenuItem>)>();
-            foreach (var p in Snap().Where(p => p.Started))
+            foreach (var p in Snap().Where(CanDispatch))
             {
                 try
                 {
@@ -337,7 +393,7 @@ namespace MotionDesk.Services
         public IReadOnlyList<PluginMenuItem> GetTrayMenuItems()
         {
             var items = new List<PluginMenuItem>();
-            foreach (var p in Snap().Where(p => p.Started))
+            foreach (var p in Snap().Where(CanDispatch))
             {
                 try { items.AddRange(WithoutHostOwned(Retry(() => p.Plugin.GetTrayMenuItems().ToList()))); }
                 catch (Exception ex) { Log($"Plugin '{p.Plugin.Name}' tray items failed: {ex.Message}"); }
@@ -393,7 +449,7 @@ namespace MotionDesk.Services
         /// No polling, registry modifications, or callbacks to unrelated plugins.</summary>
         public void NotifyCrawlerP0EnvironmentChanged()
         {
-            foreach (var entry in Snap().Where(p => p.Started))
+            foreach (var entry in Snap().Where(CanDispatch))
                 PushCrawlerP0Environment(entry.Plugin);
         }
 
@@ -558,7 +614,7 @@ namespace MotionDesk.Services
         {
             try
             {
-                p.Plugin.NavigationRequested += key => { if (p.Started && CanRun(p.Plugin.Id)) NavigationRequested?.Invoke(key); };
+                AttachNavigation(p);
                 if (CanRun(p.Plugin.Id) && !PluginFailureQuarantine.IsQuarantined(p.Plugin.Id))
                 {
                     PushLanguage(p.Plugin); PushTheme(p.Plugin); PushHardwareProfile(p.Plugin);
@@ -664,9 +720,7 @@ namespace MotionDesk.Services
                     if (existing != null)
                     {
                         if (!IsNewerVersion(plugin.Version, existing.Plugin.Version)) continue;
-                        if (existing.Started)
-                            try { existing.Plugin.Stop(); }
-                            catch (Exception ex) { Log($"Plugin '{existing.Plugin.Name}' could not stop during replacement: {ex.Message}"); continue; }
+                        if (!TryStop(existing, "replacement")) continue;
                         RemoveLoaded(existing);
                     }
                     AddLoaded(new Loaded { Plugin = plugin, Folder = folder });

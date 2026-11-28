@@ -111,7 +111,8 @@ namespace MotionDesk.Services
                     SafeMode = SafeModeService.IsSafeMode
                 };
                 if (_last == c) return;
-                _last = c; m.SetConditions(c);
+                m.SetConditions(c);
+                _last = c; // cache only a successfully applied condition set
             }
             catch (Exception ex) { RotatingLogger.WriteRecurring(RotatingLogger.RecurringSource.Glass, "GlassService.Refresh: " + ex.Message); }
         }

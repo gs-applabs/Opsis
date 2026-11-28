@@ -1441,7 +1441,7 @@
         "pass": "MP01/04/06/09",
         "status": "SOURCE_PRESENT_RUNTIME_GATE_OPEN",
         "evidencePath": "src/Services/PluginFailureQuarantine.cs",
-        "evidence": "IsQuarantined/RecordFailure/Clear; verify thresholds and runtime recovery",
+        "evidence": "IsQuarantined/RecordFailure/Clear; verify thresholds and runtime recovery; R81 gates callbacks and blocks in-process replacement after failed Stop (source only).",
         "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
         "releaseCertified": false
       },
@@ -1931,7 +1931,7 @@
         "pass": "MP05/07",
         "status": "SOURCE_PRESENT_RUNTIME_GATE_OPEN",
         "evidencePath": "src/Widgets/DeskStripWindow.cs",
-        "evidence": "MonitorPinnedOrder persisted; verify independent monitor order",
+        "evidence": "MonitorPinnedOrder persisted; verify independent monitor order; R81 mirror timer only for AllMonitors (source, runtime gate open).",
         "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
         "releaseCertified": false
       },
@@ -2191,7 +2191,7 @@
         "pass": "MP09/07/06",
         "status": "REVIEW_REQUIRED",
         "evidencePath": null,
-        "evidence": "Verify five classic fallback commands and native transition",
+        "evidence": "R81 exact-executable fallback cleanup source; native/fallback five commands and side-by-side test still open.",
         "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
         "releaseCertified": false
       },
@@ -2276,8 +2276,9 @@
       "latest_certified": "1bbb82b2bcd660674ee92a8f1c59bc463caea8be",
       "latest_audit_run": 46100848383,
       "latest_artifact": 15245119446,
-      "next": "Check R77 exact seven workflows and split resource audit; R79 has identified namespace compile defect fixed in R80. If R77 gates pass, compare R77 to R80 (two commits, zero behind) and CAS directly to R80 to test both together. Investigate managed heap/GPU counters. Keep original 100 IDs/B01-B14 and no final release.",
-      "parent_R79": "835b784e5cdce8fb8eb2134df79c1632366b82a0"
+      "next": "Check R77 full audit 46102704472 and split host/WebView data. If all seven success CAS R77 -> R80 (ahead 2/behind 0) to test GPU/heap separately. R81 staged atop R80; promote after R80 gates. Continue demand lifecycle, SDK2 and native migration gates. No main merge/release.",
+      "parent_R79": "835b784e5cdce8fb8eb2134df79c1632366b82a0",
+      "parent_R80": "5ad65d13c11262ff9a75b4a5c387bbeb50e40c59"
     }
   }
 }

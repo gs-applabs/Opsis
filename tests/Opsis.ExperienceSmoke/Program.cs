@@ -166,6 +166,21 @@ try
     var gpuAudit = GpuMonitorService.Instance.AuditState();
     Check(!gpuAudit.Sampling && gpuAudit.OpenAttempts == 0 && gpuAudit.CachedAdapters == 0,
         "R80 diagnostics do not initialize GPU sensors or trigger sampling");
+    Check(!MotionDesk.Widgets.DeskStripHostEngine.NeedsMirrorMonitor(false, true) &&
+        !MotionDesk.Widgets.DeskStripHostEngine.NeedsMirrorMonitor(true, false) &&
+        MotionDesk.Widgets.DeskStripHostEngine.NeedsMirrorMonitor(true, true),
+        "R81 DeskStrip mirror polling needs an enabled multi-monitor dock");
+    Check(PluginHost.MayDispatch(true, false, false, true) &&
+        !PluginHost.MayDispatch(false, false, false, true) &&
+        !PluginHost.MayDispatch(true, true, false, true) &&
+        !PluginHost.MayDispatch(true, false, true, true) &&
+        !PluginHost.MayDispatch(true, false, false, false),
+        "R81 retired, stopped, failed or held plugin cannot dispatch");
+    var ownMenuExe = Path.Combine(folder, "Opsis.exe");
+    Check(DesktopMenu.OwnsClassicFallback($"\"{ownMenuExe}\" --desktop-action new-container", ownMenuExe) &&
+        !DesktopMenu.OwnsClassicFallback($"\"{Path.Combine(folder, "other", "Opsis.exe")}\" --desktop-action new-container", ownMenuExe) &&
+        !DesktopMenu.OwnsClassicFallback(null, ownMenuExe),
+        "R81 classic desktop fallback cleanup checks executable ownership");
     var opt = new AppSettings { RestoreWindowsAfterDocking = false, UsageAlertsEnabled = false };
     Check(MotionDesk.Widgets.TrayApplicationContext.SelectOptionalServices(opt, false) == (false, false),
         "R65 disabled optional tray services have no timer demand");
