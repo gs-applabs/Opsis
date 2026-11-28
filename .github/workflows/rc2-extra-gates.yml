@@ -1,0 +1,129 @@
+name: OPSIS RC2 supplemental recovery, security, assets and one-hour stress
+on:
+  push:
+    branches: [ci/opsis-rc2-extra-gates]
+permissions:
+  contents: read
+env:
+  RC2_SHA: '0e6264ca7c55f8313381c626f3c5407137f0710a'
+jobs:
+  atomic-recovery:
+    runs-on: windows-2025
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: '0e6264ca7c55f8313381c626f3c5407137f0710a'
+          persist-credentials: false
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+      - name: Confirm exact frozen source and simulate interrupted writes
+        shell: pwsh
+        run: |
+          if ((git rev-parse HEAD).Trim() -ne $env:RC2_SHA) { throw 'Wrong candidate' }
+          ./tools/verify-atomic-powerloss.ps1
+  assets-and-source:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: '0e6264ca7c55f8313381c626f3c5407137f0710a'
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify release safety and source catalog
+        run: |
+          test "$(git rev-parse HEAD)" = "$RC2_SHA"
+          OPSIS_RC_VALIDATION=RC2 python tests/integration/check_baseline_and_release.py
+          if python tests/integration/check_baseline_and_release.py; then
+            echo 'Production stamp incorrectly accepted'; exit 1
+          fi
+          node addons/opsis-100/authoring/validate.cjs
+          python -m pip install Pillow
+          python addons/opsis-100/authoring/test-stage-approved-europe.py
+          node --test
+      - name: Report missing and present European production payload
+        if: always()
+        run: |
+          mkdir -p evidence
+          node addons/opsis-100/authoring/validate.cjs --release > evidence/europe-release-gate.txt 2>&1 || echo 'European production payload gate is open' >> evidence/europe-release-gate.txt
+          cat evidence/europe-release-gate.txt
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: rc2-assets-release-gate
+          path: evidence/
+  dependency-audit:
+    runs-on: windows-2025
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: '0e6264ca7c55f8313381c626f3c5407137f0710a'
+          persist-credentials: false
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+      - name: Audit direct and transitive NuGet packages
+        shell: pwsh
+        run: |
+          if ((git rev-parse HEAD).Trim() -ne $env:RC2_SHA) { throw 'Wrong candidate' }
+          New-Item -ItemType Directory -Force evidence | Out-Null
+          dotnet restore Opsis.csproj --disable-parallel
+          if ($LASTEXITCODE -ne 0) { throw 'Restore failed' }
+          dotnet list Opsis.csproj package --include-transitive --format json | Set-Content evidence/packages.json
+          if ($LASTEXITCODE -ne 0) { throw 'Package inventory failed' }
+          dotnet list Opsis.csproj package --vulnerable --include-transitive --format json | Set-Content evidence/vulnerabilities.json
+          if ($LASTEXITCODE -ne 0) { throw 'Vulnerability audit command failed' }
+          $report = Get-Content evidence/vulnerabilities.json -Raw | ConvertFrom-Json
+          if ($null -eq $report.projects) { throw 'Unexpected vulnerability report' }
+          $findings = @($report.projects | ForEach-Object { $_.frameworks } | ForEach-Object { @($_.topLevelPackages) + @($_.transitivePackages) } | Where-Object { $_ -and $_.vulnerabilities })
+          if ($findings.Count -gt 0) { throw 'Review vulnerable dependency findings' }
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: rc2-dependency-audit
+          path: evidence/
+          if-no-files-found: warn
+  one-hour-resource-audit:
+    runs-on: windows-2025
+    timeout-minutes: 110
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: '0e6264ca7c55f8313381c626f3c5407137f0710a'
+          persist-credentials: false
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+      - name: Build exact frozen RC2
+        shell: pwsh
+        run: |
+          if ((git rev-parse HEAD).Trim() -ne $env:RC2_SHA) { throw 'Wrong candidate' }
+          dotnet publish Opsis.csproj -c Release -r win-x64 --self-contained false -o publish -m:1 -p:UseSharedCompilation=false -nodeReuse:false
+          if ($LASTEXITCODE -ne 0) { throw 'Publish failed' }
+      - name: One-hour Windows runner UI/resource soak
+        shell: pwsh
+        run: |
+          $env:OPSIS_APPDATA = Join-Path $env:RUNNER_TEMP 'opsis-rc2-hour'
+          $env:OPSIS_AUDIT_TASKBAR = '1'
+          $env:OPSIS_AUDIT_RESOURCE_CYCLES = '10'
+          $env:OPSIS_AUDIT_SOAK_MINUTES = '60'
+          $output = Join-Path $env:GITHUB_WORKSPACE 'audit-result'
+          $p = Start-Process (Resolve-Path publish/Opsis.exe).Path -ArgumentList @('--ui-audit', ('"' + $output + '"')) -PassThru
+          if (-not $p.WaitForExit(5400000)) { Stop-Process -Id $p.Id -Force; throw 'One-hour audit timeout' }
+          if ($p.ExitCode -ne 0) { throw "One-hour UI audit failed: $($p.ExitCode)" }
+          if (!(Test-Path (Join-Path $output 'ui-audit.md'))) { throw 'UI report missing' }
+          if (!(Test-Path (Join-Path $output 'ui-resources.json'))) { throw 'Resource report missing' }
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: rc2-one-hour-resource-audit
+          path: audit-result/
+          if-no-files-found: warn
