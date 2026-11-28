@@ -15,7 +15,7 @@ internal sealed class DesktopToolbar : Form
 
     internal static void RefreshSettings()
     {
-        if (SafeModeService.IsSafeMode || !AppSettings.Load().DesktopToolbarEnabled) { Stop(); return; }
+        if (!RuntimeSessionPolicy.Allows(SessionBackgroundService.DesktopToolbar, AppSettings.Peek().DesktopToolbarEnabled, SafeModeService.IsSafeMode)) { Stop(); return; }
         if (_timer == null)
         {
             _timer = new System.Windows.Forms.Timer { Interval = 1000 };
@@ -61,6 +61,7 @@ internal sealed class DesktopToolbar : Form
     private static void Sync()
     {
         var settings = AppSettings.Peek();
+        if (!RuntimeSessionPolicy.Allows(SessionBackgroundService.DesktopToolbar, settings.DesktopToolbarEnabled, SafeModeService.IsSafeMode)) { Stop(); return; }
         var screens = Screen.AllScreens.Where(screen => screen.Primary || settings.DesktopToolbarAllMonitors)
             .ToDictionary(screen => screen.DeviceName, StringComparer.OrdinalIgnoreCase);
         foreach (var name in Bars.Keys.Where(id => !screens.ContainsKey(id)).ToArray())

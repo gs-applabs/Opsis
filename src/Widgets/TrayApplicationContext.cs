@@ -823,6 +823,8 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                 }
             }
             bool held = _compatibilityIsolationApplied || WindowsUpdateGuard.RequiresReview || WindowsUpdateGuard.RuntimeHold;
+            Apply(SessionBackgroundService.DesktopToolbar, DesktopToolbar.RefreshSettings);
+            Apply(SessionBackgroundService.VirtualWorkspaceWallpaper, VirtualWorkspaces.ReconcileSession);
             Apply(SessionBackgroundService.AnimatedWallpaper, WallpaperHostEngine.ReconcileSessionIfCreated);
             Apply(SessionBackgroundService.DeskStrip, DeskStripHostEngine.ReconcileSessionIfCreated);
             Apply(SessionBackgroundService.Widgets, WidgetHostEngine.ReconcileSessionIfCreated);
@@ -856,7 +858,7 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
         {
             string T(string en, string el) => MainWindow.StudioText(en, el);
             var menu = new ToolStripMenuItem(T("Desktop services · this session", "Υπηρεσίες επιφάνειας εργασίας · αυτή η συνεδρία"));
-            var reduced = new ToolStripMenuItem(T("Suspend 18 optional service groups", "Αναστολή 18 προαιρετικών ομάδων υπηρεσιών"));
+            var reduced = new ToolStripMenuItem(T("Suspend 20 optional service groups", "Αναστολή 20 προαιρετικών ομάδων υπηρεσιών"));
             var restore = new ToolStripMenuItem(T("Restore previous session selections", "Επαναφορά προηγούμενων επιλογών συνεδρίας"));
             var full = new ToolStripMenuItem(T("Allow all saved selections", "Επιτρέπονται όλες οι αποθηκευμένες επιλογές"));
             reduced.ToolTipText = T("Keeps containers, recovery UI, plugins and other ungated services unchanged. Not an isolated containers-only mode.",
@@ -883,6 +885,12 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
             menu.DropDownItems.Add(restore);
             menu.DropDownItems.Add(full);
             menu.DropDownItems.Add(new ToolStripSeparator());
+            var toolbar = new ToolStripMenuItem(T("Allow desktop toolbar", "Επιτρέπεται η γραμμή εργαλείων επιφάνειας εργασίας"));
+            var workspaces = new ToolStripMenuItem(T("Allow automatic virtual desktop wallpapers", "Αυτόματα φόντα εικονικών επιφανειών εργασίας"));
+            toolbar.Click += (_, _) => ApplySessionMask(RuntimeSessionPolicy.Allowed ^ SessionBackgroundService.DesktopToolbar);
+            workspaces.Click += (_, _) => ApplySessionMask(RuntimeSessionPolicy.Allowed ^ SessionBackgroundService.VirtualWorkspaceWallpaper);
+            menu.DropDownItems.Add(toolbar);
+            menu.DropDownItems.Add(workspaces);
             var wallpaper = new ToolStripMenuItem(T("Allow animated wallpaper (keep independent overlays)", "Κινούμενο φόντο (διατήρηση ανεξάρτητων overlays)"));
             var dock = new ToolStripMenuItem(T("Allow DeskStrip", "Επιτρέπεται το DeskStrip"));
             var widgets = new ToolStripMenuItem(T("Allow widgets (retain layout)", "Επιτρέπονται τα widgets (διατήρηση διάταξης)"));
@@ -956,6 +964,9 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                 reduced.Enabled = presetAllowed && RuntimeSessionPolicy.Allowed != SessionBackgroundService.None;
                 restore.Enabled = presetAllowed && _beforeReducedSession.HasValue;
                 full.Enabled = presetAllowed && RuntimeSessionPolicy.Allowed != SessionBackgroundService.All;
+                toolbar.Checked = RuntimeSessionPolicy.IsPermitted(SessionBackgroundService.DesktopToolbar);
+                workspaces.Checked = RuntimeSessionPolicy.IsPermitted(SessionBackgroundService.VirtualWorkspaceWallpaper);
+                toolbar.Enabled = workspaces.Enabled = presetAllowed;
                 wallpaper.Checked = RuntimeSessionPolicy.IsPermitted(SessionBackgroundService.AnimatedWallpaper);
                 dock.Checked = RuntimeSessionPolicy.IsPermitted(SessionBackgroundService.DeskStrip);
                 widgets.Checked = RuntimeSessionPolicy.IsPermitted(SessionBackgroundService.Widgets);

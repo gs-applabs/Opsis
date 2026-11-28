@@ -26,8 +26,10 @@ internal enum SessionBackgroundService
     WindowRules = 32768,
     CursorEffects = 65536,
     DesktopHotkeys = 131072,
+    DesktopToolbar = 262144,
+    VirtualWorkspaceWallpaper = 524288,
     Background = DockRestore | UsageAlerts | DiscordPresence | ScheduledAutomations | PeriodicWallpaperAccent,
-    All = Background | AnimatedWallpaper | DeskStrip | Widgets | MusicVisualizer | AppearanceAutomatic | AutoTile | AdaptiveSampling | ReplacementTaskbar | ZoneSnap | HotCorners | WindowRules | CursorEffects | DesktopHotkeys
+    All = Background | AnimatedWallpaper | DeskStrip | Widgets | MusicVisualizer | AppearanceAutomatic | AutoTile | AdaptiveSampling | ReplacementTaskbar | ZoneSnap | HotCorners | WindowRules | CursorEffects | DesktopHotkeys | DesktopToolbar | VirtualWorkspaceWallpaper
 }
 
 internal static class RuntimeSessionPolicy

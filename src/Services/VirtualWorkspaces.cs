@@ -12,7 +12,7 @@ internal static class VirtualWorkspaces
     private static readonly string Store = Path.Combine(AppPaths.AppDataFolder, "workspaces.json");
     private static System.Windows.Forms.Timer? _timer, _switchTimer;
     private static State _state = new();
-    private static Guid _applied;
+    private static Guid _applied, _observed;
     private static Guid[] _knownDesktops = [];
     private static IVirtualDesktopManager? _manager;
     private static bool _started;
@@ -26,7 +26,8 @@ internal static class VirtualWorkspaces
         public Dictionary<Guid, string> Names { get; set; } = new();
     }
 
-    public static bool OverridesSchedule => _applied != Guid.Empty && _state.Wallpapers.ContainsKey(_applied);
+    private static bool AutomaticAllowed => RuntimeSessionPolicy.IsPermitted(SessionBackgroundService.VirtualWorkspaceWallpaper);
+    public static bool OverridesSchedule => AutomaticAllowed && _applied != Guid.Empty && _state.Wallpapers.ContainsKey(_applied);
 
     internal static void Start()
     {
@@ -41,14 +42,23 @@ internal static class VirtualWorkspaces
         RefreshPolling();
     }
 
-    internal static bool NeedsPolling(int assignments, int observers) => assignments > 0 || observers > 0;
+    internal static bool NeedsPolling(int assignments, int observers, bool automaticAllowed = true) =>
+        (automaticAllowed && assignments > 0) || observers > 0;
+
+    internal static void ReconcileSession()
+    {
+        if (!_started) return;
+        RefreshPolling();
+        if (_timer != null && AutomaticAllowed) Tick();
+    }
 
     private static void RefreshPolling()
     {
-        if (!_started || !NeedsPolling(_state.Wallpapers.Count, _observers))
+        if (!_started || !NeedsPolling(_state.Wallpapers.Count, _observers, AutomaticAllowed))
         {
             _timer?.Dispose(); _timer = null;
             _knownDesktops = [];
+            _observed = Guid.Empty;
             ReleaseManagerIfIdle();
             return;
         }
@@ -81,7 +91,7 @@ internal static class VirtualWorkspaces
         _timer = null;
         _switchTimer?.Dispose();
         _switchTimer = null;
-        _applied = Guid.Empty;
+        _applied = _observed = Guid.Empty;
         _knownDesktops = [];
         ReleaseManager();
     }
@@ -215,7 +225,8 @@ internal static class VirtualWorkspaces
             var desktops = DesktopIds();
             bool topologyChanged = !desktops.SequenceEqual(_knownDesktops);
             var id = CurrentDesktop();
-            if (id != Guid.Empty && id != _applied)
+            if (id != _observed) { _observed = id; topologyChanged = true; }
+            if (AutomaticAllowed && id != Guid.Empty && id != _applied)
             {
                 var previous = _applied;
                 _applied = id;

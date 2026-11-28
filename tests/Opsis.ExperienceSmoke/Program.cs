@@ -342,7 +342,7 @@ try
     Check(!RuntimeSessionPolicy.Allows(SessionBackgroundService.All, SessionBackgroundService.UsageAlerts, false, false) &&
         !RuntimeSessionPolicy.Allows(SessionBackgroundService.All, SessionBackgroundService.UsageAlerts, true, true) &&
         !RuntimeSessionPolicy.Allows(SessionBackgroundService.All, SessionBackgroundService.None, true, false) &&
-        !RuntimeSessionPolicy.Allows(SessionBackgroundService.All, (SessionBackgroundService)262144, true, false),
+        !RuntimeSessionPolicy.Allows(SessionBackgroundService.All, (SessionBackgroundService)1048576, true, false),
         "R83 session selection cannot bypass saved opt-in, safe mode or known capabilities");
     var sessionPrefs = new AppSettings { RestoreWindowsAfterDocking = true, UsageAlertsEnabled = true };
     Check(MotionDesk.Widgets.TrayApplicationContext.SelectOptionalServices(sessionPrefs, false, SessionBackgroundService.DockRestore) == (true, false) &&
@@ -424,6 +424,11 @@ try
         !MotionDesk.UI.BackdropContrast.NeedsSampling(true, false, true) &&
         MotionDesk.UI.BackdropContrast.NeedsSampling(true, true, true),
         "R65 backdrop sampler needs transparent visible widgets and user opt-in");
+    Check(!VirtualWorkspaces.NeedsPolling(1, 0, false) && VirtualWorkspaces.NeedsPolling(1, 1, false),
+        "R107 workspace automatic pause retains explicit observation");
+    Check(RuntimeSessionPolicy.Allows(SessionBackgroundService.DesktopToolbar, SessionBackgroundService.DesktopToolbar, true, false) &&
+        !RuntimeSessionPolicy.Allows(SessionBackgroundService.DesktopToolbar, SessionBackgroundService.VirtualWorkspaceWallpaper, true, false),
+        "R107 independent toolbar and workspace gates");
     Check(!VirtualWorkspaces.NeedsPolling(0, 0) && VirtualWorkspaces.NeedsPolling(1, 0) &&
         VirtualWorkspaces.NeedsPolling(0, 1),
         "R65 desktop polling needs a saved assignment or an open observer");
