@@ -4,7 +4,9 @@
 
 Κάθε ερώτηση του χρήστη για «εκκρεμότητες», «συνέχισε», «τι μένει» αφορά **ολόκληρο το OPSIS Desktop Customization 3.0.0.3200**: αρχικές 100, παλαιότερο roadmap/διορθώσεις, P0–P6, B01–B14, UI/Glass, Shell, Containers, SDK/plugins/companion compatibility, wallpapers/εικόνες/intro/ήχο, ανεξάρτητο add-on, installers, migration/rollback, διανομή, τελικές δοκιμές. Ποτέ μόνο ένα υποσύνολο χωρίς ρητό αίτημα. Το σύνολο παραμένει ενιαίο με σταθερά IDs, alias προς παλιά IDs, συγκεκριμένο owner/κενό και κατάσταση. **Εφαρμογή από τις ευκολότερες προς τις δυσκολότερες**, με ασφάλεια ως προϋπόθεση και χωρίς να ξαναγράφεται έτοιμη λειτουργία. Αρχείο ιστορικού/QA δεν αποτελεί ενεργό backlog. Ελέγχεται κάθε φορά ο τελευταίος ακριβής σωρευτικός SHA και η διασταύρωση με ιστορικές συνομιλίες, handoffs, πραγματικούς callers/UI/ρυθμίσεις, plugins και αρχεία. Ανεπαρκή ή μη προσβάσιμα τεκμήρια καταγράφονται ως blockers, όχι ως ολοκληρωμένα. Ο χρήστης δεν πρέπει να ξαναρωτήσει για ξεχασμένα υποσύνολα. Χρήση συνδεδεμένου GitHub για πραγματικές αλλαγές· πρόσθετα μόνο αν καλύπτουν πραγματική δυνατότητα που λείπει. Όλα τα tests στο τέλος, Inno Setup, καμία πρόωρη έκδοση.
 
-## ΕΝΙΑΙΟ ROADMAP ΟΛΟΥ ΤΟΥ ΕΡΓΟΥ — R102
+## ΕΝΙΑΙΟ ROADMAP ΟΛΟΥ ΤΟΥ ΕΡΓΟΥ — R103
+
+R103 G02/#90: exact missing-prerequisite descriptions for icon hiding exceptions, original appearance restore and file-rule creation; unnamed button caption fallback fixed. Selected-rule simulation now prevents duplicate in-flight invocation on selection change and shares existing dialog cancellation; model snapshot taken before worker. Full disabled reason coverage still partial; no runtime/build. R102 and all 23 global packages remain cumulative.
 
 R102: G02/#83 shares the existing 4.5:1 current-page accent gate across palette swatches, custom picker and wallpaper-derived accent, preserves backup owner and adds keyboard-accessible swatches. G02/#95 adds specific F1 manual topics for IconAtlas, DeskFlip, accent and plugin approval. G04/#14 reports publisher and offline signature per eligible entry DLL (up to 16, explicitly incomplete beyond); separate installer path and runtime still unverified. No new timers or owners. Other caption/text pickers, per-control help/disabled reasons, all 23 global packages and final QA remain open as applicable. No compilation or Windows tests in this pass.
 
@@ -13,7 +15,7 @@ R100: user explicitly requires ALL project backlog every time, easy-to-hard, not
 | ID | Δυσκολία | Κατάσταση | Αναφορές | Πραγματικό υπόλοιπο |
 |---|---|---|---|---|
 | G01 | S | SOURCE_PRESENT_RUNTIME_GATE_OPEN | B04/X5 | Χρώματα φακέλων + ασφαλής IconAtlas restore: IconAtlasEngine.SetFolderIcon/SetFolderColor, Personalization; R100 implementation; Win11 icon refresh/INI/crash QA pending |
-| G02 | S | PARTIAL | 100:83,90,95; B10; C7/C9 | Αντίθεση custom colours, ακριβείς λόγοι disabled controls, θεματικό F1, Opsis.UI 1px/Ctrl+F/14 locales: R102 shared accent gate (three entry paths) and four specific F1 topics; other text pickers, disabled reasons, exact C7/C9 and sibling ref review pending. |
+| G02 | S | PARTIAL | 100:83,90,95; B10; C7/C9 | Αντίθεση custom colours, ακριβείς λόγοι disabled controls, θεματικό F1, Opsis.UI 1px/Ctrl+F/14 locales: R102 shared accent gate and four F1 topics; R103 exact disabled reasons and selected-rule single-flight cancellation. Other text pickers, remaining control reasons, C7/C9 and sibling review pending. |
 | G03 | S | PARTIAL | 100:40,60,62; B02/B09 | Ιδιωτικότητα native media/notification widgets και drag path preview: R101 native media/notification widgets now guard and clear on excluded monitor; remaining other private widgets/plugin/third-party boundary review. Drag path tooltip + confirmation source present (#60 QA); #62 QA. |
 | G04 | S | PARTIAL | 100:14; B08; SDK1/SDK4 | Publisher/signature on install and existing SDK/ABI catalogue: R102 PluginPublisherInfo reports each eligible entry DLL (16 limit, explicit incomplete); verify separate installer path and runtime. |
 | G05 | M | PARTIAL | 100:1,9,24,38,41,50; B01/B04/B10/B12 | Μετρήσεις CPU, last-frame remote, πραγματικό triptych, portrait density, preview ζωνών/profile windows: Existing audit, renderer, zone and profile owners; no duplicate sampling/renderer; distinguish actual implementation vs tests. |
@@ -661,3 +663,8 @@ R101 easy-to-hard global work: fixed folder restore hash acceptance for null pen
 ## R102 — accessible accent and plugin approval
 
 R102: G02/#83 shares the existing 4.5:1 current-page accent gate across palette swatches, custom picker and wallpaper-derived accent, preserves backup owner and adds keyboard-accessible swatches. G02/#95 adds specific F1 manual topics for IconAtlas, DeskFlip, accent and plugin approval. G04/#14 reports publisher and offline signature per eligible entry DLL (up to 16, explicitly incomplete beyond); separate installer path and runtime still unverified. No new timers or owners. Other caption/text pickers, per-control help/disabled reasons, all 23 global packages and final QA remain open as applicable. No compilation or Windows tests in this pass.
+
+
+## R103 — precise disabled reasons and simulation lifecycle
+
+R103 G02/#90: exact missing-prerequisite descriptions for icon hiding exceptions, original appearance restore and file-rule creation; unnamed button caption fallback fixed. Selected-rule simulation now prevents duplicate in-flight invocation on selection change and shares existing dialog cancellation; model snapshot taken before worker. Full disabled reason coverage still partial; no runtime/build. R102 and all 23 global packages remain cumulative.

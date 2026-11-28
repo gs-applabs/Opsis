@@ -1137,7 +1137,9 @@ namespace MotionDesk.UI
                 explanation.Visible = disabled.Length != 0;
                 explanation.Text = string.Join(Environment.NewLine, disabled.Select(button =>
                 {
-                    string caption = (button.Text ?? button.AccessibleName ?? button.Name ?? "Action").Replace('\r', ' ').Replace('\n', ' ').Trim();
+                    string caption = new[] { button.Text, button.AccessibleName, button.Name }
+                        .FirstOrDefault(value => !string.IsNullOrWhiteSpace(value)) ?? StudioText("Action", "Ενέργεια");
+                    caption = caption.Replace('\r', ' ').Replace('\n', ' ').Trim();
                     string reason = !string.IsNullOrWhiteSpace(button.AccessibleDescription)
                         ? button.AccessibleDescription
                         : StudioText("Unavailable while prerequisites are missing or an operation is in progress.",
@@ -3913,6 +3915,7 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
             keepIconsBtn.FlatAppearance.BorderSize = 0;
             keepIconsBtn.Click += (_, _) => ShowKeepIconsDialog();
             var quickHideCheck = new FlatToggle { RowWidth = 700, Text = LocalizationManager.T("DeskZones.QuickHideDoubleClick"), Checked = AppSettings.Load().QuickHideDoubleClickEnabled, BackColor = UiTheme.PageBackground, Margin = new Padding(0, 0, 0, 10) };
+            keepIconsBtn.AccessibleDescription = StudioText("Enable double-click desktop icon hiding to choose exceptions.", "Ενεργοποιήστε την απόκρυψη εικονιδίων με διπλό κλικ για να ορίσετε εξαιρέσεις.");
             keepIconsBtn.Enabled = quickHideCheck.Checked;
             quickHideCheck.CheckedChanged += (_, _) =>
             {

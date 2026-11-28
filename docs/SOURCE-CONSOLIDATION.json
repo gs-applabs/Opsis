@@ -1372,8 +1372,8 @@
         "pass": "MP07",
         "status": "PARTIAL_OR_RELATED_EVIDENCE",
         "evidencePath": "src/UI/MainWindow.cs; src/UI/MainWindow.Organization.cs",
-        "evidence": "WireDisabledActionReasons creates in-page explanation for disabled buttons; generic fallback and some precise per-action reasons, no complete reason coverage. R99 removes arbitrary 12-button cutoff for visible disabled actions; exact per-action reasons remain partial.",
-        "sourceReviewedAt": "2d812cbc0970767c9aac7b991ede10c9a7218787",
+        "evidence": "R103 exact prerequisite descriptions, robust caption fallback, selected-rule busy/selection state; other control reasons remain partial.",
+        "sourceReviewedAt": "5fe673156c5863320dd8a4232e7e980af8fd2e76",
         "releaseCertified": false
       },
       {
@@ -1558,6 +1558,10 @@
       "r102": {
         "base": "a8f6c03fd1a7a7c05d486a6031b305402e59359d",
         "summary": "R102: G02/#83 shares the existing 4.5:1 current-page accent gate across palette swatches, custom picker and wallpaper-derived accent, preserves backup owner and adds keyboard-accessible swatches. G02/#95 adds specific F1 manual topics for IconAtlas, DeskFlip, accent and plugin approval. G04/#14 reports publisher and offline signature per eligible entry DLL (up to 16, explicitly incomplete beyond); separate installer path and runtime still unverified. No new timers or owners. Other caption/text pickers, per-control help/disabled reasons, all 23 global packages and final QA remain open as applicable. No compilation or Windows tests in this pass."
+      },
+      "r103": {
+        "base": "5fe673156c5863320dd8a4232e7e980af8fd2e76",
+        "summary": "R103 G02/#90: exact missing-prerequisite descriptions for icon hiding exceptions, original appearance restore and file-rule creation; unnamed button caption fallback fixed. Selected-rule simulation now prevents duplicate in-flight invocation on selection change and shares existing dialog cancellation; model snapshot taken before worker. Full disabled reason coverage still partial; no runtime/build. R102 and all 23 global packages remain cumulative."
       }
     },
     "development_rule": {
@@ -2457,7 +2461,7 @@
     "active_backlog_policy": "Only incomplete or unresolved implementation requirements in proposals. Source-present and test-only rows in archived_qa, not active development. Archive is not release certification. All 100 IDs remain unique across both arrays. Reopen archived row only on concrete missing source or failed test.",
     "global_scope": {
       "rule": "## ΜΟΝΙΜΟΣ ΚΑΝΟΝΑΣ — ΠΑΝΤΑ ΟΛΕΣ ΟΙ ΕΚΚΡΕΜΟΤΗΤΕΣ, ΟΧΙ ΜΟΝΟ ΟΙ 100\n\nΚάθε ερώτηση του χρήστη για «εκκρεμότητες», «συνέχισε», «τι μένει» αφορά **ολόκληρο το OPSIS Desktop Customization 3.0.0.3200**: αρχικές 100, παλαιότερο roadmap/διορθώσεις, P0–P6, B01–B14, UI/Glass, Shell, Containers, SDK/plugins/companion compatibility, wallpapers/εικόνες/intro/ήχο, ανεξάρτητο add-on, installers, migration/rollback, διανομή, τελικές δοκιμές. Ποτέ μόνο ένα υποσύνολο χωρίς ρητό αίτημα. Το σύνολο παραμένει ενιαίο με σταθερά IDs, alias προς παλιά IDs, συγκεκριμένο owner/κενό και κατάσταση. **Εφαρμογή από τις ευκολότερες προς τις δυσκολότερες**, με ασφάλεια ως προϋπόθεση και χωρίς να ξαναγράφεται έτοιμη λειτουργία. Αρχείο ιστορικού/QA δεν αποτελεί ενεργό backlog. Ελέγχεται κάθε φορά ο τελευταίος ακριβής σωρευτικός SHA και η διασταύρωση με ιστορικές συνομιλίες, handoffs, πραγματικούς callers/UI/ρυθμίσεις, plugins και αρχεία. Ανεπαρκή ή μη προσβάσιμα τεκμήρια καταγράφονται ως blockers, όχι ως ολοκληρωμένα. Ο χρήστης δεν πρέπει να ξαναρωτήσει για ξεχασμένα υποσύνολα. Χρήση συνδεδεμένου GitHub για πραγματικές αλλαγές· πρόσθετα μόνο αν καλύπτουν πραγματική δυνατότητα που λείπει. Όλα τα tests στο τέλος, Inno Setup, καμία πρόωρη έκδοση.",
-      "source_sha": "a8f6c03fd1a7a7c05d486a6031b305402e59359d",
+      "source_sha": "5fe673156c5863320dd8a4232e7e980af8fd2e76",
       "scope_sources": [
         "docs/SOURCE-CONSOLIDATION.md B01–B14",
         "docs/REMAINING-TASKS-3.0.0.3200.md (all waves, SDK1–4, X1–16 and C1–12)",
@@ -2482,7 +2486,7 @@
           "status": "PARTIAL",
           "aliases": "100:83,90,95; B10; C7/C9",
           "requirement": "Αντίθεση custom colours, ακριβείς λόγοι disabled controls, θεματικό F1, Opsis.UI 1px/Ctrl+F/14 locales",
-          "evidence": "R102 shared accent gate, keyboard-accessible swatches and four F1 topics; remaining caption/text pickers, disabled reasons and cross-repo UI pending."
+          "evidence": "R102 accessible accent and F1 topics; R103 exact disabled reasons and single-flight selected-rule simulation cancellation. Remaining caption/text pickers, other controls and sibling UI pending."
         },
         {
           "id": "G03",

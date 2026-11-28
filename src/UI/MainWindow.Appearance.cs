@@ -431,6 +431,7 @@ namespace MotionDesk.UI
                 try { svc.RestoreOriginal(); } catch (Exception e) { Fail(e); }
                 Rebuild();
             }, 280);
+            restore.AccessibleDescription = svc.Store.HasBackup ? T("Win.RestoreOriginal") : T("Win.NothingToRestore");
             restore.Enabled = svc.Store.HasBackup;
             Bt(sr1, "Win.ImportCheck", () =>
             {

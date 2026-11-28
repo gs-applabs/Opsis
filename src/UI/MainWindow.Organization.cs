@@ -142,6 +142,7 @@ public sealed partial class MainWindow
             rules.Add(rule);
             Populate(rules.Count - 1);
         }, 135);
+        add.AccessibleDescription = StudioText("Create a data container before adding a file routing rule.", "Δημιουργήστε container δεδομένων πριν προσθέσετε κανόνα αρχείων.");
         add.Enabled = validDestinations.Length > 0;
         edits.Controls.Add(add);
         if (!add.Enabled)
@@ -223,14 +224,26 @@ public sealed partial class MainWindow
         // attributable only to that rule, regardless of global rule ordering.
         var previewSelected = StudioButton(StudioText("Simulate selected rule", "Προσομοίωση επιλεγμένου κανόνα"), () => { }, 245);
         edits.Controls.Add(previewSelected);
-        list.SelectedIndexChanged += (_, _) => previewSelected.Enabled = list.SelectedIndex >= 0;
-        previewSelected.Enabled = list.SelectedIndex >= 0;
-        previewSelected.AccessibleDescription = StudioText("Dry-run only: does not move any files.",
-            "Μόνο προσομοίωση: δεν μετακινεί αρχεία.");
+        using var previewCancellation = new CancellationTokenSource();
+        var previewToken = previewCancellation.Token;
+        dialog.FormClosed += (_, _) => previewCancellation.Cancel();
+        bool selectedPreviewRunning = false;
+        void UpdateSelectedPreview()
+        {
+            if (previewSelected.IsDisposed || dialog.IsDisposed) return;
+            previewSelected.AccessibleDescription = selectedPreviewRunning
+                ? StudioText("Read-only rule simulation is running.", "Εκτελείται προσομοίωση κανόνα χωρίς αλλαγές.")
+                : list.SelectedIndex < 0
+                    ? StudioText("Select a rule before starting its simulation.", "Επιλέξτε κανόνα πριν την προσομοίωση.")
+                    : StudioText("Dry-run only: does not move any files.", "Μόνο προσομοίωση: δεν μετακινεί αρχεία.");
+            previewSelected.Enabled = !selectedPreviewRunning && list.SelectedIndex >= 0;
+        }
+        list.SelectedIndexChanged += (_, _) => UpdateSelectedPreview();
+        UpdateSelectedPreview();
         previewSelected.Click += async (_, _) =>
         {
             int selected = list.SelectedIndex;
-            if (selected < 0 || selected >= rules.Count) return;
+            if (selectedPreviewRunning || selected < 0 || selected >= rules.Count) return;
             CaptureChecks();
             var selectedRule = rules[selected] with { Enabled = true };
             var only = package with
@@ -238,13 +251,15 @@ public sealed partial class MainWindow
                 Rules = new[] { selectedRule }, RulesEnabled = true,
                 DefaultTarget = null, KeepUnmatched = false
             };
-            previewSelected.Enabled = false;
+            selectedPreviewRunning = true;
+            UpdateSelectedPreview();
             try
             {
-                var matches = await Task.Run(() => DesktopFiles.Route(only, host.Containers(),
+                var models = host.Containers();
+                var matches = await Task.Run(() => DesktopFiles.Route(only, models,
                     Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory),
-                    Environment.GetFolderPath(Environment.SpecialFolder.CommonDesktopDirectory), CancellationToken.None));
-                if (dialog.IsDisposed) return;
+                    Environment.GetFolderPath(Environment.SpecialFolder.CommonDesktopDirectory), previewToken), previewToken);
+                if (dialog.IsDisposed || previewToken.IsCancellationRequested) return;
                 string text = StudioText("Read-only rule simulation", "Προσομοίωση κανόνα χωρίς αλλαγές") +
                     $": {selectedRule.Name}\r\n" +
                     string.Join(Environment.NewLine, matches.SelectMany(x => x.Value.Select(v =>
@@ -252,15 +267,13 @@ public sealed partial class MainWindow
                 if (matches.Count == 0) text += "\r\n" + StudioText("No matches", "Χωρίς αντιστοιχίσεις");
                 ShowTextDialog(dialog.Text, StudioText("Selected rule preview", "Προεπισκόπηση κανόνα"), text);
             }
+            catch (OperationCanceledException) { }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException)
             { if (!dialog.IsDisposed) MessageBox.Show(dialog, ex.Message, dialog.Text); }
-            finally { if (!previewSelected.IsDisposed) previewSelected.Enabled = list.SelectedIndex >= 0; }
+            finally { selectedPreviewRunning = false; UpdateSelectedPreview(); }
         };
         var actions = new FlowLayoutPanel { Dock = DockStyle.Fill, AutoSize = true, FlowDirection = FlowDirection.RightToLeft };
         var preview = StudioButton(StudioText("Preview matches", "Προεπισκόπηση αντιστοιχίσεων"), () => { }, 205);
-        using var previewCancellation = new CancellationTokenSource();
-        var previewToken = previewCancellation.Token;
-        dialog.FormClosed += (_, _) => previewCancellation.Cancel();
         preview.Click += async (_, _) =>
         {
             CaptureChecks();
