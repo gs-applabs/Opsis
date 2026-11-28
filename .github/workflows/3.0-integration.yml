@@ -1,7 +1,7 @@
 name: Opsis 3.0.0.3200 pre-release full integration validation
 on:
   push:
-    branches: [feat/3.0.0.3200-integration]
+    branches: [feat/3.0.0.3200-integration, release/3.0.0.3200-rc2]
   pull_request:
     branches: [feat/p3-p5-unified-experience, feat/3.0.0.3200-integration]
   workflow_dispatch:
@@ -36,6 +36,7 @@ jobs:
           python-version: '3.12'
       - name: Verify 2.8 settings backward compatibility and 3.0 release identity
         run: |
+          if ($env:GITHUB_REF_NAME -eq 'release/3.0.0.3200-rc2') { $env:OPSIS_RC_VALIDATION = 'RC2' }
           python tests/integration/check_baseline_and_release.py
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Syntax validation for all integrated Weather spatial scripts

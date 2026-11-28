@@ -1,7 +1,7 @@
 name: Opsis 2.8 versus 3.0 RC resource comparison
 on:
   push:
-    branches: [test/3.0.0.3200-rc-vm-audit]
+    branches: [test/3.0.0.3200-rc-vm-audit, release/3.0.0.3200-rc2]
   pull_request:
     branches: [feat/p2-win11-square-start-presets, test/3.0.0.3200-rc-vm-audit]
   workflow_dispatch:
