@@ -334,7 +334,7 @@ namespace MotionDesk.Widgets
             // Include the seven native-container registrations in the same conflict summary.
             var failedHotkeys = HotkeyManager.TakeFailureSummary();
             if (failedHotkeys.Length > 0)
-                _trayIcon.ShowBalloonTip(8000, "Opsis", string.Format(LocalizationManager.T("Hotkey.Conflict"), failedHotkeys), ToolTipIcon.Warning);
+                ShowPrivateBalloon(8000, "Opsis", string.Format(LocalizationManager.T("Hotkey.Conflict"), failedHotkeys), ToolTipIcon.Warning);
 
             // Restore lightweight persistent preferences before showing the manager.
             var appSettings = AppSettings.Load();

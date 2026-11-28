@@ -433,6 +433,24 @@ namespace MotionDesk.Services
             return Math.Abs(lon / 15.0 - pc / 3600.0) <= 2 ? pc : (int)Math.Round(lon / 15.0) * 3600;
         }
 
+        // Native widget consumes the same observation metadata as the web
+        // overlay's weather-freshness.js; no separate weather request/cache.
+        internal static string FreshnessLabel(JsonElement observation, DateTimeOffset now, bool greek)
+        {
+            static string? Read(JsonElement row, string key) =>
+                row.TryGetProperty(key, out var value) && value.ValueKind == JsonValueKind.String ? value.GetString() : null;
+            var source = Read(observation, "source");
+            if (string.IsNullOrWhiteSpace(source)) return string.Empty;
+            if (!DateTimeOffset.TryParse(Read(observation, "observedAt") ?? Read(observation, "fetchedAt"),
+                CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out var observed))
+                return (greek ? "Πηγή: " : "Source: ") + source;
+            var minutes = Math.Max(0, (long)(now - observed).TotalMinutes);
+            string age = minutes < 60 ? (greek ? $"{minutes} λ. πριν" : $"{minutes} min ago")
+                : (greek ? $"{minutes / 60} ώ. πριν" : $"{minutes / 60} h ago");
+            bool stale = minutes >= 30 || observation.TryGetProperty("stale", out var flag) && flag.ValueKind == JsonValueKind.True;
+            return source + " · " + age + (stale ? (greek ? " · Παλαιά δεδομένα" : " · Outdated data") : "");
+        }
+
         public static string Build(WeatherObservation o, double lat, double lon, DateTime nowUtc, bool stale)
         {
             var (rise, set) = SolarCalc.NextSunEvents(nowUtc, lat, lon);

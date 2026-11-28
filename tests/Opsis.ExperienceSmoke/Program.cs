@@ -118,6 +118,13 @@ try
     var removalHash = PluginTrust.RemovalFingerprint(managedPackage);
     File.WriteAllText(Path.Combine(managedPackage,"user-data.txt"),"changed after confirmation");
     Check(removalHash != PluginTrust.RemovalFingerprint(managedPackage), "P0 pending deletion fingerprint includes non-executable files");
+    using (var observed = JsonDocument.Parse("{\"source\":\"Test\",\"observedAt\":\"2026-01-01T10:00:00Z\",\"stale\":false}"))
+    {
+        var clock = new DateTimeOffset(2026,1,1,10,15,0,TimeSpan.Zero);
+        Check(MotionDesk.Widgets.WeatherPayload.FreshnessLabel(observed.RootElement, clock, false) == "Test · 15 min ago" &&
+            MotionDesk.Widgets.WeatherPayload.FreshnessLabel(observed.RootElement, clock.AddMinutes(25), true).Contains("Παλαιά δεδομένα"),
+            "P0 native weather widget uses source, observed age and stale marker");
+    }
     var noDemand = AppActivity.SelectDemand(false,false,false,false,false,false,false,false,false,false);
     var dockDemand = AppActivity.SelectDemand(false,false,false,false,false,false,false,false,true,false);
     var widgetDemand = AppActivity.SelectDemand(false,true,false,false,false,false,false,false,false,false);

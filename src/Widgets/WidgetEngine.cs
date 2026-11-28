@@ -1307,7 +1307,7 @@ namespace MotionDesk.Widgets
             var panel = CreateNativePanel(SharedName(), out var values);
             values.TextAlign = ContentAlignment.MiddleCenter;
             values.Font = new Font("Segoe UI", 9.5f);
-            values.Height = 44;
+            values.Height = 68;
             values.Text = LocalizationManager.T("WidgetText.Loading");
 
             var icon = new WeatherIconControl { Dock = DockStyle.Fill, HasObservation = false };
@@ -1341,14 +1341,21 @@ namespace MotionDesk.Widgets
                         int beaufort = WeatherService.ToBeaufort(wind);
                         double hum = r.TryGetProperty("humidity", out var hEl) ? hEl.GetDouble() : -1;
                         string humidityText = hum >= 0 ? $"{hum:0}%" : "—";
-                        values.Text = string.Format(LocalizationManager.T("WidgetText.WeatherLineFormat"), r.GetProperty("temp").GetDouble(), wind, beaufort, humidityText);
+                        string freshness = WeatherPayload.FreshnessLabel(r, DateTimeOffset.UtcNow,
+                            LocalizationManager.CurrentLanguage.StartsWith("el", StringComparison.OrdinalIgnoreCase));
+                        values.Text = string.Format(LocalizationManager.T("WidgetText.WeatherLineFormat"), r.GetProperty("temp").GetDouble(), wind, beaufort, humidityText)
+                            + (freshness.Length == 0 ? "" : Environment.NewLine + freshness);
                     }
                     else { icon.HasObservation = false; icon.Invalidate(); values.Text = LocalizationManager.T("WidgetText.WeatherUnavailable"); ok = false; }
                 }
                 catch { if (IsDisposed || revision != updateRevision) return; icon.HasObservation = false; icon.Invalidate(); values.Text = LocalizationManager.T("WidgetText.WeatherUnavailable"); ok = false; }
                 // Αν ο καιρός απέτυχε (π.χ. καμία σύνδεση στην εκκίνηση), ξαναδοκιμάζουμε σε 1 λεπτό αντί να
                 // περιμένουμε 15 λεπτά με "μη διαθέσιμο"· μετά την επιτυχία επιστρέφει στο κανονικό διάστημα.
-                if (!IsDisposed && _nativeMonitorTimer != null) _nativeMonitorTimer.Interval = ok ? 900000 : 60000;
+                if (!IsDisposed && _nativeMonitorTimer != null)
+                {
+                    _timerBaseMs = ok ? 900000 : 60000;
+                    _nativeMonitorTimer.Interval = EffectiveMonitorInterval();
+                }
             }
             OnGeocodeRequested(async cityName =>
             {
@@ -1360,9 +1367,9 @@ namespace MotionDesk.Widgets
             Action onPlace = () => { if (!IsDisposed) BeginInvoke(new Action(Update)); };
             WallpaperHostEngine.WeatherLocationChanged += onPlace;
             FormClosed += (_, _) => WallpaperHostEngine.WeatherLocationChanged -= onPlace;
-            Update();
-            _nativeMonitorTimer = new System.Windows.Forms.Timer { Interval = 900000 };
+            _nativeMonitorTimer = MonitorTimer(900000);
             _nativeMonitorTimer.Tick += (_, _) => { Update(); };
+            Update();
             UpdateNativeTimers();
         }
 
