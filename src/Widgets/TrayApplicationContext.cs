@@ -130,6 +130,7 @@ namespace MotionDesk.Widgets
             // These are reversible, session-only filters over the saved
             // preferences. They do not silently change startup/profile data.
             contextMenu.Items.Add(BuildSessionBackgroundMenu());
+            contextMenu.Items.Add(BuildSessionDesktopMenu());
             // plugins that are installed but not approved yet (user-writable folder): one click asks again
             _pluginApprovalItem = new ToolStripMenuItem { Visible = false };
             _pluginApprovalItem.Click += (s, e) => AskPluginApproval();
@@ -768,8 +769,8 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                 RuntimeSessionPolicy.SetAllowed(mask);
                 RefreshSessionBackgroundServices();
             }
-            allow.Click += (_, _) => Change(SessionBackgroundService.All);
-            pause.Click += (_, _) => Change(SessionBackgroundService.None);
+            allow.Click += (_, _) => Change(RuntimeSessionPolicy.ReplaceBackground(RuntimeSessionPolicy.Allowed, true));
+            pause.Click += (_, _) => Change(RuntimeSessionPolicy.ReplaceBackground(RuntimeSessionPolicy.Allowed, false));
             menu.DropDownItems.Add(allow); menu.DropDownItems.Add(pause);
             menu.DropDownOpening += (_, _) =>
             {
@@ -785,8 +786,38 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                         (mask & flag) == 0 ? T("Suspended for this session", "Σε αναστολή για αυτή τη συνεδρία") :
                         T("Allowed for this session; other safety checks still apply", "Επιτρέπεται στη συνεδρία· ισχύουν οι έλεγχοι ασφαλείας");
                 }
-                allow.Enabled = !safe && mask != SessionBackgroundService.All;
-                pause.Enabled = !safe && mask != SessionBackgroundService.None;
+                allow.Enabled = !safe && (mask & SessionBackgroundService.Background) != SessionBackgroundService.Background;
+                pause.Enabled = !safe && (mask & SessionBackgroundService.Background) != SessionBackgroundService.None;
+            };
+            return menu;
+        }
+
+        private ToolStripMenuItem BuildSessionDesktopMenu()
+        {
+            string T(string en, string el) => MainWindow.StudioText(en, el);
+            var menu = new ToolStripMenuItem(T("Desktop services · this session", "Υπηρεσίες επιφάνειας εργασίας · αυτή η συνεδρία"));
+            var wallpaper = new ToolStripMenuItem(T("Allow animated wallpaper (keep independent overlays)", "Κινούμενο φόντο (διατήρηση ανεξάρτητων overlays)"));
+            var dock = new ToolStripMenuItem(T("Allow DeskStrip", "Επιτρέπεται το DeskStrip"));
+            void Change(SessionBackgroundService flag, Action reconcile)
+            {
+                if (SafeModeService.IsSafeMode || System.Threading.Volatile.Read(ref _exitStarted) != 0) return;
+                RuntimeSessionPolicy.SetAllowed(flag, !RuntimeSessionPolicy.IsPermitted(flag));
+                try { reconcile(); }
+                catch (Exception ex)
+                {
+                    RotatingLogger.Write("Session desktop transition: " + ex.Message);
+                    MessageBox.Show(ex.Message, "OPSIS", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                }
+                AppActivity.RequestRefresh();
+            }
+            wallpaper.Click += (_, _) => Change(SessionBackgroundService.AnimatedWallpaper, WallpaperHostEngine.ReconcileSessionIfCreated);
+            dock.Click += (_, _) => Change(SessionBackgroundService.DeskStrip, DeskStripHostEngine.ReconcileSessionIfCreated);
+            menu.DropDownItems.Add(wallpaper); menu.DropDownItems.Add(dock);
+            menu.DropDownOpening += (_, _) =>
+            {
+                wallpaper.Checked = RuntimeSessionPolicy.IsPermitted(SessionBackgroundService.AnimatedWallpaper);
+                dock.Checked = RuntimeSessionPolicy.IsPermitted(SessionBackgroundService.DeskStrip);
+                wallpaper.Enabled = dock.Enabled = !SafeModeService.IsSafeMode;
             };
             return menu;
         }

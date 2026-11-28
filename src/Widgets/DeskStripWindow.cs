@@ -1342,8 +1342,43 @@ namespace MotionDesk.Widgets
         private readonly Dictionary<string, DeskStripWindow> _mirrors = new(StringComparer.OrdinalIgnoreCase);
         private System.Windows.Forms.Timer? _monitorTimer;
         public bool IsEnabled => _window is { IsDisposed: false };
+        internal static bool SessionPermitted => RuntimeSessionPolicy.IsPermitted(SessionBackgroundService.DeskStrip);
+        internal static void ReconcileSessionIfCreated() => _instance?.ReconcileSession();
+        private bool _resumeRequested;
+        private bool _sessionPermitted = SessionPermitted;
+
+        private void ReconcileSession()
+        {
+            bool permitted = SessionPermitted;
+            if (_sessionPermitted == permitted) return;
+            _sessionPermitted = permitted;
+            if (!permitted)
+            {
+                _resumeRequested = IsEnabled;
+                CloseForExit();
+                PluginHost.Instance.NotifyCrawlerP0EnvironmentChanged();
+            }
+            else if (_resumeRequested)
+            {
+                // Resume the dock that was running; don't change its saved
+                // StartEnabled option or recreate a dock explicitly disabled.
+                OpenDock(persistStartup: false);
+                _resumeRequested = false;
+            }
+        }
 
         public void Enable()
+        {
+            if (!_sessionPermitted)
+            {
+                _resumeRequested = true;
+                UpdateSettings(settings => settings.StartEnabled = true);
+                return;
+            }
+            OpenDock(persistStartup: true);
+        }
+
+        private void OpenDock(bool persistStartup)
         {
             if (IsEnabled) return;
             _window = new DeskStripWindow();
@@ -1356,7 +1391,8 @@ namespace MotionDesk.Widgets
                 CloseForExit();
             };
             _window.OpenDock();
-            _window.UpdateSettings(settings => settings.StartEnabled = true);
+            if (persistStartup) _window.UpdateSettings(settings => settings.StartEnabled = true);
+            else ReconcileMonitors();
             RefreshMonitorTimer();
             AppActivity.RequestRefresh();
             PluginHost.Instance.NotifyCrawlerP0EnvironmentChanged();
@@ -1364,6 +1400,7 @@ namespace MotionDesk.Widgets
 
         public void Disable()
         {
+            _resumeRequested = false;
             UpdateSettings(settings => settings.StartEnabled = false);
             CloseForExit();
             PluginHost.Instance.NotifyCrawlerP0EnvironmentChanged();
@@ -1460,7 +1497,12 @@ namespace MotionDesk.Widgets
         public void PinApp(string path)
         {
             if (!IsEnabled) Enable();
-            _window?.PinApp(path);
+            if (_window != null) _window.PinApp(path);
+            else if (!_sessionPermitted)
+                UpdateSettings(s =>
+                {
+                    if (!s.Paths.Contains(path, StringComparer.OrdinalIgnoreCase)) s.Paths.Add(path);
+                });
         }
 
         public void UnpinApp(string path)

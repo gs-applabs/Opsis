@@ -481,7 +481,7 @@ namespace MotionDesk.Services
                 // DeskStrip occupies screen edge. Yield control rather than
                 // installing another Windows AppBar or fighting its z-order.
                 bool shellHold = safeMode;
-                try { shellHold |= DeskStripHostEngine.Instance.GetSettings().StartEnabled; }
+                try { shellHold |= DeskStripHostEngine.SessionPermitted && DeskStripHostEngine.Instance.GetSettings().StartEnabled; }
                 catch (Exception) { shellHold = true; }
                 // P3/P5 hosts may provide the extra post-Windows-Update hold.
                 // It is deliberately optional for the stable 2.8.0 host.

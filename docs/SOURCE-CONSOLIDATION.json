@@ -2268,19 +2268,20 @@
     ],
     "handoff": {
       "active_branch": "integration/opsis-unified-source-r27",
-      "active_when_prepared": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+      "active_when_prepared": "5ad65d13c11262ff9a75b4a5c387bbeb50e40c59",
       "parent_R77": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
       "main": "76615c1f2661816f1645f65e87ed6223d0dcdbeb",
       "review_pr": 18,
       "ci_only_never_merge": 20,
-      "latest_certified": "1bbb82b2bcd660674ee92a8f1c59bc463caea8be",
-      "latest_audit_run": 46100848383,
-      "latest_artifact": 15245119446,
-      "next": "Check R77 full audit exact SHA; if green CAS to R80 (ahead2/behind0) for isolated GPU/heap test, then R81, R82, R83 after exact gates. R83 first live runtime mask covers five background services only; full custom/containers-only remains open. Preserve original IDs/asset blockers, no release.",
+      "latest_certified": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+      "latest_audit_run": 46102704472,
+      "latest_artifact": 15246756939,
+      "next": "Check R80 full audit 46103939134 exact SHA and GPU/heap evidence. Promote R81 CAS after all seven success, then R82/R83/R84 in order. R84 adds wallpaper/DeskStrip session admission; Widgets transactional snapshots and remaining runtime owners still open. Keep original IDs and asset blockers, no release.",
       "parent_R79": "835b784e5cdce8fb8eb2134df79c1632366b82a0",
       "parent_R80": "5ad65d13c11262ff9a75b4a5c387bbeb50e40c59",
       "parent_R81": "cae751ab4b21d69996bbacd11bed9a3ae715b3ec",
-      "parent_R82": "d1b0542327a5b00606984e9a9f5e31977d688afa"
+      "parent_R82": "d1b0542327a5b00606984e9a9f5e31977d688afa",
+      "parent_R83": "f7f4625e4da1eae13f6fade5b0551e8d3f9a9f8a"
     }
   }
 }

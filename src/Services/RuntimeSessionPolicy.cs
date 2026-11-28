@@ -13,7 +13,10 @@ internal enum SessionBackgroundService
     DiscordPresence = 4,
     ScheduledAutomations = 8,
     PeriodicWallpaperAccent = 16,
-    All = DockRestore | UsageAlerts | DiscordPresence | ScheduledAutomations | PeriodicWallpaperAccent
+    AnimatedWallpaper = 32,
+    DeskStrip = 64,
+    Background = DockRestore | UsageAlerts | DiscordPresence | ScheduledAutomations | PeriodicWallpaperAccent,
+    All = Background | AnimatedWallpaper | DeskStrip
 }
 
 internal static class RuntimeSessionPolicy
@@ -29,6 +32,12 @@ internal static class RuntimeSessionPolicy
 
     internal static bool Allows(SessionBackgroundService service, bool savedEnabled, bool safeMode)
         => Allows(Allowed, service, savedEnabled, safeMode);
+
+    internal static bool IsPermitted(SessionBackgroundService service) =>
+        Allows(Allowed, service, true, SafeModeService.IsSafeMode);
+
+    internal static SessionBackgroundService ReplaceBackground(SessionBackgroundService current, bool allow)
+        => allow ? current | SessionBackgroundService.Background : current & ~SessionBackgroundService.Background;
 
     internal static void SetAllowed(SessionBackgroundService mask)
         => Volatile.Write(ref _allowed, (int)(mask & SessionBackgroundService.All));

@@ -1367,10 +1367,40 @@ namespace MotionDesk.Widgets
         private bool _overlayOnly;
         private bool _musicSceneRequested;
         private volatile bool _exiting;
-        private bool Active => !_exiting && (_enabled || _overlayOnly);
+        // _enabled is the user's requested state (also used by workspace save).
+        // Session admission changes actual rendering, never that preference.
+        private bool _sessionAnimationAllowed = true;
+        private bool AnimationActive => AllowsAnimatedScene(_enabled, _sessionAnimationAllowed);
+        private bool Active => !_exiting && (AnimationActive || _overlayOnly);
+        internal static bool AllowsAnimatedScene(bool requested, bool allowed) => requested && allowed;
+        internal static void ReconcileSessionIfCreated() => _instance?.ReconcileSession();
+
+        private void ReconcileSession()
+        {
+            if (_exiting) return;
+            bool allowed = RuntimeSessionPolicy.IsPermitted(SessionBackgroundService.AnimatedWallpaper);
+            if (_sessionAnimationAllowed == allowed) return;
+            _sessionAnimationAllowed = allowed;
+            if (!allowed)
+            {
+                DisposeTimer(ref _scheduleTimer);
+                // No retained animated renderer may survive a suspension.
+                // Recreate only the still-requested independent overlay scene.
+                _overlayOnly = false;
+                ReleaseInactiveScene();
+                UpdateOverlayOnly();
+            }
+            else
+            {
+                EnsureScheduleTimer();
+                if (_enabled) ActivateRequestedScene();
+                else UpdateOverlayOnly();
+            }
+            StateChanged?.Invoke();
+        }
         internal static void StopForExit() => _instance?.CloseForExit();
         internal static bool HasActiveScene => _instance?.Active == true;
-        internal static bool IsEnabledIfCreated => _instance?.IsEnabled == true;
+        internal static bool IsEnabledIfCreated => _instance?.AnimationActive == true;
         internal static bool IsRunningIfCreated => _instance?.IsRunning == true;
         internal static void RefreshOptionalIfCreated() => _instance?.RefreshOptionalWatchers();
         private int _perfPushQueued;
@@ -1400,7 +1430,7 @@ namespace MotionDesk.Widgets
         internal static bool NeedsLockScreenSync(bool active, bool enabled, string? path) =>
             active && enabled && !string.IsNullOrEmpty(path);
         internal static bool NeedsSchedule(bool enabled, bool hasRules) => enabled && hasRules;
-        public string EffectiveMode(WallpaperSettings settings) => !_enabled && _overlayOnly ? "Desktop" : WallpaperSettings.NormalizeMode(settings.Mode);
+        public string EffectiveMode(WallpaperSettings settings) => !AnimationActive && _overlayOnly ? "Desktop" : WallpaperSettings.NormalizeMode(settings.Mode);
         private System.Windows.Forms.Timer? _fullscreenCheckTimer;
         private System.Windows.Forms.Timer? _lockScreenSyncTimer;
 
@@ -1438,7 +1468,7 @@ namespace MotionDesk.Widgets
         public bool IsEnabled => _enabled;
         /// <summary>Raised (on the calling thread) after Enable()/Disable(), so the Wallpaper page can keep its Enable/Disable buttons and status in step with the tray, profiles and the schedule.</summary>
         public event Action? StateChanged;
-        public bool IsRunning => _enabled && _windows.Any(w => !w.IsDisposed && w.Visible);
+        public bool IsRunning => AnimationActive && _windows.Any(w => !w.IsDisposed && w.Visible);
 
         private WallpaperHostEngine()
         {
@@ -1446,7 +1476,7 @@ namespace MotionDesk.Widgets
             // /RefreshAllAsync() πειράζουν Forms/WebView2 και ΠΡΕΠΕΙ να τρέχουν στο UI thread. Καταγράφουμε
             // το UI SynchronizationContext εδώ (ο constructor τρέχει στο UI thread) και κάνουμε Post.
             _ui = SynchronizationContext.Current ?? new WindowsFormsSynchronizationContext();
-
+            _sessionAnimationAllowed = RuntimeSessionPolicy.IsPermitted(SessionBackgroundService.AnimatedWallpaper);
         }
 
         private void AttachSceneWatchers()
@@ -1491,7 +1521,7 @@ namespace MotionDesk.Widgets
             if (_exiting) return;
             var app = AppSettings.Peek();
             var settings = WallpaperSettings.Load();
-            if (NeedsAutoMute(_enabled, settings.AudioEnabled, app.AutoMuteWhenOtherAudio)) EnsureAutoMuteWatcher();
+            if (NeedsAutoMute(AnimationActive, settings.AudioEnabled, app.AutoMuteWhenOtherAudio)) EnsureAutoMuteWatcher();
             else
             {
                 DisposeTimer(ref _autoMuteTimer);
@@ -1503,7 +1533,7 @@ namespace MotionDesk.Widgets
                         if (!window.IsDisposed) _ = window.RunScriptAsync("window.opsisAutoMute&&window.opsisAutoMute(false)");
                 }
             }
-            if (NeedsLockScreenSync(Active, app.LockScreenFollowsWallpaper, app.LockScreenSnapshotPath)) EnsureLockScreenSync();
+            if (_sessionAnimationAllowed && NeedsLockScreenSync(Active, app.LockScreenFollowsWallpaper, app.LockScreenSnapshotPath)) EnsureLockScreenSync();
             else DisposeTimer(ref _lockScreenSyncTimer);
         }
 
@@ -1635,6 +1665,13 @@ namespace MotionDesk.Widgets
         public void Enable()
         {
             if (_exiting) return;
+            _enabled = true;
+            if (!_sessionAnimationAllowed)
+            {
+                // Explicit requests during suspension update intent only.
+                StateChanged?.Invoke();
+                return;
+            }
             // Αν υπάρχει ενεργό κινούμενο wallpaper, η εφαρμογή πρέπει να ξαναγυρίζει αυτόματα
             // στην επόμενη εκκίνηση των Windows — ίδια λογική με τα widgets/DeskContainers
             // (ζητήθηκε ρητά "όταν υπάρχει κινούμενο wallpaper όπως και με τα widgets"). Το
@@ -1651,9 +1688,15 @@ namespace MotionDesk.Widgets
                 if (recommended != settings.PerformanceMode) { settings.PerformanceMode = recommended; settings.Save(); }
             }
 
+            ActivateRequestedScene();
+            StateChanged?.Invoke();
+        }
+
+        private void ActivateRequestedScene()
+        {
+            if (_exiting || !AnimationActive) return;
             bool wasOverlayOnly = _overlayOnly;
             _overlayOnly = false;
-            _enabled = true;
             AttachSceneWatchers();
             foreach (var w in _windows) w.AllowReveal = true;
             bool freshlyBuilt = _windows.Count == 0;
@@ -1683,7 +1726,6 @@ namespace MotionDesk.Widgets
             EnsureFullscreenWatcher();
             RefreshOptionalWatchers();
             if (wasOverlayOnly && !freshlyBuilt) _ = RefreshAllAsync();   // switch the running windows from "Desktop" to the real mode
-            StateChanged?.Invoke();
         }
 
         // Starts / stops the "overlay-only" state (see _overlayOnly). Called at startup, after Disable(), and whenever the overlay settings change.
@@ -1694,14 +1736,14 @@ namespace MotionDesk.Widgets
         {
             if (_exiting || _musicSceneRequested == requested) return;
             _musicSceneRequested = requested;
-            if (!_enabled) UpdateOverlayOnly();
+            if (!AnimationActive) UpdateOverlayOnly();
         }
 
         public void UpdateOverlayOnly()
         {
             if (_exiting) return;
             var s = WallpaperSettings.Load();
-            bool want = !_enabled && NeedsScene(false, s.WeatherShowInfo && s.InfoOnAllModes, _musicSceneRequested);
+            bool want = !AnimationActive && NeedsScene(false, s.WeatherShowInfo && s.InfoOnAllModes, _musicSceneRequested);
             bool changed = want != _overlayOnly;
             _overlayOnly = want;
             if (!Active)
@@ -1936,6 +1978,7 @@ namespace MotionDesk.Widgets
                 {
                     if (!Active || generation != _sceneGeneration) return false;
                     if (!automatic) return true;
+                    if (!_sessionAnimationAllowed) return false;
                     var settings = AppSettings.Peek();
                     return settings.LockScreenFollowsWallpaper &&
                         string.Equals(settings.LockScreenSnapshotPath, filePath, StringComparison.OrdinalIgnoreCase);
@@ -2087,7 +2130,7 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Count);
 
         public void EnsureScheduleTimer()
         {
-            if (_exiting) return;
+            if (_exiting || !_sessionAnimationAllowed) return;
             var settings = WallpaperSettings.Load();
             if (!NeedsSchedule(settings.ScheduleEnabled, settings.Schedule.Any(r => r.Enabled)))
             {
@@ -2105,7 +2148,7 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Count);
         // the wallpaper on by itself.
         private void ScheduleTick()
         {
-            if (_exiting) return;
+            if (_exiting || !_sessionAnimationAllowed) return;
             try
             {
                 var settings = WallpaperSettings.Load();
@@ -2119,7 +2162,7 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Count);
                 if (string.Equals(settings.Mode, rule.Mode, StringComparison.Ordinal)) return;
                 settings.Mode = rule.Mode;
                 settings.Save();
-                if (_enabled) _ = RefreshAllAsync();
+                if (AnimationActive) _ = RefreshAllAsync();
             }
             catch (Exception) { /* a schedule tick must never throw into the UI loop */ }
         }

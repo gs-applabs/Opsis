@@ -210,6 +210,15 @@ try
         MotionDesk.Widgets.TrayApplicationContext.SelectOptionalServices(sessionPrefs, false, SessionBackgroundService.All) == (true, true) &&
         sessionPrefs.RestoreWindowsAfterDocking && sessionPrefs.UsageAlertsEnabled,
         "R83 reversible session filters leave persisted preferences unchanged");
+    var desktopMask = SessionBackgroundService.AnimatedWallpaper | SessionBackgroundService.DeskStrip;
+    Check(RuntimeSessionPolicy.ReplaceBackground(desktopMask, true) == SessionBackgroundService.All &&
+        RuntimeSessionPolicy.ReplaceBackground(SessionBackgroundService.All, false) == desktopMask &&
+        RuntimeSessionPolicy.ReplaceBackground(SessionBackgroundService.None, true) == SessionBackgroundService.Background,
+        "R84 background bulk toggle preserves independent desktop service selection");
+    Check(MotionDesk.Widgets.WallpaperHostEngine.AllowsAnimatedScene(true, true) &&
+        !MotionDesk.Widgets.WallpaperHostEngine.AllowsAnimatedScene(true, false) &&
+        !MotionDesk.Widgets.WallpaperHostEngine.AllowsAnimatedScene(false, true),
+        "R84 animation session admission is separate from requested wallpaper state");
     var opt = new AppSettings { RestoreWindowsAfterDocking = false, UsageAlertsEnabled = false };
     Check(MotionDesk.Widgets.TrayApplicationContext.SelectOptionalServices(opt, false) == (false, false),
         "R65 disabled optional tray services have no timer demand");
