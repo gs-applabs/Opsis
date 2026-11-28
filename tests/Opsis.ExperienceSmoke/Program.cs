@@ -841,6 +841,24 @@ try
     Check(OpsisEcosystemGallery.ImportGalleryPack(widgetZip) == 1 &&
         OpsisEcosystemGallery.ReadWidgetContribution(OpsisEcosystemGallery.Discover().Single(x => x.PluginId == "fixture.widgets")).Binding == "Clock",
         "R122 native declarative widget pack installed and discovered");
+    var rolePackZip = Path.Combine(folder, "cursor-role-pack.zip");
+    using (var zip = System.IO.Compression.ZipFile.Open(rolePackZip, System.IO.Compression.ZipArchiveMode.Create))
+    {
+        using (var writer = new StreamWriter(zip.CreateEntry("opsis-contributions.json").Open()))
+            writer.Write(JsonSerializer.Serialize(new OpsisEcosystemGallery.Manifest { PluginId = "fixture.cursors", Version = "1.0.0",
+                Contributions = new() { new() { Id = "cursor1", Type = "cursor-pack", Title = "Fixture cursor", Category = "Test", Asset = "shell/cursor1/pack.json" } } }));
+        using (var writer = new StreamWriter(zip.CreateEntry("shell/cursor1/pack.json").Open()))
+            writer.Write("""{"schema":1,"kind":"cursor-pack","roles":{"Arrow":"arrow.cur"}}""");
+        byte[] cur = new byte[23]; cur[2] = 2; cur[4] = 1; cur[6] = 16; cur[7] = 16; cur[14] = 1; cur[18] = 22;
+        using var entry = zip.CreateEntry("shell/cursor1/arrow.cur").Open(); entry.Write(cur);
+    }
+    Check(OpsisEcosystemGallery.ImportGalleryPack(rolePackZip) == 1 &&
+        ShellAssetPack.Preview(OpsisEcosystemGallery.ResolveShellPack(OpsisEcosystemGallery.Discover().Single(x => x.PluginId == "fixture.cursors")), true).Length == 1,
+        "R124 declarative cursor pack staging and discovery, no registry application");
+    bool reservedNameDenied = false;
+    try { ShellAssetPack.ParseRoles(System.Text.Encoding.UTF8.GetBytes("""{"schema":1,"kind":"cursor-pack","roles":{"Arrow":"CON.cur"}}"""), true); }
+    catch (InvalidDataException) { reservedNameDenied = true; }
+    Check(reservedNameDenied, "R124 reserved Windows device filenames refused");
     // optional: the real 200-image static pack (OPSIS_TEST_WEBP200=<path of Opsis-Abstract-Horizons-200-WebP.zip>)
     var webp200 = Environment.GetEnvironmentVariable("OPSIS_TEST_WEBP200");
     if (!string.IsNullOrEmpty(webp200) && File.Exists(webp200))

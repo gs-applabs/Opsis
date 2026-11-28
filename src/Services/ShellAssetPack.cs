@@ -11,7 +11,7 @@ namespace MotionDesk.Services;
 internal static class ShellAssetPack
 {
     internal sealed record Slot(string Key, string Name, string Suffix);
-    internal sealed record Asset(string Role, string Source);
+    internal sealed record Asset(string Role, string Source, string Sha256);
     internal sealed record Value(bool Present, string Text, int Kind);
     internal sealed record Change(string Role, Value Original, Value Applied);
     internal sealed record Backup(bool Cursor, Change[] Changes);
@@ -69,13 +69,20 @@ internal static class ShellAssetPack
     {
         string extension = Path.GetExtension(path).ToLowerInvariant();
         byte[] data = ReadBounded(path, FileLimit);
+        ValidateAssetBytes(data, extension, cursor, allowAnimated);
+        return data;
+    }
+
+    internal static void ValidateAssetBytes(byte[] data, string extension, bool cursor, bool allowAnimated = false)
+    {
+        if (data.Length is <= 0 or > FileLimit) throw new InvalidDataException("Asset size exceeds quota.");
         if (cursor && allowAnimated && extension == ".ani")
         {
             if (data.Length < 12 || !data.AsSpan(0,4).SequenceEqual("RIFF"u8) ||
                 !data.AsSpan(8,4).SequenceEqual("ACON"u8) ||
                 (ulong)BinaryPrimitives.ReadUInt32LittleEndian(data.AsSpan(4,4)) + 8 != (ulong)data.Length)
                 throw new InvalidDataException("Invalid animated cursor.");
-            return data;
+            return;
         }
         if (extension != (cursor ? ".cur" : ".ico") || !ValidImageDirectory(data, cursor))
             throw new InvalidDataException("Invalid icon/cursor directory.");
@@ -85,15 +92,13 @@ internal static class ShellAssetPack
             using var image = new Icon(input);
             using var bitmap = image.ToBitmap();
         }
-        return data;
     }
     internal static void ValidateLocalAsset(string path, bool cursor, bool allowAnimated = false) => _ = ReadAsset(path, cursor, allowAnimated);
 
-    internal static Asset[] Preview(string manifestPath, bool cursor)
+    internal static IReadOnlyDictionary<string,string> ParseRoles(byte[] data, bool cursor)
     {
-        if (!Path.GetExtension(manifestPath).Equals(".json", StringComparison.OrdinalIgnoreCase))
-            throw new InvalidDataException("Expected a JSON pack manifest.");
-        using var doc = JsonDocument.Parse(ReadBounded(manifestPath, 16384));
+        if (data.Length is <= 0 or > 16384) throw new InvalidDataException("Invalid shell manifest size.");
+        using var doc = JsonDocument.Parse(data);
         var root = doc.RootElement;
         if (root.ValueKind != JsonValueKind.Object || !root.TryGetProperty("schema", out var schema) ||
             schema.ValueKind != JsonValueKind.Number || !schema.TryGetInt32(out int version) || version != 1 ||
@@ -101,24 +106,41 @@ internal static class ShellAssetPack
             kind.GetString() != (cursor ? "cursor-pack" : "icon-pack") ||
             !root.TryGetProperty("roles", out var roles) || roles.ValueKind != JsonValueKind.Object)
             throw new InvalidDataException("Unsupported shell asset manifest.");
-        var items = new List<Asset>();
-        var seen = new HashSet<string>(StringComparer.Ordinal);
-        string folder = Path.GetDirectoryName(manifestPath)!;
+        var items = new Dictionary<string,string>(StringComparer.Ordinal);
+        var fields = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var field in root.EnumerateObject())
+            if (!fields.Add(field.Name)) throw new InvalidDataException("Duplicate pack field.");
         foreach (var role in roles.EnumerateObject())
         {
             _ = Resolve(role.Name, cursor);
-            if (!seen.Add(role.Name) || items.Count >= 6 || role.Value.ValueKind != JsonValueKind.String)
+            if (items.ContainsKey(role.Name) || items.Count >= 6 || role.Value.ValueKind != JsonValueKind.String)
                 throw new InvalidDataException("Invalid or duplicate pack role.");
             string name = role.Value.GetString()!;
             if (name.Length is < 1 or > 128 || name != Path.GetFileName(name) ||
                 name.Any(c => !char.IsAsciiLetterOrDigit(c) && c is not ('.' or '_' or '-' or ' ')))
                 throw new InvalidDataException("Pack assets must be sibling files with simple filenames.");
-            string source = Path.Combine(folder, name);
-            ValidateLocalAsset(source, cursor);
-            items.Add(new Asset(role.Name, source));
+            string stem = name.Split('.')[0].TrimEnd().ToUpperInvariant();
+            if (stem is "CON" or "PRN" or "AUX" or "NUL" ||
+                stem.Length == 4 && (stem.StartsWith("COM") || stem.StartsWith("LPT")) && char.IsAsciiDigit(stem[3]) ||
+                !Path.GetExtension(name).Equals(cursor ? ".cur" : ".ico", StringComparison.OrdinalIgnoreCase))
+                throw new InvalidDataException("Unsupported or reserved asset filename.");
+            items.Add(role.Name, name);
         }
         if (items.Count == 0) throw new InvalidDataException("Empty pack.");
-        return items.ToArray();
+        return items;
+    }
+
+    internal static Asset[] Preview(string manifestPath, bool cursor)
+    {
+        if (!Path.GetExtension(manifestPath).Equals(".json", StringComparison.OrdinalIgnoreCase))
+            throw new InvalidDataException("Expected a JSON pack manifest.");
+        var roles = ParseRoles(ReadBounded(manifestPath, 16384), cursor);
+        string folder = Path.GetDirectoryName(manifestPath)!;
+        return roles.Select(role =>
+        {
+            string path = Path.Combine(folder, role.Value);
+            return new Asset(role.Key, path, Convert.ToHexString(SHA256.HashData(ReadAsset(path, cursor))));
+        }).ToArray();
     }
 
     private static Value Read(Slot slot)
@@ -156,12 +178,13 @@ internal static class ShellAssetPack
     {
         if (cursor) DeskCursorsEngine.RefreshCurrent(); else IconAtlasEngine.RefreshShellIcons();
     }
-    internal static void Apply(string manifest, bool cursor)
+    internal static void Apply(string manifest, bool cursor, IReadOnlyList<Asset> approved)
     {
         lock (Gate)
         {
             CheckWritable();
             var items = Preview(manifest, cursor);
+            if (!items.SequenceEqual(approved)) throw new InvalidDataException("Pack changed after preview.");
             Directory.CreateDirectory(Root);
             RequireUnlinkedLocal(Root);
             if (File.Exists(Journal(cursor))) throw new InvalidOperationException("Restore the previous pack before applying another.");
@@ -169,7 +192,9 @@ internal static class ShellAssetPack
             foreach (var item in items)
             {
                 var slot = Resolve(item.Role, cursor);
-                string stored = Store(ReadAsset(item.Source, cursor), cursor);
+                var data = ReadAsset(item.Source, cursor);
+                if (Convert.ToHexString(SHA256.HashData(data)) != item.Sha256) throw new InvalidDataException("Pack asset changed after preview.");
+                string stored = Store(data, cursor);
                 var next = new Value(true, stored + slot.Suffix, (int)RegistryValueKind.ExpandString);
                 var prior = Read(slot);
                 if (prior != next) changes.Add(new(item.Role, prior, next));

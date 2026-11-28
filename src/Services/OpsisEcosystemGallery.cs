@@ -175,13 +175,30 @@ public static class OpsisEcosystemGallery
     /// <summary>Install a data-only static wallpaper pack into the existing gallery.
     /// No scripts, DLLs, archives within archives or auto-application. Publish only
     /// after the complete manifest, bounded extraction and image checks succeed.</summary>
+    internal static string ResolveShellPack(Item item)
+    {
+        if (item.Type is not ("icon-pack" or "cursor-pack") ||
+            !Path.GetExtension(item.AssetPath).Equals(".json", StringComparison.OrdinalIgnoreCase))
+            throw new InvalidDataException("Select an icon or cursor pack.");
+        var selected = Discover().FirstOrDefault(x => x == item);
+        if (selected == null) throw new InvalidDataException("Gallery pack changed or is no longer present.");
+        _ = ShellAssetPack.Preview(selected.AssetPath, item.Type == "cursor-pack");
+        return selected.AssetPath;
+    }
+
     public static int ImportWallpaperPack(string zipPath) => ImportDataPack(zipPath, allowWidgets: false);
     public static int ImportGalleryPack(string zipPath) => ImportDataPack(zipPath, allowWidgets: true);
 
     private static bool ValidPackAsset(Contribution item, bool allowWidgets)
     {
-        if (!SafeRelative(item.Asset) || item.Asset.Count(c => c == '/') != 1 ||
-            !SafeToken(Path.GetFileName(item.Asset))) return false;
+        if (!SafeRelative(item.Asset) || !SafeToken(Path.GetFileName(item.Asset))) return false;
+        if (allowWidgets && item.Type is "icon-pack" or "cursor-pack")
+        {
+            var parts = item.Asset.Split('/');
+            return parts.Length == 3 && parts[0] == "shell" && SafeToken(parts[1]) &&
+                   parts[1] is not ("." or "..") && !parts[1].EndsWith('.') && parts[2] == "pack.json";
+        }
+        if (item.Asset.Count(c => c == '/') != 1) return false;
         string extension = Path.GetExtension(item.Asset);
         return item.Type == "wallpaper" && item.Asset.StartsWith("images/", StringComparison.Ordinal) &&
                    PackImageExtensions.Contains(extension) ||
@@ -198,7 +215,7 @@ public static class OpsisEcosystemGallery
         try
         {
             using var archive = ZipFile.OpenRead(zipPath);
-            if (archive.Entries.Count < 2 || archive.Entries.Count > MaxPackImages + 1) throw new InvalidDataException("A gallery pack must contain one manifest and 1–200 supported assets.");
+            if (archive.Entries.Count < 2 || archive.Entries.Count > MaxPackImages * (allowWidgets ? 7 : 1) + 1) throw new InvalidDataException("A gallery pack must contain one manifest and 1–200 supported assets.");
             var entries = new Dictionary<string, ZipArchiveEntry>(StringComparer.OrdinalIgnoreCase);
             long total = 0;
             foreach (var entry in archive.Entries)
@@ -218,11 +235,12 @@ public static class OpsisEcosystemGallery
                 ?? throw new InvalidDataException("Invalid gallery manifest.");
             if (manifest.Schema != 1 || !SafeToken(manifest.PluginId) || manifest.PluginId is "." or ".." ||
                 manifest.PluginId.EndsWith('.') || manifest.Contributions == null || (manifest.Contributions.Count < 1 || manifest.Contributions.Count > MaxPackImages) ||
-                !Version.TryParse(manifest.Version, out _) || entries.Count != manifest.Contributions.Count + 1)
+                !Version.TryParse(manifest.Version, out _))
                 throw new InvalidDataException("Invalid gallery pack identity or count.");
             // Use a fixed, generated folder name rather than trusting a manifest path.
             var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             var assets = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var expectedEntries = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "opsis-contributions.json" };
             foreach (var item in manifest.Contributions)
             {
                 if (item == null || !SafeToken(item.Id) || !ids.Add(item.Id) || !ValidPackAsset(item, allowWidgets) ||
@@ -232,7 +250,21 @@ public static class OpsisEcosystemGallery
                     string.IsNullOrWhiteSpace(item.Category) || item.Category.Length > 60 ||
                     (item.Author?.Length ?? 0) > 120 || (item.Description?.Length ?? 0) > 1024)
                     throw new InvalidDataException("Invalid data-only Gallery contribution.");
+                if (!expectedEntries.Add(item.Asset)) throw new InvalidDataException("Duplicate contribution path.");
+                if (item.Type is "icon-pack" or "cursor-pack")
+                {
+                    if (entries[item.Asset].Length > 16384) throw new InvalidDataException("Shell manifest too large.");
+                    var roles = ShellAssetPack.ParseRoles(ReadEntry(entries[item.Asset]), item.Type == "cursor-pack");
+                    string prefix = item.Asset[..(item.Asset.LastIndexOf('/') + 1)];
+                    foreach (var name in roles.Values.Distinct(StringComparer.OrdinalIgnoreCase))
+                    {
+                        string path = prefix + name;
+                        if (!entries.TryGetValue(path, out var roleEntry) || roleEntry.Length > 8L * 1024 * 1024 ||
+                            !expectedEntries.Add(path)) throw new InvalidDataException("Missing, oversized or shared shell pack asset.");
+                    }
+                }
             }
+            if (expectedEntries.Count != entries.Count) throw new InvalidDataException("Gallery contains undeclared files.");
             if (Manifests().Any(x => string.Equals(x.Data.PluginId, manifest.PluginId, StringComparison.OrdinalIgnoreCase)))
                 throw new InvalidDataException("A gallery pack with this identity is already installed.");
             string root = Path.Combine(AppPaths.AppDataFolder, "gallery-packs");
@@ -263,6 +295,31 @@ public static class OpsisEcosystemGallery
                         string name = "widget-" + hashes.Count.ToString("D3") + ".json";
                         File.WriteAllBytes(Path.Combine(stage, "widgets", name), data);
                         item.Asset = "widgets/" + name;
+                    }
+                    else if (item.Type is "icon-pack" or "cursor-pack")
+                    {
+                        bool cursor = item.Type == "cursor-pack";
+                        var roles = ShellAssetPack.ParseRoles(data, cursor);
+                        string prefix = item.Asset[..(item.Asset.LastIndexOf('/') + 1)];
+                        string relative = "shell/pack-" + hashes.Count.ToString("D3");
+                        string target = Path.Combine(stage, relative.Replace('/', Path.DirectorySeparatorChar));
+                        Directory.CreateDirectory(target);
+                        var rewritten = new Dictionary<string,string>(StringComparer.Ordinal);
+                        var copied = new Dictionary<string,string>(StringComparer.OrdinalIgnoreCase);
+                        foreach (var role in roles)
+                        {
+                            if (!copied.TryGetValue(role.Value, out string? name))
+                            {
+                                byte[] image = ReadEntry(entries[prefix + role.Value]);
+                                ShellAssetPack.ValidateAssetBytes(image, Path.GetExtension(role.Value).ToLowerInvariant(), cursor);
+                                name = "asset-" + (copied.Count + 1).ToString("D2") + (cursor ? ".cur" : ".ico");
+                                File.WriteAllBytes(Path.Combine(target, name), image);
+                                copied.Add(role.Value, name);
+                            }
+                            rewritten.Add(role.Key, name);
+                        }
+                        File.WriteAllText(Path.Combine(target, "pack.json"), JsonSerializer.Serialize(new { schema = 1, kind = item.Type, roles = rewritten }));
+                        item.Asset = relative + "/pack.json";
                     }
                     else
                     {

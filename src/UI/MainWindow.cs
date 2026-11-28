@@ -2874,14 +2874,14 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                         "Opsis Gallery", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }));
 
-            var dataPackButton = NewHoverButton(StudioText("Import Gallery pack (images / widgets)", "Εισαγωγή πακέτου Gallery (εικόνες / widgets)"), () => { });
+            var dataPackButton = NewHoverButton(StudioText("Import Gallery pack", "Εισαγωγή πακέτου Gallery"), () => { });
             dataPackButton.Click += async (_, _) =>
             {
                 if (!dataPackButton.Enabled) return;
                 using var picker = new OpenFileDialog { Filter = "Opsis Gallery (*.zip)|*.zip", CheckFileExists = true };
                 if (picker.ShowDialog(this) != DialogResult.OK) return;
-                if (MessageBox.Show(this, StudioText("Import declarative widgets and static images? Nothing will be executed or applied automatically.",
-                    "Εισαγωγή δηλωτικών widgets και στατικών εικόνων; Δεν θα εκτελεστεί ή εφαρμοστεί τίποτα αυτόματα."), "Opsis",
+                if (MessageBox.Show(this, StudioText("Import declarative widgets, images, icon and cursor packs? Nothing will be executed or applied automatically.",
+                    "Εισαγωγή widgets, εικόνων και πακέτων εικονιδίων/δεικτών; Δεν θα εκτελεστεί ή εφαρμοστεί τίποτα αυτόματα."), "Opsis",
                     MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes) return;
                 dataPackButton.Enabled = false;
                 string path = picker.FileName;
@@ -2898,6 +2898,12 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                 finally { if (!dataPackButton.IsDisposed) dataPackButton.Enabled = true; }
             };
             ecosystemCard.Controls.Add(dataPackButton);
+            ecosystemCard.Controls.Add(NewHoverButton(StudioText("Apply contributed icon / cursor pack", "Εφαρμογή πακέτου εικονιδίων / δεικτών"), () =>
+            {
+                if (ecosystemList.SelectedItems.Count != 1 || ecosystemList.SelectedItems[0].Tag is not OpsisEcosystemGallery.Item item) return;
+                try { ApplyShellPackWithConfirmation(OpsisEcosystemGallery.ResolveShellPack(item), item.Type == "cursor-pack"); }
+                catch (Exception ex) { MessageBox.Show(this, ex.Message, "Opsis Gallery"); }
+            }));
             ecosystemCard.Controls.Add(NewHoverButton(StudioText("Save contributed widget to Studio", "Αποθήκευση widget στο Studio"), () =>
             {
                 if (ecosystemList.SelectedItems.Count != 1 || ecosystemList.SelectedItems[0].Tag is not OpsisEcosystemGallery.Item item) return;
@@ -4219,6 +4225,8 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                                         "Opsis Gallery", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
                                         OpsisEcosystemGallery.InstallThemeContribution(asset);
                                 }
+                                else if (asset.Type is "icon-pack" or "cursor-pack")
+                                    ApplyShellPackWithConfirmation(OpsisEcosystemGallery.ResolveShellPack(asset), asset.Type == "cursor-pack");
                                 else NavigateTo("Personalization");
                             }
                             catch (Exception ex)
