@@ -1074,3 +1074,8 @@ All 10 workflows completed on frozen RC2 (supplemental jobs checkout the exact S
 - **RC2-F17** addons/opsis-100/authoring/validate.cjs --release: European production payload gate remained open in supplemental job; already tracked under ASSET-01 and ASSET-02, not a new independent asset requirement. — Inspect validator output and reconcile exact missing approved assets; preserve existing scene quality and manifests; rerun release validator. [Evidence](https://github.com/gs-applabs/Opsis/actions/runs/46136539625/job/140952995373).
 
 The 73 engineering/investigation, 8 asset, 19 QA items remain tracked; F17 is a cross-reference, not duplicate implementation work. Fix F01–F06 first, address warnings and remaining work, then rerun the full matrix on a new frozen candidate. No production release.
+
+
+## RC2-R1 corrections and functional UI acceptance
+
+Source corrections RC2-F01, RC2-F02, RC2-F03, RC2-F04, RC2-F05, RC2-F06, RC2-F09, RC2-F10, RC2-F11, RC2-F12, RC2-F13, RC2-F14, RC2-F15, RC2-F16 prepared; retest required. Prior frozen RC2 stays immutable. New candidate branch release/3.0.0.3200-rc2-r1. Actual Start Studio UI selection verifies persisted style/layout and reopen; sidebar click checks selected identity and error fallback. Per-control acceptance and all remaining scopes in CLAUDE_CODE_HANDOFF/RC2-R1-START-HERE-EL.md and JSON files. No production release.

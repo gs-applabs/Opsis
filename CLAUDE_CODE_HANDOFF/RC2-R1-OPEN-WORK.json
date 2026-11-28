@@ -1,0 +1,1690 @@
+{
+  "rc2": {
+    "channel": "RC2",
+    "branch": "release/3.0.0.3200-rc2",
+    "source_base": "c25d9c5720de2266b8552e730143ada7376e915a",
+    "expected_workflows": [
+      "3.0-rc-vm-audit",
+      "3.0-rc-installer-e2e",
+      "3.0-rc-performance-compare",
+      "3.0-source-handoff",
+      "unified-r28-checks",
+      "windows-audit",
+      "plugin-compatibility",
+      "3.0-integration",
+      "3.0-plugins-e2e"
+    ],
+    "sibling_refs": {
+      "crawler": "f35d5c02ff66e625a9071830b960f24f0384ea89",
+      "chronikologio": "e100ed17a55839d42a9f10efd5196209c878a1e6",
+      "media": "a1562d77c11021cd5f576814397a7e0c5cb9ce1f"
+    },
+    "release_blocked": true,
+    "state": "validation-completed-failed",
+    "findings": [
+      "Settings schema inventory stale (222 vs actual 226); regenerated against exact audited base: 205 retained, 21 additive, zero removed/retyped.",
+      "Version.props already 3.0.0.3200 but production gate incompatible with prerelease test; explicit RC2 validation environment gate, not production release. Default gate remains fail-closed.",
+      "All 23 global packages and original 100 IDs retained; 73 engineering/investigation entries, 8 asset/package entries and 19 QA/delivery groups from prior review remain open. Every observed failure must be added to canonical roadmap with workflow/job/SHA, symptom, fix and retest."
+    ],
+    "manual_gates": [
+      "real Windows 11 interactive 24H2/25H2 and second provider",
+      "mixed DPI and physical GPU/HDR",
+      "1h/24h stress, all controls, upgrade from older versions and add-on playback",
+      "full SDK and native shell feature gaps",
+      "exact approved assets and final release"
+    ],
+    "frozen_sha": "0e6264ca7c55f8313381c626f3c5407137f0710a",
+    "supplemental_workflow_sha": "163c4ea5242f428d268e9f5206cca7195b2a9ead",
+    "runs": [
+      {
+        "id": 46136458533,
+        "name": "Opsis RC source-only Claude handoff",
+        "head_sha": "0e6264ca7c55f8313381c626f3c5407137f0710a",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/gs-applabs/Opsis/actions/runs/46136458533"
+      },
+      {
+        "id": 46136458563,
+        "name": "OPSIS unified RC build checks",
+        "head_sha": "0e6264ca7c55f8313381c626f3c5407137f0710a",
+        "status": "completed",
+        "conclusion": "failure",
+        "url": "https://github.com/gs-applabs/Opsis/actions/runs/46136458563"
+      },
+      {
+        "id": 46136458616,
+        "name": "Opsis 2.8 versus 3.0 RC resource comparison",
+        "head_sha": "0e6264ca7c55f8313381c626f3c5407137f0710a",
+        "status": "completed",
+        "conclusion": "failure",
+        "url": "https://github.com/gs-applabs/Opsis/actions/runs/46136458616"
+      },
+      {
+        "id": 46136458537,
+        "name": "Opsis RC plugin compatibility",
+        "head_sha": "0e6264ca7c55f8313381c626f3c5407137f0710a",
+        "status": "completed",
+        "conclusion": "failure",
+        "url": "https://github.com/gs-applabs/Opsis/actions/runs/46136458537"
+      },
+      {
+        "id": 46136458534,
+        "name": "Opsis - Desktop Customization Windows audit",
+        "head_sha": "0e6264ca7c55f8313381c626f3c5407137f0710a",
+        "status": "completed",
+        "conclusion": "failure",
+        "url": "https://github.com/gs-applabs/Opsis/actions/runs/46136458534"
+      },
+      {
+        "id": 46136458539,
+        "name": "Opsis 3.0 plugin ABI and ecosystem compatibility",
+        "head_sha": "0e6264ca7c55f8313381c626f3c5407137f0710a",
+        "status": "completed",
+        "conclusion": "failure",
+        "url": "https://github.com/gs-applabs/Opsis/actions/runs/46136458539"
+      },
+      {
+        "id": 46136458561,
+        "name": "Opsis 3.0 RC exhaustive Windows VM audit",
+        "head_sha": "0e6264ca7c55f8313381c626f3c5407137f0710a",
+        "status": "completed",
+        "conclusion": "failure",
+        "url": "https://github.com/gs-applabs/Opsis/actions/runs/46136458561"
+      },
+      {
+        "id": 46136458544,
+        "name": "Opsis 3.0 RC installer Windows VM E2E",
+        "head_sha": "0e6264ca7c55f8313381c626f3c5407137f0710a",
+        "status": "completed",
+        "conclusion": "failure",
+        "url": "https://github.com/gs-applabs/Opsis/actions/runs/46136458544"
+      },
+      {
+        "id": 46136458609,
+        "name": "Opsis 3.0.0.3200 pre-release full integration validation",
+        "head_sha": "0e6264ca7c55f8313381c626f3c5407137f0710a",
+        "status": "completed",
+        "conclusion": "failure",
+        "url": "https://github.com/gs-applabs/Opsis/actions/runs/46136458609"
+      },
+      {
+        "id": 46136539625,
+        "name": "OPSIS RC2 supplemental recovery, security, assets and one-hour stress",
+        "head_sha": "163c4ea5242f428d268e9f5206cca7195b2a9ead",
+        "status": "completed",
+        "conclusion": "failure",
+        "url": "https://github.com/gs-applabs/Opsis/actions/runs/46136539625"
+      }
+    ],
+    "checks": [
+      {
+        "id": 140952740611,
+        "name": "experience-windows (windows-2022)",
+        "status": "completed",
+        "conclusion": "failure",
+        "url": "https://github.com/gs-applabs/Opsis/actions/runs/46136458609/job/140952740611"
+      },
+      {
+        "id": 140952740430,
+        "name": "experience-windows (windows-2025)",
+        "status": "completed",
+        "conclusion": "failure",
+        "url": "https://github.com/gs-applabs/Opsis/actions/runs/46136458609/job/140952740430"
+      },
+      {
+        "id": 140952740429,
+        "name": "Build 3.0 RC, shell/navigation UI and stability / windows-2022",
+        "status": "completed",
+        "conclusion": "failure",
+        "url": "https://github.com/gs-applabs/Opsis/actions/runs/46136458561/job/140952740429"
+      },
+      {
+        "id": 140952740300,
+        "name": "plugin-build-matrix (windows-2025)",
+        "status": "completed",
+        "conclusion": "failure",
+        "url": "https://github.com/gs-applabs/Opsis/actions/runs/46136458539/job/140952740300"
+      },
+      {
+        "id": 140952740287,
+        "name": "desktop",
+        "status": "completed",
+        "conclusion": "failure",
+        "url": "https://github.com/gs-applabs/Opsis/actions/runs/46136458534/job/140952740287"
+      },
+      {
+        "id": 140952740249,
+        "name": "Build 3.0 RC, shell/navigation UI and stability / windows-2025",
+        "status": "completed",
+        "conclusion": "failure",
+        "url": "https://github.com/gs-applabs/Opsis/actions/runs/46136458561/job/140952740249"
+      },
+      {
+        "id": 140952740207,
+        "name": "windows",
+        "status": "completed",
+        "conclusion": "failure",
+        "url": "https://github.com/gs-applabs/Opsis/actions/runs/46136458563/job/140952740207"
+      },
+      {
+        "id": 140952740185,
+        "name": "Crawler + Chronikologio in .NET 11 host",
+        "status": "completed",
+        "conclusion": "failure",
+        "url": "https://github.com/gs-applabs/Opsis/actions/runs/46136458537/job/140952740185"
+      },
+      {
+        "id": 140952740150,
+        "name": "rc-installer (windows-2025)",
+        "status": "completed",
+        "conclusion": "failure",
+        "url": "https://github.com/gs-applabs/Opsis/actions/runs/46136458544/job/140952740150"
+      },
+      {
+        "id": 140952740142,
+        "name": "resource-compare",
+        "status": "completed",
+        "conclusion": "failure",
+        "url": "https://github.com/gs-applabs/Opsis/actions/runs/46136458616/job/140952740142"
+      },
+      {
+        "id": 140952740106,
+        "name": "plugin-build-matrix (windows-2022)",
+        "status": "completed",
+        "conclusion": "failure",
+        "url": "https://github.com/gs-applabs/Opsis/actions/runs/46136458539/job/140952740106"
+      },
+      {
+        "id": 140952740047,
+        "name": "archive",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/gs-applabs/Opsis/actions/runs/46136458533/job/140952740047"
+      },
+      {
+        "id": 140952740021,
+        "name": "rc-installer (windows-2022)",
+        "status": "completed",
+        "conclusion": "failure",
+        "url": "https://github.com/gs-applabs/Opsis/actions/runs/46136458544/job/140952740021"
+      },
+      {
+        "id": 140952739971,
+        "name": "Electron Media Suite integration",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/gs-applabs/Opsis/actions/runs/46136458537/job/140952739971"
+      },
+      {
+        "id": 140952995427,
+        "name": "one-hour-resource-audit",
+        "status": "completed",
+        "conclusion": "failure",
+        "url": "https://github.com/gs-applabs/Opsis/actions/runs/46136539625/job/140952995427"
+      },
+      {
+        "id": 140952995373,
+        "name": "assets-and-source",
+        "status": "completed",
+        "conclusion": "failure",
+        "url": "https://github.com/gs-applabs/Opsis/actions/runs/46136539625/job/140952995373"
+      },
+      {
+        "id": 140952995345,
+        "name": "dependency-audit",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/gs-applabs/Opsis/actions/runs/46136539625/job/140952995345"
+      },
+      {
+        "id": 140952995108,
+        "name": "atomic-recovery",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/gs-applabs/Opsis/actions/runs/46136539625/job/140952995108"
+      }
+    ],
+    "defects": [
+      {
+        "id": "RC2-F01",
+        "priority": "P0",
+        "type": "BUILD",
+        "path": "src/Music/MusicOverlayPage.cs:350–351",
+        "symptom": "CS0103 ×2: L local to constructor, UpdateFromSettings calls it outside scope.",
+        "fix": "Use existing localization selection in accessible helper; preserve Greek/English and session suspension text.",
+        "run": 46136458534,
+        "job": 140952740287,
+        "status": "OPEN",
+        "tested_sha": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "RC2-F02",
+        "priority": "P0",
+        "type": "BUILD",
+        "path": "src/Services/ShellAssetPack.cs:95,100",
+        "symptom": "CS8352 ×2: payload ref-span escapes scope via sequenceData/rateData.",
+        "fix": "Use bounded chunk offset/length or scoped ref offset; preserve structural validation and add valid ANI fixture, no removal of checks.",
+        "run": 46136458534,
+        "job": 140952740287,
+        "status": "OPEN",
+        "tested_sha": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "RC2-F03",
+        "priority": "P0",
+        "type": "BUILD",
+        "path": "src/Services/PluginCapabilityManifest.cs:27; src/Services/OpsisWidgetDesigner.cs:68",
+        "symptom": "CS1739 ×2: ReadAtLeast parameter throwIfEndOfStream does not exist.",
+        "fix": "Use the actual Stream.ReadAtLeast overload with positional false; retain read quotas and EOF checks.",
+        "run": 46136458534,
+        "job": 140952740287,
+        "status": "OPEN",
+        "tested_sha": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "RC2-F04",
+        "priority": "P0",
+        "type": "BUILD",
+        "path": "src/UI/MainWindow.Performance.cs:76",
+        "symptom": "CS0026: this referenced inside static method.",
+        "fix": "Use panel.FindForm() or explicit passed owner, verify null/disposal/handle and cancellation; preserve diagnostics preview.",
+        "run": 46136458534,
+        "job": 140952740287,
+        "status": "OPEN",
+        "tested_sha": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "RC2-F05",
+        "priority": "P0",
+        "type": "TEST",
+        "path": "tests/PluginCompatibility.test.cjs:34",
+        "symptom": "JS source assertion expects requested.Version > available.Version; actual shared resolver uses available.Version >= requested.Version plus identity checks.",
+        "fix": "Reconcile assertion with actual RequireDependencyIdentity and retain behavioral tests for older/newer/identity mismatches; no weaker admission.",
+        "run": 46136458563,
+        "job": 140952740207,
+        "status": "OPEN",
+        "tested_sha": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "RC2-F06",
+        "priority": "P0",
+        "type": "TEST",
+        "path": "tests/Session4.test.cjs:9",
+        "symptom": "JS source assertion expects Pascal-case capability tokens; manifest now parses case-insensitively and normalizes network/audio/local-files.",
+        "fix": "Verify actual parsing, hash binding and deny/revoke; update stale assertion only with equivalent behavioral coverage.",
+        "run": 46136458563,
+        "job": 140952740207,
+        "status": "OPEN",
+        "tested_sha": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "RC2-F07",
+        "priority": "P1",
+        "type": "CI",
+        "path": "GitHub Actions runtime",
+        "symptom": "Node 20 action deprecation warning (checkout/setup-dotnet/setup-node/upload-artifact).",
+        "fix": "Review current action versions/pins, upgrade compatibly after build corrections, rerun exact candidate.",
+        "run": 46136458563,
+        "job": 140952740207,
+        "status": "OPEN",
+        "tested_sha": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "RC2-F08",
+        "priority": "P1",
+        "type": "CI",
+        "path": "tools/qa-r9-windows.ps1",
+        "symptom": "Historical R9 QA script still hardcodes version 2.8.0.2500; not a valid RC2 upgrade gate.",
+        "fix": "Parameterize verified version and SHA-pinned upgrade/side-by-side/clean runtime matrix; use existing installer owner. Not a reported runtime failure.",
+        "run": null,
+        "job": null,
+        "status": "OPEN",
+        "tested_sha": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "RC2-F09",
+        "priority": "P1",
+        "type": "COMPILER_WARNING",
+        "path": "src/Containers/ContainerWindow.cs:452",
+        "symptom": "CS0108",
+        "fix": "Scale hides Control.Scale; rename or explicitly disambiguate to prevent wrong scaling.",
+        "run": 46136458609,
+        "job": 140952740611,
+        "status": "OPEN",
+        "tested_sha": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "RC2-F10",
+        "priority": "P1",
+        "type": "COMPILER_WARNING",
+        "path": "src/UI/OpsisWidgetVisualDesignerForm.cs:190",
+        "symptom": "CS8620",
+        "fix": "Nullable object array passed to DataGridView insert; preserve null semantics and correct types.",
+        "run": 46136458609,
+        "job": 140952740611,
+        "status": "OPEN",
+        "tested_sha": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "RC2-F11",
+        "priority": "P1",
+        "type": "COMPILER_WARNING",
+        "path": "src/UI/OpsisStartButtonArt.cs:31",
+        "symptom": "CS8602",
+        "fix": "Guard possible null before dereference.",
+        "run": 46136458609,
+        "job": 140952740611,
+        "status": "OPEN",
+        "tested_sha": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "RC2-F12",
+        "priority": "P1",
+        "type": "COMPILER_WARNING",
+        "path": "src/Services/WallpaperPackImage.cs:51",
+        "symptom": "CS0618",
+        "fix": "Use SkiaSharp sampling-options overload with equivalent image quality.",
+        "run": 46136458609,
+        "job": 140952740611,
+        "status": "OPEN",
+        "tested_sha": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "RC2-F13",
+        "priority": "P1",
+        "type": "COMPILER_WARNING",
+        "path": "src/Services/WallpaperGalleryCatalog.cs:64",
+        "symptom": "CS8602",
+        "fix": "Guard invalid/missing manifest field.",
+        "run": 46136458609,
+        "job": 140952740611,
+        "status": "OPEN",
+        "tested_sha": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "RC2-F14",
+        "priority": "P1",
+        "type": "COMPILER_WARNING",
+        "path": "src/Widgets/WallpaperWindow.cs:1065",
+        "symptom": "CS8602",
+        "fix": "Guard nullable owner/reference with lifecycle check.",
+        "run": 46136458609,
+        "job": 140952740611,
+        "status": "OPEN",
+        "tested_sha": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "RC2-F15",
+        "priority": "P1",
+        "type": "COMPILER_WARNING",
+        "path": "src/Widgets/ReplacementTaskbar.cs:258",
+        "symptom": "CS8602",
+        "fix": "Guard nullable reference in taskbar path.",
+        "run": 46136458609,
+        "job": 140952740611,
+        "status": "OPEN",
+        "tested_sha": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "RC2-F16",
+        "priority": "P1",
+        "type": "COMPILER_WARNING",
+        "path": "src/UI/MainWindow.cs:103",
+        "symptom": "CS0169",
+        "fix": "Review and remove unused _brandPulseT if no conditional owner.",
+        "run": 46136458609,
+        "job": 140952740611,
+        "status": "OPEN",
+        "tested_sha": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "RC2-F17",
+        "priority": "P1",
+        "type": "ASSET_GATE",
+        "path": "addons/opsis-100/authoring/validate.cjs --release",
+        "symptom": "European production payload gate remained open in supplemental job; already tracked under ASSET-01 and ASSET-02, not a new independent asset requirement.",
+        "fix": "Inspect validator output and reconcile exact missing approved assets; preserve existing scene quality and manifests; rerun release validator.",
+        "run": 46136539625,
+        "job": 140952995373,
+        "status": "OPEN",
+        "tested_sha": "0e6264ca7c55f8313381c626f3c5407137f0710a",
+        "related": [
+          "ASSET-01",
+          "ASSET-02"
+        ]
+      }
+    ],
+    "active_development": [
+      {
+        "id": "DEV-A01",
+        "category": "UI, accessibility, persistence",
+        "requirement": "Remaining custom color contrast",
+        "status": "OPEN_OR_REVIEW",
+        "source": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "DEV-A02",
+        "category": "UI, accessibility, persistence",
+        "requirement": "Exact disabled-control reasons",
+        "status": "OPEN_OR_REVIEW",
+        "source": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "DEV-A03",
+        "category": "UI, accessibility, persistence",
+        "requirement": "Per-control F1 help",
+        "status": "OPEN_OR_REVIEW",
+        "source": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "DEV-A04",
+        "category": "UI, accessibility, persistence",
+        "requirement": "Remaining localization/shortcuts",
+        "status": "OPEN_OR_REVIEW",
+        "source": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "DEV-A05",
+        "category": "UI, accessibility, persistence",
+        "requirement": "Publisher/signature on separate plugin installer",
+        "status": "OPEN_OR_REVIEW",
+        "source": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "DEV-A06",
+        "category": "UI, accessibility, persistence",
+        "requirement": "Additional icon/cursor roles",
+        "status": "OPEN_OR_REVIEW",
+        "source": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "DEV-A07",
+        "category": "UI, accessibility, persistence",
+        "requirement": "Reopen active custom widgets after restart",
+        "status": "OPEN_OR_REVIEW",
+        "source": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "DEV-A08",
+        "category": "UI, accessibility, persistence",
+        "requirement": "Portrait display density",
+        "status": "OPEN_OR_REVIEW",
+        "source": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "DEV-A09",
+        "category": "UI, accessibility, persistence",
+        "requirement": "Remaining plugin/widget privacy paths",
+        "status": "OPEN_OR_REVIEW",
+        "source": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "DEV-A10",
+        "category": "UI, accessibility, persistence",
+        "requirement": "Release/readiness metadata consistency (RC2 preflight corrected; final update pending)",
+        "status": "OPEN_OR_REVIEW",
+        "source": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "DEV-B01",
+        "category": "Existing functional extensions",
+        "requirement": "Opt-in DeskFlip Alt+Tab",
+        "status": "OPEN_OR_REVIEW",
+        "source": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "DEV-B02",
+        "category": "Existing functional extensions",
+        "requirement": "Select on Alt release",
+        "status": "OPEN_OR_REVIEW",
+        "source": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "DEV-B03",
+        "category": "Existing functional extensions",
+        "requirement": "Native fallback",
+        "status": "OPEN_OR_REVIEW",
+        "source": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "DEV-B04",
+        "category": "Existing functional extensions",
+        "requirement": "Keyboard zone preview before move",
+        "status": "OPEN_OR_REVIEW",
+        "source": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "DEV-B05",
+        "category": "Existing functional extensions",
+        "requirement": "External-window profile preview/owner",
+        "status": "OPEN_OR_REVIEW",
+        "source": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "DEV-B06",
+        "category": "Existing functional extensions",
+        "requirement": "Actual Explorer tab grouping/order restore",
+        "status": "OPEN_OR_REVIEW",
+        "source": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "DEV-B07",
+        "category": "Existing functional extensions",
+        "requirement": "Per-app appearance",
+        "status": "OPEN_OR_REVIEW",
+        "source": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "DEV-B08",
+        "category": "Existing functional extensions",
+        "requirement": "Advanced window grouping",
+        "status": "OPEN_OR_REVIEW",
+        "source": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "DEV-B09",
+        "category": "Existing functional extensions",
+        "requirement": "Native tray icons depth",
+        "status": "OPEN_OR_REVIEW",
+        "source": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "DEV-B10",
+        "category": "Existing functional extensions",
+        "requirement": "Taskbar calendar",
+        "status": "OPEN_OR_REVIEW",
+        "source": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "DEV-B11",
+        "category": "Existing functional extensions",
+        "requirement": "Additional widget sources",
+        "status": "OPEN_OR_REVIEW",
+        "source": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "DEV-B12",
+        "category": "Existing functional extensions",
+        "requirement": "Gallery package management",
+        "status": "OPEN_OR_REVIEW",
+        "source": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "DEV-C01",
+        "category": "Core and Containers",
+        "requirement": "True minimal Containers-only startup",
+        "status": "OPEN_OR_REVIEW",
+        "source": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "DEV-C02",
+        "category": "Core and Containers",
+        "requirement": "Audit ungated services",
+        "status": "OPEN_OR_REVIEW",
+        "source": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "DEV-C03",
+        "category": "Core and Containers",
+        "requirement": "Further startup cost reduction",
+        "status": "OPEN_OR_REVIEW",
+        "source": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "DEV-C04",
+        "category": "Core and Containers",
+        "requirement": "Per-feature CPU attribution",
+        "status": "OPEN_OR_REVIEW",
+        "source": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "DEV-C05",
+        "category": "Core and Containers",
+        "requirement": "Persistent dirty-layout recovery",
+        "status": "OPEN_OR_REVIEW",
+        "source": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "DEV-C06",
+        "category": "Core and Containers",
+        "requirement": "Complete legacy Containers migration",
+        "status": "OPEN_OR_REVIEW",
+        "source": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "DEV-C07",
+        "category": "Core and Containers",
+        "requirement": "Inspect spacer support in Core DLL before implementation",
+        "status": "OPEN_OR_REVIEW",
+        "source": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "DEV-D01",
+        "category": "Rainmeter/Windhawk",
+        "requirement": "Rainmeter image meters",
+        "status": "OPEN_OR_REVIEW",
+        "source": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "DEV-D02",
+        "category": "Rainmeter/Windhawk",
+        "requirement": "More declarative measures",
+        "status": "OPEN_OR_REVIEW",
+        "source": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "DEV-D03",
+        "category": "Rainmeter/Windhawk",
+        "requirement": "Math expressions",
+        "status": "OPEN_OR_REVIEW",
+        "source": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "DEV-D04",
+        "category": "Rainmeter/Windhawk",
+        "requirement": "Complex layouts",
+        "status": "OPEN_OR_REVIEW",
+        "source": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "DEV-D05",
+        "category": "Rainmeter/Windhawk",
+        "requirement": "Font support",
+        "status": "OPEN_OR_REVIEW",
+        "source": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "DEV-D06",
+        "category": "Rainmeter/Windhawk",
+        "requirement": "Mod-by-mod compatibility audit",
+        "status": "OPEN_OR_REVIEW",
+        "source": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "DEV-D07",
+        "category": "Rainmeter/Windhawk",
+        "requirement": "Native equivalents only for actual gaps",
+        "status": "OPEN_OR_REVIEW",
+        "source": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "DEV-E01",
+        "category": "Native Shell",
+        "requirement": "Full native Start replacement",
+        "status": "OPEN_OR_REVIEW",
+        "source": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "DEV-E02",
+        "category": "Native Shell",
+        "requirement": "Native taskbar advanced styling beyond companion",
+        "status": "OPEN_OR_REVIEW",
+        "source": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "DEV-E03",
+        "category": "Native Shell",
+        "requirement": "Native Explorer command bar",
+        "status": "OPEN_OR_REVIEW",
+        "source": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "DEV-E04",
+        "category": "Native Shell",
+        "requirement": "Advanced Explorer appearance",
+        "status": "OPEN_OR_REVIEW",
+        "source": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "DEV-E05",
+        "category": "Native Shell",
+        "requirement": "Notification Center",
+        "status": "OPEN_OR_REVIEW",
+        "source": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "DEV-E06",
+        "category": "Native Shell",
+        "requirement": "Quick Settings",
+        "status": "OPEN_OR_REVIEW",
+        "source": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "DEV-E07",
+        "category": "Native Shell",
+        "requirement": "Native Volume Flyout beyond companion",
+        "status": "OPEN_OR_REVIEW",
+        "source": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "DEV-E08",
+        "category": "Native Shell",
+        "requirement": "Spotlight/lockscreen advanced",
+        "status": "OPEN_OR_REVIEW",
+        "source": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "DEV-F01",
+        "category": "SDK2",
+        "requirement": "API2 negotiation",
+        "status": "OPEN_OR_REVIEW",
+        "source": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "DEV-F02",
+        "category": "SDK2",
+        "requirement": "Isolated worker",
+        "status": "OPEN_OR_REVIEW",
+        "source": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "DEV-F03",
+        "category": "SDK2",
+        "requirement": "Authenticated bounded IPC",
+        "status": "OPEN_OR_REVIEW",
+        "source": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "DEV-F04",
+        "category": "SDK2",
+        "requirement": "OS-enforced capabilities",
+        "status": "OPEN_OR_REVIEW",
+        "source": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "DEV-F05",
+        "category": "SDK2",
+        "requirement": "Dependency graph",
+        "status": "OPEN_OR_REVIEW",
+        "source": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "DEV-F06",
+        "category": "SDK2",
+        "requirement": "Cycle detection",
+        "status": "OPEN_OR_REVIEW",
+        "source": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "DEV-F07",
+        "category": "SDK2",
+        "requirement": "Event bus/contracts",
+        "status": "OPEN_OR_REVIEW",
+        "source": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "DEV-F08",
+        "category": "SDK2",
+        "requirement": "SDK examples/validator",
+        "status": "OPEN_OR_REVIEW",
+        "source": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "DEV-F09",
+        "category": "SDK2",
+        "requirement": "Sibling interoperability",
+        "status": "OPEN_OR_REVIEW",
+        "source": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "DEV-Z01",
+        "category": "Multimedia/Automation",
+        "requirement": "Unified Now Playing broker",
+        "status": "OPEN_OR_REVIEW",
+        "source": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "DEV-Z02",
+        "category": "Multimedia/Automation",
+        "requirement": "DSP Media Suite contract",
+        "status": "OPEN_OR_REVIEW",
+        "source": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "DEV-Z03",
+        "category": "Multimedia/Automation",
+        "requirement": "Codec benchmark",
+        "status": "OPEN_OR_REVIEW",
+        "source": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "DEV-Z04",
+        "category": "Multimedia/Automation",
+        "requirement": "General automation undo",
+        "status": "OPEN_OR_REVIEW",
+        "source": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "DEV-Z05",
+        "category": "Multimedia/Automation",
+        "requirement": "Unified command registry",
+        "status": "OPEN_OR_REVIEW",
+        "source": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "DEV-H01",
+        "category": "Opsis.UI6/Glass",
+        "requirement": "Shared Opsis.UI6 integration",
+        "status": "OPEN_OR_REVIEW",
+        "source": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "DEV-H02",
+        "category": "Opsis.UI6/Glass",
+        "requirement": "Production Signature Composition",
+        "status": "OPEN_OR_REVIEW",
+        "source": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "DEV-H03",
+        "category": "Opsis.UI6/Glass",
+        "requirement": "Remaining Glass surfaces",
+        "status": "OPEN_OR_REVIEW",
+        "source": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "DEV-H04",
+        "category": "Opsis.UI6/Glass",
+        "requirement": "Real HDR/SDR",
+        "status": "OPEN_OR_REVIEW",
+        "source": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "DEV-H05",
+        "category": "Opsis.UI6/Glass",
+        "requirement": "SettingsEditSession/EffectsPolicy",
+        "status": "OPEN_OR_REVIEW",
+        "source": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "DEV-TH01",
+        "category": "Weather",
+        "requirement": "Three actual live render previews",
+        "status": "OPEN_OR_REVIEW",
+        "source": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "DEV-TH02",
+        "category": "Weather",
+        "requirement": "RDP last frame",
+        "status": "OPEN_OR_REVIEW",
+        "source": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "DEV-TH03",
+        "category": "Weather",
+        "requirement": "Photo occlusion quality gaps",
+        "status": "OPEN_OR_REVIEW",
+        "source": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "DEV-TH04",
+        "category": "Weather",
+        "requirement": "HDR/GPU renderer",
+        "status": "OPEN_OR_REVIEW",
+        "source": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "DEV-I01",
+        "category": "Marketplace/security",
+        "requirement": "Online marketplace",
+        "status": "OPEN_OR_REVIEW",
+        "source": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "DEV-I02",
+        "category": "Marketplace/security",
+        "requirement": "Online version management",
+        "status": "OPEN_OR_REVIEW",
+        "source": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "DEV-I03",
+        "category": "Marketplace/security",
+        "requirement": "Safe online distribution",
+        "status": "OPEN_OR_REVIEW",
+        "source": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "DEV-I04",
+        "category": "Marketplace/security",
+        "requirement": "Rollback provenance",
+        "status": "OPEN_OR_REVIEW",
+        "source": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "DEV-I05",
+        "category": "Marketplace/security",
+        "requirement": "Transitive/bundled dependency review",
+        "status": "OPEN_OR_REVIEW",
+        "source": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "DEV-I06",
+        "category": "Marketplace/security",
+        "requirement": "Complex transaction crash recovery",
+        "status": "OPEN_OR_REVIEW",
+        "source": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      }
+    ],
+    "assets": [
+      {
+        "id": "ASSET-01",
+        "requirement": "Remaining European capitals",
+        "status": "OPEN_OR_REVIEW"
+      },
+      {
+        "id": "ASSET-02",
+        "requirement": "Verify existing originals and quality",
+        "status": "OPEN_OR_REVIEW"
+      },
+      {
+        "id": "ASSET-03",
+        "requirement": "200 static wallpaper payload",
+        "status": "OPEN_OR_REVIEW"
+      },
+      {
+        "id": "ASSET-04",
+        "requirement": "Approved intro WebM",
+        "status": "OPEN_OR_REVIEW"
+      },
+      {
+        "id": "ASSET-05",
+        "requirement": "Intro audio/generator",
+        "status": "OPEN_OR_REVIEW"
+      },
+      {
+        "id": "ASSET-06",
+        "requirement": "Approved logo identity",
+        "status": "OPEN_OR_REVIEW"
+      },
+      {
+        "id": "ASSET-07",
+        "requirement": "Steel Oval Rails originals",
+        "status": "OPEN_OR_REVIEW"
+      },
+      {
+        "id": "ASSET-08",
+        "requirement": "Updated single add-on installer",
+        "status": "OPEN_OR_REVIEW"
+      }
+    ],
+    "qa": [
+      {
+        "id": "QA-01",
+        "requirement": "Final .NET 11 build",
+        "status": "OPEN"
+      },
+      {
+        "id": "QA-02",
+        "requirement": "All automated checks",
+        "status": "OPEN"
+      },
+      {
+        "id": "QA-03",
+        "requirement": "GitHub Windows runner",
+        "status": "OPEN"
+      },
+      {
+        "id": "QA-04",
+        "requirement": "Independent second Windows VM",
+        "status": "OPEN"
+      },
+      {
+        "id": "QA-05",
+        "requirement": "All buttons/settings",
+        "status": "OPEN"
+      },
+      {
+        "id": "QA-06",
+        "requirement": "Visual audit",
+        "status": "OPEN"
+      },
+      {
+        "id": "QA-07",
+        "requirement": "RAM/CPU/GPU/VRAM stress",
+        "status": "OPEN"
+      },
+      {
+        "id": "QA-08",
+        "requirement": "24h continuous operation",
+        "status": "OPEN"
+      },
+      {
+        "id": "QA-09",
+        "requirement": "Multiple screens/DPI",
+        "status": "OPEN"
+      },
+      {
+        "id": "QA-10",
+        "requirement": "Real plugins/sibling integration",
+        "status": "OPEN"
+      },
+      {
+        "id": "QA-11",
+        "requirement": "Legacy Containers/profile migration",
+        "status": "OPEN"
+      },
+      {
+        "id": "QA-12",
+        "requirement": "Fences comparison",
+        "status": "OPEN"
+      },
+      {
+        "id": "QA-13",
+        "requirement": "Installer/upgrade/uninstall/rollback",
+        "status": "OPEN"
+      },
+      {
+        "id": "QA-14",
+        "requirement": "Wallpaper quality/playback",
+        "status": "OPEN"
+      },
+      {
+        "id": "QA-15",
+        "requirement": "Security/dependencies",
+        "status": "OPEN"
+      },
+      {
+        "id": "QA-16",
+        "requirement": "Help/History/About/MIT",
+        "status": "OPEN"
+      },
+      {
+        "id": "QA-17",
+        "requirement": "Free signing if feasible",
+        "status": "OPEN"
+      },
+      {
+        "id": "QA-18",
+        "requirement": "Canonical source and Inno",
+        "status": "OPEN"
+      },
+      {
+        "id": "QA-19",
+        "requirement": "Production release approval",
+        "status": "OPEN"
+      }
+    ],
+    "observed": {
+      "js_total": 59,
+      "js_pass": 57,
+      "js_fail": 2,
+      "unique_compiler_errors": 7,
+      "compiler_files": 5,
+      "source_handoff": "success",
+      "source_artifact_ids": [
+        15260460139,
+        15260046465
+      ],
+      "workflows": {
+        "total": 10,
+        "success": 1,
+        "failure": 9
+      },
+      "jobs": {
+        "total": 18,
+        "success": 4,
+        "failure": 14
+      },
+      "unique_compiler_warnings": 8,
+      "baseline": "205 retained / 21 additive / 0 removed or retyped",
+      "atomic_recovery": "PASS process interruption only; not physical power loss",
+      "nuget_audit": "PASS configured direct/transitive vulnerability audit; not whole-app security",
+      "media_suite": "PASS standalone Electron tests; host integration blocked",
+      "europe_release": "OPEN",
+      "weather_spatial": "5 PASS in integration run",
+      "blocked": [
+        "native smoke tests",
+        "UI and screenshots",
+        "WebView2 runtime",
+        "installer build and E2E",
+        "resource comparison",
+        "one-hour soak",
+        "real host plugin load"
+      ],
+      "artifacts": {
+        "source": [
+          15260460139,
+          15260046465
+        ],
+        "dependency": 15259659620,
+        "europe_gate": 15259897081
+      }
+    }
+  },
+  "rc2_r1": {
+    "branch": "release/3.0.0.3200-rc2-r1",
+    "base_rc2_sha": "0e6264ca7c55f8313381c626f3c5407137f0710a",
+    "source_preparation": "a5d96568c9eb79ec11875cfa882397f3a5e5385e",
+    "release_blocked": true,
+    "state": "candidate-prepared-awaiting-validation",
+    "source_corrections": [
+      {
+        "id": "RC2-F01",
+        "status": "SOURCE_CHANGED_RETEST_REQUIRED"
+      },
+      {
+        "id": "RC2-F02",
+        "status": "SOURCE_CHANGED_RETEST_REQUIRED"
+      },
+      {
+        "id": "RC2-F03",
+        "status": "SOURCE_CHANGED_RETEST_REQUIRED"
+      },
+      {
+        "id": "RC2-F04",
+        "status": "SOURCE_CHANGED_RETEST_REQUIRED"
+      },
+      {
+        "id": "RC2-F05",
+        "status": "SOURCE_CHANGED_RETEST_REQUIRED"
+      },
+      {
+        "id": "RC2-F06",
+        "status": "SOURCE_CHANGED_RETEST_REQUIRED"
+      },
+      {
+        "id": "RC2-F09",
+        "status": "SOURCE_CHANGED_RETEST_REQUIRED"
+      },
+      {
+        "id": "RC2-F10",
+        "status": "SOURCE_CHANGED_RETEST_REQUIRED"
+      },
+      {
+        "id": "RC2-F11",
+        "status": "SOURCE_CHANGED_RETEST_REQUIRED"
+      },
+      {
+        "id": "RC2-F12",
+        "status": "SOURCE_CHANGED_RETEST_REQUIRED"
+      },
+      {
+        "id": "RC2-F13",
+        "status": "SOURCE_CHANGED_RETEST_REQUIRED"
+      },
+      {
+        "id": "RC2-F14",
+        "status": "SOURCE_CHANGED_RETEST_REQUIRED"
+      },
+      {
+        "id": "RC2-F15",
+        "status": "SOURCE_CHANGED_RETEST_REQUIRED"
+      },
+      {
+        "id": "RC2-F16",
+        "status": "SOURCE_CHANGED_RETEST_REQUIRED"
+      }
+    ],
+    "unresolved_rc2_findings": [
+      "RC2-F07",
+      "RC2-F08",
+      "RC2-F17"
+    ],
+    "coverage": "Actual sidebar click and error fallback detection, actual Start Studio event and persistence probes, existing taskbar/native opacity/Help checks. Others not certified; manual matrix mandatory.",
+    "handoff": "CLAUDE_CODE_HANDOFF/RC2-R1-START-HERE-EL.md"
+  },
+  "global_scope": {
+    "rule": "## ΜΟΝΙΜΟΣ ΚΑΝΟΝΑΣ — ΠΑΝΤΑ ΟΛΕΣ ΟΙ ΕΚΚΡΕΜΟΤΗΤΕΣ, ΟΧΙ ΜΟΝΟ ΟΙ 100\n\nΚάθε ερώτηση του χρήστη για «εκκρεμότητες», «συνέχισε», «τι μένει» αφορά **ολόκληρο το OPSIS Desktop Customization 3.0.0.3200**: αρχικές 100, παλαιότερο roadmap/διορθώσεις, P0–P6, B01–B14, UI/Glass, Shell, Containers, SDK/plugins/companion compatibility, wallpapers/εικόνες/intro/ήχο, ανεξάρτητο add-on, installers, migration/rollback, διανομή, τελικές δοκιμές. Ποτέ μόνο ένα υποσύνολο χωρίς ρητό αίτημα. Το σύνολο παραμένει ενιαίο με σταθερά IDs, alias προς παλιά IDs, συγκεκριμένο owner/κενό και κατάσταση. **Εφαρμογή από τις ευκολότερες προς τις δυσκολότερες**, με ασφάλεια ως προϋπόθεση και χωρίς να ξαναγράφεται έτοιμη λειτουργία. Αρχείο ιστορικού/QA δεν αποτελεί ενεργό backlog. Ελέγχεται κάθε φορά ο τελευταίος ακριβής σωρευτικός SHA και η διασταύρωση με ιστορικές συνομιλίες, handoffs, πραγματικούς callers/UI/ρυθμίσεις, plugins και αρχεία. Ανεπαρκή ή μη προσβάσιμα τεκμήρια καταγράφονται ως blockers, όχι ως ολοκληρωμένα. Ο χρήστης δεν πρέπει να ξαναρωτήσει για ξεχασμένα υποσύνολα. Χρήση συνδεδεμένου GitHub για πραγματικές αλλαγές· πρόσθετα μόνο αν καλύπτουν πραγματική δυνατότητα που λείπει. Όλα τα tests στο τέλος, Inno Setup, καμία πρόωρη έκδοση. PERMANENT SELF-CONTAINED CORE REQUIREMENT (user, 2026-11-28): all Opsis capabilities and prerequisites must ship inside the core/installer except explicitly approved dependencies. Windhawk, Rainmeter, StartAllBack and other separately installed customization applications are reference/interoperability only, never prerequisites for claiming a feature complete. Optional feature parity must be implemented in existing Opsis owners or a justified internal owner, demand-loaded, reversible, no duplicate host. Native shell surface parity remains open when only a companion/overlay or Windows Settings shortcut exists. Legacy external CLI bridge retained as dormant source for historical compatibility/recovery and schema tests, not exposed by normal personalization UI; not counted as implementation. No automatic third-party installation, no unsupported native injection. DeskStrip remains the dock/pin owner; Taskbar shares pins and must yield to dock geometry, never implement a second independent dock or overwrite its settings.",
+    "source_sha": "d7c42f50cffa69ac0cac595325291b78ecdb1d43",
+    "scope_sources": [
+      "docs/SOURCE-CONSOLIDATION.md B01–B14",
+      "docs/REMAINING-TASKS-3.0.0.3200.md (all waves, SDK1–4, X1–16 and C1–12)",
+      "docs/OPSIS-3.0.0.3200-INTEGRATION-AUDIT.md",
+      "CLAUDE_CODE_HANDOFF/TASKS-AND-ACCEPTANCE-EL.md",
+      "CLAUDE_CODE_HANDOFF/RC-3.0-FINAL-HANDOFF-EL.md",
+      "recovered previous OPSIS conversations R19/R27/R55 and Glass/asset handoffs"
+    ],
+    "scope_limitation": "Consolidated category-level work packages mapped to existing detailed sources; not exhaustive fresh verification of every historical attachment, every call site or sibling repository. No completed status without source evidence.",
+    "packages": [
+      {
+        "id": "G01",
+        "effort": "S",
+        "status": "SOURCE_PRESENT_RUNTIME_GATE_OPEN",
+        "aliases": "B04/X5",
+        "requirement": "Χρώματα φακέλων + ασφαλής IconAtlas restore",
+        "evidence": "IconAtlasEngine.SetFolderIcon/SetFolderColor, Personalization; R100 implementation; Win11 icon refresh/INI/crash QA pending R123 removed duplicate System Monitor control; local icon/cursor role pack import and exact registry backup/restore; runtime and Gallery distribution pending. R124 static icon/cursor Gallery ZIP distribution and SHA-bound confirmation; native runtime, animated packs and online Marketplace pending. R125: animated CUR/ANI role packs and/or bounded widget storage, native decode/runtime pending.",
+        "latest_direct_audit": "IconAtlasEngine.SetFolderColor / MainWindow Personalization, ShellAssetPack.Apply/Restore and DeskCursorsEngine.PackSlot; CUR/ANI and local/Gallery packs present. Only native decode/registry/restore tests for existing scope; expanded roles remain G17."
+      },
+      {
+        "id": "G02",
+        "effort": "S",
+        "status": "PARTIAL",
+        "aliases": "100:83,90,95; B10; C7/C9",
+        "requirement": "Αντίθεση custom colours, ακριβείς λόγοι disabled controls, θεματικό F1, Opsis.UI 1px/Ctrl+F/14 locales",
+        "evidence": "R102 accessible accent and F1 topics; R103 exact disabled reasons and single-flight selected-rule simulation cancellation. Remaining caption/text pickers, other controls and sibling UI pending. R113 real Opsis Start List/Tiles/Compact, pin reorder and keyboard selection; actual visual/runtime tests and native Start styling still pending. R123 removed duplicate System Monitor control; local icon/cursor role pack import and exact registry backup/restore; runtime and Gallery distribution pending.",
+        "latest_direct_audit": "HelpForm.ShowContextualHelp and MainWindow F1 exist; exact per-control topic/locale coverage and remaining color pickers/disabled reasons still gaps."
+      },
+      {
+        "id": "G03",
+        "effort": "S",
+        "status": "PARTIAL",
+        "aliases": "100:40,60,62; B02/B09",
+        "requirement": "Ιδιωτικότητα native media/notification widgets και drag path preview",
+        "evidence": "R101 native media/notification widgets now guard and clear on excluded monitor; remaining other private widgets/plugin/third-party boundary review. Drag path tooltip + confirmation source present (#60 QA); #62 QA. R104: shared native presentation predicate, DeskFlip closes on settings/topology change.",
+        "latest_direct_audit": "WidgetEngine native media/notification privacy subscription and clearing, DeskFlip presentation admission; remaining SDK/plugin/media paths not exhaustively audited."
+      },
+      {
+        "id": "G04",
+        "effort": "S",
+        "status": "PARTIAL",
+        "aliases": "100:14; B08; SDK1/SDK4",
+        "requirement": "Publisher/signature on install and existing SDK/ABI catalogue",
+        "evidence": "R102 entry DLL publisher/signature listing via existing approval owner; separate installer and runtime pending. R104: bounded package traversal/trust hashing, no runtime certification. R105: On-demand installed-package signature report in About; separate installer pending.",
+        "latest_direct_audit": "PluginPublisherInfo.Inspect and tray approval publisher/signature displayed; separate install presentation not established."
+      },
+      {
+        "id": "G05",
+        "effort": "M",
+        "status": "PARTIAL",
+        "aliases": "100:1,9,24,38,41,50; B01/B04/B10/B12",
+        "requirement": "Μετρήσεις CPU, last-frame remote, πραγματικό triptych, portrait density, preview ζωνών/profile windows",
+        "evidence": "Existing audit, renderer, zone and profile owners; no duplicate sampling/renderer; distinguish actual implementation vs tests. R106: reversible bulk suspend/restore of existing 18 session gates, changed-owner reconciliation; no new startup mode or measurements. R107: toolbar and automatic workspace wallpaper gates, total 20; explicit workspace observation preserved. Actual tests pending. R109: reduced startup mask before governor and independent weather overlay gate; no runtime validation or true containers-only host. R110: bounded optional transfer undo, single-flight transfers, safer container layout history restore; runtime/migration fixtures pending. R111: bounded Explorer capture, asynchronous UI, validated preference batch with rollback, RuntimeHold for Explorer/Taskbar; runtime pending. R112 shared bounded Start scan, live launcher uses saved pin ranking/group labels; live Tiles/Compact and native styling remain open. R114 literal Rainmeter variables and bounded single-flight Windhawk CLI; real provider and broader compatibility tests pending. R116 shared DeskStrip reservation and Taskbar collision-aware placement; actual multi-monitor tests pending. R121 composite visual editor, JSON portability and shared custom widget lifecycle/theme; runtime and sibling UI validation pending. R122 single data-only Gallery pack importer extended to widgets/images and direct save to Widget Studio; other pack types/runtime pending. R126: bounded profile recovery and/or preflight widget placement, DeskFlip capture budget; Windows validation pending.",
+        "latest_direct_audit": "UiResourceAudit reports host and child WebView CPU separately, not exclusive feature attribution; WeatherTriptychForm draws static photo grading; ZoneSnapEngine immediately SetWindowPos on keyboard move; R126 preview compares widget bounds, not external apps; distinct portrait density not found in inspected owners. These specific gaps only."
+      },
+      {
+        "id": "G06",
+        "effort": "M",
+        "status": "PARTIAL",
+        "aliases": "S4; B05",
+        "requirement": "DeskFlip Vista/grid/list: opt-in Alt+Tab replacement, keyboard release and compatibility",
+        "evidence": "Three styles already present, Ctrl+Alt+F only; global Alt+Tab opt-in missing. Preserve native switcher fallback. R104: DeskFlip presentation guard, native Alt+Tab unchanged. R105: DeskFlip reuses desktop-hotkey admission and closes on teardown/focus loss; native Alt+Tab unchanged. R126: bounded profile recovery and/or preflight widget placement, DeskFlip capture budget; Windows validation pending.",
+        "latest_direct_audit": "DeskFlipOverlay has three styles, keyboard navigation/activation, bounded single-flight capture, privacy and reduced-motion guards; native Alt+Tab replacement/release not implemented."
+      },
+      {
+        "id": "G07",
+        "effort": "M",
+        "status": "PARTIAL",
+        "aliases": "B03/MP2F",
+        "requirement": "Full / Custom / Containers-only, reversible ownership lifecycle, minimal host",
+        "evidence": "18 session gates present; no full startup mode or comprehensive stop/restart. Preserve saved choices. R105: DeskFlip reuses desktop-hotkey admission and closes on teardown/focus loss; native Alt+Tab unchanged. R106: reversible bulk suspend/restore of existing 18 session gates, changed-owner reconciliation; no new startup mode or measurements. R107: toolbar and automatic workspace wallpaper gates, total 20; explicit workspace observation preserved. Actual tests pending. R108: opt-in deferred plugin discovery/load using existing host, saved choices and approval policy; per-plugin constructor isolation and full startup mode pending. R109: reduced startup mask before governor and independent weather overlay gate; no runtime validation or true containers-only host. R117 explicit pre-load package exclusions and settings selection; isolation, SDK2 and runtime pending. R120 integrated SCR host/installer and shared scene configuration; Windows runtime gate open. R121 composite visual editor, JSON portability and shared custom widget lifecycle/theme; runtime and sibling UI validation pending. R125: feature-switch enable respects RuntimeHold.",
+        "latest_direct_audit": "RuntimeSessionPolicy 21 flags, TrayApplicationContext.ApplySessionMask and per-group controls, ReducedStartup plus deferred plugins and startup mask. Full/custom controls exist in session; complete minimal Containers-only startup and ungated-owner audit remain."
+      },
+      {
+        "id": "G08",
+        "effort": "M",
+        "status": "PARTIAL",
+        "aliases": "B02; X13; 100:16,20,17,54; C1",
+        "requirement": "Native Containers legacy migration/recovery, dirty layout, spacers, porting, local/remote transfers, Fences behavior",
+        "evidence": "Existing native host and importer/atomic storage; actual legacy fixture and complete no-loss migration/restore pending. R110: bounded optional transfer undo, single-flight transfers, safer container layout history restore; runtime/migration fixtures pending. R116 shared DeskStrip reservation and Taskbar collision-aware placement; actual multi-monitor tests pending. R119 local verified plugin transaction/rollback and container history recency; real crash/installer tests pending. R126: bounded profile recovery and/or preflight widget placement, DeskFlip capture budget; Windows validation pending.",
+        "latest_direct_audit": "ContainerHost.Organization.SaveFileRules/RefreshOrganization + DesktopFiles.Route + MainWindow.Organization/OrganizationEditors show extension routing, default destination and simulation exist. Tabs, portals, notes, search, dirty retention/retry and layout history exist. Remaining: actual legacy migration fixtures, persistent-write/crash recovery and spacers uncertain (core binary/source boundary), runtime/Fences comparison; do not reimplement routing/default destination."
+      },
+      {
+        "id": "G09",
+        "effort": "M",
+        "status": "PARTIAL",
+        "aliases": "B04; wave1 1–3,8–12,16–20; wave2 4–7,11,17; X3/X4/X11",
+        "requirement": "Start Studio, native Taskbar/tray/clock, Explorer preferences/tabs/command bar/context menu, per-app and per-monitor rules",
+        "evidence": "Existing start launcher, taskbar four edges/floating/segmented/dynamic/gestures, Explorer session, icon atlas. Review only gaps; full native Start/Explorer advanced missing. R111: bounded Explorer capture, asynchronous UI, validated preference batch with rollback, RuntimeHold for Explorer/Taskbar; runtime pending. R112 shared bounded Start scan, live launcher uses saved pin ranking/group labels; live Tiles/Compact and native styling remain open. R113 real Opsis Start List/Tiles/Compact, pin reorder and keyboard selection; actual visual/runtime tests and native Start styling still pending. R115 built-in taskbar presets and internal studio routes; external bridge not counted toward parity. Native surface parity remains pending. R116 shared DeskStrip reservation and Taskbar collision-aware placement; actual multi-monitor tests pending.",
+        "latest_direct_audit": "ReplacementTaskbar.RefreshBars uses CalculateBounds, AvoidDeskStrip, per-monitor profiles, shared pins, fullscreen suppression and ApplyState; thumbnails via DwmRegisterThumbnail, animation/gestures/clock and OpsisVolumeFlyout exist. DesktopLauncher consumes StartStudio saved layouts and pin order. Explorer preferences and folder session capture/restore exist. Remaining genuine gaps: native Start/Explorer advanced, tray/calendar depth, native surface parity, per-app/tab grouping. Existing companion features are QA, not new implementation."
+      },
+      {
+        "id": "G10",
+        "effort": "M",
+        "status": "PARTIAL",
+        "aliases": "B06; S5; widgets.rainmeter-bridge",
+        "requirement": "Rainmeter declarative measures/meters, images/fonts/variables; Windhawk mod-by-mod compatibility, self-contained equivalents",
+        "evidence": "Existing bounded INI importer and inventory, no arbitrary injection or untrusted scripts; no full engine. R114 literal Rainmeter variables and bounded single-flight Windhawk CLI; real provider and broader compatibility tests pending. R115 built-in taskbar presets and internal studio routes; external bridge not counted toward parity. Native surface parity remains pending. R122 single data-only Gallery pack importer extended to widgets/images and direct save to Widget Studio; other pack types/runtime pending.",
+        "latest_direct_audit": "OpsisRainmeterSkinImporter literal variable expansion, 1–8 String meters, bounded known bindings; actual richer declarative image/measure/math support missing. OpsisModCompatibility read-only per-mod scan exists; complete independent equivalence matrix still missing."
+      },
+      {
+        "id": "G11",
+        "effort": "M",
+        "status": "PARTIAL",
+        "aliases": "B08; SDK1/3/4; C10/C11; 100:97",
+        "requirement": "Plugin SDK negotiation/dependencies, lifecycle/update/rollback/validator/samples/event bus, cross-app Crawler/Chronologio/Appearance/Media Suite compatibility",
+        "evidence": "Legacy API 1.0.0.0, single host, hash/consent present; full dependency resolver, updates/SDK and real E2E pending. R108: opt-in deferred plugin discovery/load using existing host, saved choices and approval policy; per-plugin constructor isolation and full startup mode pending. R117 explicit pre-load package exclusions and settings selection; isolation, SDK2 and runtime pending. R118 pre-load declared dependency metadata and host range, resolver identity validation and per-entrypoint failure handling; isolated worker/full graph/update tests pending. R119 local verified plugin transaction/rollback and container history recency; real crash/installer tests pending.",
+        "latest_direct_audit": "PluginHost.StartOwned/RevokePluginTrust, PluginCapabilityManifest API-1 and declared dependencies, PluginPackageMaintenance.Stage/ScheduleRollback verified local transaction present. Remaining SDK2 negotiation/graph, event/capability contract and sibling runtime verification; no duplicate host/update owner."
+      },
+      {
+        "id": "G12",
+        "effort": "M",
+        "status": "PARTIAL",
+        "aliases": "B09; X7/X8/X10; 100:1; C12",
+        "requirement": "Shared Now Playing/DSP/codec benchmark and automation, command registry, GPU/telemetry, HangTrace",
+        "evidence": "Existing metadata/capture/scheduler/palette/governor; review overlap, explicit device/provider/privacy, true session identity, Media Suite fallback.",
+        "latest_direct_audit": "MediaSessionReader reads a playing GSMTC session and revision-consistent metadata/timeline; SharedLoopbackCapture Acquire/Release exists. OpsisAutomationStudio.Plan/ExecuteDue and profile AutomationService exist; MainWindow universal search and command palette wired. Remaining unified broker across consumers, actual DSP contract, comparative codec benchmark, general automation undo and command registry consolidation."
+      },
+      {
+        "id": "G13",
+        "effort": "M",
+        "status": "PARTIAL",
+        "aliases": "B10; X12; S3; C3/C4/C7/C8/C9/C11",
+        "requirement": "Opsis.UI 6, secondary windows/themes, sidebar, menu/dialog, onboarding/history/help, shared tokens/settings edit/effects",
+        "evidence": "Existing Signature/legacy renderer and UI preview; sibling repo changes and actual surface checks pending. R121 composite visual editor, JSON portability and shared custom widget lifecycle/theme; runtime and sibling UI validation pending. R122 single data-only Gallery pack importer extended to widgets/images and direct save to Widget Studio; other pack types/runtime pending. R125: bounded widget listing and reserved name rejection.",
+        "latest_direct_audit": "DesktopMaterials supports Containers/DeskStrip/Widgets and GlassService GPU lazy manager with fallback. Opsis.csproj Signature composition conditional external source/native DLL; production shared UI integration and full surface/locale audit pending."
+      },
+      {
+        "id": "G14",
+        "effort": "L",
+        "status": "PARTIAL",
+        "aliases": "B07; X13; 100:15/16/20/92/93/99; C2",
+        "requirement": "Windows update guard, originals/restore point, verified rollback provenance, dependency and ImageSharp advisory review, signing last/free if feasible",
+        "evidence": "Existing guard/atomic archives; real restore and trusted provenance not certified. Inno unchanged, no forced OS writes. R104: bounded package traversal/trust hashing, no runtime certification. R111: bounded Explorer capture, asynchronous UI, validated preference batch with rollback, RuntimeHold for Explorer/Taskbar; runtime pending. R114 literal Rainmeter variables and bounded single-flight Windhawk CLI; real provider and broader compatibility tests pending. R119 local verified plugin transaction/rollback and container history recency; real crash/installer tests pending. R120 integrated SCR host/installer and shared scene configuration; Windows runtime gate open. R123 removed duplicate System Monitor control; local icon/cursor role pack import and exact registry backup/restore; runtime and Gallery distribution pending. R124 static icon/cursor Gallery ZIP distribution and SHA-bound confirmation; native runtime, animated packs and online Marketplace pending. R125: animated CUR/ANI role packs and/or bounded widget storage, native decode/runtime pending. R126: bounded profile recovery and/or preflight widget placement, DeskFlip capture budget; Windows validation pending.",
+        "latest_direct_audit": "WindowsProtectionService.RequestSystemRestorePointAsync calls official Windows checkpoint with exit code; WindowsUpdateGuard.ApproveCurrentBuild preserves runtime latch. Existing code is QA; actual restore point/rollback provenance, dependencies and crash recovery remain. Opsis.csproj direct package refs SkiaSharp, not ImageSharp; transitive/bundled dependency review still required."
+      },
+      {
+        "id": "G15",
+        "effort": "L",
+        "status": "SOURCE_PRESENT_RUNTIME_GATE_OPEN",
+        "aliases": "X1; screensaver.creator; B04",
+        "requirement": "Real .scr creation/install /s /c /p",
+        "evidence": "Existing native fullscreen scene preview only; reuse scene owner. R120 integrated SCR host/installer and shared scene configuration; Windows runtime gate open.",
+        "latest_direct_audit": "Program .scr branch -> OpsisScreensaverHost.Run (/s,/c,/p), preview/settings owner, registry selection/restore and installer.iss copies Opsis.exe as Opsis.scr. Source present; runtime install/preview/uninstall only for documented scope."
+      },
+      {
+        "id": "G16",
+        "effort": "L",
+        "status": "MISSING_OR_PARTIAL",
+        "aliases": "start.shell-replacement; explorer.advanced; B04; wave3 13–15; X6",
+        "requirement": "Full Windows Start, advanced Explorer/tabs/command bar, native notification/quick settings/volume, lock screen/Spotlight",
+        "evidence": "Unsupported builds require fail-closed optional adapters. No proprietary injection or fake native claim. R115 built-in taskbar presets and internal studio routes; external bridge not counted toward parity. Native surface parity remains pending.",
+        "latest_direct_audit": "OpsisModCore explicitly lists native Start replacement and advanced Explorer as planned; OpsisExplorerStudioForm labels shortcuts not native command bar; ReplacementTaskbar opens Windows notification/quick settings and separate Opsis volume. LockScreenEngine image/registry set/reset exists; Spotlight/native advanced remains. No external runtime prerequisite."
+      },
+      {
+        "id": "G17",
+        "effort": "L",
+        "status": "MISSING_OR_PARTIAL",
+        "aliases": "theme.gallery-marketplace; X2/X5/X9; B06/B08",
+        "requirement": "Marketplace, icon pack 2.0, widget sources/design/layout and secure contributions",
+        "evidence": "Existing gallery/importer and declarative designer; verify remaining catalog/SDK and package ownership. R121 composite visual editor, JSON portability and shared custom widget lifecycle/theme; runtime and sibling UI validation pending. R122 single data-only Gallery pack importer extended to widgets/images and direct save to Widget Studio; other pack types/runtime pending. R123 removed duplicate System Monitor control; local icon/cursor role pack import and exact registry backup/restore; runtime and Gallery distribution pending. R124 static icon/cursor Gallery ZIP distribution and SHA-bound confirmation; native runtime, animated packs and online Marketplace pending. R125: animated CUR/ANI role packs and/or bounded widget storage, native decode/runtime pending.",
+        "latest_direct_audit": "MainWindow.Experience and OpsisWidgetVisualDesignerForm open/save/edit composite, local JSON and Rainmeter import; OpsisCustomWidgetWindow runtime shared timer. Gallery contributions/local role packs present. Missing: reopen custom widgets after restart, richer sources, remaining roles, online marketplace, package management gaps; existing features QA."
+      },
+      {
+        "id": "G18",
+        "effort": "L",
+        "status": "PARTIAL",
+        "aliases": "SDK2; B08; X13",
+        "requirement": "Actual restricted out-of-process SDK2 worker, authenticated bounded IPC, cancellation and ownership",
+        "evidence": "Current consent controls admission only, not Windows permission sandbox; isolated ABI negotiation still denied until implemented. R117 explicit pre-load package exclusions and settings selection; isolation, SDK2 and runtime pending. R118 pre-load declared dependency metadata and host range, resolver identity validation and per-entrypoint failure handling; isolated worker/full graph/update tests pending. R119 local verified plugin transaction/rollback and container history recency; real crash/installer tests pending.",
+        "latest_direct_audit": "PluginCapabilityManifest requires trusted-in-process, supports API1 only, explicitly rejects isolated-worker. Host has identity/trust checks, no OS sandbox."
+      },
+      {
+        "id": "G19",
+        "effort": "L",
+        "status": "PARTIAL",
+        "aliases": "B09/B10/B12; X14/X16; W1/W2",
+        "requirement": "Realistic photo-first Weather, glass/refraction/HDR/SDR, GPU effects, scene transitions, Ancient Athens/Rome/landmarks",
+        "evidence": "Preserve 2.5D high fidelity, no primitive landscape or fake HDR; actual GPU/visual QA. R109: reduced startup mask before governor and independent weather overlay gate; no runtime validation or true containers-only host.",
+        "latest_direct_audit": "Weather JS and Athens effects have day/night blend, particles, mask, fixed white labels and panorama. Four 4K WebP Athens stages tracked. Existing rendering QA; actual triptych/last-frame/production HDR and verified high-fidelity visual gaps remain."
+      },
+      {
+        "id": "G20",
+        "effort": "L",
+        "status": "PARTIAL_ASSET_REVIEW",
+        "aliases": "B11/B12; W3/W4/W5; C5/C6",
+        "requirement": "100/110 add-on + 200 static, 50 European capitals, Greek prefecture/island capitals, landmark scenes, Gallery & separate Inno add-on release",
+        "evidence": "Separate exact pack inventories and actual rights-verified artwork. Existing Europe automation; inspect actual PR and recover original assets; no substitute/placeholders.",
+        "latest_direct_audit": "R126 actual tree: capitals.json 52 city/landmark rows, islands.json 93 island rows; all 145 referenced image paths exist, embedded resources and CityScenePicker consume them. Patras/White Tower/Rio landmarks present; geographic quality/runtime only for existing images, not recreate blanket. Europe 50 authoring catalog; R21 review 31+7+10+1 of 49, not latest approved count. GitHub public add-on release 1.3.0 declares 112 wallpapers, 100 animated + Glass + 8 Europe + Rome + two MP4; binary contents not inspected. Verify release payload/original sources and remaining approved European assets."
+      },
+      {
+        "id": "G21",
+        "effort": "X",
+        "status": "ASSET_BLOCKED",
+        "aliases": "B13; B09",
+        "requirement": "Exact approved Spectrum sphere/logo PNG/ICO, Intro A/V2 blue WebM + audio/generator, Christmas Spectrum 60s, Water Ripples, animated/static, Steel Oval Rails",
+        "evidence": "Original bytes not verified; preserve approved names/provenance, do not fabricate replacement; review actual Library/PR payload.",
+        "latest_direct_audit": "R126 tree has no .webm/.mp4/.wav/.mp3/.ogg; tray startup intro is a native Form, not proof of requested video. Add-on 1.3.0 release declares both Spectrum MP4 but exact bytes not audited. Original approved intro/logo/audio/generator/rails need provenance and packaging review."
+      },
+      {
+        "id": "G22",
+        "effort": "L",
+        "status": "QA_ONLY",
+        "aliases": "B01/B14; C1/C3/C5/C6; Q1/Q2; 100 archived_qa",
+        "requirement": "All exact-SHA cumulative CI, real Windows 11/GPU/mixed DPI, install/upgrade/uninstall, all controls/plugins/CPU RAM stress",
+        "evidence": "Prior R80 evidence only; R81 audit state separate. No per-pass CI, no claim of latest pass.",
+        "latest_direct_audit": "Actions exact R126 SHA query returned zero runs; historical R80 evidence not certification. Core source review does not certify runtime; tests consolidated later."
+      },
+      {
+        "id": "G23",
+        "effort": "X",
+        "status": "RELEASE_GATE",
+        "aliases": "B14; Q3; C2/C8/C10",
+        "requirement": "Final single canonical source, installers, add-on release, links, version/Help/MIT/History/splash, signing last, sibling compatibility",
+        "evidence": "Only after final validation; no main merge/release now.",
+        "latest_direct_audit": "GitHub releases show latest main app v2.8.0.2511 and add-on v1.3.0. R126 Version.props is 3.0.0.3200 RC while readiness JSON is stale; reconcile before release, do not publish now."
+      }
+    ],
+    "execution_order": "S → M → L → X (safety gates required; tests only after implementation). Source-present packages QA only; archived 100 not separate duplicate implementation queue.",
+    "original_100_active": [
+      1,
+      9,
+      14,
+      16,
+      24,
+      38,
+      40,
+      41,
+      50,
+      83,
+      90,
+      95
+    ],
+    "original_100_archived": 88,
+    "last_direct_source_audit": {
+      "source_sha": "a174170059830e60f90947e147c26814d2975948",
+      "method": "Targeted method-body/UI caller and tree review; no Windows execution, no exhaustive binary or sibling inspection.",
+      "findings": [
+        {
+          "id": "G01",
+          "evidence": "IconAtlasEngine.SetFolderColor / MainWindow Personalization, ShellAssetPack.Apply/Restore and DeskCursorsEngine.PackSlot; CUR/ANI and local/Gallery packs present. Only native decode/registry/restore tests for existing scope; expanded roles remain G17."
+        },
+        {
+          "id": "G02",
+          "evidence": "HelpForm.ShowContextualHelp and MainWindow F1 exist; exact per-control topic/locale coverage and remaining color pickers/disabled reasons still gaps."
+        },
+        {
+          "id": "G03",
+          "evidence": "WidgetEngine native media/notification privacy subscription and clearing, DeskFlip presentation admission; remaining SDK/plugin/media paths not exhaustively audited."
+        },
+        {
+          "id": "G04",
+          "evidence": "PluginPublisherInfo.Inspect and tray approval publisher/signature displayed; separate install presentation not established."
+        },
+        {
+          "id": "G05",
+          "evidence": "UiResourceAudit reports host and child WebView CPU separately, not exclusive feature attribution; WeatherTriptychForm draws static photo grading; ZoneSnapEngine immediately SetWindowPos on keyboard move; R126 preview compares widget bounds, not external apps; distinct portrait density not found in inspected owners. These specific gaps only."
+        },
+        {
+          "id": "G06",
+          "evidence": "DeskFlipOverlay has three styles, keyboard navigation/activation, bounded single-flight capture, privacy and reduced-motion guards; native Alt+Tab replacement/release not implemented."
+        },
+        {
+          "id": "G07",
+          "evidence": "RuntimeSessionPolicy 21 flags, TrayApplicationContext.ApplySessionMask and per-group controls, ReducedStartup plus deferred plugins and startup mask. Full/custom controls exist in session; complete minimal Containers-only startup and ungated-owner audit remain."
+        },
+        {
+          "id": "G08",
+          "evidence": "ContainerHost.Organization.SaveFileRules/RefreshOrganization + DesktopFiles.Route + MainWindow.Organization/OrganizationEditors show extension routing, default destination and simulation exist. Tabs, portals, notes, search, dirty retention/retry and layout history exist. Remaining: actual legacy migration fixtures, persistent-write/crash recovery and spacers uncertain (core binary/source boundary), runtime/Fences comparison; do not reimplement routing/default destination."
+        },
+        {
+          "id": "G09",
+          "evidence": "ReplacementTaskbar.RefreshBars uses CalculateBounds, AvoidDeskStrip, per-monitor profiles, shared pins, fullscreen suppression and ApplyState; thumbnails via DwmRegisterThumbnail, animation/gestures/clock and OpsisVolumeFlyout exist. DesktopLauncher consumes StartStudio saved layouts and pin order. Explorer preferences and folder session capture/restore exist. Remaining genuine gaps: native Start/Explorer advanced, tray/calendar depth, native surface parity, per-app/tab grouping. Existing companion features are QA, not new implementation."
+        },
+        {
+          "id": "G10",
+          "evidence": "OpsisRainmeterSkinImporter literal variable expansion, 1–8 String meters, bounded known bindings; actual richer declarative image/measure/math support missing. OpsisModCompatibility read-only per-mod scan exists; complete independent equivalence matrix still missing."
+        },
+        {
+          "id": "G11",
+          "evidence": "PluginHost.StartOwned/RevokePluginTrust, PluginCapabilityManifest API-1 and declared dependencies, PluginPackageMaintenance.Stage/ScheduleRollback verified local transaction present. Remaining SDK2 negotiation/graph, event/capability contract and sibling runtime verification; no duplicate host/update owner."
+        },
+        {
+          "id": "G12",
+          "evidence": "MediaSessionReader reads a playing GSMTC session and revision-consistent metadata/timeline; SharedLoopbackCapture Acquire/Release exists. OpsisAutomationStudio.Plan/ExecuteDue and profile AutomationService exist; MainWindow universal search and command palette wired. Remaining unified broker across consumers, actual DSP contract, comparative codec benchmark, general automation undo and command registry consolidation."
+        },
+        {
+          "id": "G13",
+          "evidence": "DesktopMaterials supports Containers/DeskStrip/Widgets and GlassService GPU lazy manager with fallback. Opsis.csproj Signature composition conditional external source/native DLL; production shared UI integration and full surface/locale audit pending."
+        },
+        {
+          "id": "G14",
+          "evidence": "WindowsProtectionService.RequestSystemRestorePointAsync calls official Windows checkpoint with exit code; WindowsUpdateGuard.ApproveCurrentBuild preserves runtime latch. Existing code is QA; actual restore point/rollback provenance, dependencies and crash recovery remain. Opsis.csproj direct package refs SkiaSharp, not ImageSharp; transitive/bundled dependency review still required."
+        },
+        {
+          "id": "G15",
+          "evidence": "Program .scr branch -> OpsisScreensaverHost.Run (/s,/c,/p), preview/settings owner, registry selection/restore and installer.iss copies Opsis.exe as Opsis.scr. Source present; runtime install/preview/uninstall only for documented scope."
+        },
+        {
+          "id": "G16",
+          "evidence": "OpsisModCore explicitly lists native Start replacement and advanced Explorer as planned; OpsisExplorerStudioForm labels shortcuts not native command bar; ReplacementTaskbar opens Windows notification/quick settings and separate Opsis volume. LockScreenEngine image/registry set/reset exists; Spotlight/native advanced remains. No external runtime prerequisite."
+        },
+        {
+          "id": "G17",
+          "evidence": "MainWindow.Experience and OpsisWidgetVisualDesignerForm open/save/edit composite, local JSON and Rainmeter import; OpsisCustomWidgetWindow runtime shared timer. Gallery contributions/local role packs present. Missing: reopen custom widgets after restart, richer sources, remaining roles, online marketplace, package management gaps; existing features QA."
+        },
+        {
+          "id": "G19",
+          "evidence": "Weather JS and Athens effects have day/night blend, particles, mask, fixed white labels and panorama. Four 4K WebP Athens stages tracked. Existing rendering QA; actual triptych/last-frame/production HDR and verified high-fidelity visual gaps remain."
+        },
+        {
+          "id": "G20",
+          "evidence": "R126 actual tree: capitals.json 52 city/landmark rows, islands.json 93 island rows; all 145 referenced image paths exist, embedded resources and CityScenePicker consume them. Patras/White Tower/Rio landmarks present; geographic quality/runtime only for existing images, not recreate blanket. Europe 50 authoring catalog; R21 review 31+7+10+1 of 49, not latest approved count. GitHub public add-on release 1.3.0 declares 112 wallpapers, 100 animated + Glass + 8 Europe + Rome + two MP4; binary contents not inspected. Verify release payload/original sources and remaining approved European assets."
+        },
+        {
+          "id": "G21",
+          "evidence": "R126 tree has no .webm/.mp4/.wav/.mp3/.ogg; tray startup intro is a native Form, not proof of requested video. Add-on 1.3.0 release declares both Spectrum MP4 but exact bytes not audited. Original approved intro/logo/audio/generator/rails need provenance and packaging review."
+        },
+        {
+          "id": "G22",
+          "evidence": "Actions exact R126 SHA query returned zero runs; historical R80 evidence not certification. Core source review does not certify runtime; tests consolidated later."
+        },
+        {
+          "id": "G23",
+          "evidence": "GitHub releases show latest main app v2.8.0.2511 and add-on v1.3.0. R126 Version.props is 3.0.0.3200 RC while readiness JSON is stale; reconcile before release, do not publish now."
+        }
+      ],
+      "release_certified": false
+    }
+  },
+  "original_proposals": [
+    {
+      "id": 1,
+      "requirement": "Δείκτης CPU ανά λειτουργία, με ξεχωριστή ένδειξη για τις διεργασίες WebView2.",
+      "pass": "MP02/03",
+      "status": "PARTIAL_OR_RELATED_EVIDENCE",
+      "evidencePath": "src/Services/UiResourceAudit.cs",
+      "evidence": "Describe medianHostCpuCorePercent/medianWebViewCpuCorePercent; no per-feature exclusive attribution",
+      "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+      "releaseCertified": false
+    },
+    {
+      "id": 9,
+      "requirement": "Πάγωμα του τελευταίου καρέ σε απομακρυσμένη συνεδρία με δυνατότητα εξαίρεσης.",
+      "pass": "MP02/03",
+      "status": "PARTIAL_OR_RELATED_EVIDENCE",
+      "evidencePath": "src/Services/AppActivity.cs",
+      "evidence": "remote pause state; verify last-frame freeze and override R99 preserves loaded still image on pause; exact retained last-frame screenshot for arbitrary pages missing.",
+      "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+      "releaseCertified": false
+    },
+    {
+      "id": 14,
+      "requirement": "Εμφάνιση εκδότη και κατάστασης υπογραφής στο παράθυρο εγκατάστασης πρόσθετου.",
+      "pass": "MP01/04/06/09",
+      "status": "PARTIAL_OR_RELATED_EVIDENCE",
+      "evidencePath": "src/Widgets/TrayApplicationContext.cs; src/Services/PluginTrust.cs",
+      "evidence": "R102 PluginPublisherInfo enumerates eligible DLL entrypoints; per-file offline signature and publisher, explicit incomplete beyond 16. Separate installer and runtime pending.",
+      "sourceReviewedAt": "a8f6c03fd1a7a7c05d486a6031b305402e59359d",
+      "releaseCertified": false
+    },
+    {
+      "id": 16,
+      "requirement": "Επαναφορά προηγούμενης έκδοσης αν το νέο προφίλ αποτύχει να ανοίξει.",
+      "pass": "MP01/04/06/09",
+      "status": "PARTIAL_OR_RELATED_EVIDENCE",
+      "evidencePath": "tests/Opsis.ExperienceSmoke/Program.cs",
+      "evidence": "failed recovery cannot modify live settings; real rollback test pending R126 bounded semantic .bak fallback and retained live rollback; actual installer/profile recovery QA pending.",
+      "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+      "releaseCertified": false
+    },
+    {
+      "id": 24,
+      "requirement": "Ταυτόχρονη προεπισκόπηση χαραυγής, μεσημεριού και νύχτας.",
+      "pass": "MP08",
+      "status": "PARTIAL_OR_RELATED_EVIDENCE",
+      "evidencePath": "src/UI/WeatherTriptychForm.cs",
+      "evidence": "three graded panel render path; verify actual scene rather than illustration",
+      "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+      "releaseCertified": false
+    },
+    {
+      "id": 38,
+      "requirement": "Διαφορετική πυκνότητα πληροφοριών σε κατακόρυφη δευτερεύουσα οθόνη.",
+      "pass": "MP05/07",
+      "status": "REVIEW_REQUIRED",
+      "evidencePath": "src/Widgets/WidgetEngine.cs; src/Services/AppSettings.cs; src/UI/MainWindow.cs",
+      "evidence": "Inspected widget/setting/UI paths; no distinct portrait information-density policy located. Do not equate crop focus or Code & Docs template with density.",
+      "sourceReviewedAt": "2d812cbc0970767c9aac7b991ede10c9a7218787",
+      "releaseCertified": false
+    },
+    {
+      "id": 40,
+      "requirement": "Εξαίρεση οθόνης παρουσίασης από προσωπικές ειδοποιήσεις και στοιχεία πολυμέσων.",
+      "pass": "MP05/07",
+      "status": "PARTIAL_OR_RELATED_EVIDENCE",
+      "evidencePath": "docs/SOURCE-CONSOLIDATION.md",
+      "evidence": "R57 privacy check before audio allocation; verify all notifications and metadata R101 adds native media/notification widget presentation guards before and after async reads, clears private data on settings save/location/visibility, detaches subscription on dispose; audit all remaining widget/plugin/third-party paths. Windows OS/third-party notifications outside Opsis control.",
+      "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+      "releaseCertified": false
+    },
+    {
+      "id": 41,
+      "requirement": "Προεπισκόπηση ζώνης με το πληκτρολόγιο πριν από τη μετακίνηση.",
+      "pass": "MP05",
+      "status": "PARTIAL_OR_RELATED_EVIDENCE",
+      "evidencePath": "src/Widgets/ZoneLayoutEditorForm.cs",
+      "evidence": "preview keyboard arrows/home/end; verify window move preview",
+      "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+      "releaseCertified": false
+    },
+    {
+      "id": 50,
+      "requirement": "Προεπισκόπηση των παραθύρων που θα μετακινηθούν όταν αλλάξει προφίλ.",
+      "pass": "MP05",
+      "status": "PARTIAL_OR_RELATED_EVIDENCE",
+      "evidencePath": "src/Services/WorkspaceProfileService.cs; src/UI/MainWindow.cs",
+      "evidence": "WorkspaceProfile holds settings, wallpaper, widgets and monitors; timed workspace preview and AutoTile preview separate. No pre-application list of app windows affected by profile found. Establish actual window-placement owner before implementing. R126 preflight of actual Opsis widget geometry shared with restore; external app windows are not owned by profile.",
+      "sourceReviewedAt": "2d812cbc0970767c9aac7b991ede10c9a7218787",
+      "releaseCertified": false
+    },
+    {
+      "id": 83,
+      "requirement": "Ελάχιστη αντίθεση κειμένου κατά την επιλογή προσαρμοσμένου χρώματος.",
+      "pass": "MP07",
+      "status": "PARTIAL_OR_RELATED_EVIDENCE",
+      "evidencePath": "src/Services/TextContrast.cs; src/UI/MainWindow.Themes.cs",
+      "evidence": "R102 same current-page WCAG 4.5:1 gate on swatches, custom picker, wallpaper-derived accent. Other caption/text pickers and runtime pending.",
+      "sourceReviewedAt": "a8f6c03fd1a7a7c05d486a6031b305402e59359d",
+      "releaseCertified": false
+    },
+    {
+      "id": 90,
+      "requirement": "Επεξήγηση του λόγου που ένα κουμπί είναι ανενεργό μέσα στην ίδια σελίδα.",
+      "pass": "MP07",
+      "status": "PARTIAL_OR_RELATED_EVIDENCE",
+      "evidencePath": "src/UI/MainWindow.cs; src/UI/MainWindow.Organization.cs",
+      "evidence": "R103 exact prerequisite descriptions, robust caption fallback, selected-rule busy/selection state; other control reasons remain partial.",
+      "sourceReviewedAt": "5fe673156c5863320dd8a4232e7e980af8fd2e76",
+      "releaseCertified": false
+    },
+    {
+      "id": 95,
+      "requirement": "Θεματική βοήθεια από κάθε κουμπί με F1.",
+      "pass": "MP09/07/06",
+      "status": "PARTIAL_OR_RELATED_EVIDENCE",
+      "evidencePath": "docs/SOURCE-CONSOLIDATION.md",
+      "evidence": "R102 adds specific HelpForm topics for IconAtlas, DeskFlip, accent and plugin approval; full control/locale coverage and runtime pending.",
+      "sourceReviewedAt": "a8f6c03fd1a7a7c05d486a6031b305402e59359d",
+      "releaseCertified": false
+    }
+  ],
+  "legacy_backlog": "docs/REMAINING-TASKS-3.0.0.3200.md",
+  "additional_review": [
+    "profile backup deletion/recovery and preview snapshot identity",
+    "portrait density already implemented for Containers; verify full requirement",
+    "CUR/ANI native decode and actual restore"
+  ]
+}

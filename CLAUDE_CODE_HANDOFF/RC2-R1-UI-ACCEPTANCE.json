@@ -1,0 +1,223 @@
+{
+  "schema": 1,
+  "source_base": "a5d96568c9eb79ec11875cfa882397f3a5e5385e",
+  "rc2_sha": "0e6264ca7c55f8313381c626f3c5407137f0710a",
+  "coverage": [
+    {
+      "page": "Dashboard",
+      "expected": "Open via sidebar, actual content identity, cards/navigation; verify feature launch and status reflect service state.",
+      "status": "NOT_CERTIFIED",
+      "requiredEvidence": [
+        "before",
+        "action",
+        "observable effect",
+        "persist/reopen if applicable",
+        "restore",
+        "screenshot/log or measurement"
+      ]
+    },
+    {
+      "page": "Theme",
+      "expected": "Change palette, contrast, mode; inspect actual app theme and reopen persisted settings; revert.",
+      "status": "NOT_CERTIFIED",
+      "requiredEvidence": [
+        "before",
+        "action",
+        "observable effect",
+        "persist/reopen if applicable",
+        "restore",
+        "screenshot/log or measurement"
+      ]
+    },
+    {
+      "page": "Personalization",
+      "expected": "Open Start Studio/Explorer Studio/Taskbar Designer; verify start style, taskbar registry values and restored state; native vs companion explicitly.",
+      "status": "NOT_CERTIFIED",
+      "requiredEvidence": [
+        "before",
+        "action",
+        "observable effect",
+        "persist/reopen if applicable",
+        "restore",
+        "screenshot/log or measurement"
+      ]
+    },
+    {
+      "page": "Wallpaper",
+      "expected": "Select Gallery category, static/video/weather; observe actual desktop and scene, switch and restore; offline, RDP, GPU; no claim from screenshot alone.",
+      "status": "NOT_CERTIFIED",
+      "requiredEvidence": [
+        "before",
+        "action",
+        "observable effect",
+        "persist/reopen if applicable",
+        "restore",
+        "screenshot/log or measurement"
+      ]
+    },
+    {
+      "page": "Widgets",
+      "expected": "Request System Monitor by button, verify visible widget and live samples, close/reopen, ensure no redundant settings switch; add/remove each widget, persist custom layouts.",
+      "status": "NOT_CERTIFIED",
+      "requiredEvidence": [
+        "before",
+        "action",
+        "observable effect",
+        "persist/reopen if applicable",
+        "restore",
+        "screenshot/log or measurement"
+      ]
+    },
+    {
+      "page": "DeskZones",
+      "expected": "Create/modify/apply zone to disposable test window; verify bounds and undo; keyboard preview is missing.",
+      "status": "NOT_CERTIFIED",
+      "requiredEvidence": [
+        "before",
+        "action",
+        "observable effect",
+        "persist/reopen if applicable",
+        "restore",
+        "screenshot/log or measurement"
+      ]
+    },
+    {
+      "page": "DeskContainers",
+      "expected": "Create/rename/move/lock/tab/portal/rules/drag file in isolated fixture; verify actual filesystem and restore; test legacy migration.",
+      "status": "NOT_CERTIFIED",
+      "requiredEvidence": [
+        "before",
+        "action",
+        "observable effect",
+        "persist/reopen if applicable",
+        "restore",
+        "screenshot/log or measurement"
+      ]
+    },
+    {
+      "page": "DeskStrip",
+      "expected": "Pin/unpin/reorder, edge, auto-hide, hover, actual window geometry and conflict with replacement taskbar.",
+      "status": "NOT_CERTIFIED",
+      "requiredEvidence": [
+        "before",
+        "action",
+        "observable effect",
+        "persist/reopen if applicable",
+        "restore",
+        "screenshot/log or measurement"
+      ]
+    },
+    {
+      "page": "DeskMusicVisualizer",
+      "expected": "Toggle when safe, play test audio; verify real visualization, metadata privacy and session suspend/restart; no microphone without consent.",
+      "status": "NOT_CERTIFIED",
+      "requiredEvidence": [
+        "before",
+        "action",
+        "observable effect",
+        "persist/reopen if applicable",
+        "restore",
+        "screenshot/log or measurement"
+      ]
+    },
+    {
+      "page": "Performance",
+      "expected": "Select tier, read service state and observed process metrics; verify diagnostics, cancel/export and no retained workers.",
+      "status": "NOT_CERTIFIED",
+      "requiredEvidence": [
+        "before",
+        "action",
+        "observable effect",
+        "persist/reopen if applicable",
+        "restore",
+        "screenshot/log or measurement"
+      ]
+    },
+    {
+      "page": "Automation",
+      "expected": "Save profile, create safe rule, trigger in isolated data, verify effect and restoration; Profiles alias is intentional.",
+      "status": "NOT_CERTIFIED",
+      "requiredEvidence": [
+        "before",
+        "action",
+        "observable effect",
+        "persist/reopen if applicable",
+        "restore",
+        "screenshot/log or measurement"
+      ]
+    },
+    {
+      "page": "Settings",
+      "expected": "Apply actual opacity/native alpha and persisted settings; toggle flags; reopen and restart; verify localization and themes.",
+      "status": "NOT_CERTIFIED",
+      "requiredEvidence": [
+        "before",
+        "action",
+        "observable effect",
+        "persist/reopen if applicable",
+        "restore",
+        "screenshot/log or measurement"
+      ]
+    },
+    {
+      "page": "About",
+      "expected": "Open Help/History, navigate tabs and validate content; versions, license, installer identity.",
+      "status": "NOT_CERTIFIED",
+      "requiredEvidence": [
+        "before",
+        "action",
+        "observable effect",
+        "persist/reopen if applicable",
+        "restore",
+        "screenshot/log or measurement"
+      ]
+    },
+    {
+      "page": "AudioEnhancement",
+      "expected": "Conditional Media Suite installation: present only when detected; verify DSP using test audio, absent case explicit.",
+      "status": "NOT_CERTIFIED",
+      "requiredEvidence": [
+        "before",
+        "action",
+        "observable effect",
+        "persist/reopen if applicable",
+        "restore",
+        "screenshot/log or measurement"
+      ]
+    },
+    {
+      "page": "plugin:*",
+      "expected": "Conditional on installed approved plugin; actual route/load with pinned provider DLL, check feeds/widget and unload/disable.",
+      "status": "NOT_CERTIFIED",
+      "requiredEvidence": [
+        "before",
+        "action",
+        "observable effect",
+        "persist/reopen if applicable",
+        "restore",
+        "screenshot/log or measurement"
+      ]
+    },
+    {
+      "page": "Subdialogs and risky commands",
+      "expected": "Every visible enabled control has a stable ID and outcome/readback. Modal/destructive/network/admin controls isolated and explicitly approved; skipped or absent prerequisite never PASS.",
+      "status": "NOT_CERTIFIED",
+      "requiredEvidence": [
+        "before",
+        "action",
+        "observable effect",
+        "persist/reopen if applicable",
+        "restore",
+        "screenshot/log or measurement"
+      ]
+    }
+  ],
+  "rules": [
+    "Inventory is not PASS.",
+    "One row per actual control instance; distinguish missing, disabled with reason, exercised, passed, failed, blocked, skipped.",
+    "No blind clicking destructive or network actions; disposable fixtures and explicit safe probes.",
+    "Every supported locale/theme/size/monitor profile including 14 locales, 100/150/200 DPI, collapsed/expanded sidebar, scroll; actual Windows 11 interactive mandatory.",
+    "Inspect screenshot artifacts visually, not just file existence.",
+    "Retest full frozen candidate after fixes."
+  ]
+}

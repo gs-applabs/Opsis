@@ -875,6 +875,27 @@ try
     Check(ShellAssetPack.ParseRoles(System.Text.Encoding.UTF8.GetBytes("""{"schema":1,"kind":"cursor-pack","roles":{"Arrow":"arrow.ani"}}"""), true)["Arrow"] == "arrow.ani",
         "R125 animated cursor extension admitted in declarative pack");
     Check(!ShellAssetPack.ValidAnimatedCursor("RIFF\0\0\0\0ACON"u8.ToArray()), "R125 rejects RIFF header without animation frames");
+    // A structurally valid ANI fixture (one CUR frame, sequence/rate chunks).
+    // This tests the parser; actual Windows cursor decoding remains a separate runtime gate.
+    byte[] AniChunk(string tag, byte[] payload)
+    {
+        using var buffer = new MemoryStream(); using var writer = new BinaryWriter(buffer);
+        writer.Write(System.Text.Encoding.ASCII.GetBytes(tag)); writer.Write(payload.Length); writer.Write(payload);
+        if ((payload.Length & 1) != 0) writer.Write((byte)0);
+        return buffer.ToArray();
+    }
+    var aniHeader = new byte[36];
+    System.Buffers.Binary.BinaryPrimitives.WriteUInt32LittleEndian(aniHeader.AsSpan(0), 36);
+    System.Buffers.Binary.BinaryPrimitives.WriteUInt32LittleEndian(aniHeader.AsSpan(4), 1);
+    System.Buffers.Binary.BinaryPrimitives.WriteUInt32LittleEndian(aniHeader.AsSpan(8), 1);
+    System.Buffers.Binary.BinaryPrimitives.WriteUInt32LittleEndian(aniHeader.AsSpan(28), 6);
+    System.Buffers.Binary.BinaryPrimitives.WriteUInt32LittleEndian(aniHeader.AsSpan(32), 3);
+    var aniCursor = new byte[23]; aniCursor[2] = 2; aniCursor[4] = 1; aniCursor[6] = 16; aniCursor[7] = 16; aniCursor[14] = 1; aniCursor[18] = 22;
+    var frameList = "fram"u8.ToArray().Concat(AniChunk("icon", aniCursor)).ToArray();
+    byte[] MakeAni(byte sequence) => AniChunk("RIFF", "ACON"u8.ToArray().Concat(AniChunk("seq ", new byte[] { sequence, 0, 0, 0 }))
+        .Concat(AniChunk("anih", aniHeader)).Concat(AniChunk("rate", new byte[] { 6, 0, 0, 0 })).Concat(AniChunk("LIST", frameList)).ToArray());
+    Check(ShellAssetPack.ValidAnimatedCursor(MakeAni(0)) && !ShellAssetPack.ValidAnimatedCursor(MakeAni(1)),
+        "RC2-R1 ANI structural parser accepts bounded sequence/rate and rejects out-of-range frame");
     foreach (string invalidName in new[] { "CON", "LPT1", " Clock" })
     {
         bool denied = false;

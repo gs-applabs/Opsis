@@ -4180,5 +4180,77 @@
         "europe_gate": 15259897081
       }
     }
+  },
+  "rc2_r1": {
+    "branch": "release/3.0.0.3200-rc2-r1",
+    "base_rc2_sha": "0e6264ca7c55f8313381c626f3c5407137f0710a",
+    "source_preparation": "a5d96568c9eb79ec11875cfa882397f3a5e5385e",
+    "release_blocked": true,
+    "state": "candidate-prepared-awaiting-validation",
+    "source_corrections": [
+      {
+        "id": "RC2-F01",
+        "status": "SOURCE_CHANGED_RETEST_REQUIRED"
+      },
+      {
+        "id": "RC2-F02",
+        "status": "SOURCE_CHANGED_RETEST_REQUIRED"
+      },
+      {
+        "id": "RC2-F03",
+        "status": "SOURCE_CHANGED_RETEST_REQUIRED"
+      },
+      {
+        "id": "RC2-F04",
+        "status": "SOURCE_CHANGED_RETEST_REQUIRED"
+      },
+      {
+        "id": "RC2-F05",
+        "status": "SOURCE_CHANGED_RETEST_REQUIRED"
+      },
+      {
+        "id": "RC2-F06",
+        "status": "SOURCE_CHANGED_RETEST_REQUIRED"
+      },
+      {
+        "id": "RC2-F09",
+        "status": "SOURCE_CHANGED_RETEST_REQUIRED"
+      },
+      {
+        "id": "RC2-F10",
+        "status": "SOURCE_CHANGED_RETEST_REQUIRED"
+      },
+      {
+        "id": "RC2-F11",
+        "status": "SOURCE_CHANGED_RETEST_REQUIRED"
+      },
+      {
+        "id": "RC2-F12",
+        "status": "SOURCE_CHANGED_RETEST_REQUIRED"
+      },
+      {
+        "id": "RC2-F13",
+        "status": "SOURCE_CHANGED_RETEST_REQUIRED"
+      },
+      {
+        "id": "RC2-F14",
+        "status": "SOURCE_CHANGED_RETEST_REQUIRED"
+      },
+      {
+        "id": "RC2-F15",
+        "status": "SOURCE_CHANGED_RETEST_REQUIRED"
+      },
+      {
+        "id": "RC2-F16",
+        "status": "SOURCE_CHANGED_RETEST_REQUIRED"
+      }
+    ],
+    "unresolved_rc2_findings": [
+      "RC2-F07",
+      "RC2-F08",
+      "RC2-F17"
+    ],
+    "coverage": "Actual sidebar click and error fallback detection, actual Start Studio event and persistence probes, existing taskbar/native opacity/Help checks. Others not certified; manual matrix mandatory.",
+    "handoff": "CLAUDE_CODE_HANDOFF/RC2-R1-START-HERE-EL.md"
   }
 }

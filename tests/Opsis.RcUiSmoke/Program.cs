@@ -72,6 +72,36 @@ internal static class Program
                 Verify(controls.All(c => c.Width >= 0 && c.Height >= 0), title + " nonnegative control sizes");
                 measured.Add(new { title, controlCount = controls.Length, preferredSize = form.PreferredSize.ToString() });
             }
+            // Exercise actual Start Studio UI event handlers and reload saved values, not just count controls.
+            var startBefore = StartStudioPreferences.Read();
+            try
+            {
+                using var start = new StartStudioForm();
+                var startControls = AllControls(start).ToArray();
+                var stylePicker = startControls.OfType<ComboBox>().Single(c => c.Items.Count == OpsisStartButtonArt.Styles.Length &&
+                    c.Items.Cast<object>().Select(x => x.ToString()).SequenceEqual(OpsisStartButtonArt.Styles));
+                var layoutPicker = startControls.OfType<ComboBox>().Single(c => c.Items.Cast<object>().Select(x => x.ToString()).SequenceEqual(new[] { "List", "Tiles", "Compact" }));
+                var results = startControls.OfType<ListView>().Single();
+                foreach (string style in OpsisStartButtonArt.Styles)
+                {
+                    stylePicker.SelectedItem = style;
+                    Verify(StartStudioPreferences.Read().StartButtonStyle == style, "Start button selection persisted: " + style);
+                }
+                foreach (var (layout, view) in new[] { ("List", View.Details), ("Tiles", View.Tile), ("Compact", View.SmallIcon) })
+                {
+                    layoutPicker.SelectedItem = layout;
+                    Verify(results.View == view && StartStudioPreferences.Read().DisplayStyle == layout, "Start layout UI + persisted state: " + layout);
+                }
+                using var reopened = new StartStudioForm();
+                Verify(AllControls(reopened).OfType<ComboBox>().Any(c => c.SelectedItem as string == "Compact") &&
+                    AllControls(reopened).OfType<ComboBox>().Any(c => c.SelectedItem as string == OpsisStartButtonArt.Styles[^1]),
+                    "Start Studio reopens with selected layout and emblem");
+            }
+            finally
+            {
+                StartStudioPreferences.SetDisplay(startBefore.DisplayStyle, startBefore.GroupByFolder);
+                StartStudioPreferences.SetStartButton(startBefore.StartButtonStyle);
+            }
             // Exercise every registered sidebar navigation button, capture the
             // real main window and record layout/scroll properties for each page.
             using (var shell = new MainWindow())
@@ -92,8 +122,11 @@ internal static class Program
                 var currentKey = typeof(MainWindow).GetField("_currentPageKey", binding)
                     ?? throw new InvalidOperationException("current page identity missing");
                 var pageTimings = new System.Collections.Generic.List<object>();
+                var pageFailures = new System.Collections.Generic.List<string>();
                 foreach (var key in pageKeys)
                 {
+                    try
+                    {
                     var elapsed = Stopwatch.StartNew();
                     Verify(navButtons[key] is Control { Visible: true, Enabled: true }, "visible enabled sidebar button: " + key);
                     var navButton = (Control)navButtons[key]!;
@@ -123,7 +156,11 @@ internal static class Program
                     shell.DrawToBitmap(screenshot, new Rectangle(0, 0, 1280, 800));
                     var safeKey = string.Concat(key.Where(char.IsLetterOrDigit));
                     screenshot.Save(Path.Combine(output, "sidebar-page-" + safeKey + ".png"));
+                    }
+                    catch (Exception ex) { pageFailures.Add(key + ": " + ex.Message); Console.Error.WriteLine(pageFailures[^1]); }
                 }
+                File.WriteAllText(Path.Combine(output, "sidebar-pages.json"), JsonSerializer.Serialize(new { requiredPages, actualPages = pageKeys, measurements = pageTimings, failures = pageFailures }, new JsonSerializerOptions { WriteIndented = true }));
+                Verify(pageFailures.Count == 0, "all sidebar pages load without failures: " + string.Join("; ", pageFailures));
                 // Validate the sidebar width animation and scroll container in the real shell.
                 var navField = typeof(MainWindow).GetField("_nav",
                     System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
