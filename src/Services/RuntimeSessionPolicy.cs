@@ -17,8 +17,9 @@ internal enum SessionBackgroundService
     DeskStrip = 64,
     Widgets = 128,
     MusicVisualizer = 256,
+    AppearanceAutomatic = 512,
     Background = DockRestore | UsageAlerts | DiscordPresence | ScheduledAutomations | PeriodicWallpaperAccent,
-    All = Background | AnimatedWallpaper | DeskStrip | Widgets | MusicVisualizer
+    All = Background | AnimatedWallpaper | DeskStrip | Widgets | MusicVisualizer | AppearanceAutomatic
 }
 
 internal static class RuntimeSessionPolicy

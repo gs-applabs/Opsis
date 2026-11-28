@@ -36,6 +36,7 @@ namespace MotionDesk.UI
 
             AddText(panel, T("Win.Intro"));
             if (svc.Started && !svc.EngineActive) AddText(panel, T("Win.EngineBusy"));
+            if (svc.AutomaticSessionSuspended) AddText(panel, StudioText("Automatic appearance and live effects suspended for this session; saved choices retained.", "Αυτόματη εμφάνιση και ζωντανά εφέ σε αναστολή για τη συνεδρία· οι επιλογές διατηρούνται."));
             var cur = svc.Engine.ReadCurrent();
             var s = svc.Settings;
 

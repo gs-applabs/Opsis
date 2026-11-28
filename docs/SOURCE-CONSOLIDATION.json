@@ -2268,15 +2268,15 @@
     ],
     "handoff": {
       "active_branch": "integration/opsis-unified-source-r27",
-      "active_when_prepared": "5ad65d13c11262ff9a75b4a5c387bbeb50e40c59",
+      "active_when_prepared": "cae751ab4b21d69996bbacd11bed9a3ae715b3ec",
       "parent_R77": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
       "main": "76615c1f2661816f1645f65e87ed6223d0dcdbeb",
       "review_pr": 18,
       "ci_only_never_merge": 20,
-      "latest_certified": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
-      "latest_audit_run": 46102704472,
-      "latest_artifact": 15246756939,
-      "next": "Check exact R80 full audit GPU/heap evidence, CAS R80->R81 only after 7/7 PASS, then ordered R82/R83/R84/R85/R86 gates. R86 music admission; remaining appearance/shell/hotkeys/plugins and native migration fixtures/rollback. No release.",
+      "latest_certified": "5ad65d13c11262ff9a75b4a5c387bbeb50e40c59",
+      "latest_audit_run": 46103939134,
+      "latest_artifact": 15247381558,
+      "next": "Check exact R81 full audit and all seven gates; then CAS R81->R82 and ordered R83/R84/R85/R86/R87. Continue native migration fixtures/rollback and remaining shell/hotkeys/plugins/performance owners. No main merge/release.",
       "parent_R79": "835b784e5cdce8fb8eb2134df79c1632366b82a0",
       "parent_R80": "5ad65d13c11262ff9a75b4a5c387bbeb50e40c59",
       "parent_R81": "cae751ab4b21d69996bbacd11bed9a3ae715b3ec",
@@ -2284,7 +2284,9 @@
       "parent_R83": "f7f4625e4da1eae13f6fade5b0551e8d3f9a9f8a",
       "parent_R84": "f51111de179870bb2c13cdf0b0819155e325adb6",
       "parent_R85": "b2db4aed2817df69581ee4375dfb468dead189a6",
-      "R86": "R86 adds independent MusicVisualizer session admission. Existing settings controller remains available, persisted Enabled and other settings unchanged by session switch; timer stops, playback generation invalidates stale metadata, active read cancellation and reader disposal, capture/surface Clear via existing owners. Renderer object retained for native script backpressure, host lazy until first render, no second capture/scheduler. Resume only if saved Enabled; explicit preview denied while suspended, settings checkbox distinguishes saved intent. Two deterministic assertions; no Windows build yet. Live audio/GSMTC/WebView transitions, cancellation/disposal failure, renderer cleanup and lock state need actual tests; no guarantee of immediate cancellation of native requests. Independent wallpaper animation unaffected; full Containers-only remains open. R80 at preparation 6/7 PASS, full 46103939134 active. Preserve ordered R80-R86 gates, original 100 IDs and B01-B14, no main merge/release."
+      "R86": "R86 adds independent MusicVisualizer session admission. Existing settings controller remains available, persisted Enabled and other settings unchanged by session switch; timer stops, playback generation invalidates stale metadata, active read cancellation and reader disposal, capture/surface Clear via existing owners. Renderer object retained for native script backpressure, host lazy until first render, no second capture/scheduler. Resume only if saved Enabled; explicit preview denied while suspended, settings checkbox distinguishes saved intent. Two deterministic assertions; no Windows build yet. Live audio/GSMTC/WebView transitions, cancellation/disposal failure, renderer cleanup and lock state need actual tests; no guarantee of immediate cancellation of native requests. Independent wallpaper animation unaffected; full Containers-only remains open. R80 at preparation 6/7 PASS, full 46103939134 active. Preserve ordered R80-R86 gates, original 100 IDs and B01-B14, no main merge/release.",
+      "parent_R86": "65bf171f3e0edf852a4c4ededddf5b1ac413907f",
+      "R87": "R87: R80 all 7 workflows passed, 59 JS +214 native, 0 errors/11 warnings. Full 46103939134, unreleased installer/source 15247381558, audit 15247416512. R80 nonoverlapping 5 samples/window: host private 105558016 -> 106598400, managed 31107544 -> 27115736, heap 20211608 -> 20106160, fragmentation 120160 -> 117448, CPU .31 -> .31, handles 923 -> 908, GDI 187 -> 183, no tracked WebView child, host writes 0. GPU at baseline/idle/soak end: 1 open, 1 empty, 1 close, 0 failures, no sampling/cache. Gen2 delta 0, allocated bytes delta 161204488. R77 end host private 164114432: R80 approximately 35% lower, strong evidence for probe-related regression in this workload, not proof of causal isolation/leak-free or physical GPU. R81 CAS promoted and PR18 exact head verified; seven workflows started, preserve full audit. R87 adds independent automatic appearance/live effects session admission, guards existing timers and WinEvent callbacks, retains settings and mutex across suspension, restores native effects/taskbar and disposes timers/hooks on suspension; stop releases mutex only after cleanup, no restoration by nonowner. Failed cleanup latches no resume, retains ownership until successful stop or process exit. Direct static manual commands remain distinct, slideshow forced advance gated; no general appearance read-only or complete Containers-only claim. Explicit taskbar restore-point request still allowed while suspended by owner before deferred apply. Existing native restore APIs may swallow failures; actual native effects/hook unhook, compatibility/safe mode, two-process owner and repeated transitions require tests. Two assertions, uncompiled. Preserve 100 IDs/B01-B14, no main merge/release."
     }
   }
 }

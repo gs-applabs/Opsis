@@ -6,7 +6,7 @@ namespace MotionDesk.Appearance;
 
 public sealed class AppearanceService
 {
-    private static readonly Lazy<AppearanceService> _instance = new(() => new AppearanceService());
+    private static readonly Lazy<AppearanceService> _instance = new(() => new AppearanceService { _lifecycleManaged = true });
     public static AppearanceService Instance => _instance.Value;
 
     private readonly AppearanceStore _store = new();
@@ -22,7 +22,8 @@ public sealed class AppearanceService
     private readonly TaskbarShapeEngine _taskbarShape;
     private readonly IRestorePointService _restorePoints;
     private readonly BackupVault _vault;
-    private bool _started;
+    private bool _started, _lifecycleManaged, _cleanupFailed;
+    private bool _sessionAllowed = true;
     private readonly bool _noSystem;
     private readonly InstanceGuard _guard = new();
 
@@ -63,16 +64,26 @@ public sealed class AppearanceService
     public BackupVault Vault => _vault;
     public bool IsAdministrator => _restorePoints.IsAdministrator;
     public bool Started => _started;
+    internal bool AutomaticSessionSuspended => !_sessionAllowed || _cleanupFailed;
+    internal static bool MayRunAutomatic(bool sessionAllowed, bool lifecycleManaged, bool started, bool owner, bool cleanupFailed)
+        => sessionAllowed && !cleanupFailed && (!lifecycleManaged || (started && owner));
+    private bool AutomaticAllowed => MayRunAutomatic(_sessionAllowed, _lifecycleManaged, _started, EngineActive, _cleanupFailed);
 
     private void RaiseChanged() { try { Changed?.Invoke(); } catch (Exception) { } }
 
     /// <summary>Called once when Opsis starts. Applies what was already on (it does NOT ask for a new restore point on every start).</summary>
     public void Start()
     {
-        if (_started) return;
+        if (_started || _cleanupFailed) return;
+        _lifecycleManaged = true;
         _started = true;
         _settings = _store.Load();
         if (!_guard.TryAcquire()) return;   // the old separate app applies the effects; this one only shows the settings
+        if (AutomaticAllowed) ApplySelectedAutomatic();
+    }
+
+    private void ApplySelectedAutomatic()
+    {
         ApplySchedule();
         UpdateTimer();
         UpdateSlideTimer();
@@ -80,17 +91,42 @@ public sealed class AppearanceService
         ApplyTaskbar(askForRestorePoint: false);
     }
 
+    // Suspend live resources, but retain the existing exclusive engine lease and saved choices.
+    // Explicit static appearance edits remain user commands, not automatic work.
+    internal void SetSessionAllowed(bool allowed)
+    {
+        if (allowed && _cleanupFailed) throw new InvalidOperationException("Appearance cleanup failed; restart Opsis before resuming.");
+        if (_sessionAllowed == allowed) return;
+        _sessionAllowed = allowed;
+        if (!allowed && EngineActive) ReleaseLiveResources();
+        else if (AutomaticAllowed) ApplySelectedAutomatic();
+        RaiseChanged();
+    }
+
     /// <summary>Called when Opsis exits: the taskbar and the window effects ALWAYS go back to Windows.</summary>
     public void Stop()
     {
+        bool restore = EngineActive || !_lifecycleManaged;
+        _lifecycleManaged = true;
         _started = false;
+        // Never release ownership before restoring our native resources.
+        if (restore) ReleaseLiveResources();
         _guard.Release();
-        _barTimer?.Stop(); _barTimer?.Dispose(); _barTimer = null;
-        try { _taskbarLook.RestoreAll(); _taskbarShape.RestoreAll(); } catch (Exception) { }
-        _timer?.Stop(); _timer?.Dispose(); _timer = null;
-        _slideTimer?.Stop(); _slideTimer?.Dispose(); _slideTimer = null;
-        _watcher?.Dispose(); _watcher = null;
-        try { _effects.RestoreAll(); } catch (Exception) { }
+    }
+
+    private void ReleaseLiveResources()
+    {
+        var errors = new List<Exception>();
+        void Attempt(Action action) { try { action(); } catch (Exception ex) { errors.Add(ex); } }
+        Attempt(() => { _barTimer?.Stop(); _barTimer?.Dispose(); _barTimer = null; });
+        Attempt(() => { _timer?.Stop(); _timer?.Dispose(); _timer = null; });
+        Attempt(() => { _slideTimer?.Stop(); _slideTimer?.Dispose(); _slideTimer = null; });
+        Attempt(() => { _watcher?.Dispose(); _watcher = null; });
+        Attempt(_taskbarLook.RestoreAll);
+        Attempt(_taskbarShape.RestoreAll);
+        Attempt(_effects.RestoreAll);
+        _cleanupFailed = errors.Count != 0;
+        if (_cleanupFailed) throw new AggregateException("Appearance cleanup failed", errors);
     }
 
     public void Pause() { _timer?.Stop(); _slideTimer?.Stop(); _barTimer?.Stop(); }
@@ -112,13 +148,15 @@ public sealed class AppearanceService
     /// <summary>The window hook lives ONLY while a window effect is on (no polling).</summary>
     public void ApplyEffects()
     {
-        if (_started && !EngineActive) return;
+        if (!AutomaticAllowed) return;
         try
         {
             _effects.AccentRgb = _engine.ReadAccent() ?? 0x0078D4;
             _effects.Apply(_settings.Effects);
             bool need = _settings.Effects.AnyWindowEffect;
-            if (need && _watcher == null) _watcher = new WinEventWatcher(h => _effects.OnForegroundChanged(h), h => _effects.ApplyToWindow(h));
+            if (need && _watcher == null) _watcher = new WinEventWatcher(
+                h => { if (AutomaticAllowed) _effects.OnForegroundChanged(h); },
+                h => { if (AutomaticAllowed) _effects.ApplyToWindow(h); });
             else if (!need && _watcher != null) { _watcher.Dispose(); _watcher = null; }
         }
         catch (Exception) { /* an effect that fails must never take Opsis down */ }
@@ -154,6 +192,7 @@ public sealed class AppearanceService
     public RestorePointResult? ApplyTaskbar(bool askForRestorePoint)
     {
         RestorePointResult? rp = null;
+        if (_lifecycleManaged && (!_started || !EngineActive || _cleanupFailed)) return null;
         try
         {
             bool wantsAny = _settings.TaskbarLook.Enabled || _settings.TaskbarShape.Enabled;
@@ -162,6 +201,7 @@ public sealed class AppearanceService
                 rp = InvasiveGuard.BeforeInvasiveChange(_settings.Safety, _restorePoints, "Opsis: taskbar look", DateTime.UtcNow);
                 _store.Save(_settings);
             }
+            if (!AutomaticAllowed) return rp;
             _taskbarLook.Apply(_settings.TaskbarLook);
             _taskbarShape.Apply(_settings.TaskbarShape);
         }
@@ -172,12 +212,12 @@ public sealed class AppearanceService
 
     private void UpdateBarTimer()
     {
-        bool need = _taskbarLook.NeedsTimer || _settings.TaskbarShape.Enabled || _settings.TaskbarLook.Enabled;
+        bool need = AutomaticAllowed && (_taskbarLook.NeedsTimer || _settings.TaskbarShape.Enabled || _settings.TaskbarLook.Enabled);
         if (!need) { _barTimer?.Stop(); return; }
         if (_barTimer == null)
         {
             _barTimer = new System.Windows.Forms.Timer { Interval = 800 };
-            _barTimer.Tick += (_, _) => { try { _taskbarLook.Tick(); _taskbarShape.Tick(); } catch (Exception) { } };
+            _barTimer.Tick += (_, _) => { if (!AutomaticAllowed) return; try { _taskbarLook.Tick(); _taskbarShape.Tick(); } catch (Exception) { } };
         }
         _barTimer.Start();
     }
@@ -193,7 +233,7 @@ public sealed class AppearanceService
 
     private void UpdateSlideTimer()
     {
-        if (!_settings.Slideshow.Enabled) { _slideTimer?.Stop(); return; }
+        if (!AutomaticAllowed || !_settings.Slideshow.Enabled) { _slideTimer?.Stop(); return; }
         if (_slideTimer == null)
         {
             _slideTimer = new System.Windows.Forms.Timer { Interval = 60_000 };      // one cheap check a minute, only while the slideshow is on
@@ -206,6 +246,7 @@ public sealed class AppearanceService
     /// <summary>Changes the wallpaper when the interval passed (always with <paramref name="force"/>). True when it changed.</summary>
     public bool SlideshowTick(DateTime utcNow, bool force)
     {
+        if (!AutomaticAllowed) return false;
         var s = _settings.Slideshow;
         try
         {
@@ -253,7 +294,7 @@ public sealed class AppearanceService
 
     public void ApplySchedule()
     {
-        if (_settings.Mode == ThemeMode.Manual) return;
+        if (!AutomaticAllowed || _settings.Mode == ThemeMode.Manual) return;
         try
         {
             bool wantDark = AppearanceEngine.ShouldBeDark(_settings, DateTime.Now);
@@ -271,7 +312,7 @@ public sealed class AppearanceService
 
     private void UpdateTimer()
     {
-        bool need = _settings.Mode != ThemeMode.Manual;
+        bool need = AutomaticAllowed && _settings.Mode != ThemeMode.Manual;
         if (!need) { _timer?.Stop(); return; }
         if (_timer == null)
         {

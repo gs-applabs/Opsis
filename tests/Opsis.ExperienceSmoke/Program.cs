@@ -202,7 +202,7 @@ try
     Check(!RuntimeSessionPolicy.Allows(SessionBackgroundService.All, SessionBackgroundService.UsageAlerts, false, false) &&
         !RuntimeSessionPolicy.Allows(SessionBackgroundService.All, SessionBackgroundService.UsageAlerts, true, true) &&
         !RuntimeSessionPolicy.Allows(SessionBackgroundService.All, SessionBackgroundService.None, true, false) &&
-        !RuntimeSessionPolicy.Allows(SessionBackgroundService.All, (SessionBackgroundService)512, true, false),
+        !RuntimeSessionPolicy.Allows(SessionBackgroundService.All, (SessionBackgroundService)1024, true, false),
         "R83 session selection cannot bypass saved opt-in, safe mode or known capabilities");
     var sessionPrefs = new AppSettings { RestoreWindowsAfterDocking = true, UsageAlertsEnabled = true };
     Check(MotionDesk.Widgets.TrayApplicationContext.SelectOptionalServices(sessionPrefs, false, SessionBackgroundService.DockRestore) == (true, false) &&
@@ -210,7 +210,7 @@ try
         MotionDesk.Widgets.TrayApplicationContext.SelectOptionalServices(sessionPrefs, false, SessionBackgroundService.All) == (true, true) &&
         sessionPrefs.RestoreWindowsAfterDocking && sessionPrefs.UsageAlertsEnabled,
         "R83 reversible session filters leave persisted preferences unchanged");
-    var desktopMask = SessionBackgroundService.AnimatedWallpaper | SessionBackgroundService.DeskStrip | SessionBackgroundService.Widgets | SessionBackgroundService.MusicVisualizer;
+    var desktopMask = SessionBackgroundService.AnimatedWallpaper | SessionBackgroundService.DeskStrip | SessionBackgroundService.Widgets | SessionBackgroundService.MusicVisualizer | SessionBackgroundService.AppearanceAutomatic;
     Check(RuntimeSessionPolicy.ReplaceBackground(desktopMask, true) == SessionBackgroundService.All &&
         RuntimeSessionPolicy.ReplaceBackground(SessionBackgroundService.All, false) == desktopMask &&
         RuntimeSessionPolicy.ReplaceBackground(SessionBackgroundService.None, true) == SessionBackgroundService.Background,
@@ -227,6 +227,15 @@ try
     Check(RuntimeSessionPolicy.Allows(SessionBackgroundService.MusicVisualizer | SessionBackgroundService.Widgets, SessionBackgroundService.MusicVisualizer, true, false) &&
         !RuntimeSessionPolicy.Allows(SessionBackgroundService.AnimatedWallpaper, SessionBackgroundService.MusicVisualizer, true, false),
         "R86 music visualizer admission is independent of animation and widgets");
+    Check(MotionDesk.Appearance.AppearanceService.MayRunAutomatic(true, true, true, true, false) &&
+        !MotionDesk.Appearance.AppearanceService.MayRunAutomatic(false, true, true, true, false) &&
+        !MotionDesk.Appearance.AppearanceService.MayRunAutomatic(true, true, true, false, false) &&
+        !MotionDesk.Appearance.AppearanceService.MayRunAutomatic(true, true, false, true, false) &&
+        !MotionDesk.Appearance.AppearanceService.MayRunAutomatic(true, true, true, true, true),
+        "R87 automatic appearance requires session admission, running owner and successful cleanup");
+    Check(RuntimeSessionPolicy.Allows(SessionBackgroundService.AppearanceAutomatic | SessionBackgroundService.MusicVisualizer, SessionBackgroundService.AppearanceAutomatic, true, false) &&
+        !RuntimeSessionPolicy.Allows(SessionBackgroundService.Widgets, SessionBackgroundService.AppearanceAutomatic, true, false),
+        "R87 automatic appearance admission independent of other desktop services");
     var widgetFixture = new MotionDesk.Widgets.WidgetSnapshot { WidgetId = "clock", X = 24, Y = 40, Width = 320, Height = 180, IsLocked = true, MonitorId = "m1" };
     var widgetPlan = MotionDesk.Widgets.WidgetHostEngine.CopyLayout(new[] { widgetFixture, new MotionDesk.Widgets.WidgetSnapshot { WidgetId = "CLOCK" } });
     widgetFixture.Width = 999;

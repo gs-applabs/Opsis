@@ -800,6 +800,7 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
             var dock = new ToolStripMenuItem(T("Allow DeskStrip", "Επιτρέπεται το DeskStrip"));
             var widgets = new ToolStripMenuItem(T("Allow widgets (retain layout)", "Επιτρέπονται τα widgets (διατήρηση διάταξης)"));
             var music = new ToolStripMenuItem(T("Allow music visualizer", "Επιτρέπεται το μουσικό visualizer"));
+            var appearance = new ToolStripMenuItem(T("Allow automatic appearance and live effects", "Αυτόματη εμφάνιση και ζωντανά εφέ"));
             void Change(SessionBackgroundService flag, Action reconcile)
             {
                 if (SafeModeService.IsSafeMode || System.Threading.Volatile.Read(ref _exitStarted) != 0) return;
@@ -816,13 +817,24 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
             dock.Click += (_, _) => Change(SessionBackgroundService.DeskStrip, DeskStripHostEngine.ReconcileSessionIfCreated);
             widgets.Click += (_, _) => Change(SessionBackgroundService.Widgets, WidgetHostEngine.ReconcileSessionIfCreated);
             music.Click += (_, _) => Change(SessionBackgroundService.MusicVisualizer, StudioMusic.ReconcileSession);
-            menu.DropDownItems.Add(wallpaper); menu.DropDownItems.Add(dock); menu.DropDownItems.Add(widgets); menu.DropDownItems.Add(music);
+            appearance.Click += (_, _) =>
+            {
+                if (WindowsUpdateGuard.RequiresReview || _compatibilityIsolationApplied) return;
+                Change(SessionBackgroundService.AppearanceAutomatic, () =>
+                {
+                    var svc = MotionDesk.Appearance.AppearanceService.Instance;
+                    if (svc.Started) svc.SetSessionAllowed(RuntimeSessionPolicy.IsPermitted(SessionBackgroundService.AppearanceAutomatic));
+                });
+            };
+            menu.DropDownItems.Add(wallpaper); menu.DropDownItems.Add(dock); menu.DropDownItems.Add(widgets); menu.DropDownItems.Add(music); menu.DropDownItems.Add(appearance);
             menu.DropDownOpening += (_, _) =>
             {
                 wallpaper.Checked = RuntimeSessionPolicy.IsPermitted(SessionBackgroundService.AnimatedWallpaper);
                 dock.Checked = RuntimeSessionPolicy.IsPermitted(SessionBackgroundService.DeskStrip);
                 widgets.Checked = RuntimeSessionPolicy.IsPermitted(SessionBackgroundService.Widgets);
                 music.Checked = RuntimeSessionPolicy.IsPermitted(SessionBackgroundService.MusicVisualizer);
+                appearance.Checked = RuntimeSessionPolicy.IsPermitted(SessionBackgroundService.AppearanceAutomatic) && !MotionDesk.Appearance.AppearanceService.Instance.AutomaticSessionSuspended;
+                appearance.Enabled = !SafeModeService.IsSafeMode && !WindowsUpdateGuard.RequiresReview && !_compatibilityIsolationApplied && MotionDesk.Appearance.AppearanceService.Instance.Started && MotionDesk.Appearance.AppearanceService.Instance.EngineActive;
                 wallpaper.Enabled = dock.Enabled = widgets.Enabled = music.Enabled = !SafeModeService.IsSafeMode;
             };
             return menu;
