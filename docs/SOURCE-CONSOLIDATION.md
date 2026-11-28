@@ -609,3 +609,7 @@ R97 no-duplicate rule applied: exact R96 PluginHost method bodies checked before
 ## R98 — active-only roadmap and native weather integration
 
 R98: user requests keep only incomplete requirements. Active proposal array now 19 rows; 81 removed from active implementation queue, preserved in archived_qa for final testing/history. 15 newly confirmed/completed-in-source rows plus 5 explicit test-only rows moved; 61 prior source-present rows moved. No release certification. Native weather source/age/staleness now visible from existing shared payload; weather refresh uses existing MonitorTimer multiplier and adaptive cadence instead of hardcoded independent timer, including failure retries. Hotkey warning now routed through existing presentation privacy balloon helper. One assertion prepared. No build or runtime tests. Remaining legacy B01–B14 separate, not deleted. Earlier 57-source evidence crosscheck remains incomplete; active rows can be narrowed further using actual method bodies, archive can be reopened on concrete missing implementation. No intermediate CI, main merge or release.
+
+## R98a — static assertion correction
+
+R98a static namespace reconciliation: WeatherPayload is declared in MotionDesk.Services, not MotionDesk.Widgets; corrected two assertion references before final QA. Active 19 / archive 81 unchanged. No compile or runtime test. Legacy backlog has 34 records including B01–B14; it is separate from original 100.
