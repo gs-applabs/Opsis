@@ -1675,6 +1675,20 @@
           "src/UI/NativeShellThemeForm.cs",
           "tests/Opsis.ExperienceSmoke/Program.cs"
         ]
+      },
+      "r115": {
+        "base_sha": "7abe6ac774efd9ef01215bfc7d2fe5536a7b21d2",
+        "summary": "R115 G09/G10/G16: six built-in Taskbar Designer presets using existing profile/preview/Apply and monitor settings, no automatic activation; main personalization switches from external theme adapter to native Opsis Start/Taskbar/Explorer studio entries; Explorer replaces Windhawk editor shortcut with Windows Folder Options. RuntimeHold added to taskbar designer, volume and gestures. Seven preset smoke assertions prepared; no build/runtime tests. Native Start/Explorer/notification/quick-settings/volume surface style parity remains open; external adapter not a substitute. All 23 groups retained.",
+        "paths": [
+          "src/Services/OpsisTaskbarDesigner.cs",
+          "src/UI/OpsisTaskbarDesignerForm.cs",
+          "src/UI/MainWindow.cs",
+          "src/UI/OpsisExplorerStudioForm.cs",
+          "src/Services/OpsisModCore.cs",
+          "src/Widgets/OpsisVolumeFlyout.cs",
+          "src/Widgets/ReplacementTaskbar.cs",
+          "tests/Opsis.ExperienceSmoke/Program.cs"
+        ]
       }
     },
     "development_rule": {
@@ -2573,8 +2587,8 @@
     },
     "active_backlog_policy": "Only incomplete or unresolved implementation requirements in proposals. Source-present and test-only rows in archived_qa, not active development. Archive is not release certification. All 100 IDs remain unique across both arrays. Reopen archived row only on concrete missing source or failed test.",
     "global_scope": {
-      "rule": "## ΜΟΝΙΜΟΣ ΚΑΝΟΝΑΣ — ΠΑΝΤΑ ΟΛΕΣ ΟΙ ΕΚΚΡΕΜΟΤΗΤΕΣ, ΟΧΙ ΜΟΝΟ ΟΙ 100\n\nΚάθε ερώτηση του χρήστη για «εκκρεμότητες», «συνέχισε», «τι μένει» αφορά **ολόκληρο το OPSIS Desktop Customization 3.0.0.3200**: αρχικές 100, παλαιότερο roadmap/διορθώσεις, P0–P6, B01–B14, UI/Glass, Shell, Containers, SDK/plugins/companion compatibility, wallpapers/εικόνες/intro/ήχο, ανεξάρτητο add-on, installers, migration/rollback, διανομή, τελικές δοκιμές. Ποτέ μόνο ένα υποσύνολο χωρίς ρητό αίτημα. Το σύνολο παραμένει ενιαίο με σταθερά IDs, alias προς παλιά IDs, συγκεκριμένο owner/κενό και κατάσταση. **Εφαρμογή από τις ευκολότερες προς τις δυσκολότερες**, με ασφάλεια ως προϋπόθεση και χωρίς να ξαναγράφεται έτοιμη λειτουργία. Αρχείο ιστορικού/QA δεν αποτελεί ενεργό backlog. Ελέγχεται κάθε φορά ο τελευταίος ακριβής σωρευτικός SHA και η διασταύρωση με ιστορικές συνομιλίες, handoffs, πραγματικούς callers/UI/ρυθμίσεις, plugins και αρχεία. Ανεπαρκή ή μη προσβάσιμα τεκμήρια καταγράφονται ως blockers, όχι ως ολοκληρωμένα. Ο χρήστης δεν πρέπει να ξαναρωτήσει για ξεχασμένα υποσύνολα. Χρήση συνδεδεμένου GitHub για πραγματικές αλλαγές· πρόσθετα μόνο αν καλύπτουν πραγματική δυνατότητα που λείπει. Όλα τα tests στο τέλος, Inno Setup, καμία πρόωρη έκδοση.",
-      "source_sha": "ed27c51ba7cfc24a02f4a424cf428c1d4b3a085e",
+      "rule": "## ΜΟΝΙΜΟΣ ΚΑΝΟΝΑΣ — ΠΑΝΤΑ ΟΛΕΣ ΟΙ ΕΚΚΡΕΜΟΤΗΤΕΣ, ΟΧΙ ΜΟΝΟ ΟΙ 100\n\nΚάθε ερώτηση του χρήστη για «εκκρεμότητες», «συνέχισε», «τι μένει» αφορά **ολόκληρο το OPSIS Desktop Customization 3.0.0.3200**: αρχικές 100, παλαιότερο roadmap/διορθώσεις, P0–P6, B01–B14, UI/Glass, Shell, Containers, SDK/plugins/companion compatibility, wallpapers/εικόνες/intro/ήχο, ανεξάρτητο add-on, installers, migration/rollback, διανομή, τελικές δοκιμές. Ποτέ μόνο ένα υποσύνολο χωρίς ρητό αίτημα. Το σύνολο παραμένει ενιαίο με σταθερά IDs, alias προς παλιά IDs, συγκεκριμένο owner/κενό και κατάσταση. **Εφαρμογή από τις ευκολότερες προς τις δυσκολότερες**, με ασφάλεια ως προϋπόθεση και χωρίς να ξαναγράφεται έτοιμη λειτουργία. Αρχείο ιστορικού/QA δεν αποτελεί ενεργό backlog. Ελέγχεται κάθε φορά ο τελευταίος ακριβής σωρευτικός SHA και η διασταύρωση με ιστορικές συνομιλίες, handoffs, πραγματικούς callers/UI/ρυθμίσεις, plugins και αρχεία. Ανεπαρκή ή μη προσβάσιμα τεκμήρια καταγράφονται ως blockers, όχι ως ολοκληρωμένα. Ο χρήστης δεν πρέπει να ξαναρωτήσει για ξεχασμένα υποσύνολα. Χρήση συνδεδεμένου GitHub για πραγματικές αλλαγές· πρόσθετα μόνο αν καλύπτουν πραγματική δυνατότητα που λείπει. Όλα τα tests στο τέλος, Inno Setup, καμία πρόωρη έκδοση. PERMANENT SELF-CONTAINED CORE REQUIREMENT (user, 2026-11-28): all Opsis capabilities and prerequisites must ship inside the core/installer except explicitly approved dependencies. Windhawk, Rainmeter, StartAllBack and other separately installed customization applications are reference/interoperability only, never prerequisites for claiming a feature complete. Optional feature parity must be implemented in existing Opsis owners or a justified internal owner, demand-loaded, reversible, no duplicate host. Native shell surface parity remains open when only a companion/overlay or Windows Settings shortcut exists. Legacy external CLI bridge retained as dormant source for historical compatibility/recovery and schema tests, not exposed by normal personalization UI; not counted as implementation. No automatic third-party installation, no unsupported native injection.",
+      "source_sha": "7abe6ac774efd9ef01215bfc7d2fe5536a7b21d2",
       "scope_sources": [
         "docs/SOURCE-CONSOLIDATION.md B01–B14",
         "docs/REMAINING-TASKS-3.0.0.3200.md (all waves, SDK1–4, X1–16 and C1–12)",
@@ -2655,7 +2669,7 @@
           "status": "PARTIAL",
           "aliases": "B04; wave1 1–3,8–12,16–20; wave2 4–7,11,17; X3/X4/X11",
           "requirement": "Start Studio, native Taskbar/tray/clock, Explorer preferences/tabs/command bar/context menu, per-app and per-monitor rules",
-          "evidence": "Existing start launcher, taskbar four edges/floating/segmented/dynamic/gestures, Explorer session, icon atlas. Review only gaps; full native Start/Explorer advanced missing. R111: bounded Explorer capture, asynchronous UI, validated preference batch with rollback, RuntimeHold for Explorer/Taskbar; runtime pending. R112 shared bounded Start scan, live launcher uses saved pin ranking/group labels; live Tiles/Compact and native styling remain open. R113 real Opsis Start List/Tiles/Compact, pin reorder and keyboard selection; actual visual/runtime tests and native Start styling still pending."
+          "evidence": "Existing start launcher, taskbar four edges/floating/segmented/dynamic/gestures, Explorer session, icon atlas. Review only gaps; full native Start/Explorer advanced missing. R111: bounded Explorer capture, asynchronous UI, validated preference batch with rollback, RuntimeHold for Explorer/Taskbar; runtime pending. R112 shared bounded Start scan, live launcher uses saved pin ranking/group labels; live Tiles/Compact and native styling remain open. R113 real Opsis Start List/Tiles/Compact, pin reorder and keyboard selection; actual visual/runtime tests and native Start styling still pending. R115 built-in taskbar presets and internal studio routes; external bridge not counted toward parity. Native surface parity remains pending."
         },
         {
           "id": "G10",
@@ -2663,7 +2677,7 @@
           "status": "PARTIAL",
           "aliases": "B06; S5; widgets.rainmeter-bridge",
           "requirement": "Rainmeter declarative measures/meters, images/fonts/variables; Windhawk mod-by-mod compatibility, self-contained equivalents",
-          "evidence": "Existing bounded INI importer and inventory, no arbitrary injection or untrusted scripts; no full engine. R114 literal Rainmeter variables and bounded single-flight Windhawk CLI; real provider and broader compatibility tests pending."
+          "evidence": "Existing bounded INI importer and inventory, no arbitrary injection or untrusted scripts; no full engine. R114 literal Rainmeter variables and bounded single-flight Windhawk CLI; real provider and broader compatibility tests pending. R115 built-in taskbar presets and internal studio routes; external bridge not counted toward parity. Native surface parity remains pending."
         },
         {
           "id": "G11",
@@ -2711,7 +2725,7 @@
           "status": "MISSING_OR_PARTIAL",
           "aliases": "start.shell-replacement; explorer.advanced; B04; wave3 13–15; X6",
           "requirement": "Full Windows Start, advanced Explorer/tabs/command bar, native notification/quick settings/volume, lock screen/Spotlight",
-          "evidence": "Unsupported builds require fail-closed optional adapters. No proprietary injection or fake native claim."
+          "evidence": "Unsupported builds require fail-closed optional adapters. No proprietary injection or fake native claim. R115 built-in taskbar presets and internal studio routes; external bridge not counted toward parity. Native surface parity remains pending."
         },
         {
           "id": "G17",

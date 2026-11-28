@@ -2644,12 +2644,13 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                         "DeskFlip", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }));
 
-            var nativeThemeCard = AddCardSection(panel, StudioText("Native Shell themes (optional provider)", "Εγγενή θέματα Shell (προαιρετικός πάροχος)"));
-            AddText(nativeThemeCard, StudioText("Use a compatible existing Windhawk styler to avoid duplicate native hooks. Experimental, requires installed CLI and mod.", "Χρήση συμβατού υπάρχοντος Windhawk styler χωρίς διπλούς μηχανισμούς. Πειραματικό, απαιτεί εγκατεστημένο CLI και mod."));
-            AddButtonGrid(nativeThemeCard, (StudioText("Native Shell Theme Editor", "Επεξεργαστής εγγενών θεμάτων"), (_, _) =>
-            {
-                using var dialog = new NativeShellThemeForm(); dialog.ShowDialog(this);
-            }));
+            var nativeThemeCard = AddCardSection(panel, StudioText("Built-in shell customization", "Ενσωματωμένη εξατομίκευση Shell"));
+            AddText(nativeThemeCard, StudioText("These Opsis-owned tools need no Windhawk or Rainmeter installation. Advanced native Windows surface styling is not yet equivalent; existing Windows controls remain available.",
+                "Τα εργαλεία του OPSIS δεν απαιτούν εγκατάσταση Windhawk ή Rainmeter. Η πλήρης προηγμένη διαμόρφωση των εγγενών επιφανειών Windows εκκρεμεί· οι κανονικές ρυθμίσεις Windows παραμένουν διαθέσιμες."));
+            AddButtonGrid(nativeThemeCard,
+                (StudioText("Start Studio", "Σχεδιαστής Έναρξης"), (_, _) => { using var dialog = new StartStudioForm(); dialog.ShowDialog(this); }),
+                (StudioText("Taskbar Designer", "Σχεδιαστής γραμμής εργασιών"), (_, _) => { using var dialog = new OpsisTaskbarDesignerForm(); dialog.ShowDialog(this); }),
+                (StudioText("Explorer Studio", "Σχεδιαστής Explorer"), (_, _) => { using var dialog = new OpsisExplorerStudioForm(); dialog.ShowDialog(this); }));
 
             // ---------- Unified Opsis ecosystem: core modules, gallery, recovery ----------
             var coreCard = AddCardSection(panel, LocalizationManager.CurrentLanguage == "el"

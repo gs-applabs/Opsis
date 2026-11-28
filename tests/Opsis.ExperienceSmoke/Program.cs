@@ -1022,6 +1022,16 @@ try
     catch (InvalidDataException) { rejected = true; }
     Check(rejected, "taskbar animation rejects extremely fast CPU-intensive polling");
 
+    foreach (var presetName in OpsisTaskbarDesigner.BuiltInPresets)
+    {
+        var builtIn = OpsisTaskbarDesigner.CreatePreset(presetName);
+        OpsisTaskbarDesigner.Validate(builtIn);
+        Check(builtIn.Name == presetName && !builtIn.ActiveButtonAnimation, "R115 self-contained taskbar preset " + presetName);
+    }
+    rejected = false;
+    try { OpsisTaskbarDesigner.CreatePreset("External provider"); }
+    catch (ArgumentOutOfRangeException) { rejected = true; }
+    Check(rejected, "R115 preset rejects external provider");
     var desktop = new System.Drawing.Rectangle(-1920, 0, 1920, 1080);
     var work = new System.Drawing.Rectangle(-1920, 0, 1920, 1032);
     var nativeBar = new System.Drawing.Rectangle(-1920, 1032, 1920, 48);

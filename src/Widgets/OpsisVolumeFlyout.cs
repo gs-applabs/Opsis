@@ -21,7 +21,7 @@ internal sealed class OpsisVolumeFlyout : Form
     internal static void CloseCurrent() { _current?.Close(); _current = null; }
     internal static void Open(Rectangle anchor, string style)
     {
-        if (style is not ("Compact" or "Large") || SafeModeService.IsSafeMode || WindowsUpdateGuard.RequiresReview) return;
+        if (style is not ("Compact" or "Large") || SafeModeService.IsSafeMode || WindowsUpdateGuard.RequiresReview || WindowsUpdateGuard.RuntimeHold) return;
         CloseCurrent();
         var form = _current = new OpsisVolumeFlyout(style);
         var work = Screen.FromRectangle(anchor).WorkingArea;
@@ -62,7 +62,7 @@ internal sealed class OpsisVolumeFlyout : Form
     }
     private void ApplyVolume()
     {
-        if (!_volume.Enabled || WindowsUpdateGuard.RequiresReview || SafeModeService.IsSafeMode) return;
+        if (!_volume.Enabled || WindowsUpdateGuard.RequiresReview || WindowsUpdateGuard.RuntimeHold || SafeModeService.IsSafeMode) return;
         try
         {
             using var enumerator = new MMDeviceEnumerator();

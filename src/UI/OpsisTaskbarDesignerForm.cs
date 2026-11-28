@@ -85,6 +85,16 @@ public sealed class OpsisTaskbarDesignerForm : Form
         _speed.Value = _profile.AnimationIntervalMs;
 
         grid.Controls.Add(Labeled("Monitor / Οθόνη", _monitor));
+        var preset = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 180 };
+        preset.Items.AddRange(OpsisTaskbarDesigner.BuiltInPresets.Cast<object>().ToArray());
+        var loadPreset = new Button { Text = "Preview preset / Προεπισκόπηση", AutoSize = true, Height = 34 };
+        preset.SelectedIndex = 0;
+        loadPreset.Click += (_, _) =>
+        {
+            if (preset.SelectedItem is string name) LoadDraft(OpsisTaskbarDesigner.CreatePreset(name));
+        };
+        grid.Controls.Add(Labeled("Built-in style / Ενσωματωμένο στυλ", preset));
+        grid.Controls.Add(loadPreset);
         grid.Controls.Add(Labeled("Empty area middle click", _middle));
         grid.Controls.Add(Labeled("Empty area double click", _double));
         grid.Controls.Add(Labeled("Volume flyout (Opsis)", _volume));
@@ -130,7 +140,7 @@ public sealed class OpsisTaskbarDesignerForm : Form
                 MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes) return;
             try
             {
-                if (WindowsUpdateGuard.RequiresReview || SafeModeService.IsSafeMode) throw new InvalidOperationException("Compatibility review required.");
+                if (WindowsUpdateGuard.RequiresReview || WindowsUpdateGuard.RuntimeHold || SafeModeService.IsSafeMode) throw new InvalidOperationException("Compatibility review required.");
                 OpsisTaskbarDesigner.SaveMonitorProfile(_monitorKeys[_monitor.SelectedIndex]!, null);
                 LoadMonitor(); ReplacementTaskbar.RefreshSettings();
             }
@@ -158,7 +168,7 @@ public sealed class OpsisTaskbarDesignerForm : Form
         {
             try
             {
-                if (WindowsUpdateGuard.RequiresReview || SafeModeService.IsSafeMode)
+                if (WindowsUpdateGuard.RequiresReview || WindowsUpdateGuard.RuntimeHold || SafeModeService.IsSafeMode)
                     throw new InvalidOperationException("Windows compatibility review is required.");
                 FillProfile();
                 if (_monitor.SelectedIndex > 0) OpsisTaskbarDesigner.SaveMonitorProfile(_monitorKeys[_monitor.SelectedIndex]!, _profile);
@@ -168,19 +178,7 @@ public sealed class OpsisTaskbarDesignerForm : Form
             }
             catch (Exception ex) { MessageBox.Show(this, ex.Message, "Opsis", MessageBoxButtons.OK, MessageBoxIcon.Error); }
         };
-        restore.Click += (_, _) =>
-        {
-            var defaults = OpsisTaskbarDesigner.Default;
-            _style.SelectedItem = defaults.Style;
-            _alignment.SelectedItem = defaults.Alignment;
-            _width.Value = defaults.ButtonWidth; _gap.Value = defaults.ButtonGap;
-            _opacity.Value = defaults.OpacityPercent;
-            _taskView.Checked = defaults.ShowTaskView; _clock.Checked = defaults.ShowClock;
-            _animate.Checked = defaults.ActiveButtonAnimation; _speed.Value = defaults.AnimationIntervalMs;
-            _thumbnail.SelectedItem = defaults.ThumbnailStyle;
-            _middle.SelectedItem = defaults.EmptyMiddleClick; _double.SelectedItem = defaults.EmptyDoubleClick; _volume.SelectedItem = defaults.VolumeStyle;
-            LoadGeometry(defaults);
-        };
+        restore.Click += (_, _) => LoadDraft(OpsisTaskbarDesigner.Default);
         system.Click += (_, _) => TaskbarViewProfiles.OpenWindowsTaskbarSettings();
         DrawPreview();
     }
@@ -215,6 +213,24 @@ public sealed class OpsisTaskbarDesignerForm : Form
             LoadGeometry(_profile);
         }
         catch (Exception ex) { MessageBox.Show(this, ex.Message, Text); }
+        finally { _loading = false; }
+        DrawPreview();
+    }
+
+    private void LoadDraft(OpsisTaskbarDesigner.Profile p)
+    {
+        _loading = true;
+        try
+        {
+            _profile = p;
+            _style.SelectedItem = p.Style; _alignment.SelectedItem = p.Alignment;
+            _width.Value = p.ButtonWidth; _gap.Value = p.ButtonGap; _opacity.Value = p.OpacityPercent;
+            _taskView.Checked = p.ShowTaskView; _clock.Checked = p.ShowClock;
+            _animate.Checked = p.ActiveButtonAnimation; _speed.Value = p.AnimationIntervalMs;
+            _thumbnail.SelectedItem = p.ThumbnailStyle; _middle.SelectedItem = p.EmptyMiddleClick;
+            _double.SelectedItem = p.EmptyDoubleClick; _volume.SelectedItem = p.VolumeStyle;
+            LoadGeometry(p);
+        }
         finally { _loading = false; }
         DrawPreview();
     }

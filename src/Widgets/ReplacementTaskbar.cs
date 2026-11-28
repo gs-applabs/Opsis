@@ -261,7 +261,7 @@ internal sealed class ReplacementTaskbar : Form
 
     private void RunGesture(string action)
     {
-        if (!OpsisTaskbarDesigner.ValidGesture(action) || WindowsUpdateGuard.RequiresReview || SafeModeService.IsSafeMode) return;
+        if (!OpsisTaskbarDesigner.ValidGesture(action) || WindowsUpdateGuard.RequiresReview || WindowsUpdateGuard.RuntimeHold || SafeModeService.IsSafeMode) return;
         switch (action)
         {
             case "Task view": VirtualWorkspaces.OpenTaskView(); break;

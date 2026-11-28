@@ -70,8 +70,12 @@ public sealed class OpsisExplorerStudioForm : Form
             catch (Exception ex) { MessageBox.Show(this, ex.Message, Text); }
         };
         options.Controls.Add(tabs);
-        var nativeEditor = new Button { Text = "Native Explorer options (Windhawk)", AutoSize = true };
-        nativeEditor.Click += (_, _) => { using var dialog = new NativeShellThemeForm(); dialog.ShowDialog(this); };
+        var nativeEditor = new Button { Text = "Windows Folder Options / Επιλογές φακέλων", AutoSize = true };
+        nativeEditor.Click += (_, _) =>
+        {
+            try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("control.exe", "folders") { UseShellExecute = false }); }
+            catch (Exception ex) { MessageBox.Show(this, ex.Message, Text); }
+        };
         options.Controls.Add(nativeEditor);
         var session = new Button { Text = "Explorer session / Συνεδρία φακέλων", AutoSize = true };
         session.Click += (_, _) =>

@@ -48,6 +48,32 @@ public static class OpsisTaskbarDesigner
     private static string? _cachedPath;
     private static long _checkedAt;
     public static Profile Default => new();
+
+    // Original Opsis presets; use only the already shipped geometry/rendering
+    // and sound owners. Never invoke an external shell mod or activate a bar.
+    public static IReadOnlyList<string> BuiltInPresets { get; } =
+        Array.AsReadOnly(new[] { "Classic", "Compact", "Floating Glass", "Segmented Dock", "Vertical Studio", "Minimal" });
+
+    public static Profile CreatePreset(string name)
+    {
+        var p = name switch
+        {
+            "Classic" => new Profile(),
+            "Compact" => new Profile { Style = "Compact", ButtonWidth = 84, ButtonGap = 1, ThumbnailStyle = "Compact", VolumeStyle = "Compact" },
+            "Floating Glass" => new Profile { Style = "Glass", Alignment = "Center", Edge = "Bottom", Floating = true,
+                DynamicSize = true, LengthPercent = 80, Thickness = 56, ButtonWidth = 100, OpacityPercent = 88, VolumeStyle = "Large", ThumbnailStyle = "Large" },
+            "Segmented Dock" => new Profile { Style = "Glass", Edge = "Bottom", Alignment = "Center", Segmented = true,
+                Floating = true, DynamicSize = true, EdgeMargin = 12, ButtonGap = 6, ButtonWidth = 88, VolumeStyle = "Compact" },
+            "Vertical Studio" => new Profile { Style = "Compact", Edge = "Left", Thickness = 72, Floating = true,
+                LengthPercent = 85, ButtonWidth = 84, ButtonGap = 3, ThumbnailStyle = "Compact", VolumeStyle = "Compact" },
+            "Minimal" => new Profile { Style = "Compact", ButtonWidth = 76, ButtonGap = 0, ShowTaskView = false,
+                ShowClock = true, ThumbnailStyle = "Off", VolumeStyle = "Compact" },
+            _ => throw new ArgumentOutOfRangeException(nameof(name))
+        };
+        p.Name = name;
+        Validate(p);
+        return p;
+    }
     private static Profile Copy(Profile p) => new()
     {
         Schema = p.Schema, Name = p.Name, Style = p.Style, Alignment = p.Alignment,
