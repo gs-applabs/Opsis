@@ -45,7 +45,7 @@ namespace MotionDesk.Widgets
             long untilSafety = ExperienceSafetyIntervalMs - (Environment.TickCount64 - _lastExperienceSafetyCheck);
             int next = (int)Math.Clamp(untilSafety, 1000L,
                 ExperienceCadenceMs(RuntimeSessionPolicy.Allows(SessionBackgroundService.ScheduledAutomations,
-                    settings.OpsisAutomationsEnabled, SafeModeService.IsSafeMode), settings.ReplaceWindowsTaskbar, WindowsUpdateGuard.RequiresReview));
+                    settings.OpsisAutomationsEnabled, SafeModeService.IsSafeMode), RuntimeSessionPolicy.Allows(SessionBackgroundService.ReplacementTaskbar, settings.ReplaceWindowsTaskbar, SafeModeService.IsSafeMode), WindowsUpdateGuard.RequiresReview));
             if (_experienceTimer.Interval != next) _experienceTimer.Interval = next;
         }
         private bool _compatibilityIsolationApplied;
@@ -308,7 +308,7 @@ namespace MotionDesk.Widgets
                         if (WindowsUpdateGuard.RequiresReview) IsolateShellForUpdate();
                         else if (!_compatibilityIsolationApplied)
                         {
-                            if (settings.ReplaceWindowsTaskbar) ReplacementTaskbar.RefreshSettings();
+                            if (RuntimeSessionPolicy.Allows(SessionBackgroundService.ReplacementTaskbar, settings.ReplaceWindowsTaskbar, SafeModeService.IsSafeMode)) ReplacementTaskbar.RefreshSettings();
                             if (RuntimeSessionPolicy.Allows(SessionBackgroundService.ScheduledAutomations,
                                 settings.OpsisAutomationsEnabled, SafeModeService.IsSafeMode)) OpsisAutomationStudio.ExecuteDue(false);
                         }
@@ -803,6 +803,7 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
             var appearance = new ToolStripMenuItem(T("Allow automatic appearance and live effects", "Αυτόματη εμφάνιση και ζωντανά εφέ"));
             var autoTile = new ToolStripMenuItem(T("Allow automatic window tiling", "Αυτόματη διάταξη παραθύρων"));
             var adaptive = new ToolStripMenuItem(T("Allow adaptive performance sampling", "Δειγματοληψία προσαρμοστικής απόδοσης"));
+            var taskbar = new ToolStripMenuItem(T("Allow Opsis replacement taskbar", "Επιτρέπεται η taskbar του Opsis"));
             void Change(SessionBackgroundService flag, Action reconcile)
             {
                 if (SafeModeService.IsSafeMode || System.Threading.Volatile.Read(ref _exitStarted) != 0) return;
@@ -835,7 +836,12 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
             };
             adaptive.Click += (_, _) => Change(SessionBackgroundService.AdaptiveSampling, PerformanceGovernor.ReconcileSession);
             menu.DropDownItems.Add(wallpaper); menu.DropDownItems.Add(dock); menu.DropDownItems.Add(widgets); menu.DropDownItems.Add(music); menu.DropDownItems.Add(appearance);
-            menu.DropDownItems.Add(autoTile); menu.DropDownItems.Add(adaptive);
+            taskbar.Click += (_, _) =>
+            {
+                if (WindowsUpdateGuard.RequiresReview || WindowsUpdateGuard.RuntimeHold || _compatibilityIsolationApplied) return;
+                Change(SessionBackgroundService.ReplacementTaskbar, () => { ReplacementTaskbar.RefreshSettings(); RefreshExperienceCadence(); });
+            };
+            menu.DropDownItems.Add(autoTile); menu.DropDownItems.Add(adaptive); menu.DropDownItems.Add(taskbar);
             menu.DropDownOpening += (_, _) =>
             {
                 wallpaper.Checked = RuntimeSessionPolicy.IsPermitted(SessionBackgroundService.AnimatedWallpaper);
@@ -848,6 +854,8 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                 autoTile.Enabled = !SafeModeService.IsSafeMode && !WindowsUpdateGuard.RequiresReview && !_compatibilityIsolationApplied;
                 adaptive.Checked = RuntimeSessionPolicy.IsPermitted(SessionBackgroundService.AdaptiveSampling);
                 adaptive.Enabled = !SafeModeService.IsSafeMode;
+                taskbar.Checked = RuntimeSessionPolicy.IsPermitted(SessionBackgroundService.ReplacementTaskbar);
+                taskbar.Enabled = !SafeModeService.IsSafeMode && !WindowsUpdateGuard.RequiresReview && !WindowsUpdateGuard.RuntimeHold && !_compatibilityIsolationApplied;
                 wallpaper.Enabled = dock.Enabled = widgets.Enabled = music.Enabled = !SafeModeService.IsSafeMode;
             };
             return menu;

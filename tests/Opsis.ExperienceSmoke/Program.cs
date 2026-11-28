@@ -246,7 +246,7 @@ try
     Check(!RuntimeSessionPolicy.Allows(SessionBackgroundService.All, SessionBackgroundService.UsageAlerts, false, false) &&
         !RuntimeSessionPolicy.Allows(SessionBackgroundService.All, SessionBackgroundService.UsageAlerts, true, true) &&
         !RuntimeSessionPolicy.Allows(SessionBackgroundService.All, SessionBackgroundService.None, true, false) &&
-        !RuntimeSessionPolicy.Allows(SessionBackgroundService.All, (SessionBackgroundService)4096, true, false),
+        !RuntimeSessionPolicy.Allows(SessionBackgroundService.All, (SessionBackgroundService)8192, true, false),
         "R83 session selection cannot bypass saved opt-in, safe mode or known capabilities");
     var sessionPrefs = new AppSettings { RestoreWindowsAfterDocking = true, UsageAlertsEnabled = true };
     Check(MotionDesk.Widgets.TrayApplicationContext.SelectOptionalServices(sessionPrefs, false, SessionBackgroundService.DockRestore) == (true, false) &&
@@ -291,6 +291,12 @@ try
     Check(RuntimeSessionPolicy.Allows(SessionBackgroundService.AutoTile | SessionBackgroundService.AdaptiveSampling, SessionBackgroundService.AutoTile, true, false) &&
         !RuntimeSessionPolicy.Allows(SessionBackgroundService.AutoTile, SessionBackgroundService.AdaptiveSampling, true, false),
         "R88 independent automatic tiling and adaptive sampling admission");
+    Check(MotionDesk.Widgets.ReplacementTaskbar.AllowsReplacement(true, true, false, false) &&
+        !MotionDesk.Widgets.ReplacementTaskbar.AllowsReplacement(false, true, false, false) &&
+        !MotionDesk.Widgets.ReplacementTaskbar.AllowsReplacement(true, false, false, false) &&
+        !MotionDesk.Widgets.ReplacementTaskbar.AllowsReplacement(true, true, true, false) &&
+        !MotionDesk.Widgets.ReplacementTaskbar.AllowsReplacement(true, true, false, true),
+        "P0 replacement taskbar requires preference, session and compatibility clearance");
     var widgetFixture = new MotionDesk.Widgets.WidgetSnapshot { WidgetId = "clock", X = 24, Y = 40, Width = 320, Height = 180, IsLocked = true, MonitorId = "m1" };
     var widgetPlan = MotionDesk.Widgets.WidgetHostEngine.CopyLayout(new[] { widgetFixture, new MotionDesk.Widgets.WidgetSnapshot { WidgetId = "CLOCK" } });
     widgetFixture.Width = 999;

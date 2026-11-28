@@ -20,8 +20,9 @@ internal enum SessionBackgroundService
     AppearanceAutomatic = 512,
     AutoTile = 1024,
     AdaptiveSampling = 2048,
+    ReplacementTaskbar = 4096,
     Background = DockRestore | UsageAlerts | DiscordPresence | ScheduledAutomations | PeriodicWallpaperAccent,
-    All = Background | AnimatedWallpaper | DeskStrip | Widgets | MusicVisualizer | AppearanceAutomatic | AutoTile | AdaptiveSampling
+    All = Background | AnimatedWallpaper | DeskStrip | Widgets | MusicVisualizer | AppearanceAutomatic | AutoTile | AdaptiveSampling | ReplacementTaskbar
 }
 
 internal static class RuntimeSessionPolicy

@@ -112,6 +112,22 @@ namespace MotionDesk.Services
         }
         private bool _started;
 
+        // A failed Start may have created native windows, hooks or workers before throwing.
+        // Attempt the same owner cleanup once; prohibit same-process restart if it is uncertain.
+        private static void StartOwned(Loaded p)
+        {
+            if (p.Started || p.Retired || p.StopFailed) return;
+            try { p.Plugin.Start(); p.Started = true; }
+            catch
+            {
+                p.Started = false;
+                try { p.Plugin.Stop(); }
+                catch (Exception ex) { p.StopFailed = true; Log($"Plugin '{p.Plugin.Name}' cleanup after failed start failed: {ex.Message}"); }
+                DetachNavigation(p);
+                throw;
+            }
+        }
+
         /// <summary>Asked (on the UI thread) before an UNTRUSTED plugin folder is loaded for the first time; returning false skips it. Default: deny.</summary>
 
         private PluginTrust.Store? _trustStore;
@@ -130,7 +146,7 @@ namespace MotionDesk.Services
         {
             var settings = AppSettings.Peek();
             return MayRunPlugin(settings.PluginsEnabled, settings.DisabledPluginIds.Contains(id),
-                SafeModeService.IsSafeMode, _globalHoldUntilRestart || _compatibilitySuspended || WindowsUpdateGuard.RequiresReview);
+                SafeModeService.IsSafeMode, _globalHoldUntilRestart || _compatibilitySuspended || WindowsUpdateGuard.RequiresReview || WindowsUpdateGuard.RuntimeHold);
         }
 
         public bool IsPluginEnabled(string id) => !AppSettings.Peek().DisabledPluginIds.Contains(id);
@@ -158,7 +174,7 @@ namespace MotionDesk.Services
         {
             if (enabled && (_globalHoldUntilRestart || !AppSettings.Peek().PluginsEnabled || SafeModeService.IsSafeMode))
                 throw new InvalidOperationException("Enable global plugins and restart Opsis before activating this plugin.");
-            if (enabled && (_compatibilitySuspended || WindowsUpdateGuard.RequiresReview))
+            if (enabled && (_compatibilitySuspended || WindowsUpdateGuard.RequiresReview || WindowsUpdateGuard.RuntimeHold))
                 throw new InvalidOperationException("Windows compatibility review and Opsis restart required before enabling plugins.");
             var p = Snap().FirstOrDefault(x => x.Plugin.Id == id);
             if (enabled && p is { StopFailed: true })
@@ -172,7 +188,7 @@ namespace MotionDesk.Services
             {
                 try
                 {
-                    if (enabled && !p.Started && !p.Retired && !p.StopFailed && CanRun(id)) { AttachNavigation(p); PushLanguage(p.Plugin); PushTheme(p.Plugin); PushHardwareProfile(p.Plugin); p.Plugin.Start(); p.Started = true; }
+                    if (enabled && !p.Started && !p.Retired && !p.StopFailed && CanRun(id)) { AttachNavigation(p); PushLanguage(p.Plugin); PushTheme(p.Plugin); PushHardwareProfile(p.Plugin); StartOwned(p); }
                     else if (!enabled) { TryStop(p, "toggle"); DetachNavigation(p); }
                 }
                 catch (Exception ex)
@@ -229,7 +245,7 @@ namespace MotionDesk.Services
         /// <summary>Φορτώνει και ξεκινά όλα τα plugin. Πρέπει να κληθεί στο UI thread.</summary>
         public void StartAll()
         {
-            if (_started || _compatibilitySuspended || WindowsUpdateGuard.RequiresReview) return;
+            if (_started || _compatibilitySuspended || WindowsUpdateGuard.RequiresReview || WindowsUpdateGuard.RuntimeHold) return;
             _started = true;
             SweepPendingRemovals();
             if (!AppSettings.Peek().PluginsEnabled || SafeModeService.IsSafeMode) { _globalHoldUntilRestart = true; return; }
@@ -252,7 +268,7 @@ namespace MotionDesk.Services
                     if (!disabled.Contains(p.Plugin.Id) && CanRun(p.Plugin.Id) && !PluginFailureQuarantine.IsQuarantined(p.Plugin.Id))
                     {
                         PushLanguage(p.Plugin); PushTheme(p.Plugin); PushHardwareProfile(p.Plugin);
-                        p.Plugin.Start(); p.Started = true;
+                        StartOwned(p);
                     }
                     else if (PluginFailureQuarantine.IsQuarantined(p.Plugin.Id))
                         Log($"Plugin '{p.Plugin.Name}' is temporarily isolated; use the plugin toggle to re-enable it intentionally.");
@@ -574,14 +590,14 @@ namespace MotionDesk.Services
         /// <summary>Asks about every pending plugin (on the UI thread, after start-up); the approved ones are loaded and started at once. Returns how many were approved.</summary>
         public int ResolvePending(Func<PluginTrustRequest, bool> ask)
         {
-            if (_globalHoldUntilRestart || _compatibilitySuspended || WindowsUpdateGuard.RequiresReview || SafeModeService.IsSafeMode || !AppSettings.Peek().PluginsEnabled) return 0;
+            if (_globalHoldUntilRestart || _compatibilitySuspended || WindowsUpdateGuard.RequiresReview || SafeModeService.IsSafeMode || !AppSettings.Peek().PluginsEnabled || WindowsUpdateGuard.RuntimeHold) return 0;
             int approved = 0;
             foreach (var req in PendingApprovals)
             {
                 bool yes;
                 try { yes = ask(req); } catch (Exception ex) { Log($"Plugin '{req.Name}' approval prompt failed: {ex.Message}"); yes = false; }
                 if (!yes) { Log($"Plugin '{req.Name}' not approved by the user (sha256 {req.Sha256})."); continue; }
-                if (_globalHoldUntilRestart || _compatibilitySuspended || WindowsUpdateGuard.RequiresReview || SafeModeService.IsSafeMode || !AppSettings.Peek().PluginsEnabled) break;
+                if (_globalHoldUntilRestart || _compatibilitySuspended || WindowsUpdateGuard.RequiresReview || SafeModeService.IsSafeMode || !AppSettings.Peek().PluginsEnabled || WindowsUpdateGuard.RuntimeHold) break;
                 try
                 {
                     string currentHash = PluginTrust.HashFolder(req.Folder);
@@ -595,7 +611,7 @@ namespace MotionDesk.Services
                         Log($"Plugin '{req.Name}' changed before approval completed; it requires a new approval.");
                         continue;
                     }
-                    if (_globalHoldUntilRestart || _compatibilitySuspended || WindowsUpdateGuard.RequiresReview || SafeModeService.IsSafeMode || !AppSettings.Peek().PluginsEnabled) break;
+                    if (_globalHoldUntilRestart || _compatibilitySuspended || WindowsUpdateGuard.RequiresReview || SafeModeService.IsSafeMode || !AppSettings.Peek().PluginsEnabled || WindowsUpdateGuard.RuntimeHold) break;
                     TrustStore.Approve(req.Name, req.Sha256);
                     Log($"Plugin '{req.Name}' approved by the user (sha256 {req.Sha256}).");
                     var before = Snap().ToHashSet();
@@ -618,7 +634,7 @@ namespace MotionDesk.Services
                 if (CanRun(p.Plugin.Id) && !PluginFailureQuarantine.IsQuarantined(p.Plugin.Id))
                 {
                     PushLanguage(p.Plugin); PushTheme(p.Plugin); PushHardwareProfile(p.Plugin);
-                    p.Plugin.Start(); p.Started = true;
+                    StartOwned(p);
                 }
             }
             catch (Exception ex)

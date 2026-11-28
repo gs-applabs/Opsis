@@ -64,10 +64,13 @@ internal sealed class ReplacementTaskbar : Form
         }
     }
 
+    internal static bool AllowsReplacement(bool saved, bool permitted, bool review, bool held) => saved && permitted && !review && !held;
+    private static bool Admission => AllowsReplacement(AppSettings.Peek().ReplaceWindowsTaskbar,
+        RuntimeSessionPolicy.IsPermitted(SessionBackgroundService.ReplacementTaskbar), WindowsUpdateGuard.RequiresReview, WindowsUpdateGuard.RuntimeHold);
+
     internal static void RefreshSettings()
     {
-        if (SafeModeService.IsSafeMode || WindowsUpdateGuard.RequiresReview ||
-            !AppSettings.Load().ReplaceWindowsTaskbar) { Stop(); return; }
+        if (!Admission) { Stop(); return; }
         // A single taskbar owner is essential. StartAllBack/ExplorerPatcher can
         // already own the Windows shell, so Opsis does NOT stack a second
         // overlay over them. This is read-only; user/vendor files are untouched.
@@ -120,6 +123,8 @@ internal sealed class ReplacementTaskbar : Form
         foreach (var bar in Bars.Values) bar.Dispose();
         Bars.Clear();
         _windows = [];
+        _displayIdentities = Array.Empty<MonitorTopologyService.Display>();
+        _displaySignature = ""; _identityAt = 0; _windowsTrayUntil = 0;
         AppActivity.RequestRefresh();
     }
 
@@ -132,7 +137,8 @@ internal sealed class ReplacementTaskbar : Form
 
     private static void RefreshBars()
     {
-        if (WindowsUpdateGuard.RuntimeHold) { Stop(); return; }
+        if (!Admission) { Stop(); return; }
+        if (_timer == null) return; // a stale queued callback cannot create another owner
         if (Environment.TickCount64 < _windowsTrayUntil) return;
         var screens = Screen.AllScreens.ToDictionary(screen => screen.DeviceName, StringComparer.OrdinalIgnoreCase);
         foreach (var stale in Bars.Keys.Where(id => !screens.ContainsKey(id)).ToArray())
