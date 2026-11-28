@@ -675,12 +675,6 @@ namespace MotionDesk.Containers
                 if (Visible) RefreshPortal();
                 else { _portalRefreshRevision++; _portalTimer.Stop(); }
             }
-            if (Model.Kind == ContainerKind.Portal)
-            {
-                if (_watch != null) _watch.EnableRaisingEvents = Visible;
-                if (Visible) RefreshPortal();
-                else { _portalRefreshRevision++; _portalTimer.Stop(); }
-            }
             if (Visible) Dirty(); else _repaint.Stop();
         }
         protected override void OnSizeChanged(EventArgs e) { base.OnSizeChanged(e); if (!IsCollapsed) _scroll = ItemLayout.ClampScroll(_scroll, Items.Count); Dirty(); }
