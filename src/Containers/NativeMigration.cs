@@ -24,12 +24,18 @@ namespace MotionDesk.Containers
             string manifestPath = Path.Combine(stage, ManifestFile);
             string snapDir = Path.Combine(parent, "container-snapshots");
             if (File.Exists(live)) return null; // native layout always wins
+            RejectReparsePath(parent);
+            RejectReparsePath(stage);
+            RejectReparsePath(snapDir);
+            RejectReparsePath(manifestPath);
             if (!File.Exists(manifestPath) && !Directory.Exists(Path.Combine(legacyRoot, "Profiles"))) return null;
 
             // A second process may see an incomplete import. Do not let it
             // prepare or publish concurrently. No persistent lock handle.
             Directory.CreateDirectory(parent);
-            using var migrationLock = new FileStream(Path.Combine(parent, "container-migration-v1.lock"),
+            string lockPath = Path.Combine(parent, "container-migration-v1.lock");
+            RejectReparsePath(lockPath);
+            using var migrationLock = new FileStream(lockPath,
                 FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
             if (File.Exists(live)) return null;
             Manifest plan;
@@ -120,23 +126,27 @@ namespace MotionDesk.Containers
 
         internal static string Hash(string path)
         {
+            RejectReparsePath(path);
             using var stream = File.OpenRead(path);
             return Convert.ToHexString(SHA256.HashData(stream));
         }
 
         private static void ValidatePlan(string stage, string snapDir, Manifest plan)
         {
-            if (plan.Version != Version || plan.Snapshots == null ||
+            RejectReparsePath(stage);
+            RejectReparsePath(snapDir);
+            if (plan.Version != Version || plan.Snapshots == null || plan.Snapshots.Length > 10000 ||
                 !string.Equals(Hash(Path.Combine(stage, "live.json")), plan.LiveSha256, StringComparison.Ordinal))
                 throw new IOException("Invalid or damaged native migration plan.");
             var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             for (int i = 0; i < plan.Snapshots.Length; i++)
             {
                 var e = plan.Snapshots[i];
-                if (!ValidSnapshotName(e.Name) || !names.Add(e.Name) ||
+                if (e == null || !ValidSnapshotName(e.Name) || !names.Add(e.Name) ||
                     !string.Equals(Hash(Payload(stage, i)), e.Sha256, StringComparison.Ordinal))
                     throw new IOException("Invalid native migration snapshot.");
                 string target = Path.Combine(snapDir, e.Name);
+                RejectReparsePath(target);
                 if (File.Exists(target) && !string.Equals(Hash(target), e.Sha256, StringComparison.Ordinal))
                     throw new IOException("A snapshot changed during migration: " + e.Name + ". Existing files preserved.");
                 if (Directory.Exists(target)) throw new IOException("Snapshot destination is a directory: " + e.Name);
@@ -147,6 +157,8 @@ namespace MotionDesk.Containers
         // publication is a no-op if the exact content already exists.
         internal static void PublishStagedFile(string source, string destination, string expectedHash, string temp)
         {
+            RejectReparsePath(destination);
+            RejectReparsePath(temp);
             if (!string.Equals(Hash(source), expectedHash, StringComparison.Ordinal))
                 throw new IOException("Migration payload failed integrity check.");
             if (File.Exists(destination))
@@ -156,8 +168,10 @@ namespace MotionDesk.Containers
             }
             try
             {
+                // Remove only the previous staging entry; never truncate through a link.
+                if (File.Exists(temp)) File.Delete(temp);
                 using (var input = File.OpenRead(source))
-                using (var output = new FileStream(temp, FileMode.Create, FileAccess.Write, FileShare.None))
+                using (var output = new FileStream(temp, FileMode.CreateNew, FileAccess.Write, FileShare.None))
                 {
                     input.CopyTo(output);
                     output.Flush(flushToDisk: true);
@@ -175,33 +189,64 @@ namespace MotionDesk.Containers
         private static void WriteDurable(string path, byte[] bytes)
         {
             string tmp = path + ".tmp";
-            using (var stream = new FileStream(tmp, FileMode.Create, FileAccess.Write, FileShare.None))
+            RejectReparsePath(path);
+            RejectReparsePath(tmp);
+            if (File.Exists(tmp)) File.Delete(tmp);
+            using (var stream = new FileStream(tmp, FileMode.CreateNew, FileAccess.Write, FileShare.None))
             { stream.Write(bytes); stream.Flush(flushToDisk: true); }
             File.Move(tmp, path, overwrite: false);
         }
 
         private static void RequireOwnedStage(string stage)
         {
+            RejectReparsePath(Path.Combine(stage, OwnerFile));
             if ((File.GetAttributes(stage) & FileAttributes.ReparsePoint) != 0 ||
                 !File.Exists(Path.Combine(stage, OwnerFile)) ||
                 File.ReadAllText(Path.Combine(stage, OwnerFile)) != Owner)
                 throw new IOException("Unrecognized native migration staging folder; no data removed.");
         }
 
-        private static void DeleteOwnedStage(string directory)
+        internal static void RejectReparsePath(string path)
         {
-            // Refuse to traverse junctions/symlinks, including unexpected
-            // entries in a previously interrupted staging directory.
-            if ((File.GetAttributes(directory) & FileAttributes.ReparsePoint) != 0)
-                throw new IOException("Migration staging directory is a reparse point.");
+            for (string? current = Path.GetFullPath(path); current != null; current = Path.GetDirectoryName(current))
+            {
+                try
+                {
+                    if ((File.GetAttributes(current) & FileAttributes.ReparsePoint) != 0)
+                        throw new IOException("Migration path contains a reparse point; original data retained: " + current);
+                }
+                catch (FileNotFoundException) { }
+                catch (DirectoryNotFoundException) { }
+            }
+        }
+
+        private static void ValidateCleanupTree(string directory)
+        {
+            RejectReparsePath(directory);
             foreach (string entry in Directory.EnumerateFileSystemEntries(directory))
             {
                 var attributes = File.GetAttributes(entry);
                 if ((attributes & FileAttributes.ReparsePoint) != 0)
                     throw new IOException("Migration staging entry is a reparse point.");
-                if ((attributes & FileAttributes.Directory) != 0) DeleteOwnedStage(entry);
+                if ((attributes & FileAttributes.Directory) != 0) ValidateCleanupTree(entry);
+            }
+        }
+
+        private static void DeleteOwnedStage(string directory)
+        {
+            // Preflight the entire tree before deleting any entry; keep the owner
+            // marker until the end so a partial cleanup remains recognizable.
+            ValidateCleanupTree(directory);
+            foreach (string entry in Directory.EnumerateFileSystemEntries(directory))
+            {
+                if (Path.GetFileName(entry).Equals(OwnerFile, StringComparison.OrdinalIgnoreCase)) continue;
+                RejectReparsePath(entry);
+                if (Directory.Exists(entry)) DeleteOwnedStage(entry);
                 else File.Delete(entry);
             }
+            string marker = Path.Combine(directory, OwnerFile);
+            RejectReparsePath(marker);
+            if (File.Exists(marker)) File.Delete(marker);
             Directory.Delete(directory);
         }
     }

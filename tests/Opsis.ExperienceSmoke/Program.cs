@@ -144,6 +144,50 @@ try
         !MotionDesk.Containers.NativeMigration.ValidSnapshotName("../Default.json") &&
         !MotionDesk.Containers.NativeMigration.ValidSnapshotName("Default.exe"),
         "R76 migration only accepts safe snapshot filenames");
+    // Exercise the real native serializer and recovery entry point with a durable staged plan.
+    var recoveryRoot = Path.Combine(migrationDir, "recovery");
+    var recoveryStage = Path.Combine(recoveryRoot, "container-migration-v1");
+    var recoverySnapshots = Path.Combine(recoveryRoot, "container-snapshots");
+    var recoveryLive = Path.Combine(recoveryRoot, "containers-native.json");
+    Directory.CreateDirectory(recoveryStage); Directory.CreateDirectory(recoverySnapshots);
+    var migrationDoc = new Opsis.Containers.ContainersDocument();
+    migrationDoc.Containers.Add(new Opsis.Containers.Container { Title = "Recovery fixture", Hidden = true });
+    var stagedLive = Path.Combine(recoveryStage, "live.json");
+    new Opsis.Containers.ContainersStore(stagedLive).Save(migrationDoc);
+    var stagedSnapshot = Path.Combine(recoveryStage, "snapshot-000000.json");
+    var serializerScratch = Path.Combine(migrationDir, "serializer");
+    Directory.CreateDirectory(serializerScratch);
+    Opsis.Containers.ContainerSnapshots.Save(migrationDoc, serializerScratch, "Recovery fixture");
+    var serializedSnapshot = Directory.GetFiles(serializerScratch).Single();
+    File.Copy(serializedSnapshot, stagedSnapshot);
+    var snapshotName = Path.GetFileName(serializedSnapshot);
+    var snapshotTarget = Path.Combine(recoverySnapshots, snapshotName);
+    var liveHash = MotionDesk.Containers.NativeMigration.Hash(stagedLive);
+    var snapshotHash = MotionDesk.Containers.NativeMigration.Hash(stagedSnapshot);
+    File.WriteAllText(Path.Combine(recoveryStage, "owner.txt"), "OPSIS-NATIVE-MIGRATION-V1");
+    File.WriteAllText(Path.Combine(recoveryStage, "manifest.json"), JsonSerializer.Serialize(new
+    {
+        Version = 1, LiveSha256 = liveHash, Snapshots = new[] { new { Name = snapshotName, Sha256 = snapshotHash } }, Summary = "Recovery fixture"
+    }));
+    var legacyMissing = Path.Combine(recoveryRoot, "legacy-missing");
+    var noMonitors = Array.Empty<Opsis.Containers.MonitorInfo>();
+    var recoveryStore = new Opsis.Containers.ContainersStore(recoveryLive);
+    File.WriteAllText(snapshotTarget, "unrelated user snapshot");
+    bool refusedRecovery = false;
+    try { MotionDesk.Containers.NativeMigration.ImportIfNeeded(recoveryStore, legacyMissing, noMonitors); }
+    catch (IOException) { refusedRecovery = true; }
+    Check(refusedRecovery && !File.Exists(recoveryLive) && File.ReadAllText(snapshotTarget) == "unrelated user snapshot" && Directory.Exists(recoveryStage),
+        "R89 full recovery refuses conflicting snapshot and retains staged plan");
+    File.Delete(snapshotTarget);
+    File.Copy(stagedSnapshot, snapshotTarget); // simulate crash after snapshot publication
+    var recoveryStamp = File.GetLastWriteTimeUtc(snapshotTarget);
+    Check(MotionDesk.Containers.NativeMigration.ImportIfNeeded(recoveryStore, legacyMissing, noMonitors) == "Recovery fixture" &&
+        MotionDesk.Containers.NativeMigration.Hash(recoveryLive) == liveHash && MotionDesk.Containers.NativeMigration.Hash(snapshotTarget) == snapshotHash &&
+        File.GetLastWriteTimeUtc(snapshotTarget) == recoveryStamp && !Directory.Exists(recoveryStage),
+        "R89 full recovery resumes after partial publication, live layout last, without snapshot rewrite");
+    Check(MotionDesk.Containers.NativeMigration.ImportIfNeeded(recoveryStore, legacyMissing, noMonitors) == null &&
+        MotionDesk.Containers.NativeMigration.Hash(recoveryLive) == liveHash,
+        "R89 existing native layout wins and repeated import is a no-op");
     var iconEntries = new[] { Path.Combine(folder,"user","Shared.txt"), Path.Combine(folder,"public","Shared.lnk"),
         Path.Combine(folder,"user","Unique.txt") };
     var uniqueIcons = MotionDesk.Widgets.DesktopIconVisibilityEngine.UniqueIconNames(new[] { iconEntries[0], iconEntries[2] }, iconEntries);

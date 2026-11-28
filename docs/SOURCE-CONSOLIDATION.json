@@ -1260,9 +1260,9 @@
     "canonical_history": "docs/SOURCE-CONSOLIDATION.md",
     "classification": "Source present = named source anchor, not complete feature; partial = related code/history; review = no sufficient evidence. No item release-certified by this audit.",
     "counts": {
-      "PARTIAL_OR_RELATED_EVIDENCE": 31,
-      "REVIEW_REQUIRED": 43,
-      "SOURCE_PRESENT_RUNTIME_GATE_OPEN": 26
+      "PARTIAL_OR_RELATED_EVIDENCE": 32,
+      "REVIEW_REQUIRED": 38,
+      "SOURCE_PRESENT_RUNTIME_GATE_OPEN": 30
     },
     "proposals": [
       {
@@ -1679,30 +1679,30 @@
         "id": 42,
         "requirement": "Αναίρεση τελευταίας ομαδικής τακτοποίησης παραθύρων.",
         "pass": "MP05",
-        "status": "REVIEW_REQUIRED",
-        "evidencePath": null,
-        "evidence": "Verify undo batch window arrangement",
-        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "status": "SOURCE_PRESENT_RUNTIME_GATE_OPEN",
+        "evidencePath": "src/Services/AutoTileService.cs",
+        "evidence": "UndoLastManual and ApplyApprovedPreview retain successful manual moves; real UI route, HWND reuse and actual undo test open.",
+        "sourceReviewedAt": "b6d0a373e46342923b37e07ea4515024407cca8a",
         "releaseCertified": false
       },
       {
         "id": 43,
         "requirement": "Κανόνες αντιστοίχισης εφαρμογής και τύπου εγγράφου σε ζώνη.",
         "pass": "MP05",
-        "status": "REVIEW_REQUIRED",
-        "evidencePath": null,
-        "evidence": "Verify app/document rule and conflict with AutoTile",
-        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "status": "PARTIAL_OR_RELATED_EVIDENCE",
+        "evidencePath": "src/Services/AutoTileService.cs",
+        "evidence": "ResolveRuleRect matches application and explicit document extension in window title; conflict with WindowRules and actual UI/movement test open.",
+        "sourceReviewedAt": "b6d0a373e46342923b37e07ea4515024407cca8a",
         "releaseCertified": false
       },
       {
         "id": 44,
         "requirement": "Προσωρινή επέκταση παραθύρου σε δύο γειτονικές ζώνες.",
         "pass": "MP05",
-        "status": "REVIEW_REQUIRED",
-        "evidencePath": null,
-        "evidence": "Verify spanning two adjacent zones",
-        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "status": "SOURCE_PRESENT_RUNTIME_GATE_OPEN",
+        "evidencePath": "src/Services/AutoTileService.cs; src/Widgets/ZoneLayoutEditorForm.cs",
+        "evidence": "TrySpanWindow/RestoreSpan and editor buttons; actual native window movement/restore and stale handle test open.",
+        "sourceReviewedAt": "b6d0a373e46342923b37e07ea4515024407cca8a",
         "releaseCertified": false
       },
       {
@@ -1749,10 +1749,10 @@
         "id": 49,
         "requirement": "Εξαιρέσεις για διαλόγους, παλέτες εργαλείων και προσωρινά παράθυρα.",
         "pass": "MP05",
-        "status": "REVIEW_REQUIRED",
-        "evidencePath": null,
-        "evidence": "Verify dialog/palette/temp-window exclusion",
-        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "status": "SOURCE_PRESENT_RUNTIME_GATE_OPEN",
+        "evidencePath": "src/Services/AutoTileService.cs",
+        "evidence": "IsTilingCandidate rejects owned windows, dialogs, tool windows, no-activate and noncaptioned popups; actual native fixtures open.",
+        "sourceReviewedAt": "b6d0a373e46342923b37e07ea4515024407cca8a",
         "releaseCertified": false
       },
       {
@@ -2039,10 +2039,10 @@
         "id": 78,
         "requirement": "Επιλογή συσκευής εισόδου του visualizer ξεχωριστά από την προεπιλεγμένη έξοδο.",
         "pass": "MP02/06/07",
-        "status": "REVIEW_REQUIRED",
-        "evidencePath": null,
-        "evidence": "Verify independent visualizer input and output device controls",
-        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "status": "SOURCE_PRESENT_RUNTIME_GATE_OPEN",
+        "evidencePath": "src/Music/DesktopMusicController.cs; src/Music/MusicOverlayPage.cs",
+        "evidence": "Explicit SetAudioInput and selector, isolated capture separate from default output; actual WASAPI and Bluetooth tests open.",
+        "sourceReviewedAt": "b6d0a373e46342923b37e07ea4515024407cca8a",
         "releaseCertified": false
       },
       {
@@ -2276,7 +2276,7 @@
       "latest_certified": "5ad65d13c11262ff9a75b4a5c387bbeb50e40c59",
       "latest_audit_run": 46103939134,
       "latest_artifact": 15247381558,
-      "next": "Check exact R81 full audit and all seven gates; then CAS R81->R82 and ordered R83/R84/R85/R86/R87/R88. Continue native migration fixtures/rollback and remaining shell/hotkeys/plugins. No main merge/release.",
+      "next": "Check exact R81 full audit and all seven gates then CAS R81->R82; ordered R83/R84/R85/R86/R87/R88/R89. Continue actual legacy migration fixtures, rollback UI, shell/hotkeys/plugins and feature backlog; no release.",
       "parent_R79": "835b784e5cdce8fb8eb2134df79c1632366b82a0",
       "parent_R80": "5ad65d13c11262ff9a75b4a5c387bbeb50e40c59",
       "parent_R81": "cae751ab4b21d69996bbacd11bed9a3ae715b3ec",
@@ -2288,7 +2288,9 @@
       "parent_R86": "65bf171f3e0edf852a4c4ededddf5b1ac413907f",
       "R87": "R87: R80 all 7 workflows passed, 59 JS +214 native, 0 errors/11 warnings. Full 46103939134, unreleased installer/source 15247381558, audit 15247416512. R80 nonoverlapping 5 samples/window: host private 105558016 -> 106598400, managed 31107544 -> 27115736, heap 20211608 -> 20106160, fragmentation 120160 -> 117448, CPU .31 -> .31, handles 923 -> 908, GDI 187 -> 183, no tracked WebView child, host writes 0. GPU at baseline/idle/soak end: 1 open, 1 empty, 1 close, 0 failures, no sampling/cache. Gen2 delta 0, allocated bytes delta 161204488. R77 end host private 164114432: R80 approximately 35% lower, strong evidence for probe-related regression in this workload, not proof of causal isolation/leak-free or physical GPU. R81 CAS promoted and PR18 exact head verified; seven workflows started, preserve full audit. R87 adds independent automatic appearance/live effects session admission, guards existing timers and WinEvent callbacks, retains settings and mutex across suspension, restores native effects/taskbar and disposes timers/hooks on suspension; stop releases mutex only after cleanup, no restoration by nonowner. Failed cleanup latches no resume, retains ownership until successful stop or process exit. Direct static manual commands remain distinct, slideshow forced advance gated; no general appearance read-only or complete Containers-only claim. Explicit taskbar restore-point request still allowed while suspended by owner before deferred apply. Existing native restore APIs may swallow failures; actual native effects/hook unhook, compatibility/safe mode, two-process owner and repeated transitions require tests. Two assertions, uncompiled. Preserve 100 IDs/B01-B14, no main merge/release.",
       "parent_R87": "c3f810ec4437361c86ca884d85e50365a3827e1a",
-      "R88": "R88 adds separate session admission bits for automatic window tiling and adaptive performance sampling. AutoTile refresh stops/disposes existing timer when not admitted, clears signature cache; automatic Apply checks current saved preference, session and Windows compatibility guards before enumerating windows. Explicit force/preview/span/undo commands unchanged, no automatic reversal of prior window positions. Governor reuses existing sampler, generation invalidates stale samples; session suspension stops timer and clears hysteresis windows but retains current reduced tier while adaptive profile still eligible, avoiding sudden quality increase. Explicit saved profile disable/forced tier/Low/safe-mode resets drop through normal policy. No saved setting changes from mask, no second scheduler, UI description differentiates session suspension. Three deterministic assertions, uncompiled. In-flight native sampling may finish and an already-published notification may arrive; actual repeated transitions and CPU measurement pending. Manual changes and explicit diagnostics remain independent. Remaining shell/hotkeys/plugins and native migration fixture/rollback open, no complete Containers-only claim. At preparation R81 4/7 PASS, full 46105331553 in progress; R80 latest audited, preserve exact ordered gates and all 100 IDs/B01-B14. No release or main merge."
+      "R88": "R88 adds separate session admission bits for automatic window tiling and adaptive performance sampling. AutoTile refresh stops/disposes existing timer when not admitted, clears signature cache; automatic Apply checks current saved preference, session and Windows compatibility guards before enumerating windows. Explicit force/preview/span/undo commands unchanged, no automatic reversal of prior window positions. Governor reuses existing sampler, generation invalidates stale samples; session suspension stops timer and clears hysteresis windows but retains current reduced tier while adaptive profile still eligible, avoiding sudden quality increase. Explicit saved profile disable/forced tier/Low/safe-mode resets drop through normal policy. No saved setting changes from mask, no second scheduler, UI description differentiates session suspension. Three deterministic assertions, uncompiled. In-flight native sampling may finish and an already-published notification may arrive; actual repeated transitions and CPU measurement pending. Manual changes and explicit diagnostics remain independent. Remaining shell/hotkeys/plugins and native migration fixture/rollback open, no complete Containers-only claim. At preparation R81 4/7 PASS, full 46105331553 in progress; R80 latest audited, preserve exact ordered gates and all 100 IDs/B01-B14. No release or main merge.",
+      "parent_R88": "b6d0a373e46342923b37e07ea4515024407cca8a",
+      "R89": "R89 hardens NativeMigration: reject reparse points along destination/stage/lock/owner/payload paths, use CreateNew for temporary payloads after removing old staging entries, validate all cleanup entries before deletion and owner marker last. Conservative rejection of redirected/junction paths; not a defense against concurrent adversarial path swaps or all hardlink attacks. New real native serializer staged-recovery fixture: conflict retains stage and does not publish live, simulate interrupted publication with identical snapshot, complete live last without rewrite, repeat no-op. Three assertions uncompiled; actual legacy Profiles importer fixture, owner marker interrupted preparation, physical crash and real rollback/restore UI still open. Reconciled IDs 42,43,44,49,78 from exact R88 source: four source-present/runtime-open, one partial; now {\"PARTIAL_OR_RELATED_EVIDENCE\":32,\"REVIEW_REQUIRED\":38,\"SOURCE_PRESENT_RUNTIME_GATE_OPEN\":30}. Not completion percentages. R81 at review 6/7 PASS, full 46105331553 in progress. R80 latest audited, ordered gates remain, no main merge/release. Preserve 100 IDs and B01-B14. Next remaining P0 native fixture, then shell ownership and plugins."
     }
   }
 }
