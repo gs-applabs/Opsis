@@ -90,7 +90,8 @@ namespace MotionDesk.Widgets
         private bool Low => PerformanceProfile.ForFeature(PerfFeature.DeskStrip).Tier == HardwareTier.Low;
         private Screen DockScreen => Screen.AllScreens.FirstOrDefault(screen => screen.DeviceName == (_screenOverride ?? _s.Monitor))
             ?? Screen.PrimaryScreen ?? Screen.AllScreens[0];
-        private bool WantsGpu => !Low && DesktopMaterials.Get(DesktopSurface.DeskStrip).Mode != "Solid" &&
+        private bool EligibleGlassSurface => !Low && DesktopMaterials.Get(DesktopSurface.DeskStrip).Mode != "Solid";
+        private bool WantsGpu => EligibleGlassSurface &&
 #if SIGNATURE_COMPOSITION_PREVIEW
             GlassService.Enabled;
         private GlassPaneBinder? _signaturePane;
@@ -617,7 +618,7 @@ namespace MotionDesk.Widgets
             if (!_wantGpu || !IsHandleCreated || IsDisposed || Disposing) return;
             if (_signaturePane == null)
             {
-                _signaturePane = new GlassPaneBinder(this, 20, () => _wantGpu && WantsGpu, DesktopSurface.DeskStrip);
+                _signaturePane = new GlassPaneBinder(this, 20, () => EligibleGlassSurface, DesktopSurface.DeskStrip, trackPolicyDemand: false);
                 _signaturePane.PaneChanged += () =>
                 {
                     if (!IsDisposed && !Disposing && IsHandleCreated) Invalidate();
@@ -646,6 +647,7 @@ namespace MotionDesk.Widgets
         protected override void OnVisibleChanged(EventArgs e)
         {
             base.OnVisibleChanged(e);
+            GlassService.SetSurfaceDemand(this, Visible && !Disposing && !IsDisposed && EligibleGlassSurface);
             if (!_wantGpu || Disposing || IsDisposed) return;
             SyncGlassPane();
             _layeredDirty = Visible;
@@ -1012,6 +1014,7 @@ namespace MotionDesk.Widgets
             if (disposing)
             {
                 if (_glassPolicyHandler != null) { GlassService.PolicyChanged -= _glassPolicyHandler; _glassPolicyHandler = null; }
+                GlassService.SetSurfaceDemand(this, false);
                 _layeredTimer.Stop(); _layeredTimer.Dispose(); _layered?.Dispose();
 #if SIGNATURE_COMPOSITION_PREVIEW
                 _signaturePane?.Dispose(); _signaturePane = null;
@@ -1069,7 +1072,9 @@ namespace MotionDesk.Widgets
 
         private void RefreshMaterial()
         {
-            if (!IsHandleCreated || IsDisposed) return;
+            if (!IsHandleCreated || IsDisposed || Disposing) return;
+            GlassService.SetSurfaceDemand(this, Visible && EligibleGlassSurface);
+            if (!Visible) return; // a hidden dock must not recreate the GPU device
             var material = DesktopMaterials.Get(DesktopSurface.DeskStrip);
             bool gpu = WantsGpu;
             if (gpu != _wantGpu)

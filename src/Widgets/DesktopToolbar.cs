@@ -97,7 +97,7 @@ internal sealed class DesktopToolbar : Form
         Add(MainWindow.StudioText("Calendar", "Ημερολόγιο"), () => OpenWidget("calendar", 365, 284), 112);
         Add(MainWindow.StudioText("Tile windows", "Τακτοποίηση"), () => AutoTileService.Apply(force: true), 125);
         Controls.AddRange([_actions, _clock]);
-        _glass = new GlassPaneBinder(this, 8, () => GlassService.Enabled, DesktopSurface.DeskStrip);
+        _glass = new GlassPaneBinder(this, 8, () => true, DesktopSurface.DeskStrip);
         ApplyColors();
     }
 

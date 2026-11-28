@@ -181,6 +181,19 @@ try
         !DesktopMenu.OwnsClassicFallback($"\"{Path.Combine(folder, "other", "Opsis.exe")}\" --desktop-action new-container", ownMenuExe) &&
         !DesktopMenu.OwnsClassicFallback(null, ownMenuExe),
         "R81 classic desktop fallback cleanup checks executable ownership");
+    Check(GlassService.NeedsPolicyMonitor(1, GpuGlassMode.Auto, false) &&
+        GlassService.NeedsPolicyMonitor(1, GpuGlassMode.Always, false) &&
+        !GlassService.NeedsPolicyMonitor(0, GpuGlassMode.Auto, false) &&
+        !GlassService.NeedsPolicyMonitor(1, GpuGlassMode.Blur, false) &&
+        !GlassService.NeedsPolicyMonitor(1, GpuGlassMode.Solid, false) &&
+        !GlassService.NeedsPolicyMonitor(1, GpuGlassMode.Always, true),
+        "R82 glass policy monitoring requires an eligible visible surface and GPU mode");
+    Check(!GlassService.MayRetireManager(1, false, 30000, false) &&
+        !GlassService.MayRetireManager(0, true, 30000, false) &&
+        !GlassService.MayRetireManager(0, false, 29999, false) &&
+        !GlassService.MayRetireManager(0, false, 30000, true) &&
+        GlassService.MayRetireManager(0, false, 30000, false),
+        "R82 shared glass manager retires only after idle grace and no active pane/demand/diagnostic hold");
     var opt = new AppSettings { RestoreWindowsAfterDocking = false, UsageAlertsEnabled = false };
     Check(MotionDesk.Widgets.TrayApplicationContext.SelectOptionalServices(opt, false) == (false, false),
         "R65 disabled optional tray services have no timer demand");

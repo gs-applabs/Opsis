@@ -421,7 +421,7 @@ namespace MotionDesk.Containers
                 _repaint.Stop();
                 if (Visible && IsHandleCreated && Width > 0 && Height > 0) PresentFrame(Bounds);
             };
-            _pane = new GlassPaneBinder(this, 14, () => GlassService.Enabled && DesktopMaterials.Get(DesktopSurface.Containers).Mode != "Solid", DesktopSurface.Containers, cornerOverride: () => (int)Math.Round(DesktopMaterials.Get(DesktopSurface.Containers).EffectiveRadius(14) * Scale));
+            _pane = new GlassPaneBinder(this, 14, () => DesktopMaterials.Get(DesktopSurface.Containers).Mode != "Solid", DesktopSurface.Containers, cornerOverride: () => (int)Math.Round(DesktopMaterials.Get(DesktopSurface.Containers).EffectiveRadius(14) * Scale));
             _pane.PaneChanged += Dirty;
             _icons.Loaded += Dirty;
             _portalTimer.Tick += (_, _) => { _portalTimer.Stop(); RefreshPortal(); };

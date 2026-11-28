@@ -34,7 +34,7 @@ public static class AppActivity
 
     private static Demand CurrentDemand() => SelectDemand(
         WallpaperHostEngine.HasActiveScene, WidgetHostEngine.HasVisibleWidgets,
-        ReplacementTaskbar.ActivityDemand, GlassService.ExistingManager != null,
+        ReplacementTaskbar.ActivityDemand, GlassService.ActivityDemand,
         DiscordPresence.Instance.ActivityDemand, _containerDemand?.Invoke() == true,
         DesktopToolbar.ActivityDemand, AutoTileService.ActivityDemand,
         DeskStripHostEngine.ActivityDemand, _diagnostics);
