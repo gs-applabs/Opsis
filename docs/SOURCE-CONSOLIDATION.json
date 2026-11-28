@@ -3047,7 +3047,7 @@
       "media": "a1562d77c11021cd5f576814397a7e0c5cb9ce1f"
     },
     "release_blocked": true,
-    "state": "validation-in-progress",
+    "state": "validation-completed-failed",
     "findings": [
       "Settings schema inventory stale (222 vs actual 226); regenerated against exact audited base: 205 retained, 21 additive, zero removed/retyped.",
       "Version.props already 3.0.0.3200 but production gate incompatible with prerelease test; explicit RC2 validation environment gate, not production release. Default gate remains fail-closed.",
@@ -3080,52 +3080,12 @@
         "url": "https://github.com/gs-applabs/Opsis/actions/runs/46136458563"
       },
       {
-        "id": 46136458539,
-        "name": "Opsis 3.0 plugin ABI and ecosystem compatibility",
-        "head_sha": "0e6264ca7c55f8313381c626f3c5407137f0710a",
-        "status": "in_progress",
-        "conclusion": null,
-        "url": "https://github.com/gs-applabs/Opsis/actions/runs/46136458539"
-      },
-      {
         "id": 46136458616,
         "name": "Opsis 2.8 versus 3.0 RC resource comparison",
         "head_sha": "0e6264ca7c55f8313381c626f3c5407137f0710a",
         "status": "completed",
         "conclusion": "failure",
         "url": "https://github.com/gs-applabs/Opsis/actions/runs/46136458616"
-      },
-      {
-        "id": 46136458561,
-        "name": "Opsis 3.0 RC exhaustive Windows VM audit",
-        "head_sha": "0e6264ca7c55f8313381c626f3c5407137f0710a",
-        "status": "in_progress",
-        "conclusion": null,
-        "url": "https://github.com/gs-applabs/Opsis/actions/runs/46136458561"
-      },
-      {
-        "id": 46136458534,
-        "name": "Opsis - Desktop Customization Windows audit",
-        "head_sha": "0e6264ca7c55f8313381c626f3c5407137f0710a",
-        "status": "completed",
-        "conclusion": "failure",
-        "url": "https://github.com/gs-applabs/Opsis/actions/runs/46136458534"
-      },
-      {
-        "id": 46136458544,
-        "name": "Opsis 3.0 RC installer Windows VM E2E",
-        "head_sha": "0e6264ca7c55f8313381c626f3c5407137f0710a",
-        "status": "in_progress",
-        "conclusion": null,
-        "url": "https://github.com/gs-applabs/Opsis/actions/runs/46136458544"
-      },
-      {
-        "id": 46136458609,
-        "name": "Opsis 3.0.0.3200 pre-release full integration validation",
-        "head_sha": "0e6264ca7c55f8313381c626f3c5407137f0710a",
-        "status": "in_progress",
-        "conclusion": null,
-        "url": "https://github.com/gs-applabs/Opsis/actions/runs/46136458609"
       },
       {
         "id": 46136458537,
@@ -3136,11 +3096,51 @@
         "url": "https://github.com/gs-applabs/Opsis/actions/runs/46136458537"
       },
       {
+        "id": 46136458534,
+        "name": "Opsis - Desktop Customization Windows audit",
+        "head_sha": "0e6264ca7c55f8313381c626f3c5407137f0710a",
+        "status": "completed",
+        "conclusion": "failure",
+        "url": "https://github.com/gs-applabs/Opsis/actions/runs/46136458534"
+      },
+      {
+        "id": 46136458539,
+        "name": "Opsis 3.0 plugin ABI and ecosystem compatibility",
+        "head_sha": "0e6264ca7c55f8313381c626f3c5407137f0710a",
+        "status": "completed",
+        "conclusion": "failure",
+        "url": "https://github.com/gs-applabs/Opsis/actions/runs/46136458539"
+      },
+      {
+        "id": 46136458561,
+        "name": "Opsis 3.0 RC exhaustive Windows VM audit",
+        "head_sha": "0e6264ca7c55f8313381c626f3c5407137f0710a",
+        "status": "completed",
+        "conclusion": "failure",
+        "url": "https://github.com/gs-applabs/Opsis/actions/runs/46136458561"
+      },
+      {
+        "id": 46136458544,
+        "name": "Opsis 3.0 RC installer Windows VM E2E",
+        "head_sha": "0e6264ca7c55f8313381c626f3c5407137f0710a",
+        "status": "completed",
+        "conclusion": "failure",
+        "url": "https://github.com/gs-applabs/Opsis/actions/runs/46136458544"
+      },
+      {
+        "id": 46136458609,
+        "name": "Opsis 3.0.0.3200 pre-release full integration validation",
+        "head_sha": "0e6264ca7c55f8313381c626f3c5407137f0710a",
+        "status": "completed",
+        "conclusion": "failure",
+        "url": "https://github.com/gs-applabs/Opsis/actions/runs/46136458609"
+      },
+      {
         "id": 46136539625,
         "name": "OPSIS RC2 supplemental recovery, security, assets and one-hour stress",
         "head_sha": "163c4ea5242f428d268e9f5206cca7195b2a9ead",
-        "status": "queued",
-        "conclusion": null,
+        "status": "completed",
+        "conclusion": "failure",
         "url": "https://github.com/gs-applabs/Opsis/actions/runs/46136539625"
       }
     ],
@@ -3148,29 +3148,29 @@
       {
         "id": 140952740611,
         "name": "experience-windows (windows-2022)",
-        "status": "in_progress",
-        "conclusion": null,
+        "status": "completed",
+        "conclusion": "failure",
         "url": "https://github.com/gs-applabs/Opsis/actions/runs/46136458609/job/140952740611"
       },
       {
         "id": 140952740430,
         "name": "experience-windows (windows-2025)",
-        "status": "in_progress",
-        "conclusion": null,
+        "status": "completed",
+        "conclusion": "failure",
         "url": "https://github.com/gs-applabs/Opsis/actions/runs/46136458609/job/140952740430"
       },
       {
         "id": 140952740429,
         "name": "Build 3.0 RC, shell/navigation UI and stability / windows-2022",
-        "status": "in_progress",
-        "conclusion": null,
+        "status": "completed",
+        "conclusion": "failure",
         "url": "https://github.com/gs-applabs/Opsis/actions/runs/46136458561/job/140952740429"
       },
       {
         "id": 140952740300,
         "name": "plugin-build-matrix (windows-2025)",
-        "status": "in_progress",
-        "conclusion": null,
+        "status": "completed",
+        "conclusion": "failure",
         "url": "https://github.com/gs-applabs/Opsis/actions/runs/46136458539/job/140952740300"
       },
       {
@@ -3232,8 +3232,8 @@
       {
         "id": 140952740021,
         "name": "rc-installer (windows-2022)",
-        "status": "in_progress",
-        "conclusion": null,
+        "status": "completed",
+        "conclusion": "failure",
         "url": "https://github.com/gs-applabs/Opsis/actions/runs/46136458544/job/140952740021"
       },
       {
@@ -3246,8 +3246,8 @@
       {
         "id": 140952995427,
         "name": "one-hour-resource-audit",
-        "status": "queued",
-        "conclusion": null,
+        "status": "completed",
+        "conclusion": "failure",
         "url": "https://github.com/gs-applabs/Opsis/actions/runs/46136539625/job/140952995427"
       },
       {
@@ -3260,8 +3260,8 @@
       {
         "id": 140952995345,
         "name": "dependency-audit",
-        "status": "queued",
-        "conclusion": null,
+        "status": "completed",
+        "conclusion": "success",
         "url": "https://github.com/gs-applabs/Opsis/actions/runs/46136539625/job/140952995345"
       },
       {
@@ -3368,6 +3368,118 @@
         "job": null,
         "status": "OPEN",
         "tested_sha": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "RC2-F09",
+        "priority": "P1",
+        "type": "COMPILER_WARNING",
+        "path": "src/Containers/ContainerWindow.cs:452",
+        "symptom": "CS0108",
+        "fix": "Scale hides Control.Scale; rename or explicitly disambiguate to prevent wrong scaling.",
+        "run": 46136458609,
+        "job": 140952740611,
+        "status": "OPEN",
+        "tested_sha": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "RC2-F10",
+        "priority": "P1",
+        "type": "COMPILER_WARNING",
+        "path": "src/UI/OpsisWidgetVisualDesignerForm.cs:190",
+        "symptom": "CS8620",
+        "fix": "Nullable object array passed to DataGridView insert; preserve null semantics and correct types.",
+        "run": 46136458609,
+        "job": 140952740611,
+        "status": "OPEN",
+        "tested_sha": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "RC2-F11",
+        "priority": "P1",
+        "type": "COMPILER_WARNING",
+        "path": "src/UI/OpsisStartButtonArt.cs:31",
+        "symptom": "CS8602",
+        "fix": "Guard possible null before dereference.",
+        "run": 46136458609,
+        "job": 140952740611,
+        "status": "OPEN",
+        "tested_sha": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "RC2-F12",
+        "priority": "P1",
+        "type": "COMPILER_WARNING",
+        "path": "src/Services/WallpaperPackImage.cs:51",
+        "symptom": "CS0618",
+        "fix": "Use SkiaSharp sampling-options overload with equivalent image quality.",
+        "run": 46136458609,
+        "job": 140952740611,
+        "status": "OPEN",
+        "tested_sha": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "RC2-F13",
+        "priority": "P1",
+        "type": "COMPILER_WARNING",
+        "path": "src/Services/WallpaperGalleryCatalog.cs:64",
+        "symptom": "CS8602",
+        "fix": "Guard invalid/missing manifest field.",
+        "run": 46136458609,
+        "job": 140952740611,
+        "status": "OPEN",
+        "tested_sha": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "RC2-F14",
+        "priority": "P1",
+        "type": "COMPILER_WARNING",
+        "path": "src/Widgets/WallpaperWindow.cs:1065",
+        "symptom": "CS8602",
+        "fix": "Guard nullable owner/reference with lifecycle check.",
+        "run": 46136458609,
+        "job": 140952740611,
+        "status": "OPEN",
+        "tested_sha": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "RC2-F15",
+        "priority": "P1",
+        "type": "COMPILER_WARNING",
+        "path": "src/Widgets/ReplacementTaskbar.cs:258",
+        "symptom": "CS8602",
+        "fix": "Guard nullable reference in taskbar path.",
+        "run": 46136458609,
+        "job": 140952740611,
+        "status": "OPEN",
+        "tested_sha": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "RC2-F16",
+        "priority": "P1",
+        "type": "COMPILER_WARNING",
+        "path": "src/UI/MainWindow.cs:103",
+        "symptom": "CS0169",
+        "fix": "Review and remove unused _brandPulseT if no conditional owner.",
+        "run": 46136458609,
+        "job": 140952740611,
+        "status": "OPEN",
+        "tested_sha": "0e6264ca7c55f8313381c626f3c5407137f0710a"
+      },
+      {
+        "id": "RC2-F17",
+        "priority": "P1",
+        "type": "ASSET_GATE",
+        "path": "addons/opsis-100/authoring/validate.cjs --release",
+        "symptom": "European production payload gate remained open in supplemental job; already tracked under ASSET-01 and ASSET-02, not a new independent asset requirement.",
+        "fix": "Inspect validator output and reconcile exact missing approved assets; preserve existing scene quality and manifests; rerun release validator.",
+        "run": 46136539625,
+        "job": 140952995373,
+        "status": "OPEN",
+        "tested_sha": "0e6264ca7c55f8313381c626f3c5407137f0710a",
+        "related": [
+          "ASSET-01",
+          "ASSET-02"
+        ]
       }
     ],
     "active_development": [
@@ -4032,7 +4144,41 @@
       "source_artifact_ids": [
         15260460139,
         15260046465
-      ]
+      ],
+      "workflows": {
+        "total": 10,
+        "success": 1,
+        "failure": 9
+      },
+      "jobs": {
+        "total": 18,
+        "success": 4,
+        "failure": 14
+      },
+      "unique_compiler_warnings": 8,
+      "baseline": "205 retained / 21 additive / 0 removed or retyped",
+      "atomic_recovery": "PASS process interruption only; not physical power loss",
+      "nuget_audit": "PASS configured direct/transitive vulnerability audit; not whole-app security",
+      "media_suite": "PASS standalone Electron tests; host integration blocked",
+      "europe_release": "OPEN",
+      "weather_spatial": "5 PASS in integration run",
+      "blocked": [
+        "native smoke tests",
+        "UI and screenshots",
+        "WebView2 runtime",
+        "installer build and E2E",
+        "resource comparison",
+        "one-hour soak",
+        "real host plugin load"
+      ],
+      "artifacts": {
+        "source": [
+          15260460139,
+          15260046465
+        ],
+        "dependency": 15259659620,
+        "europe_gate": 15259897081
+      }
     }
   }
 }

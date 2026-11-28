@@ -1034,3 +1034,43 @@ Frozen source `0e6264ca7c55f8313381c626f3c5407137f0710a` (never move release bra
 - QA-19: Production release approval
 
 Physical Windows 11/GPU/DPI, second provider, 24-hour soak, full legacy upgrade and add-on E2E cannot be certified by the current runner jobs. Preserve all original 100 IDs, B01–B14, and G01–G23. After the runs terminate, inspect every failed job/log/artifact and add only distinct evidence-backed findings; fix on integration branch and rerun a new frozen candidate, not this SHA. No production release.
+
+
+## RC2 final CI report — 2026-11-28
+
+All 10 workflows completed on frozen RC2 (supplemental jobs checkout the exact SHA). 1 workflow success, 9 failure; 4 jobs success, 14 failure. No successful main application binary or installer. All compile-failed jobs repeat the 7 unique C# errors already tracked in RC2-F01–F04. JS 57/59; both source assertions tracked in F05–F06. 8 distinct compiler warnings added below. Baseline 205+21 settings, 0 removed/retyped; production gate refused release as expected. Source handoff, standalone Electron Media Suite, isolated atomic process-crash recovery, and configured NuGet audit passed. European production payload gate open (linked to existing ASSET entries). The 5 focused weather-spatial tests passed; not WebView2 runtime certification. Native tests, UI, installer, host plugin loading, resource comparison and one-hour stress blocked by compile or earlier JS failures; no runtime conclusion. Real Win11, physical GPU, second VM provider and 24h stress remain open.
+
+| Job | Conclusion |
+|---|---|
+| [experience-windows (windows-2022)](https://github.com/gs-applabs/Opsis/actions/runs/46136458609/job/140952740611) | failure |
+| [experience-windows (windows-2025)](https://github.com/gs-applabs/Opsis/actions/runs/46136458609/job/140952740430) | failure |
+| [Build 3.0 RC, shell/navigation UI and stability / windows-2022](https://github.com/gs-applabs/Opsis/actions/runs/46136458561/job/140952740429) | failure |
+| [plugin-build-matrix (windows-2025)](https://github.com/gs-applabs/Opsis/actions/runs/46136458539/job/140952740300) | failure |
+| [desktop](https://github.com/gs-applabs/Opsis/actions/runs/46136458534/job/140952740287) | failure |
+| [Build 3.0 RC, shell/navigation UI and stability / windows-2025](https://github.com/gs-applabs/Opsis/actions/runs/46136458561/job/140952740249) | failure |
+| [windows](https://github.com/gs-applabs/Opsis/actions/runs/46136458563/job/140952740207) | failure |
+| [Crawler + Chronikologio in .NET 11 host](https://github.com/gs-applabs/Opsis/actions/runs/46136458537/job/140952740185) | failure |
+| [rc-installer (windows-2025)](https://github.com/gs-applabs/Opsis/actions/runs/46136458544/job/140952740150) | failure |
+| [resource-compare](https://github.com/gs-applabs/Opsis/actions/runs/46136458616/job/140952740142) | failure |
+| [plugin-build-matrix (windows-2022)](https://github.com/gs-applabs/Opsis/actions/runs/46136458539/job/140952740106) | failure |
+| [archive](https://github.com/gs-applabs/Opsis/actions/runs/46136458533/job/140952740047) | success |
+| [rc-installer (windows-2022)](https://github.com/gs-applabs/Opsis/actions/runs/46136458544/job/140952740021) | failure |
+| [Electron Media Suite integration](https://github.com/gs-applabs/Opsis/actions/runs/46136458537/job/140952739971) | success |
+| [one-hour-resource-audit](https://github.com/gs-applabs/Opsis/actions/runs/46136539625/job/140952995427) | failure |
+| [assets-and-source](https://github.com/gs-applabs/Opsis/actions/runs/46136539625/job/140952995373) | failure |
+| [dependency-audit](https://github.com/gs-applabs/Opsis/actions/runs/46136539625/job/140952995345) | success |
+| [atomic-recovery](https://github.com/gs-applabs/Opsis/actions/runs/46136539625/job/140952995108) | success |
+
+### Additional corrections and linked asset gate
+
+- **RC2-F09** src/Containers/ContainerWindow.cs:452: CS0108 — Scale hides Control.Scale; rename or explicitly disambiguate to prevent wrong scaling. [Evidence](https://github.com/gs-applabs/Opsis/actions/runs/46136458609/job/140952740611).
+- **RC2-F10** src/UI/OpsisWidgetVisualDesignerForm.cs:190: CS8620 — Nullable object array passed to DataGridView insert; preserve null semantics and correct types. [Evidence](https://github.com/gs-applabs/Opsis/actions/runs/46136458609/job/140952740611).
+- **RC2-F11** src/UI/OpsisStartButtonArt.cs:31: CS8602 — Guard possible null before dereference. [Evidence](https://github.com/gs-applabs/Opsis/actions/runs/46136458609/job/140952740611).
+- **RC2-F12** src/Services/WallpaperPackImage.cs:51: CS0618 — Use SkiaSharp sampling-options overload with equivalent image quality. [Evidence](https://github.com/gs-applabs/Opsis/actions/runs/46136458609/job/140952740611).
+- **RC2-F13** src/Services/WallpaperGalleryCatalog.cs:64: CS8602 — Guard invalid/missing manifest field. [Evidence](https://github.com/gs-applabs/Opsis/actions/runs/46136458609/job/140952740611).
+- **RC2-F14** src/Widgets/WallpaperWindow.cs:1065: CS8602 — Guard nullable owner/reference with lifecycle check. [Evidence](https://github.com/gs-applabs/Opsis/actions/runs/46136458609/job/140952740611).
+- **RC2-F15** src/Widgets/ReplacementTaskbar.cs:258: CS8602 — Guard nullable reference in taskbar path. [Evidence](https://github.com/gs-applabs/Opsis/actions/runs/46136458609/job/140952740611).
+- **RC2-F16** src/UI/MainWindow.cs:103: CS0169 — Review and remove unused _brandPulseT if no conditional owner. [Evidence](https://github.com/gs-applabs/Opsis/actions/runs/46136458609/job/140952740611).
+- **RC2-F17** addons/opsis-100/authoring/validate.cjs --release: European production payload gate remained open in supplemental job; already tracked under ASSET-01 and ASSET-02, not a new independent asset requirement. — Inspect validator output and reconcile exact missing approved assets; preserve existing scene quality and manifests; rerun release validator. [Evidence](https://github.com/gs-applabs/Opsis/actions/runs/46136539625/job/140952995373).
+
+The 73 engineering/investigation, 8 asset, 19 QA items remain tracked; F17 is a cross-reference, not duplicate implementation work. Fix F01–F06 first, address warnings and remaining work, then rerun the full matrix on a new frozen candidate. No production release.
