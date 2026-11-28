@@ -50,6 +50,25 @@ try
     bool workerDenied = false;
     try { PluginCapabilityManifest.RequireCompatibleApi(sdkFixture); } catch (InvalidDataException) { workerDenied = true; }
     Check(workerDenied, "P0 unsupported isolated execution must not fall back to in-process loading");
+    var grantFolder = Path.Combine(folder, "plugin-consent"); Directory.CreateDirectory(grantFolder);
+    var permissionFile = Path.Combine(grantFolder, "opsis-permissions.json");
+    File.WriteAllText(permissionFile, "{\"Network\":true,\"Audio\":false,\"LocalFiles\":true}");
+    var requestedCaps = PluginCapabilityManifest.Read(grantFolder);
+    var grantHash = PluginTrust.HashFolder(grantFolder);
+    var grantStore = new PluginTrust.Store(Path.Combine(grantFolder, "trust-fixture.json"));
+    grantStore.Approve("fixture", grantHash);
+    Check(!grantStore.IsApproved("fixture", grantHash, requestedCaps), "P0 legacy approval does not grant explicitly requested capabilities");
+    grantStore.Approve("fixture", grantHash, requestedCaps);
+    Check(grantStore.IsApproved("fixture", grantHash, requestedCaps) &&
+        !grantStore.IsApproved("fixture", grantHash, new[] { "network" }) &&
+        !grantStore.IsApproved("fixture", new string('B',64), requestedCaps),
+        "P0 exact hash and declared capability set required");
+    grantStore.Revoke("fixture");
+    Check(!grantStore.IsApproved("fixture", grantHash, requestedCaps), "P0 revoked capability grant denied");
+    File.WriteAllText(permissionFile, "{\"Network\":true,\"network\":false}");
+    bool duplicateDenied = false;
+    try { PluginCapabilityManifest.Read(grantFolder); } catch (InvalidDataException) { duplicateDenied = true; }
+    Check(duplicateDenied, "P0 conflicting duplicate permission declaration denied");
     const string releaseAsset = "https://github.com/gs-applabs/Opsis/releases/download/v3.0.0.3200/OpsisSetup.exe";
     Check(UpdateCheckService.IsReleaseAssetUrl(releaseAsset,"v3.0.0.3200","OpsisSetup.exe") &&
         !UpdateCheckService.IsReleaseAssetUrl(releaseAsset,"v3.0.0.3201","OpsisSetup.exe") &&

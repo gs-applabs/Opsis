@@ -34,6 +34,7 @@ namespace MotionDesk.Services
             public volatile bool Started;
             public volatile bool Retired;
             public volatile bool StopFailed;
+            public volatile bool TrustRevoked;
             public Action<string>? NavigationHandler;
         }
 
@@ -145,6 +146,7 @@ namespace MotionDesk.Services
         private bool CanRun(string id)
         {
             var settings = AppSettings.Peek();
+            if (Snap().Any(p => p.TrustRevoked && p.Plugin.Id == id)) return false;
             return MayRunPlugin(settings.PluginsEnabled, settings.DisabledPluginIds.Contains(id),
                 SafeModeService.IsSafeMode, _globalHoldUntilRestart || _compatibilitySuspended || WindowsUpdateGuard.RequiresReview || WindowsUpdateGuard.RuntimeHold);
         }
@@ -156,8 +158,13 @@ namespace MotionDesk.Services
         {
             var found = Snap().FirstOrDefault(p => p.Plugin.Id == id);
             if (found == null) return false;
-            SetPluginEnabled(id, false);
-            TrustStore.Revoke(Path.GetFileName(found.Folder));
+            // Close dispatch and stop before persisting revocation. A failed
+            // settings write must not permit the resident instance to restart.
+            found.TrustRevoked = true;
+            TryStop(found, "trust revoked");
+            DetachNavigation(found);
+            try { TrustStore.Revoke(Path.GetFileName(found.Folder)); }
+            finally { SetPluginEnabled(id, false); }
             return true;
         }
 
@@ -177,6 +184,8 @@ namespace MotionDesk.Services
             if (enabled && (_compatibilitySuspended || WindowsUpdateGuard.RequiresReview || WindowsUpdateGuard.RuntimeHold))
                 throw new InvalidOperationException("Windows compatibility review and Opsis restart required before enabling plugins.");
             var p = Snap().FirstOrDefault(x => x.Plugin.Id == id);
+            if (enabled && p is { TrustRevoked: true })
+                throw new InvalidOperationException("Trust was revoked. Restart Opsis and explicitly approve the package again.");
             if (enabled && p is { StopFailed: true })
                 throw new InvalidOperationException("The previous plugin stop failed. Restart Opsis before activating it.");
             var settings = AppSettings.Load();
@@ -571,13 +580,15 @@ namespace MotionDesk.Services
         internal bool ConsiderFolder(string folder, bool trustedRoot)
         {
             PluginCapabilityManifest.RequireCompatibleApi(folder);
-            _ = PluginCapabilityManifest.Read(folder); // malformed declaration fails before assembly loading
-            if (!trustedRoot)
+            var requested = PluginCapabilityManifest.Read(folder); // malformed declaration fails before assembly loading
+            // Protected legacy packages keep their established admission path.
+            // A package explicitly requesting capabilities requires consent even there.
+            if (!trustedRoot || requested.Length > 0)
             {
                 string name = Path.GetFileName(folder), hash;
                 try { hash = PluginTrust.HashFolder(folder); }
                 catch (Exception ex) { Log($"Plugin '{folder}' skipped: trust check failed: {ex.Message}"); return false; }
-                if (!TrustStore.IsApproved(name, hash))
+                if (!TrustStore.IsApproved(name, hash, requested))
                 {
                     RefreshPending(folder, name, hash);
                     Log($"Plugin '{name}' in '{folder}' is waiting for approval (sha256 {hash}); it is not loaded until the user approves it.");
@@ -591,7 +602,9 @@ namespace MotionDesk.Services
         private void RefreshPending(string folder, string name, string hash)
         {
             var (publisher, signature) = PluginPublisherInfo.Inspect(folder);
-            var request = new PluginTrustRequest(name, folder, hash, publisher, signature, PluginCapabilityManifest.Summary(folder));
+            var requested = PluginCapabilityManifest.Read(folder);
+            var request = new PluginTrustRequest(name, folder, hash, publisher, signature,
+                requested.Length == 0 ? "Not declared / Δεν δηλώθηκαν" : string.Join(", ", requested), Array.AsReadOnly(requested));
             lock (_pending) { _pending.RemoveAll(p => string.Equals(p.Folder, folder, StringComparison.OrdinalIgnoreCase)); _pending.Add(request); }
         }
 
@@ -605,9 +618,10 @@ namespace MotionDesk.Services
                 try
                 {
                     PluginCapabilityManifest.RequireCompatibleApi(req.Folder);
-                    _ = PluginCapabilityManifest.Read(req.Folder);
+                    var currentCapabilities = PluginCapabilityManifest.Read(req.Folder);
                     string beforePrompt = PluginTrust.HashFolder(req.Folder);
-                    if (!string.Equals(beforePrompt, req.Sha256, StringComparison.OrdinalIgnoreCase))
+                    if (!string.Equals(beforePrompt, req.Sha256, StringComparison.OrdinalIgnoreCase) ||
+                        !currentCapabilities.SequenceEqual(PluginCapabilityManifest.NormalizeCapabilities(req.RequestedCapabilities)))
                     { RefreshPending(req.Folder, req.Name, beforePrompt); continue; }
                 }
                 catch (Exception ex) { Log($"Plugin '{req.Name}' preapproval validation failed: {ex.Message}"); continue; }
@@ -626,8 +640,10 @@ namespace MotionDesk.Services
                     }
                     if (_globalHoldUntilRestart || _compatibilitySuspended || WindowsUpdateGuard.RequiresReview || SafeModeService.IsSafeMode || !AppSettings.Peek().PluginsEnabled || WindowsUpdateGuard.RuntimeHold) break;
                     PluginCapabilityManifest.RequireCompatibleApi(req.Folder);
-                    _ = PluginCapabilityManifest.Read(req.Folder);
-                    TrustStore.Approve(req.Name, req.Sha256);
+                    var granted = PluginCapabilityManifest.Read(req.Folder);
+                    if (!granted.SequenceEqual(PluginCapabilityManifest.NormalizeCapabilities(req.RequestedCapabilities)))
+                    { RefreshPending(req.Folder, req.Name, currentHash); continue; }
+                    TrustStore.Approve(req.Name, req.Sha256, granted);
                     Log($"Plugin '{req.Name}' approved by the user (sha256 {req.Sha256}).");
                     var before = Snap().ToHashSet();
                     (FolderLoader ?? LoadFolder)(req.Folder);

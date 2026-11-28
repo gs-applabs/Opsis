@@ -79,42 +79,67 @@ namespace MotionDesk.Services
             public string Name { get; set; } = "";
             public string Sha256 { get; set; } = "";
             public DateTime ApprovedUtc { get; set; }
+            public string[]? GrantedCapabilities { get; set; }
         }
 
         public sealed class Store
         {
             private readonly string _path;
-            private readonly List<Entry> _entries;
+            private List<Entry> _entries;
+            private readonly object _gate = new();
 
             public Store(string path)
             {
                 _path = path;
-                try { _entries = File.Exists(path) ? JsonSerializer.Deserialize<List<Entry>>(File.ReadAllText(path)) ?? new() : new(); }
-                catch (Exception ex) when (ex is JsonException or IOException) { _entries = new(); }
+                try
+                {
+                    _entries = File.Exists(path) && new FileInfo(path).Length <= 1024 * 1024
+                        ? JsonSerializer.Deserialize<List<Entry>>(File.ReadAllText(path)) ?? new() : new();
+                    _entries.RemoveAll(e => e == null || string.IsNullOrWhiteSpace(e.Name) ||
+                        e.Sha256 is not { Length: 64 } || !e.Sha256.All(Uri.IsHexDigit) ||
+                        (e.GrantedCapabilities?.Any(x => !PluginCapabilityManifest.KnownCapability(x)) ?? false));
+                }
+                catch (Exception ex) when (ex is JsonException or IOException or UnauthorizedAccessException) { _entries = new(); }
             }
 
-            public bool IsApproved(string name, string sha256) =>
-                _entries.Any(e => string.Equals(e.Name, name, StringComparison.OrdinalIgnoreCase) && string.Equals(e.Sha256, sha256, StringComparison.OrdinalIgnoreCase));
+            public bool IsApproved(string name, string sha256, IEnumerable<string>? requested = null)
+            {
+                var required = PluginCapabilityManifest.NormalizeCapabilities(requested);
+                lock (_gate)
+                    return _entries.Any(e => string.Equals(e.Name, name, StringComparison.OrdinalIgnoreCase) &&
+                        string.Equals(e.Sha256, sha256, StringComparison.OrdinalIgnoreCase) &&
+                        PluginCapabilityManifest.NormalizeCapabilities(e.GrantedCapabilities).SequenceEqual(required));
+            }
+
+            private void Save(List<Entry> next)
+            {
+                Directory.CreateDirectory(Path.GetDirectoryName(_path)!);
+                AtomicFile.WriteAllText(_path, JsonSerializer.Serialize(next, new JsonSerializerOptions { WriteIndented = true }));
+                _entries = next; // publish in-memory only after durable write returns
+            }
 
             public void Revoke(string name)
             {
-                _entries.RemoveAll(e => string.Equals(e.Name, name, StringComparison.OrdinalIgnoreCase));
-                Directory.CreateDirectory(Path.GetDirectoryName(_path)!);
-                AtomicFile.WriteAllText(_path, JsonSerializer.Serialize(_entries));
+                lock (_gate) Save(_entries.Where(e => !string.Equals(e.Name, name, StringComparison.OrdinalIgnoreCase)).ToList());
             }
 
-            public void Approve(string name, string sha256)
+            public void Approve(string name, string sha256, IEnumerable<string>? granted = null)
             {
-                _entries.RemoveAll(e => string.Equals(e.Name, name, StringComparison.OrdinalIgnoreCase));      // one approved content per plugin name
-                _entries.Add(new Entry { Name = name, Sha256 = sha256.ToUpperInvariant(), ApprovedUtc = DateTime.UtcNow });
-                Directory.CreateDirectory(Path.GetDirectoryName(_path)!);
-                AtomicFile.WriteAllText(_path, JsonSerializer.Serialize(_entries, new JsonSerializerOptions { WriteIndented = true }));
+                var caps = PluginCapabilityManifest.NormalizeCapabilities(granted);
+                if (caps.Any(x => !PluginCapabilityManifest.KnownCapability(x)))
+                    throw new InvalidDataException("Unsupported plugin capability.");
+                lock (_gate)
+                {
+                    var next = _entries.Where(e => !string.Equals(e.Name, name, StringComparison.OrdinalIgnoreCase)).ToList();
+                    next.Add(new Entry { Name = name, Sha256 = sha256.ToUpperInvariant(), ApprovedUtc = DateTime.UtcNow, GrantedCapabilities = caps });
+                    Save(next);
+                }
             }
         }
     }
 
     public sealed record PluginTrustRequest(string Name, string Folder, string Sha256,
-        string Publisher = "Unknown / Άγνωστος", string SignatureStatus = "Unknown / Άγνωστη", string Capabilities = "Not declared / Δεν δηλώθηκαν");
+        string Publisher = "Unknown / Άγνωστος", string SignatureStatus = "Unknown / Άγνωστη", string Capabilities = "Not declared / Δεν δηλώθηκαν", IReadOnlyList<string>? RequestedCapabilities = null);
 
     /// <summary>
     /// Inspect both publisher certificate METADATA and Windows Authenticode

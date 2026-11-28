@@ -562,7 +562,9 @@ namespace MotionDesk.Widgets
             // a hidden top-most owner so the box is never lost behind other windows (it used to appear behind the desktop at login and was never answered)
             using var owner = new Form { TopMost = true, ShowInTaskbar = false, FormBorderStyle = FormBorderStyle.None, Opacity = 0, Size = new System.Drawing.Size(1, 1), StartPosition = FormStartPosition.CenterScreen };
             owner.Show();
-            PluginHost.Instance.ResolvePending(req => MessageBox.Show(owner,
+            PluginHost.Instance.ResolvePending(req =>
+            {
+                if (MessageBox.Show(owner,
                 string.Format(LocalizationManager.T("Plugin.TrustBody"), req.Name, req.Folder, req.Sha256.Substring(0, 16))
                 + Environment.NewLine + Environment.NewLine
                 + "Publisher / Εκδότης: " + req.Publisher
@@ -570,7 +572,18 @@ namespace MotionDesk.Widgets
                 + Environment.NewLine + "Requested capabilities / Δηλωμένες δυνατότητες: " + req.Capabilities
                 + Environment.NewLine + Environment.NewLine
                 + "⚠ In-process plugins are not sandboxed. / Τα DLL plugins εκτελούνται χωρίς sandbox.",
-                LocalizationManager.T("Plugin.TrustTitle"), MessageBoxButtons.YesNo, MessageBoxIcon.Warning, MessageBoxDefaultButton.Button2) == DialogResult.Yes);
+                LocalizationManager.T("Plugin.TrustTitle"), MessageBoxButtons.YesNo, MessageBoxIcon.Warning, MessageBoxDefaultButton.Button2) != DialogResult.Yes) return false;
+                foreach (string capability in req.RequestedCapabilities ?? Array.Empty<string>())
+                {
+                    if (MessageBox.Show(owner,
+                        req.Name + ": " + capability + Environment.NewLine +
+                        "Approve this declared capability? Denial keeps the entire plugin disabled. This is not an OS permission sandbox." + Environment.NewLine +
+                        "Έγκριση δηλωμένης δυνατότητας; Η άρνηση εμποδίζει τη φόρτωση ολόκληρου του plugin. Δεν αποτελεί απομόνωση δικαιωμάτων Windows.",
+                        LocalizationManager.T("Plugin.TrustTitle"), MessageBoxButtons.YesNo, MessageBoxIcon.Warning,
+                        MessageBoxDefaultButton.Button2) != DialogResult.Yes) return false;
+                }
+                return true;
+            });
             UpdatePluginApprovalItem();
         }
 
