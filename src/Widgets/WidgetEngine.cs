@@ -346,12 +346,7 @@ namespace MotionDesk.Widgets
         private Action? _presentationPrivacyChanged;
         private bool OnPresentationMonitor()
         {
-            var ids = AppSettings.Peek().PresentationMonitorIds;
-            if (ids == null || ids.Count == 0) return false;
-            var screen = Screen.FromControl(this);
-            if (ids.Any(id => string.Equals(id, screen.DeviceName, StringComparison.OrdinalIgnoreCase))) return true;
-            var monitor = MonitorTopologyService.ForDevice(screen.DeviceName)?.Id;
-            return monitor != null && ids.Any(id => string.Equals(id, monitor, StringComparison.OrdinalIgnoreCase));
+            return MonitorTopologyService.IsPresentationDisplay(Screen.FromControl(this).DeviceName);
         }
         private void ObservePresentationPrivacy(Action refresh)
         {

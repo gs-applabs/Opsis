@@ -41,6 +41,9 @@ public sealed class DeskFlipOverlay : Form
         DoubleBuffered = true;
         KeyPreview = true;
         BackColor = SystemInformation.HighContrast ? SystemColors.Window : Color.FromArgb(20, 35, 49);
+        // DeskFlip lists windows from every screen; suppress the entire Opsis
+        // overlay while any connected display is marked for presentation.
+        if (MonitorTopologyService.IsPresentationDisplay()) return;
         _desktop = _style == "Flip 3D" ? CaptureDesktop(Bounds) : null;
         foreach (var window in CandidateWindows())
             _entries.Add(new Entry(window, GetTitle(window), null));
@@ -55,9 +58,25 @@ public sealed class DeskFlipOverlay : Form
     protected override void OnShown(EventArgs e)
     {
         base.OnShown(e);
+        AppSettings.SettingsSaved += OnPrivacyChanged;
+        Microsoft.Win32.SystemEvents.DisplaySettingsChanged += OnDisplaySettingsChanged;
+        if (MonitorTopologyService.IsPresentationDisplay()) { Close(); return; }
         Activate();
         Focus();
         if (_style != "Compact list") _ = PopulateSnapshotsAsync();
+    }
+
+    private void OnDisplaySettingsChanged(object? sender, EventArgs e) => OnPrivacyChanged();
+    private void OnPrivacyChanged()
+    {
+        if (IsDisposed || Disposing || !IsHandleCreated) return;
+        if (InvokeRequired)
+        {
+            try { BeginInvoke((Action)OnPrivacyChanged); }
+            catch (InvalidOperationException) { }
+            return;
+        }
+        if (MonitorTopologyService.IsPresentationDisplay()) Close();
     }
 
     // PrintWindow can block even after WM_NULL succeeds. Keep at most one
@@ -365,6 +384,8 @@ public sealed class DeskFlipOverlay : Form
         if (disposing)
         {
             _closing = true;
+            AppSettings.SettingsSaved -= OnPrivacyChanged;
+            Microsoft.Win32.SystemEvents.DisplaySettingsChanged -= OnDisplaySettingsChanged;
             _timer.Dispose();
             foreach (var entry in _entries) entry.Snapshot?.Dispose();
             _entries.Clear();
@@ -423,6 +444,11 @@ public static class DeskFlipEngine
 
     public static void Show()
     {
+        if (MonitorTopologyService.IsPresentationDisplay())
+        {
+            _overlay?.Close();
+            return;
+        }
         if (_overlay is { IsDisposed: false } shown)
         {
             shown.Activate();

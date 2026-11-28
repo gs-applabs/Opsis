@@ -46,10 +46,14 @@ namespace MotionDesk.Services
                 .Where(f => f.EndsWith(".dll", StringComparison.OrdinalIgnoreCase) || (f.EndsWith(".deps.json", StringComparison.OrdinalIgnoreCase) || f.EndsWith("opsis-permissions.json", StringComparison.OrdinalIgnoreCase) || f.EndsWith("opsis-sdk.json", StringComparison.OrdinalIgnoreCase) || f.EndsWith(".runtimeconfig.json", StringComparison.OrdinalIgnoreCase) || f.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) || f.EndsWith(".ps1", StringComparison.OrdinalIgnoreCase) || f.EndsWith(".cmd", StringComparison.OrdinalIgnoreCase) || f.EndsWith(".bat", StringComparison.OrdinalIgnoreCase) || f.EndsWith(".js", StringComparison.OrdinalIgnoreCase)))
                 .OrderBy(f => f, StringComparer.OrdinalIgnoreCase).ToList();
             var sb = new StringBuilder();
+            long bytes = 0;
             foreach (var f in files)
             {
                 using var sha = SHA256.Create();
                 using var fs = new FileStream(f, FileMode.Open, FileAccess.Read, FileShare.Read);
+                if (fs.Length > 2L * 1024 * 1024 * 1024 - bytes)
+                    throw new InvalidDataException("Plugin trust inspection exceeds 2 GiB quota.");
+                bytes += fs.Length;
                 string h = Convert.ToHexString(sha.ComputeHash(fs));
                 sb.Append(Path.GetRelativePath(folder, f).ToLowerInvariant()).Append('|').Append(h).Append('\n');
             }
@@ -111,11 +115,14 @@ namespace MotionDesk.Services
         {
             var directories = new Stack<string>();
             directories.Push(folder);
+            int inspected = 0;
             while (directories.TryPop(out var directory))
             {
                 if (PackagePaths.IsLink(directory)) throw new InvalidDataException("Linked plugin folders are not supported.");
                 foreach (string entry in Directory.EnumerateFileSystemEntries(directory))
                 {
+                    if (++inspected > 10000)
+                        throw new InvalidDataException("Plugin directory inspection exceeds 10000 entries.");
                     var attributes = File.GetAttributes(entry);
                     if ((attributes & FileAttributes.ReparsePoint) != 0)
                         throw new InvalidDataException("Linked plugin files are not supported.");

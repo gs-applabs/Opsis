@@ -597,11 +597,7 @@ namespace MotionDesk.Widgets
         // third-party application notifications are outside Opsis' control.
         private void ShowPrivateBalloon(int timeout, string title, string message, ToolTipIcon icon)
         {
-            var ids = AppSettings.Peek().PresentationMonitorIds;
-            if (ids != null && Screen.AllScreens.Any(screen => ids.Any(id =>
-                    id.Equals(screen.DeviceName, StringComparison.OrdinalIgnoreCase) ||
-                    id.Equals(MonitorTopologyService.ForDevice(screen.DeviceName)?.Id, StringComparison.OrdinalIgnoreCase))))
-                return;
+            if (MonitorTopologyService.IsPresentationDisplay()) return;
             _trayIcon.ShowBalloonTip(timeout, title, message, icon);
         }
 

@@ -42,6 +42,16 @@ internal static class MonitorTopologyService
         return screens;
     }
     internal static Display? ForDevice(string? device) => Current().FirstOrDefault(s => s.DeviceName == device);
+    // Single identity predicate for native presentation privacy checks.
+    internal static bool IsPresentationDisplay(string? device = null)
+    {
+        var ids = AppSettings.Peek().PresentationMonitorIds;
+        if (ids == null || ids.Count == 0) return false;
+        bool Matches(string? value) => value != null && ids.Any(id => string.Equals(id, value, StringComparison.OrdinalIgnoreCase));
+        if (device != null && Matches(device)) return true;
+        return Current().Any(s => (device == null || string.Equals(s.DeviceName, device, StringComparison.OrdinalIgnoreCase))
+            && (Matches(s.DeviceName) || Matches(s.Id)));
+    }
     internal static Display? Match(string? id, string? device = null, int width = 0, int height = 0)
     {
         var current = Current();
