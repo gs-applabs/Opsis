@@ -1363,14 +1363,6 @@ namespace MotionDesk.UI
             // μπορούν να μπουν στις αντίστοιχες καρτέλες") - το θέμα widgets/containers και το
             // προεπιλεγμένο μέγεθος νέων widgets αφορούν ΑΠΟΚΛΕΙΣΤΙΚΑ αυτή τη σελίδα.
             AddSection(panel, LocalizationManager.T("Settings.SectionWidgetsContainers"));
-            panel.Controls.Add(SettingsView.Checkbox(LocalizationManager.T("Settings.ShowSystemMonitorWidget"),
-                AppSettings.Load().ShowSystemMonitor || WidgetHostEngine.Instance.HasRequestedWidget("sysmon"),
-                v =>
-                {
-                    if (v) WidgetHostEngine.Instance.RequestWidget("sysmon", 100, 100, ww, wh);
-                    else WidgetHostEngine.Instance.CloseWidget("sysmon");
-                    var a = AppSettings.Load(); a.ShowSystemMonitor = v; a.Save();
-                }));
             panel.Controls.Add(SettingsView.BuildWidgetsThemeRow());
             panel.Controls.Add(BuildWidgetsTransparencyRows());
             BuildDesktopMaterialCard(panel, DesktopSurface.Widgets);
@@ -2987,6 +2979,7 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                     }
                 }
                 RefreshPreview();
+                preview.Disposed += (_, _) => { preview.Image?.Dispose(); preview.Image = null; };
                 row.Controls.Add(preview);
 
                 row.Controls.Add(new Label { Text = LocalizationManager.T(labelKey), ForeColor = UiTheme.TextPrimary, Font = UiTheme.FontBody, AutoSize = true, Location = new Point(42, 13) });
@@ -2998,16 +2991,16 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                     using var dlg = new OpenFileDialog { Filter = LocalizationManager.T("Filter.Icons"), Title = LocalizationManager.T("Personalization.ChooseIcon") };
                     if (dlg.ShowDialog(this) == DialogResult.OK)
                     {
-                        set(dlg.FileName);
-                        RefreshPreview();
-                        _statusLabel.Text = LocalizationManager.T("Personalization.IconAppliedStatus");
+                        try { set(dlg.FileName); RefreshPreview(); _statusLabel.Text = LocalizationManager.T("Personalization.IconAppliedStatus"); }
+                        catch (Exception ex) { MessageBox.Show(this, ex.Message, "IconAtlas", MessageBoxButtons.OK, MessageBoxIcon.Warning); }
                     }
                 };
                 row.Controls.Add(chooseBtn);
 
                 var resetBtn = new HoverButton { Text = LocalizationManager.T("Personalization.Reset"), Width = 90, Height = 30, Location = new Point(490, 7), FlatStyle = FlatStyle.Flat, ForeColor = UiTheme.TextSecondary, BackColor = UiTheme.SurfaceHover, Cursor = Cursors.Hand };
                 resetBtn.FlatAppearance.BorderSize = 0;
-                resetBtn.Click += (_, _) => { set(null); RefreshPreview(); _statusLabel.Text = LocalizationManager.T("Personalization.IconResetStatus"); };
+                resetBtn.Click += (_, _) => { try { set(null); RefreshPreview(); _statusLabel.Text = LocalizationManager.T("Personalization.IconResetStatus"); }
+                    catch (Exception ex) { MessageBox.Show(this, ex.Message, "IconAtlas"); } };
                 row.Controls.Add(resetBtn);
 
                 return row;
@@ -3021,6 +3014,7 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
             iconCard.Controls.Add(BuildIconSlotRow("Personalization.NetworkIcon", IconAtlasEngine.GetNetworkIcon, IconAtlasEngine.SetNetworkIcon));
             iconCard.Controls.Add(BuildIconSlotRow("Personalization.ControlPanelIcon", IconAtlasEngine.GetControlPanelIcon, IconAtlasEngine.SetControlPanelIcon));
             iconCard.Controls.Add(BuildIconSlotRow("Personalization.UsersFilesIcon", IconAtlasEngine.GetUsersFilesIcon, IconAtlasEngine.SetUsersFilesIcon));
+            AddShellPackControls(iconCard, cursor: false);
 
             // "Εισαγωγή icon pack (depot)…" — σαρώνει έναν φάκελο για έτοιμα ζευγάρια εικονιδίων
             // Κάδου Ανακύκλωσης (σύμβαση "-empty"/"-full", π.χ. sdushantha/recycle-bin-themes στο
@@ -3579,8 +3573,8 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                     using var dlg = new OpenFileDialog { Filter = LocalizationManager.T("Filter.Cursors"), Title = LocalizationManager.T("Personalization.Browse") };
                     if (dlg.ShowDialog(this) == DialogResult.OK)
                     {
-                        DeskCursorsEngine.SetCursor(capturedRole, dlg.FileName);
-                        pathLabel.Text = Path.GetFileName(dlg.FileName);
+                        try { DeskCursorsEngine.SetCursor(capturedRole, dlg.FileName); pathLabel.Text = Path.GetFileName(dlg.FileName); }
+                        catch (Exception ex) { MessageBox.Show(this, ex.Message, "DeskCursors"); }
                     }
                 };
                 row.Controls.Add(browseBtn);
@@ -3588,8 +3582,10 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
             }
 
             AddButtonGrid(cursorCard,
-                (LocalizationManager.T("Personalization.ApplyCursors"), (_, _) => { DeskCursorsEngine.ApplyNow(); _statusLabel.Text = LocalizationManager.T("Personalization.CursorsAppliedStatus"); }),
-                (LocalizationManager.T("Personalization.ResetCursors"), (_, _) => { DeskCursorsEngine.ResetAllToWindowsDefault(); if (_pageBuilders.TryGetValue("Personalization", out var rebuild)) rebuild(); }));
+                (LocalizationManager.T("Personalization.ApplyCursors"), (_, _) => { try { DeskCursorsEngine.ApplyNow(); _statusLabel.Text = LocalizationManager.T("Personalization.CursorsAppliedStatus"); } catch (Exception ex) { MessageBox.Show(this, ex.Message, "DeskCursors"); } }),
+                (LocalizationManager.T("Personalization.ResetCursors"), (_, _) => { try { DeskCursorsEngine.ResetAllToWindowsDefault(); if (_pageBuilders.TryGetValue("Personalization", out var rebuild)) rebuild(); } catch (Exception ex) { MessageBox.Show(this, ex.Message, "DeskCursors"); } }));
+
+            AddShellPackControls(cursorCard, cursor: true);
 
             // ---------- DeskSounds ----------
             var soundsCard = AddCardSection(panel, LocalizationManager.T("Personalization.SectionDeskSounds"));

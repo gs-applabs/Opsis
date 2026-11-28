@@ -1193,6 +1193,12 @@ try
         OpsisScreensaverHost.Parse(new[] { "/p", "-1" }).Mode == OpsisScreensaverHost.Command.Invalid &&
         OpsisScreensaverHost.Parse(new[] { "--background" }).Mode == OpsisScreensaverHost.Command.Invalid,
         "R120 SCR preview handle and fail-closed unknown commands");
+    var icoFixture = new byte[23]; icoFixture[2] = 1; icoFixture[4] = 1;
+    icoFixture[6] = 16; icoFixture[7] = 16; icoFixture[14] = 1; icoFixture[18] = 22;
+    Check(ShellAssetPack.ValidImageDirectory(icoFixture, false) && !ShellAssetPack.ValidImageDirectory(icoFixture, true),
+        "R123 shell asset directory format distinguishes icons and cursors");
+    icoFixture[14] = 2;
+    Check(!ShellAssetPack.ValidImageDirectory(icoFixture, false), "R123 rejects out-of-range icon payload");
     var screensaverProfile = OpsisScreensaverStudio.Read();
     Check(screensaverProfile.Mode == "Clock", "screensaver first-run mode is safe clock-only");
     screensaverProfile.DimPercent = 35;

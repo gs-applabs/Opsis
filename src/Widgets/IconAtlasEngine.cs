@@ -44,6 +44,19 @@ namespace MotionDesk.Widgets
         public static void SetControlPanelIcon(string? icoPath) => SetClsidIcon(ControlPanelClsid, null, icoPath);
         public static void SetUsersFilesIcon(string? icoPath) => SetClsidIcon(UsersFilesClsid, null, icoPath);
 
+        internal static ShellAssetPack.Slot PackSlot(string role) => role switch
+        {
+            "ThisPC" => IconSlot(ThisPcClsid, ""),
+            "RecycleBinEmpty" => IconSlot(RecycleBinClsid, "empty"),
+            "RecycleBinFull" => IconSlot(RecycleBinClsid, "full"),
+            "Network" => IconSlot(NetworkClsid, ""),
+            "ControlPanel" => IconSlot(ControlPanelClsid, ""),
+            "UsersFiles" => IconSlot(UsersFilesClsid, ""),
+            _ => throw new InvalidDataException("Unsupported desktop icon role: " + role)
+        };
+        private static ShellAssetPack.Slot IconSlot(string clsid, string name) =>
+            new($@"SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\CLSID\{clsid}\DefaultIcon", name, ",0");
+
         private static string? GetClsidIcon(string clsid, string? namedValue)
         {
             using var key = Registry.CurrentUser.OpenSubKey(
@@ -56,8 +69,10 @@ namespace MotionDesk.Widgets
 
         private static void SetClsidIcon(string clsid, string? namedValue, string? icoPath)
         {
-            using var key = Registry.CurrentUser.CreateSubKey(
-                $@"SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\CLSID\{clsid}\DefaultIcon");
+            ShellAssetPack.CheckWritable();
+            if (!string.IsNullOrEmpty(icoPath)) ShellAssetPack.ValidateLocalAsset(icoPath, false);
+            var slot = IconSlot(clsid, namedValue ?? "");
+            using var key = Registry.CurrentUser.CreateSubKey(slot.Key);
             if (key == null) return;
             string valueName = namedValue ?? string.Empty;
             if (string.IsNullOrEmpty(icoPath)) key.DeleteValue(valueName, false);
@@ -351,7 +366,12 @@ namespace MotionDesk.Widgets
             var result = new DepotImportResult();
             if (!Directory.Exists(folderPath)) return result;
 
-            var icoFiles = Directory.GetFiles(folderPath, "*.ico", SearchOption.TopDirectoryOnly);
+            RequireUnlinked(folderPath);
+            var icoFiles = Directory.EnumerateFiles(folderPath, "*.ico", SearchOption.TopDirectoryOnly)
+                .Take(257).ToArray();
+            if (icoFiles.Length > 256) throw new InvalidDataException("Icon pack scan exceeds 256 files.");
+            icoFiles = icoFiles.Where(f => PackagePaths.IsExistingUnlinkedPath(folderPath, f))
+                .OrderBy(f => f, StringComparer.OrdinalIgnoreCase).ToArray();
             string? FindByKeyword(string keyword) => icoFiles.FirstOrDefault(f =>
             {
                 string name = Path.GetFileNameWithoutExtension(f);
