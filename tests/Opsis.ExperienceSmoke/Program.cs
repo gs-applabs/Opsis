@@ -125,6 +125,14 @@ try
             WeatherPayload.FreshnessLabel(observed.RootElement, clock.AddMinutes(25), true).Contains("Παλαιά δεδομένα"),
             "P0 native weather widget uses source, observed age and stale marker");
     }
+    var originalFolderIni = System.Text.Encoding.UTF8.GetBytes("[.ShellClassInfo]\r\nInfoTip=Keep me\r\nIconFile=old.ico\r\nIconIndex=1\r\n[ViewState]\r\nMode=Details");
+    byte[] mergedFolderIni = MotionDesk.Widgets.IconAtlasEngine.MergeFolderIconIni(originalFolderIni, @"C:\Icons\folder.ico");
+    string mergedFolderText = System.Text.Encoding.Unicode.GetString(mergedFolderIni);
+    Check(mergedFolderText.Contains("InfoTip=Keep me") && mergedFolderText.Contains("Mode=Details") &&
+        mergedFolderText.Contains("IconResource=") && !mergedFolderText.Contains("IconFile=") &&
+        !mergedFolderText.Contains("IconIndex="), "IconAtlas preserves unrelated folder settings");
+    byte[] folderIco = MotionDesk.Widgets.IconAtlasEngine.CreateFolderColorIcon(System.Drawing.Color.CornflowerBlue);
+    Check(folderIco.Length > 6 && folderIco[2] == 1 && folderIco[4] == 7, "IconAtlas produces seven icon sizes");
     var noDemand = AppActivity.SelectDemand(false,false,false,false,false,false,false,false,false,false);
     var dockDemand = AppActivity.SelectDemand(false,false,false,false,false,false,false,false,true,false);
     var widgetDemand = AppActivity.SelectDemand(false,true,false,false,false,false,false,false,false,false);

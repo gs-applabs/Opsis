@@ -3005,10 +3005,34 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                 using var iconDlg = new OpenFileDialog { Filter = LocalizationManager.T("Filter.Icons"), Title = LocalizationManager.T("Personalization.ChooseIcon") };
                 if (iconDlg.ShowDialog(this) == DialogResult.OK)
                 {
-                    IconAtlasEngine.SetFolderIcon(folderDlg.SelectedPath, iconDlg.FileName);
-                    _statusLabel.Text = LocalizationManager.T("Personalization.FolderIconAppliedStatus");
+                    try
+                    {
+                        IconAtlasEngine.SetFolderIcon(folderDlg.SelectedPath, iconDlg.FileName);
+                        _statusLabel.Text = LocalizationManager.T("Personalization.FolderIconAppliedStatus");
+                    }
+                    catch (Exception ex) { MessageBox.Show(this, ex.Message, "IconAtlas", MessageBoxButtons.OK, MessageBoxIcon.Warning); }
                 }
             }));
+
+            AddText(iconCard, StudioText("Folder colours — choose a local folder and any colour; restore its previous icon when needed.",
+                "Χρώματα φακέλων — επίλεξε τοπικό φάκελο και οποιοδήποτε χρώμα· επανάφερε το προηγούμενο εικονίδιο όποτε χρειάζεται."));
+            AddButtonGrid(iconCard,
+                (StudioText("Choose folder colour…", "Επιλογή χρώματος φακέλου…"), (_, _) =>
+                {
+                    using var folder = new FolderBrowserDialog();
+                    if (folder.ShowDialog(this) != DialogResult.OK) return;
+                    using var picker = new ColorDialog { FullOpen = true, Color = Color.FromArgb(246, 190, 62) };
+                    if (picker.ShowDialog(this) != DialogResult.OK) return;
+                    try { IconAtlasEngine.SetFolderColor(folder.SelectedPath, picker.Color); _statusLabel.Text = StudioText("Folder colour applied", "Το χρώμα φακέλου εφαρμόστηκε"); }
+                    catch (Exception ex) { MessageBox.Show(this, ex.Message, "IconAtlas", MessageBoxButtons.OK, MessageBoxIcon.Warning); }
+                }),
+                (StudioText("Restore original folder icon…", "Επαναφορά αρχικού εικονιδίου φακέλου…"), (_, _) =>
+                {
+                    using var folder = new FolderBrowserDialog();
+                    if (folder.ShowDialog(this) != DialogResult.OK) return;
+                    try { IconAtlasEngine.SetFolderIcon(folder.SelectedPath, null); _statusLabel.Text = StudioText("Original folder icon restored", "Το αρχικό εικονίδιο επαναφέρθηκε"); }
+                    catch (Exception ex) { MessageBox.Show(this, ex.Message, "IconAtlas", MessageBoxButtons.OK, MessageBoxIcon.Warning); }
+                }));
 
             // ---------- P0: Explorer View Profiles ----------
             var explorerCard = AddCardSection(panel,

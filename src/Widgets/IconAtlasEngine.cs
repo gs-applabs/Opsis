@@ -1,5 +1,13 @@
 using System;
 using System.IO;
+using System.Drawing;
+using System.Drawing.Drawing2D;
+using System.Drawing.Imaging;
+using System.Security.Cryptography;
+using System.Text;
+using System.Text.Json;
+using System.Collections.Generic;
+using MotionDesk.Services;
 using System.Linq;
 using System.Runtime.InteropServices;
 using Microsoft.Win32;
@@ -61,28 +69,267 @@ namespace MotionDesk.Widgets
         // χρησιμοποιεί το ίδιο το Explorer όταν ο χρήστης αλλάζει εικονίδιο φακέλου από το UI του
         // ("Ιδιότητες" → "Προσαρμογή"). Το ReadOnly attribute στον ΦΑΚΕΛΟ (όχι στα περιεχόμενά του)
         // είναι το επίσημο σήμα προς το Explorer "αυτός ο φάκελος έχει custom desktop.ini".
+        private static readonly object FolderGate = new();
+        private const int IniLimit = 65536;
+        private sealed class FolderOriginal
+        {
+            public string Folder { get; set; } = "";
+            public byte[]? Original { get; set; }
+            public int IniAttributes { get; set; }
+            public bool FolderReadOnly { get; set; }
+            public string? LastHash { get; set; }
+            public string? PendingHash { get; set; }
+        }
+
+        private static string? Digest(byte[]? bytes) =>
+            bytes == null ? null : Convert.ToHexString(SHA256.HashData(bytes));
+
+        private static void RequireUnlinked(string path)
+        {
+            for (string? p = Path.GetFullPath(path); p != null; p = Path.GetDirectoryName(p))
+            {
+                try
+                {
+                    if ((File.GetAttributes(p) & FileAttributes.ReparsePoint) != 0)
+                        throw new IOException("Folder icons cannot modify linked paths.");
+                }
+                catch (FileNotFoundException) when (p == path) { }
+                catch (DirectoryNotFoundException) when (p == path) { }
+            }
+        }
+
+        private static string FolderPath(string folderPath)
+        {
+            if (!Path.IsPathFullyQualified(folderPath) || folderPath.StartsWith(@"\\", StringComparison.Ordinal))
+                throw new IOException("Choose a local folder.");
+            var folder = Path.TrimEndingDirectorySeparator(Path.GetFullPath(folderPath));
+            if (!Directory.Exists(folder) || Path.GetDirectoryName(folder) == null ||
+                new DriveInfo(Path.GetPathRoot(folder)!).DriveType != DriveType.Fixed)
+                throw new IOException("Choose an existing folder on a local fixed drive, not a drive root.");
+            foreach (var root in new[] { Environment.GetFolderPath(Environment.SpecialFolder.Windows),
+                Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
+                Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86) })
+            {
+                if (string.IsNullOrEmpty(root)) continue;
+                var relative = Path.GetRelativePath(root, folder);
+                if (relative == "." || (!Path.IsPathRooted(relative) && relative != ".." &&
+                    !relative.StartsWith(".." + Path.DirectorySeparatorChar, StringComparison.Ordinal)))
+                    throw new IOException("System and application folders are not supported.");
+            }
+            RequireUnlinked(folder);
+            return folder;
+        }
+
+        private static byte[]? ReadIni(string path)
+        {
+            RequireUnlinked(path);
+            if (!File.Exists(path)) return null;
+            using var stream = File.OpenRead(path);
+            if (stream.Length > IniLimit) throw new InvalidDataException("desktop.ini exceeds the safety limit.");
+            var bytes = new byte[(int)stream.Length];
+            stream.ReadExactly(bytes);
+            return bytes;
+        }
+
+        // Preserve other sections and keys, including InfoTip and localized names.
+        // Unsupported legacy encodings fail closed instead of silently corrupting them.
+        internal static byte[] MergeFolderIconIni(byte[]? original, string iconPath)
+        {
+            if (string.IsNullOrWhiteSpace(iconPath) || iconPath.Contains('\r') || iconPath.Contains('\n') ||
+                iconPath.Contains('\0')) throw new ArgumentException("Invalid icon path.");
+            string text = "";
+            if (original is { Length: > 0 })
+            {
+                if (original.Length >= 2 && original[0] == 255 && original[1] == 254)
+                    text = new UnicodeEncoding(false, true, true).GetString(original, 2, original.Length - 2);
+                else if (original.Length >= 2 && original[0] == 254 && original[1] == 255)
+                    text = new UnicodeEncoding(true, true, true).GetString(original, 2, original.Length - 2);
+                else
+                {
+                    int offset = original.Length >= 3 && original[0] == 239 && original[1] == 187 && original[2] == 191 ? 3 : 0;
+                    text = new UTF8Encoding(false, true).GetString(original, offset, original.Length - offset);
+                }
+                if (text.Contains('\0')) throw new InvalidDataException("Unsupported desktop.ini encoding.");
+            }
+            var lines = text.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n').ToList();
+            bool shell = false, found = false;
+            var result = new List<string>();
+            foreach (var line in lines)
+            {
+                string trimmed = line.Trim();
+                if (trimmed.StartsWith("[") && trimmed.EndsWith("]"))
+                {
+                    shell = string.Equals(trimmed, "[.ShellClassInfo]", StringComparison.OrdinalIgnoreCase);
+                    if (shell && found) throw new InvalidDataException("Duplicate ShellClassInfo section.");
+                    result.Add(line);
+                    if (shell) { found = true; result.Add("IconResource=" + iconPath + ",0"); }
+                    continue;
+                }
+                var equals = trimmed.IndexOf('=');
+                if (shell && equals >= 0)
+                {
+                    var key = trimmed[..equals].Trim();
+                    if (new[] { "IconResource", "IconFile", "IconIndex" }.Contains(key, StringComparer.OrdinalIgnoreCase))
+                        continue;
+                }
+                result.Add(line);
+            }
+            if (!found)
+            {
+                result.Add("[.ShellClassInfo]");
+                result.Add("IconResource=" + iconPath + ",0");
+            }
+            var encoding = new UnicodeEncoding(false, true, true);
+            return encoding.GetPreamble().Concat(encoding.GetBytes(string.Join("\r\n", result) + "\r\n")).ToArray();
+        }
+
+        private static void WriteIni(string path, byte[]? data, FileAttributes attributes)
+        {
+            RequireUnlinked(path);
+            if (data == null)
+            {
+                if (File.Exists(path)) { File.SetAttributes(path, FileAttributes.Normal); File.Delete(path); }
+                return;
+            }
+            string temp = path + "." + Guid.NewGuid().ToString("N") + ".tmp";
+            FileAttributes? prior = File.Exists(path) ? File.GetAttributes(path) : null;
+            bool swapped = false;
+            try
+            {
+                using (var stream = new FileStream(temp, FileMode.CreateNew, FileAccess.Write, FileShare.None))
+                { stream.Write(data); stream.Flush(true); }
+                if (prior.HasValue) File.SetAttributes(path, FileAttributes.Normal);
+                File.Move(temp, path, overwrite: true);
+                swapped = true;
+                File.SetAttributes(path, attributes);
+            }
+            finally
+            {
+                if (!swapped && prior.HasValue && File.Exists(path)) File.SetAttributes(path, prior.Value);
+                if (File.Exists(temp)) File.Delete(temp);
+            }
+        }
+
         public static void SetFolderIcon(string folderPath, string? icoPath)
         {
-            string iniPath = Path.Combine(folderPath, "desktop.ini");
-            if (string.IsNullOrEmpty(icoPath))
+            if (SafeModeService.IsSafeMode || WindowsUpdateGuard.RequiresReview || WindowsUpdateGuard.RuntimeHold)
+                throw new InvalidOperationException("Windows compatibility review is required.");
+            lock (FolderGate)
             {
-                if (File.Exists(iniPath))
+                string folder = FolderPath(folderPath);
+                string ini = Path.Combine(folder, "desktop.ini");
+                byte[]? current = ReadIni(ini);
+                string root = Path.Combine(AppPaths.AppDataFolder, "folder-icons");
+                Directory.CreateDirectory(root);
+                RequireUnlinked(root);
+                string journal = Path.Combine(root, Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(folder.ToUpperInvariant()))) + ".json");
+                RequireUnlinked(journal);
+                FolderOriginal? backup = null;
+                if (File.Exists(journal))
                 {
-                    try { File.SetAttributes(iniPath, FileAttributes.Normal); File.Delete(iniPath); } catch (IOException) { }
+                    if (new FileInfo(journal).Length > 128 * 1024) throw new InvalidDataException("Invalid folder icon backup.");
+                    backup = JsonSerializer.Deserialize<FolderOriginal>(File.ReadAllText(journal))
+                        ?? throw new InvalidDataException("Invalid folder icon backup.");
+                    if (!string.Equals(backup.Folder, folder, StringComparison.OrdinalIgnoreCase) || backup.Original?.Length > IniLimit)
+                        throw new InvalidDataException("Folder icon backup does not match.");
+                    var hash = Digest(current);
+                    if (hash != Digest(backup.Original) && hash != backup.LastHash && hash != backup.PendingHash)
+                        throw new IOException("desktop.ini changed outside Opsis. No settings were overwritten.");
                 }
-                try { File.SetAttributes(folderPath, File.GetAttributes(folderPath) & ~FileAttributes.ReadOnly); } catch (IOException) { }
+                if (string.IsNullOrEmpty(icoPath))
+                {
+                    if (backup == null) throw new InvalidOperationException("No Opsis backup exists for this folder.");
+                    WriteIni(ini, backup.Original, (FileAttributes)backup.IniAttributes);
+                    var attrs = File.GetAttributes(folder);
+                    File.SetAttributes(folder, backup.FolderReadOnly ? attrs | FileAttributes.ReadOnly : attrs & ~FileAttributes.ReadOnly);
+                    File.Delete(journal);
+                    RefreshShellIcons();
+                    return;
+                }
+                if (!Path.IsPathFullyQualified(icoPath) || !File.Exists(icoPath)) throw new IOException("Choose an existing icon.");
+                RequireUnlinked(icoPath);
+                backup ??= new FolderOriginal { Folder = folder, Original = current,
+                    IniAttributes = (int)(current == null ? FileAttributes.Normal : File.GetAttributes(ini)),
+                    FolderReadOnly = (File.GetAttributes(folder) & FileAttributes.ReadOnly) != 0 };
+                var updated = MergeFolderIconIni(current, icoPath);
+                if (updated.Length > IniLimit) throw new InvalidDataException("desktop.ini exceeds the safety limit.");
+                backup.PendingHash = Digest(updated);
+                // Persist original and intended hash BEFORE touching the folder.
+                AtomicFile.WriteAllText(journal, JsonSerializer.Serialize(backup));
+                WriteIni(ini, updated, FileAttributes.Hidden | FileAttributes.System | FileAttributes.Archive);
+                File.SetAttributes(folder, File.GetAttributes(folder) | FileAttributes.ReadOnly);
+                backup.LastHash = backup.PendingHash;
+                backup.PendingHash = null;
+                AtomicFile.WriteAllText(journal, JsonSerializer.Serialize(backup));
+                RefreshShellIcons();
             }
-            else
-            {
-                // Ένα ήδη υπάρχον desktop.ini είναι Hidden+System — το File.WriteAllText πάνω του πετάει
-                // UnauthorizedAccessException (σε φάκελο που ήδη είχε εικονίδιο ή άλλη προσαρμογή).
-                if (File.Exists(iniPath)) File.SetAttributes(iniPath, FileAttributes.Normal);
-                File.WriteAllText(iniPath, $"[.ShellClassInfo]\r\nIconResource={icoPath},0\r\n");
-                File.SetAttributes(iniPath, FileAttributes.Hidden | FileAttributes.System | FileAttributes.Archive);
-                try { File.SetAttributes(folderPath, File.GetAttributes(folderPath) | FileAttributes.ReadOnly); } catch (IOException) { }
-            }
-            RefreshShellIcons();
         }
+
+        // Generate an original multi-resolution ICO locally; no download or
+        // new renderer service. Windows Explorer uses the same folder owner.
+        public static void SetFolderColor(string folderPath, Color color)
+        {
+            string root = Path.Combine(AppPaths.AppDataFolder, "folder-icons");
+            Directory.CreateDirectory(root);
+            RequireUnlinked(root);
+            string path = Path.Combine(root, $"folder-{color.R:X2}{color.G:X2}{color.B:X2}.ico");
+            RequireUnlinked(path);
+            if (!File.Exists(path))
+            {
+                byte[] bytes = CreateFolderColorIcon(color);
+                string temp = path + "." + Guid.NewGuid().ToString("N") + ".tmp";
+                try
+                {
+                    using (var stream = new FileStream(temp, FileMode.CreateNew, FileAccess.Write, FileShare.None))
+                    { stream.Write(bytes); stream.Flush(true); }
+                    try { File.Move(temp, path, overwrite: false); }
+                    catch (IOException) when (File.Exists(path)) { }
+                }
+                finally { if (File.Exists(temp)) File.Delete(temp); }
+            }
+            SetFolderIcon(folderPath, path);
+        }
+
+        internal static byte[] CreateFolderColorIcon(Color color)
+        {
+            int[] sizes = { 16, 24, 32, 48, 64, 128, 256 };
+            var images = new List<byte[]>();
+            foreach (int size in sizes)
+            {
+                using var bitmap = new Bitmap(size, size, PixelFormat.Format32bppArgb);
+                using (var graphics = Graphics.FromImage(bitmap))
+                {
+                    graphics.Clear(Color.Transparent);
+                    graphics.SmoothingMode = SmoothingMode.AntiAlias;
+                    graphics.ScaleTransform(size / 256f, size / 256f);
+                    using var back = new SolidBrush(ControlPaintDark(color));
+                    using var front = new LinearGradientBrush(new Rectangle(12, 72, 232, 150),
+                        Color.FromArgb(255, Math.Min(255, color.R + 32), Math.Min(255, color.G + 32), Math.Min(255, color.B + 32)),
+                        Color.FromArgb(color.R, color.G, color.B), LinearGradientMode.Vertical);
+                    graphics.FillPolygon(back, new Point[] { new(13, 48), new(90, 48), new(112, 71), new(235, 71), new(235, 216), new(13, 216) });
+                    graphics.FillPolygon(front, new Point[] { new(12, 87), new(244, 87), new(226, 220), new(22, 220) });
+                }
+                using var png = new MemoryStream();
+                bitmap.Save(png, ImageFormat.Png);
+                images.Add(png.ToArray());
+            }
+            using var output = new MemoryStream();
+            using var writer = new BinaryWriter(output);
+            writer.Write((ushort)0); writer.Write((ushort)1); writer.Write((ushort)sizes.Length);
+            int offset = 6 + sizes.Length * 16;
+            for (int i = 0; i < sizes.Length; i++)
+            {
+                byte dimension = (byte)(sizes[i] == 256 ? 0 : sizes[i]);
+                writer.Write(dimension); writer.Write(dimension); writer.Write((byte)0); writer.Write((byte)0);
+                writer.Write((ushort)1); writer.Write((ushort)32);
+                writer.Write(images[i].Length); writer.Write(offset); offset += images[i].Length;
+            }
+            foreach (var image in images) writer.Write(image);
+            writer.Flush(); return output.ToArray();
+        }
+
+        private static Color ControlPaintDark(Color c) =>
+            Color.FromArgb(c.R * 3 / 4, c.G * 3 / 4, c.B * 3 / 4);
 
         // "Depot" icon packs: στο web υπάρχουν έτοιμα σετ εικονιδίων Κάδου Ανακύκλωσης που
         // καλύπτουν και τις δύο καταστάσεις (π.χ. sdushantha/recycle-bin-themes στο GitHub),

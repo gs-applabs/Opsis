@@ -58,7 +58,7 @@ public static class OpsisModCore
         new ModuleDefinition("screensaver.creator", "Desktop", "Complete Windows .scr installation (planned)", Array.Empty<string>(), Array.Empty<string>()),
         new ModuleDefinition("screensaver.preview", "Desktop", "Native clock/image screensaver scene preview", Array.Empty<string>(), Array.Empty<string>(), 19041, true),
         new ModuleDefinition("theme.appearance-presets", "Themes", "Appearance Presets", Array.Empty<string>(), Array.Empty<string>(), 19041, true),
-        new ModuleDefinition("theme.icon-atlas", "Themes", "IconAtlas pack manager", Array.Empty<string>(), Array.Empty<string>(), 19041, true),
+        new ModuleDefinition("theme.icon-atlas", "Themes", "IconAtlas pack manager and folder colours", Array.Empty<string>(), Array.Empty<string>(), 19041, true),
         new ModuleDefinition("theme.dynamic-accent", "Themes", "Opt-in wallpaper-derived Opsis accents", Array.Empty<string>(), Array.Empty<string>(), 19041, true),
         new ModuleDefinition("theme.gallery-marketplace", "Themes", "Theme Marketplace (planned)", Array.Empty<string>(), Array.Empty<string>()),
         new ModuleDefinition("theme.pack-export", "Themes", "Safe .opsis-theme pack import/export", Array.Empty<string>(), Array.Empty<string>(), 19041, true),

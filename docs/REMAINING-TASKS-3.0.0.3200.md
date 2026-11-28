@@ -1,4 +1,6 @@
-# Opsis 3.0.0.3200 — remaining tasks (analytic list)
+# Opsis 3.0.0.3200 — historical detailed requirements / acceptance criteria
+
+**Current authoritative status:** `docs/SOURCE-CONSOLIDATION.md` / `.json` → global_scope. The tables below preserve historical requirements and acceptance criteria; do not treat their old statuses as current or reimplement already integrated features.
 
 Source: `PENDING.csv` / `CLAUDE-TASKS-EL.md` of the RC patch. Status as of 2026-11-24, branch `patch/3.0.0.3200-appearance`.
 Effort: **S** = short (code only, ≤ 1 h), **M** = medium (code + tests), **L** = long (needs real Windows 11 / VM / external assets), **X** = blocked by something outside the code.
