@@ -1767,5 +1767,20 @@
     "profile backup deletion/recovery and preview snapshot identity",
     "portrait density already implemented for Containers; verify full requirement",
     "CUR/ANI native decode and actual restore"
-  ]
+  ],
+  "rc2_r2": {
+    "branch": "release/3.0.0.3200-rc2-r2",
+    "previous_candidate": "c958144601fd7caaf57ffab93061853f532ec01f",
+    "source_preparation": "4555fcf3fbe88fa2f48d95f2ca5ff4c43622bd08",
+    "release_blocked": true,
+    "state": "prepared-awaiting-validation",
+    "changes": [
+      "RC2R1-F01 Explorer single-option exception",
+      "RC2R1-F02 explicit native serializer assembly reference",
+      "RC2R1-F03 pinned compatible Chronikologio descendant",
+      "noninteractive weather consent fixture",
+      "independent UI/experience/shell/native/weather/WebView outcomes with aggregate failure gate"
+    ],
+    "installer_r1_artifact": 15269642416
+  }
 }

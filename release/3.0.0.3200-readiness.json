@@ -4,71 +4,71 @@
   "targetVersion": "3.0.0.3200",
   "currentPublishedVersion": "2.8.0.2511",
   "state": "rc-validation",
-  "branch": "release/3.0.0.3200-rc2-r1",
+  "branch": "release/3.0.0.3200-rc2-r2",
   "releaseBlocked": true,
   "requireAllGatesPassed": true,
   "gates": [
     {
       "id": "baseline-source-settings-inventory",
       "status": "pending",
-      "evidence": "RC2-R1 exact-source retest pending; original RC2 evidence retained."
+      "evidence": "RC2-R2 retest pending; R1 frozen evidence retained."
     },
     {
       "id": "source-setting-schema-preservation",
       "status": "pending",
-      "evidence": "RC2-R1 exact-source retest pending; original RC2 evidence retained."
+      "evidence": "RC2-R2 retest pending; R1 frozen evidence retained."
     },
     {
       "id": "p0-p1-p2-p3-p5-code-stacked",
       "status": "pending",
-      "evidence": "RC2-R1 exact-source retest pending; original RC2 evidence retained."
+      "evidence": "RC2-R2 retest pending; R1 frozen evidence retained."
     },
     {
       "id": "weather-pr8-code-stacked",
       "status": "pending",
-      "evidence": "RC2-R1 exact-source retest pending; original RC2 evidence retained."
+      "evidence": "RC2-R2 retest pending; R1 frozen evidence retained."
     },
     {
       "id": "plugin-runtime-and-gallery-collision-audit",
       "status": "pending",
-      "evidence": "RC2-R1 exact-source retest pending; original RC2 evidence retained."
+      "evidence": "RC2-R2 retest pending; R1 frozen evidence retained."
     },
     {
       "id": "unified-win2022-win2025-build-tests",
       "status": "pending",
-      "evidence": "RC2-R1 exact-source retest pending; original RC2 evidence retained."
+      "evidence": "RC2-R2 retest pending; R1 frozen evidence retained."
     },
     {
       "id": "webview2-gpu-weather-renderer-captures",
       "status": "pending",
-      "evidence": "RC2-R1 exact-source retest pending; original RC2 evidence retained."
+      "evidence": "RC2-R2 retest pending; R1 frozen evidence retained."
     },
     {
       "id": "installer-install-reinstall-uninstall-windows-vm",
       "status": "pending",
-      "evidence": "RC2-R1 exact-source retest pending; original RC2 evidence retained."
+      "evidence": "RC2-R2 retest pending; R1 frozen evidence retained."
     },
     {
       "id": "integrated-plugins-e2e",
       "status": "pending",
-      "evidence": "RC2-R1 exact-source retest pending; original RC2 evidence retained."
+      "evidence": "RC2-R2 retest pending; R1 frozen evidence retained."
     },
     {
       "id": "windows11-visual-dpi-multimonitor-performance",
       "status": "pending",
-      "evidence": "RC2-R1 exact-source retest pending; original RC2 evidence retained."
+      "evidence": "RC2-R2 retest pending; R1 frozen evidence retained."
     },
     {
       "id": "complete-original-feature-list",
       "status": "pending",
-      "evidence": "RC2-R1 exact-source retest pending; original RC2 evidence retained."
+      "evidence": "RC2-R2 retest pending; R1 frozen evidence retained."
     },
     {
       "id": "approved-version-bump-and-production-release",
       "status": "pending",
-      "evidence": "RC2-R1 exact-source retest pending; original RC2 evidence retained."
+      "evidence": "RC2-R2 retest pending; R1 frozen evidence retained."
     }
   ],
   "channel": "RC2",
-  "candidateSourceBase": "a5d96568c9eb79ec11875cfa882397f3a5e5385e"
+  "candidateSourceBase": "4555fcf3fbe88fa2f48d95f2ca5ff4c43622bd08"
 }

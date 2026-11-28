@@ -39,6 +39,7 @@ jobs:
           python tests/integration/check_baseline_and_release.py
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Build actual 3.0.0.3200 candidate (command line version override only)
+        id: build
         run: |
           dotnet restore Opsis.csproj --disable-parallel
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
@@ -51,19 +52,31 @@ jobs:
           New-Item -ItemType Directory -Force evidence | Out-Null
           Get-FileHash publish/Opsis.exe -Algorithm SHA256 | Format-List | Out-File evidence/rc-exe-sha256.txt
       - name: Build/run previous P1/P2 shell tests
+        id: shell
+        if: steps.build.outcome == 'success'
+        continue-on-error: true
         run: |
           dotnet run --project tests/Opsis.ShellSmoke/Opsis.ShellSmoke.csproj -c Release -p:OpsisAppVersion=3.0.0.3200 -m:1 -p:UseSharedCompilation=false -nodeReuse:false
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Build/run integrated P0-P5 feature and resource smoke
+        id: experience
+        if: steps.build.outcome == 'success'
+        continue-on-error: true
         run: |
           dotnet run --project tests/Opsis.ExperienceSmoke/Opsis.ExperienceSmoke.csproj -c Release -p:OpsisAppVersion=3.0.0.3200 -m:1 -p:UseSharedCompilation=false -nodeReuse:false
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Build/run full sidebar-page, button-art, scrolling UI snapshots and stress
+        id: ui
+        if: steps.build.outcome == 'success'
+        continue-on-error: true
         run: |
           dotnet run --project tests/Opsis.RcUiSmoke/Opsis.RcUiSmoke.csproj -c Release -p:OpsisAppVersion=3.0.0.3200 -- evidence/ui
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           if (!(Test-Path evidence/ui/ui-smoke-report.json)) { throw 'UI report missing' }
       - name: Real published executable self-test and memory observation
+        id: native
+        if: steps.build.outcome == 'success'
+        continue-on-error: true
         run: |
           $env:OPSIS_APPDATA = Join-Path $env:RUNNER_TEMP 'Opsis-RC-SelfTest'
           New-Item -ItemType Directory -Force $env:OPSIS_APPDATA | Out-Null
@@ -76,6 +89,9 @@ jobs:
           [pscustomobject]@{ runMs=$sw.Elapsed.TotalMilliseconds; exit=$proc.ExitCode; platform=$env:RUNNER_OS } |
             ConvertTo-Json | Set-Content evidence/rc-runtime.json
       - name: Weather JavaScript syntax and fallback engine
+        id: weather
+        if: steps.build.outcome == 'success'
+        continue-on-error: true
         run: |
           foreach ($file in @('weather.js','weather-spatial.js','weather-landscape.js','weather-atmosphere.js','sky-mask.js','ancient-athens.js','ancient-athens-effects.js')) {
             node --check "src/Widgets/wallpaper/$file"
@@ -84,9 +100,28 @@ jobs:
           node --test
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Render Weather in real WebView2 Windows runner
+        id: webview
+        if: steps.build.outcome == 'success'
+        continue-on-error: true
         run: |
           dotnet run --project tests/weather-spatial/WebViewSmoke.csproj -c Release -- publish/widgets/wallpaper evidence/weather
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Enforce every independent validation outcome
+        if: always()
+        shell: pwsh
+        env:
+          BUILD: ${{ steps.build.outcome }}
+          SHELL: ${{ steps.shell.outcome }}
+          EXPERIENCE: ${{ steps.experience.outcome }}
+          UI: ${{ steps.ui.outcome }}
+          NATIVE: ${{ steps.native.outcome }}
+          WEATHER: ${{ steps.weather.outcome }}
+          WEBVIEW: ${{ steps.webview.outcome }}
+        run: |
+          New-Item -ItemType Directory -Force evidence | Out-Null
+          $outcomes = [ordered]@{build=$env:BUILD; shell=$env:SHELL; experience=$env:EXPERIENCE; ui=$env:UI; native=$env:NATIVE; weather=$env:WEATHER; webview=$env:WEBVIEW}
+          $outcomes | ConvertTo-Json | Set-Content evidence/independent-gates.json
+          if (@($outcomes.Values | Where-Object { $_ -ne 'success' }).Count -gt 0) { throw 'At least one independent gate failed or was blocked' }
       - name: Archive RC portable files and VM evidence (not production release)
         if: always()
         uses: actions/upload-artifact@v4

@@ -18,6 +18,11 @@ internal static class Program
         Environment.SetEnvironmentVariable("OPSIS_APPDATA", Path.Combine(Path.GetFullPath(output), "appdata"));
         Application.SetHighDpiMode(HighDpiMode.PerMonitorV2);
         Application.EnableVisualStyles();
+        // Use the same non-interactive weather consent fixture as UiAudit, never a real location lookup.
+        Environment.SetEnvironmentVariable("OPSIS_E2E", "1");
+        var weatherFixture = MotionDesk.Widgets.WallpaperSettings.Load();
+        weatherFixture.WeatherLocationPrompted = true;
+        weatherFixture.Save();
         var checks = new System.Collections.Generic.List<object>();
         void Verify(bool ok, string label)
         {
