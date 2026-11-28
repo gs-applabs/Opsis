@@ -121,6 +121,10 @@ internal sealed class HelpForm : OpsisWindow
             "DeskStrip · Dock / Γραμμή: pin commands and organise the strip · οργάνωση γραμμής εφαρμογών.",
             "DeskMusicVisualizer · Audio / Ήχος: configure audio visualisations · ρύθμιση οπτικοποίησης μουσικής.",
             "Personalization · Εξατομίκευση: lock screen and cursor effects · κλείδωμα και δείκτες.",
+            "Choose folder colour / Επιλογή χρώματος φακέλου: select a local folder and colour. IconAtlas stores the original icon configuration before applying the generated icon. Use Restore original folder icon / Επαναφορά αρχικού εικονιδίου φακέλου to restore; unsupported or externally changed folders may be refused.",
+            "DeskFlip / Flip 3D / Thumbnail grid / Compact list: Ctrl+Alt+F opens the selected view when registered. Tab and Enter choose a window; Esc cancels.",
+            "Custom colour / Custom color / Προσαρμοσμένο χρώμα / Accent / From wallpaper: the accent chooser checks 4.5:1 text contrast against the current Opsis page background and offers an adjusted colour before saving. It does not certify every Windows surface.",
+            "Plugin approval / Έγκριση πρόσθετου: read the DLL names, publishers, signature results and capabilities before approving. Offline signature verification does not check revocation; in-process DLLs are not sandboxed.",
             "About · Information / Πληροφορίες: version, licences and updates · εκδόσεις και ενημερώσεις."
         }));
         // Practical paths use existing page identities and commands, not proposed features.

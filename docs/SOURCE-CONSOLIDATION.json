@@ -1292,8 +1292,8 @@
         "pass": "MP01/04/06/09",
         "status": "PARTIAL_OR_RELATED_EVIDENCE",
         "evidencePath": "src/Widgets/TrayApplicationContext.cs; src/Services/PluginTrust.cs",
-        "evidence": "AskPluginApproval shows publisher and signature; not proven in a separate package installer window. Reuse approval metadata; verify actual installation UI.",
-        "sourceReviewedAt": "2d812cbc0970767c9aac7b991ede10c9a7218787",
+        "evidence": "R102 PluginPublisherInfo enumerates eligible DLL entrypoints; per-file offline signature and publisher, explicit incomplete beyond 16. Separate installer and runtime pending.",
+        "sourceReviewedAt": "a8f6c03fd1a7a7c05d486a6031b305402e59359d",
         "releaseCertified": false
       },
       {
@@ -1362,8 +1362,8 @@
         "pass": "MP07",
         "status": "PARTIAL_OR_RELATED_EVIDENCE",
         "evidencePath": "src/Services/TextContrast.cs; src/UI/MainWindow.Themes.cs",
-        "evidence": "Existing contrast algorithm Readable default 4.5:1 and preview use; no comprehensive custom-color picker enforcement verified. Reuse utility.",
-        "sourceReviewedAt": "2d812cbc0970767c9aac7b991ede10c9a7218787",
+        "evidence": "R102 same current-page WCAG 4.5:1 gate on swatches, custom picker, wallpaper-derived accent. Other caption/text pickers and runtime pending.",
+        "sourceReviewedAt": "a8f6c03fd1a7a7c05d486a6031b305402e59359d",
         "releaseCertified": false
       },
       {
@@ -1382,8 +1382,8 @@
         "pass": "MP09/07/06",
         "status": "PARTIAL_OR_RELATED_EVIDENCE",
         "evidencePath": "docs/SOURCE-CONSOLIDATION.md",
-        "evidence": "R48 F1 route; per-control topic coverage not established",
-        "sourceReviewedAt": "4b8c8ab581a02f4d96e2372cbfae5c36c963899e",
+        "evidence": "R102 adds specific HelpForm topics for IconAtlas, DeskFlip, accent and plugin approval; full control/locale coverage and runtime pending.",
+        "sourceReviewedAt": "a8f6c03fd1a7a7c05d486a6031b305402e59359d",
         "releaseCertified": false
       }
     ],
@@ -1554,7 +1554,11 @@
         "src/Containers/DesktopFiles.cs"
       ],
       "duplicate_removed": "ContainerWindow.OnVisibleChanged: identical adjacent portal block",
-      "runtime_tested": false
+      "runtime_tested": false,
+      "r102": {
+        "base": "a8f6c03fd1a7a7c05d486a6031b305402e59359d",
+        "summary": "R102: G02/#83 shares the existing 4.5:1 current-page accent gate across palette swatches, custom picker and wallpaper-derived accent, preserves backup owner and adds keyboard-accessible swatches. G02/#95 adds specific F1 manual topics for IconAtlas, DeskFlip, accent and plugin approval. G04/#14 reports publisher and offline signature per eligible entry DLL (up to 16, explicitly incomplete beyond); separate installer path and runtime still unverified. No new timers or owners. Other caption/text pickers, per-control help/disabled reasons, all 23 global packages and final QA remain open as applicable. No compilation or Windows tests in this pass."
+      }
     },
     "development_rule": {
       "mandatory": true,
@@ -2453,7 +2457,7 @@
     "active_backlog_policy": "Only incomplete or unresolved implementation requirements in proposals. Source-present and test-only rows in archived_qa, not active development. Archive is not release certification. All 100 IDs remain unique across both arrays. Reopen archived row only on concrete missing source or failed test.",
     "global_scope": {
       "rule": "## ΜΟΝΙΜΟΣ ΚΑΝΟΝΑΣ — ΠΑΝΤΑ ΟΛΕΣ ΟΙ ΕΚΚΡΕΜΟΤΗΤΕΣ, ΟΧΙ ΜΟΝΟ ΟΙ 100\n\nΚάθε ερώτηση του χρήστη για «εκκρεμότητες», «συνέχισε», «τι μένει» αφορά **ολόκληρο το OPSIS Desktop Customization 3.0.0.3200**: αρχικές 100, παλαιότερο roadmap/διορθώσεις, P0–P6, B01–B14, UI/Glass, Shell, Containers, SDK/plugins/companion compatibility, wallpapers/εικόνες/intro/ήχο, ανεξάρτητο add-on, installers, migration/rollback, διανομή, τελικές δοκιμές. Ποτέ μόνο ένα υποσύνολο χωρίς ρητό αίτημα. Το σύνολο παραμένει ενιαίο με σταθερά IDs, alias προς παλιά IDs, συγκεκριμένο owner/κενό και κατάσταση. **Εφαρμογή από τις ευκολότερες προς τις δυσκολότερες**, με ασφάλεια ως προϋπόθεση και χωρίς να ξαναγράφεται έτοιμη λειτουργία. Αρχείο ιστορικού/QA δεν αποτελεί ενεργό backlog. Ελέγχεται κάθε φορά ο τελευταίος ακριβής σωρευτικός SHA και η διασταύρωση με ιστορικές συνομιλίες, handoffs, πραγματικούς callers/UI/ρυθμίσεις, plugins και αρχεία. Ανεπαρκή ή μη προσβάσιμα τεκμήρια καταγράφονται ως blockers, όχι ως ολοκληρωμένα. Ο χρήστης δεν πρέπει να ξαναρωτήσει για ξεχασμένα υποσύνολα. Χρήση συνδεδεμένου GitHub για πραγματικές αλλαγές· πρόσθετα μόνο αν καλύπτουν πραγματική δυνατότητα που λείπει. Όλα τα tests στο τέλος, Inno Setup, καμία πρόωρη έκδοση.",
-      "source_sha": "d5a2a1b296f79492fa67b97d9925cd25ff697a91",
+      "source_sha": "a8f6c03fd1a7a7c05d486a6031b305402e59359d",
       "scope_sources": [
         "docs/SOURCE-CONSOLIDATION.md B01–B14",
         "docs/REMAINING-TASKS-3.0.0.3200.md (all waves, SDK1–4, X1–16 and C1–12)",
@@ -2478,7 +2482,7 @@
           "status": "PARTIAL",
           "aliases": "100:83,90,95; B10; C7/C9",
           "requirement": "Αντίθεση custom colours, ακριβείς λόγοι disabled controls, θεματικό F1, Opsis.UI 1px/Ctrl+F/14 locales",
-          "evidence": "Reuse TextContrast, MainWindow disabled explanation, HelpForm and shared UI. Exact C7/C9 source and sibling ref review."
+          "evidence": "R102 shared accent gate, keyboard-accessible swatches and four F1 topics; remaining caption/text pickers, disabled reasons and cross-repo UI pending."
         },
         {
           "id": "G03",
@@ -2494,7 +2498,7 @@
           "status": "PARTIAL",
           "aliases": "100:14; B08; SDK1/SDK4",
           "requirement": "Publisher/signature on install and existing SDK/ABI catalogue",
-          "evidence": "Reuse PluginPublisherInfo, PluginTrust and installer UI; verify actual installation path."
+          "evidence": "R102 entry DLL publisher/signature listing via existing approval owner; separate installer and runtime pending."
         },
         {
           "id": "G05",

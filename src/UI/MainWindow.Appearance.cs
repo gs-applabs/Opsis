@@ -71,6 +71,29 @@ namespace MotionDesk.UI
                 if (initial is int i) dlg.Color = Color.FromArgb(255, Color.FromArgb(i));
                 return dlg.ShowDialog(this) == DialogResult.OK ? Rgb(dlg.Color) : null;
             }
+            int? ConfirmAccessibleAccent(int c)
+            {
+                Color proposed = Color.FromArgb(255, Color.FromArgb(c));
+                Color surface = UiTheme.PageBackground;
+                double ratio = TextContrast.Ratio(proposed, surface);
+                if (ratio < 4.5)
+                {
+                    Color accessible = TextContrast.Readable(proposed, surface);
+                    bool applyAccessible = MessageBox.Show(this, MainWindow.StudioText(
+                        $"The selected accent has only {ratio:F1}:1 text contrast on the current theme. Use the closest accessible colour ({accessible.R:X2}{accessible.G:X2}{accessible.B:X2}) instead?",
+                        $"Το επιλεγμένο accent έχει αντίθεση κειμένου μόλις {ratio:F1}:1 με το τρέχον θέμα. Να χρησιμοποιηθεί το πλησιέστερο προσβάσιμο χρώμα (#{accessible.R:X2}{accessible.G:X2}{accessible.B:X2});"),
+                        "Opsis · WCAG 4.5:1", MessageBoxButtons.YesNo, MessageBoxIcon.Question,
+                        MessageBoxDefaultButton.Button1) == DialogResult.Yes;
+                    if (!applyAccessible) return null;
+                    c = Rgb(accessible);
+                }
+                return c;
+            }
+            void ApplyAccessibleAccent(int c)
+            {
+                if (ConfirmAccessibleAccent(c) is int selected)
+                    Do(() => svc.Engine.Apply(new Look { AccentRgb = selected }));
+            }
             void ResetButton(Control card, int category)
             {
                 var r = Row(card);
@@ -119,7 +142,9 @@ namespace MotionDesk.UI
                 int c = rgb;
                 var b = new Button { Width = 32, Height = 32, FlatStyle = FlatStyle.Flat, BackColor = Color.FromArgb(255, Color.FromArgb(c)), Margin = new Padding(0, 0, 6, 6), Cursor = Cursors.Hand, TabStop = false };
                 b.FlatAppearance.BorderSize = 1; b.FlatAppearance.BorderColor = UiTheme.Border;
-                b.Click += (_, _) => Do(() => svc.Engine.Apply(new Look { AccentRgb = c }));
+                b.AccessibleName = $"Accent #{c:X6}";
+                b.TabStop = true;
+                b.Click += (_, _) => ApplyAccessibleAccent(c);
                 sw.Controls.Add(b);
             }
             theme.Controls.Add(sw);
@@ -127,22 +152,7 @@ namespace MotionDesk.UI
             Bt(accRow, "Win.CustomColor", () =>
             {
                 if (PickColor() is not int c) return;
-                Color proposed = Color.FromArgb(255, Color.FromArgb(c));
-                Color surface = UiTheme.PageBackground;
-                double ratio = TextContrast.Ratio(proposed, surface);
-                if (ratio < 4.5)
-                {
-                    Color accessible = TextContrast.Readable(proposed, surface);
-                    bool applyAccessible = MessageBox.Show(this, MainWindow.StudioText(
-                        $"The selected accent has only {ratio:F1}:1 text contrast on the current theme. Use the closest accessible colour ({accessible.R:X2}{accessible.G:X2}{accessible.B:X2}) instead?",
-                        $"Το επιλεγμένο accent έχει αντίθεση κειμένου μόλις {ratio:F1}:1 με το τρέχον θέμα. Να χρησιμοποιηθεί το πλησιέστερο προσβάσιμο χρώμα (#{accessible.R:X2}{accessible.G:X2}{accessible.B:X2});"),
-                        "Opsis · WCAG 4.5:1", MessageBoxButtons.YesNo, MessageBoxIcon.Question,
-                        MessageBoxDefaultButton.Button1) == DialogResult.Yes;
-                    if (!applyAccessible) return;
-                    c = Rgb(accessible);
-                }
-                int selected = c;
-                Do(() => svc.Engine.Apply(new Look { AccentRgb = selected }));
+                ApplyAccessibleAccent(c);
             }, 190);
             Bt(accRow, "Win.FromWallpaper", () =>
             {
@@ -183,9 +193,8 @@ namespace MotionDesk.UI
                 preview.Controls.Add(buttons);
                 preview.AcceptButton = apply; preview.CancelButton = cancel;
                 if (preview.ShowDialog(this) != DialogResult.OK) return;
-                int selected = c.Value;
-                // Preserves the existing backup/undo behaviour of the appearance engine.
-                Do(() => svc.Engine.Apply(new Look { AccentRgb = selected }));
+                // Same contrast gate and backup/undo owner as the custom picker.
+                ApplyAccessibleAccent(c.Value);
             }, 190);
             ResetButton(theme, 0);
 

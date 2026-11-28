@@ -204,21 +204,34 @@ namespace MotionDesk.Services
         {
             try
             {
-                var dll = Directory.EnumerateFiles(folder, "*Plugin.dll", SearchOption.TopDirectoryOnly)
-                    .FirstOrDefault(path => (File.GetAttributes(path) & FileAttributes.ReparsePoint) == 0);
-                if (dll == null) return ("Unknown", "No plugin entry DLL found");
-                string publisher = "Unknown / Άγνωστος";
-                try
+                var entries = Directory.EnumerateFiles(folder, "*Plugin.dll", SearchOption.TopDirectoryOnly)
+                    .Where(path => PackagePaths.IsExistingUnlinkedPath(folder, path))
+                    .OrderBy(path => path, StringComparer.OrdinalIgnoreCase).Take(17).ToArray();
+                if (entries.Length == 0) return ("Unknown", "No unlinked plugin entry DLL found");
+                var publishers = new List<string>();
+                var signatures = new List<string>();
+                foreach (string dll in entries.Take(16))
                 {
-                    using var cert = System.Security.Cryptography.X509Certificates.X509Certificate.CreateFromSignedFile(dll);
-                    publisher = cert.Subject;
+                    string publisher = "Unknown / Άγνωστος";
+                    try
+                    {
+                        using var cert = System.Security.Cryptography.X509Certificates.X509Certificate.CreateFromSignedFile(dll);
+                        publisher = cert.Subject;
+                    }
+                    catch (System.Security.Cryptography.CryptographicException)
+                    {
+                        // An unsigned DLL has no embedded publisher certificate.
+                    }
+                    string name = Path.GetFileName(dll);
+                    publishers.Add(name + ": " + publisher);
+                    signatures.Add(name + ": " + AuthenticodeVerifier.VerifyOffline(dll));
                 }
-                catch (System.Security.Cryptography.CryptographicException)
+                if (entries.Length > 16)
                 {
-                    // An unsigned DLL has no embedded publisher certificate.
+                    publishers.Add("Additional DLLs not inspected / Επιπλέον DLL χωρίς έλεγχο");
+                    signatures.Add("Incomplete inspection / Μη πλήρης έλεγχος");
                 }
-                var signature = AuthenticodeVerifier.VerifyOffline(dll);
-                return (publisher, signature);
+                return (string.Join(Environment.NewLine, publishers), string.Join(Environment.NewLine, signatures));
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException)
             { return ("Unknown", "Could not inspect: " + ex.GetType().Name); }
