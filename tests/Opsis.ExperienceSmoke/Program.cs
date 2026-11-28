@@ -155,11 +155,17 @@ try
     Check(MotionDesk.Widgets.DesktopIconVisibilityEngine.ReleasedIconNames(new[] { iconEntries[0] },
         new[] { iconEntries[0].ToUpperInvariant() }).Count == 0,
         "R77 shared references are case insensitive");
-    Check(TrayApplicationContext.ExperienceCadenceMs(false, false, false) == 900000 &&
-        TrayApplicationContext.ExperienceCadenceMs(true, false, false) == 60000 &&
-        TrayApplicationContext.ExperienceCadenceMs(false, true, false) == 60000 &&
-        TrayApplicationContext.ExperienceCadenceMs(false, false, true) == 60000,
+    Check(MotionDesk.Widgets.TrayApplicationContext.ExperienceCadenceMs(false, false, false) == 900000 &&
+        MotionDesk.Widgets.TrayApplicationContext.ExperienceCadenceMs(true, false, false) == 60000 &&
+        MotionDesk.Widgets.TrayApplicationContext.ExperienceCadenceMs(false, true, false) == 60000 &&
+        MotionDesk.Widgets.TrayApplicationContext.ExperienceCadenceMs(false, false, true) == 60000,
         "R79 experience timer uses safety-only cadence when optional consumers are off");
+    Check(GpuMonitorService.NextProbeDelayMs(true) == 1500 &&
+        GpuMonitorService.NextProbeDelayMs(false) == 300000,
+        "R80 unavailable GPU sensor probe has demand-only five minute retry budget");
+    var gpuAudit = GpuMonitorService.Instance.AuditState();
+    Check(!gpuAudit.Sampling && gpuAudit.OpenAttempts == 0 && gpuAudit.CachedAdapters == 0,
+        "R80 diagnostics do not initialize GPU sensors or trigger sampling");
     var opt = new AppSettings { RestoreWindowsAfterDocking = false, UsageAlertsEnabled = false };
     Check(MotionDesk.Widgets.TrayApplicationContext.SelectOptionalServices(opt, false) == (false, false),
         "R65 disabled optional tray services have no timer demand");

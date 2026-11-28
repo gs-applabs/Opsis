@@ -29,12 +29,20 @@ namespace MotionDesk.Services
         public static GpuMonitorService Instance { get; } = new();
         private const int RefreshIntervalMs = 1500;
         private const int IdleReleaseMs = 30_000;
+        private const int UnavailableRetryMs = 5 * 60_000;
+        private int _openAttempts, _openFailures, _emptyProbes, _closeAttempts, _closeFailures;
+        internal readonly record struct SensorAudit(int OpenAttempts, int OpenFailures, int EmptyProbes,
+            int CloseAttempts, int CloseFailures, bool Sampling, int CachedAdapters);
+        // Diagnostics never touch drivers or extend the demand deadline.
+        internal SensorAudit AuditState() => new(Volatile.Read(ref _openAttempts), Volatile.Read(ref _openFailures),
+            Volatile.Read(ref _emptyProbes), Volatile.Read(ref _closeAttempts), Volatile.Read(ref _closeFailures),
+            Volatile.Read(ref _sampling) != 0, Volatile.Read(ref _readings)?.Length ?? 0);
+        internal static int NextProbeDelayMs(bool usable) => usable ? RefreshIntervalMs : UnavailableRetryMs;
         private long _lastDemand;
         private System.Threading.Timer? _idleTimer;
         private readonly object _hardwareLock = new();
         private readonly UpdateVisitor _visitor = new();
         private Computer? _computer;
-        private bool _initializationAttempted;
         private bool _disposed;
         private int _sampling;
         private long _nextSample;
@@ -76,50 +84,76 @@ namespace MotionDesk.Services
 
         private void ReadSensors()
         {
+            bool usable = false;
             try
             {
                 lock (_hardwareLock)
                 {
                     if (_disposed) return;
-                    if (!_initializationAttempted)
+                    if (_computer == null)
                     {
-                        _initializationAttempted = true;
-                        _computer = new Computer { IsGpuEnabled = true };
-                        try { _computer.Open(); }
+                        Interlocked.Increment(ref _openAttempts);
+                        try
+                        {
+                            _computer = new Computer { IsGpuEnabled = true };
+                            _computer.Open();
+                        }
                         catch
                         {
-                            try { _computer.Close(); } catch (Exception) { }
-                            _computer = null;
+                            Interlocked.Increment(ref _openFailures);
+                            CloseSensors();
+                            Volatile.Write(ref _readings, []);
+                            return;
                         }
                     }
-
-                    if (_computer == null) { Volatile.Write(ref _readings, []); return; }
-                    _computer.Accept(_visitor);
+                    // If the driver exposes no supported GPU (common on CI),
+                    // avoid visiting unrelated hardware or rebuilding a large
+                    // driver graph whenever a widget reopens.
                     var adapters = _computer.Hardware
                         .Where(h => h.HardwareType is HardwareType.GpuNvidia or HardwareType.GpuAmd or HardwareType.GpuIntel)
                         .OrderBy(h => h.HardwareType == HardwareType.GpuIntel).ToArray();
+                    if (adapters.Length == 0)
+                    {
+                        Interlocked.Increment(ref _emptyProbes);
+                        CloseSensors();
+                        Volatile.Write(ref _readings, []);
+                        return;
+                    }
+                    foreach (var adapter in adapters) adapter.Accept(_visitor);
                     Volatile.Write(ref _readings, adapters.Select(gpu => ReadAdapter(gpu, adapters.Length)).ToArray());
+                    usable = true;
                 }
             }
-            catch (Exception)
+            catch (Exception ex)
             {
                 lock (_hardwareLock)
-                    if (!_disposed && _readings == null) Volatile.Write(ref _readings, []);
+                {
+                    if (!_disposed)
+                    {
+                        CloseSensors();
+                        Volatile.Write(ref _readings, []);
+                    }
+                }
+                System.Diagnostics.Debug.WriteLine(ex);
             }
             finally
             {
                 lock (_hardwareLock)
                 {
-                    Volatile.Write(ref _nextSample, Environment.TickCount64 + RefreshIntervalMs);
-                    Volatile.Write(ref _sampling, 0);
-                    if (!_disposed)
+                    Volatile.Write(ref _nextSample, Environment.TickCount64 + NextProbeDelayMs(usable));
+                    if (!_disposed && usable && _computer != null)
                     {
-                        // One deadline, owned by the sensor service. No sampling
-                        // timer: only actual snapshot requests touch drivers.
+                        // Idle cleanup only for actual live sensor resources.
                         _idleTimer ??= new System.Threading.Timer(_ => ReleaseIdle(), null,
                             System.Threading.Timeout.Infinite, System.Threading.Timeout.Infinite);
                         _idleTimer.Change(IdleReleaseMs, System.Threading.Timeout.Infinite);
                     }
+                    else
+                    {
+                        _idleTimer?.Dispose(); _idleTimer = null;
+                    }
+                    // Release the worker gate after its entire state is committed.
+                    Volatile.Write(ref _sampling, 0);
                 }
             }
         }
@@ -165,8 +199,8 @@ namespace MotionDesk.Services
                 }
                 _idleTimer.Dispose(); _idleTimer = null;
                 CloseSensors();
-                // Reopen on a subsequent request, including after device changes.
-                _initializationAttempted = false;
+                // A successfully used device can reopen on a new request.
+                // Negative results never arm this timer or reset their cooldown.
                 Volatile.Write(ref _nextSample, 0);
                 Volatile.Write(ref _readings, null);
             }
@@ -174,8 +208,11 @@ namespace MotionDesk.Services
 
         private void CloseSensors()
         {
-            try { _computer?.Close(); } catch (Exception) { }
-            _computer = null;
+            var computer = _computer; _computer = null;
+            if (computer == null) return;
+            Interlocked.Increment(ref _closeAttempts);
+            try { computer.Close(); }
+            catch (Exception ex) { Interlocked.Increment(ref _closeFailures); System.Diagnostics.Debug.WriteLine(ex); }
         }
 
         public void Dispose()

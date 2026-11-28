@@ -26,7 +26,9 @@ internal static class UiResourceAudit
 
     private sealed record Sample(string Phase, double ElapsedMs, double CpuMs, double CpuCorePercent,
         long ManagedBytes, long PrivateBytes, long WorkingSetBytes, int Handles, uint GdiObjects, uint UserObjects,
-        ulong? IoWriteBytes, ulong? IoWriteOperations, List<BrowserSample> Browsers);
+        ulong? IoWriteBytes, ulong? IoWriteOperations, List<BrowserSample> Browsers,
+        long HeapSizeBytes, long FragmentedBytes, long TotalAllocatedBytes, int Gen0Collections,
+        int Gen1Collections, int Gen2Collections, GpuMonitorService.SensorAudit GpuSensors);
 
     private sealed record BrowserSample(int Pid, string Kind, double CpuMs, long PrivateBytes, double CpuCorePercent);
 
@@ -77,10 +79,14 @@ internal static class UiResourceAudit
                 foreach (var pid in browserCounters.Keys.Where(pid => !livePids.Contains(pid)).ToArray())
                     browserCounters.Remove(pid);
                 bool hasIo = GetProcessIoCounters(process.Handle, out var io);
+                var heap = GC.GetGCMemoryInfo();
                 samples.Add(new Sample(phase, Math.Round(at, 1), Math.Round(cpu, 1), Math.Round(cpuPercent, 2),
                     GC.GetTotalMemory(false), process.PrivateMemorySize64, process.WorkingSet64, process.HandleCount,
                     GetGuiResources(process.Handle, 0), GetGuiResources(process.Handle, 1),
-                    hasIo ? io.WriteBytes : null, hasIo ? io.WriteOperations : null, browsers));
+                    hasIo ? io.WriteBytes : null, hasIo ? io.WriteOperations : null, browsers,
+                    heap.HeapSizeBytes, heap.FragmentedBytes, GC.GetTotalAllocatedBytes(false),
+                    GC.CollectionCount(0), GC.CollectionCount(1), GC.CollectionCount(2),
+                    GpuMonitorService.Instance.AuditState()));
                 lastElapsed = at;
                 lastCpu = cpu;
             }
@@ -220,6 +226,8 @@ internal static class UiResourceAudit
                 medianHostCpuCorePercent = Median(group.Select(s => s.CpuCorePercent)),
                 medianWebViewCpuCorePercent = Median(group.Select(s => s.Browsers.Sum(b => b.CpuCorePercent))),
                 medianManagedBytes = Median(group.Select(s => (double)s.ManagedBytes)),
+                medianHeapSizeBytes = Median(group.Select(s => (double)s.HeapSizeBytes)),
+                medianFragmentedBytes = Median(group.Select(s => (double)s.FragmentedBytes)),
                 medianHandles = Median(group.Select(s => (double)s.Handles)),
                 medianGdiObjects = Median(group.Select(s => (double)s.GdiObjects)),
                 medianUserObjects = Median(group.Select(s => (double)s.UserObjects))
@@ -232,7 +240,12 @@ internal static class UiResourceAudit
                 soakFirst = Describe(soak.Take(Math.Min(5, soak.Length / 2)).ToArray()),
                 soakLast = Describe(soak.TakeLast(Math.Min(5, soak.Length / 2)).ToArray()),
                 soakHostIoWriteBytes = Delta(soak.FirstOrDefault()?.IoWriteBytes, soak.LastOrDefault()?.IoWriteBytes),
-                soakHostIoWriteOperations = Delta(soak.FirstOrDefault()?.IoWriteOperations, soak.LastOrDefault()?.IoWriteOperations)
+                soakHostIoWriteOperations = Delta(soak.FirstOrDefault()?.IoWriteOperations, soak.LastOrDefault()?.IoWriteOperations),
+                gpuAtBaseline = first.GpuSensors,
+                gpuAtLastIdle = last.GpuSensors,
+                gpuAtSoakEnd = soak.LastOrDefault()?.GpuSensors,
+                gen2CollectionsDelta = last.Gen2Collections - first.Gen2Collections,
+                allocatedBytesDelta = last.TotalAllocatedBytes - first.TotalAllocatedBytes
             };
             // Expose the measured baseline and trend in CI logs, not just a ZIP.
             Console.WriteLine("OPSIS_RESOURCE_TREND " + JsonSerializer.Serialize(trend));
