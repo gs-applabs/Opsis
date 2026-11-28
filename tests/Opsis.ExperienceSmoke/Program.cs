@@ -98,6 +98,26 @@ try
         !AutomationService.MayRun(true,true,false,false,false) &&
         !AutomationService.MayRun(true,true,true,false,true),
         "P0 profile automation is demand-driven and honors shared session and safety admission");
+    Check(PluginHost.MayStartOwner(false,false,false,false,false) &&
+        !PluginHost.MayStartOwner(true,false,false,false,false) &&
+        !PluginHost.MayStartOwner(false,true,false,false,false) &&
+        !PluginHost.MayStartOwner(false,false,true,false,false) &&
+        !PluginHost.MayStartOwner(false,false,false,true,false) &&
+        !PluginHost.MayStartOwner(false,false,false,false,true), "P0 plugin owner denies duplicate or uncertain activation");
+    var managedRoot = Path.Combine(folder,"plugins");
+    var managedPackage = Path.Combine(managedRoot,"fixture");
+    Directory.CreateDirectory(managedPackage);
+    File.WriteAllText(Path.Combine(managedPackage,"FixturePlugin.dll"),"test only");
+    var externalPackage = Path.Combine(folder,"external");
+    Directory.CreateDirectory(externalPackage);
+    File.WriteAllText(Path.Combine(externalPackage,"FixturePlugin.dll"),"test only");
+    Check(PluginTrust.IsManagedPackageFolder(managedPackage,new[]{managedRoot}) &&
+        !PluginTrust.IsManagedPackageFolder(managedRoot,new[]{managedRoot}) &&
+        !PluginTrust.IsManagedPackageFolder(externalPackage,new[]{managedRoot}),
+        "P0 plugin deletion limited to managed direct package children");
+    var removalHash = PluginTrust.RemovalFingerprint(managedPackage);
+    File.WriteAllText(Path.Combine(managedPackage,"user-data.txt"),"changed after confirmation");
+    Check(removalHash != PluginTrust.RemovalFingerprint(managedPackage), "P0 pending deletion fingerprint includes non-executable files");
     var noDemand = AppActivity.SelectDemand(false,false,false,false,false,false,false,false,false,false);
     var dockDemand = AppActivity.SelectDemand(false,false,false,false,false,false,false,false,true,false);
     var widgetDemand = AppActivity.SelectDemand(false,true,false,false,false,false,false,false,false,false);

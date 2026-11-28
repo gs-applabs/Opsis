@@ -91,6 +91,7 @@ namespace MotionDesk.Services
         // είναι ήδη φορτωμένο, Windows file lock), οπότε ο φάκελος μπαίνει εδώ και σαρώνεται/
         // διαγράφεται στην ΕΠΟΜΕΝΗ εκκίνηση, πριν φορτωθεί κανένα plugin (βλ. PluginHost.StartAll).
         public List<string> PendingPluginRemovals { get; set; } = new();
+        public Dictionary<string, string> PendingPluginRemovalHashes { get; set; } = new(StringComparer.OrdinalIgnoreCase);
 
         // Φάκελος όπου αποθηκεύονται τα μετατρεπόμενα .wmv->.mp4 (κενό = προεπιλογή στο AppData).
         public string? WmvConversionOutputDir { get; set; }

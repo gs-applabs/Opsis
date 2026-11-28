@@ -56,6 +56,57 @@ namespace MotionDesk.Services
             return Convert.ToHexString(total.ComputeHash(Encoding.UTF8.GetBytes(sb.ToString())));
         }
 
+        // Only direct children of the existing host-managed package roots can be
+        // deleted by Opsis. Registry-discovered arbitrary directories are read-only.
+        internal static bool IsManagedPackageFolder(string folder, IEnumerable<string>? roots = null)
+        {
+            try
+            {
+                if (!Path.IsPathFullyQualified(folder) || folder.StartsWith(@"\\", StringComparison.Ordinal)) return false;
+                string full = Normalize(folder);
+                var managed = roots ?? new[]
+                {
+                    Path.Combine(AppContext.BaseDirectory, "plugins"),
+                    Path.Combine(AppPaths.AppDataFolder, "plugins"),
+                    Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Opsis", "plugins")
+                };
+                if (!managed.Any(root => string.Equals(Path.GetDirectoryName(full), Normalize(root), StringComparison.OrdinalIgnoreCase)))
+                    return false;
+                if (!Directory.Exists(full)) return false;
+                for (string? ancestor = full; ancestor != null; ancestor = Path.GetDirectoryName(ancestor))
+                    if (PackagePaths.IsLink(ancestor)) return false;
+                return Directory.EnumerateFiles(full, "*Plugin.dll", SearchOption.TopDirectoryOnly).Any();
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException)
+            { return false; }
+        }
+
+        internal static string RemovalFingerprint(string folder)
+        {
+            // Include all files, unlike the execution trust fingerprint. Changing
+            // any data in a pending package invalidates the deletion request.
+            using var total = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
+            int count = 0;
+            long bytes = 0;
+            foreach (string file in PluginFiles(folder).OrderBy(f => f, StringComparer.OrdinalIgnoreCase))
+            {
+                using var stream = File.OpenRead(file);
+                if (++count > 10000 || stream.Length > 2L * 1024 * 1024 * 1024 - bytes)
+                    throw new InvalidDataException("Package removal exceeds verification quota.");
+                bytes += stream.Length;
+                total.AppendData(Encoding.UTF8.GetBytes(Path.GetRelativePath(folder, file).ToLowerInvariant() + "\\n"));
+                total.AppendData(SHA256.HashData(stream));
+            }
+            return Convert.ToHexString(total.GetHashAndReset());
+        }
+        internal static bool CanRemovePackage(string folder, string? fingerprint)
+        {
+            try { return fingerprint is { Length: 64 } && IsManagedPackageFolder(folder) &&
+                string.Equals(RemovalFingerprint(folder), fingerprint, StringComparison.OrdinalIgnoreCase); }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException or ArgumentException)
+            { return false; }
+        }
+
         private static IEnumerable<string> PluginFiles(string folder)
         {
             var directories = new Stack<string>();
