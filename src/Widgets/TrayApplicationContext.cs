@@ -801,10 +801,88 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
             return menu;
         }
 
+        // A temporary preset uses the existing admission mask and existing owners.
+        // Never overwrite persistent feature choices or container layout.
+        private SessionBackgroundService? _beforeReducedSession;
+
+        private void ApplySessionMask(SessionBackgroundService desired)
+        {
+            if (SafeModeService.IsSafeMode || System.Threading.Volatile.Read(ref _exitStarted) != 0) return;
+            var changed = RuntimeSessionPolicy.Allowed ^ desired;
+            if (changed == SessionBackgroundService.None) return;
+            RuntimeSessionPolicy.SetAllowed(desired);
+            var failures = new List<string>();
+            void Apply(SessionBackgroundService flag, Action reconcile)
+            {
+                if ((changed & flag) == 0) return;
+                try { reconcile(); }
+                catch (Exception ex)
+                {
+                    failures.Add(flag.ToString());
+                    RotatingLogger.Write("Session preset " + flag + ": " + ex.Message);
+                }
+            }
+            bool held = _compatibilityIsolationApplied || WindowsUpdateGuard.RequiresReview || WindowsUpdateGuard.RuntimeHold;
+            Apply(SessionBackgroundService.AnimatedWallpaper, WallpaperHostEngine.ReconcileSessionIfCreated);
+            Apply(SessionBackgroundService.DeskStrip, DeskStripHostEngine.ReconcileSessionIfCreated);
+            Apply(SessionBackgroundService.Widgets, WidgetHostEngine.ReconcileSessionIfCreated);
+            Apply(SessionBackgroundService.MusicVisualizer, StudioMusic.ReconcileSession);
+            Apply(SessionBackgroundService.AppearanceAutomatic, () =>
+            {
+                var svc = MotionDesk.Appearance.AppearanceService.Instance;
+                if (svc.Started) svc.SetSessionAllowed(!held && RuntimeSessionPolicy.IsPermitted(SessionBackgroundService.AppearanceAutomatic));
+            });
+            Apply(SessionBackgroundService.AutoTile, AutoTileService.RefreshSettings);
+            Apply(SessionBackgroundService.AdaptiveSampling, PerformanceGovernor.ReconcileSession);
+            Apply(SessionBackgroundService.ReplacementTaskbar, ReplacementTaskbar.RefreshSettings);
+            Apply(SessionBackgroundService.ZoneSnap, () =>
+            {
+                if (!held && RuntimeSessionPolicy.IsPermitted(SessionBackgroundService.ZoneSnap)) ZoneSnapEngine.Start();
+                else ZoneSnapEngine.Stop();
+            });
+            Apply(SessionBackgroundService.HotCorners | SessionBackgroundService.WindowRules |
+                SessionBackgroundService.CursorEffects | SessionBackgroundService.DesktopHotkeys |
+                SessionBackgroundService.AutoTile, ReconcileDesktopServices);
+            Apply(SessionBackgroundService.Background, RefreshSessionBackgroundServices);
+            RefreshExperienceCadence();
+            AppActivity.RequestRefresh();
+            if (failures.Count > 0)
+                MessageBox.Show(MainWindow.StudioText("Some services could not reconcile; restart may be required: ",
+                    "Ορισμένες υπηρεσίες δεν μπόρεσαν να αλλάξουν κατάσταση· ίσως απαιτείται επανεκκίνηση: ")
+                    + string.Join(", ", failures), "OPSIS", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+        }
+
         private ToolStripMenuItem BuildSessionDesktopMenu()
         {
             string T(string en, string el) => MainWindow.StudioText(en, el);
             var menu = new ToolStripMenuItem(T("Desktop services · this session", "Υπηρεσίες επιφάνειας εργασίας · αυτή η συνεδρία"));
+            var reduced = new ToolStripMenuItem(T("Suspend 18 optional service groups", "Αναστολή 18 προαιρετικών ομάδων υπηρεσιών"));
+            var restore = new ToolStripMenuItem(T("Restore previous session selections", "Επαναφορά προηγούμενων επιλογών συνεδρίας"));
+            var full = new ToolStripMenuItem(T("Allow all saved selections", "Επιτρέπονται όλες οι αποθηκευμένες επιλογές"));
+            reduced.ToolTipText = T("Keeps containers, recovery UI, plugins and other ungated services unchanged. Not an isolated containers-only mode.",
+                "Διατηρεί containers, ανάκτηση, plugins και άλλες μη ελεγχόμενες υπηρεσίες. Δεν είναι αποκλειστική λειτουργία containers.");
+            reduced.Click += (_, _) =>
+            {
+                if (SafeModeService.IsSafeMode || RuntimeSessionPolicy.Allowed == SessionBackgroundService.None) return;
+                _beforeReducedSession ??= RuntimeSessionPolicy.Allowed;
+                ApplySessionMask(SessionBackgroundService.None);
+            };
+            restore.Click += (_, _) =>
+            {
+                if (_beforeReducedSession is not { } previous || SafeModeService.IsSafeMode) return;
+                ApplySessionMask(previous);
+                _beforeReducedSession = null;
+            };
+            full.Click += (_, _) =>
+            {
+                if (SafeModeService.IsSafeMode) return;
+                ApplySessionMask(SessionBackgroundService.All);
+                _beforeReducedSession = null;
+            };
+            menu.DropDownItems.Add(reduced);
+            menu.DropDownItems.Add(restore);
+            menu.DropDownItems.Add(full);
+            menu.DropDownItems.Add(new ToolStripSeparator());
             var wallpaper = new ToolStripMenuItem(T("Allow animated wallpaper (keep independent overlays)", "Κινούμενο φόντο (διατήρηση ανεξάρτητων overlays)"));
             var dock = new ToolStripMenuItem(T("Allow DeskStrip", "Επιτρέπεται το DeskStrip"));
             var widgets = new ToolStripMenuItem(T("Allow widgets (retain layout)", "Επιτρέπονται τα widgets (διατήρηση διάταξης)"));
@@ -874,6 +952,10 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
             }
             menu.DropDownOpening += (_, _) =>
             {
+                bool presetAllowed = !SafeModeService.IsSafeMode && System.Threading.Volatile.Read(ref _exitStarted) == 0;
+                reduced.Enabled = presetAllowed && RuntimeSessionPolicy.Allowed != SessionBackgroundService.None;
+                restore.Enabled = presetAllowed && _beforeReducedSession.HasValue;
+                full.Enabled = presetAllowed && RuntimeSessionPolicy.Allowed != SessionBackgroundService.All;
                 wallpaper.Checked = RuntimeSessionPolicy.IsPermitted(SessionBackgroundService.AnimatedWallpaper);
                 dock.Checked = RuntimeSessionPolicy.IsPermitted(SessionBackgroundService.DeskStrip);
                 widgets.Checked = RuntimeSessionPolicy.IsPermitted(SessionBackgroundService.Widgets);
