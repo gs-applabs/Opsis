@@ -74,9 +74,10 @@ internal static class ShellAssetPack
         int offset = 12, chunks = 0, frames = 0;
         uint declaredFrames = 0, steps = 0, flags = 0;
         bool header = false, frameList = false, sequence = false, rate = false;
-        ReadOnlySpan<byte> sequenceData = default, rateData = default;
+        int sequenceOffset = 0, sequenceLength = 0, rateOffset = 0, rateLength = 0;
         while (offset < data.Length)
         {
+            int payloadOffset = offset + 8;
             if (++chunks > 256 || !TryChunk(data, ref offset, out var id, out var payload)) return false;
             if (id.SequenceEqual("anih"u8))
             {
@@ -92,12 +93,12 @@ internal static class ShellAssetPack
             else if (id.SequenceEqual("seq "u8))
             {
                 if (sequence || payload.Length == 0 || payload.Length > 4096 || payload.Length % 4 != 0) return false;
-                sequence = true; sequenceData = payload;
+                sequence = true; sequenceOffset = payloadOffset; sequenceLength = payload.Length;
             }
             else if (id.SequenceEqual("rate"u8))
             {
                 if (rate || payload.Length == 0 || payload.Length > 4096 || payload.Length % 4 != 0) return false;
-                rate = true; rateData = payload;
+                rate = true; rateOffset = payloadOffset; rateLength = payload.Length;
             }
             else if (id.SequenceEqual("LIST"u8))
             {
@@ -115,6 +116,8 @@ internal static class ShellAssetPack
             }
             else return false;
         }
+        var sequenceData = data.Slice(sequenceOffset, sequenceLength);
+        var rateData = data.Slice(rateOffset, rateLength);
         if (!header || !frameList || frames != declaredFrames ||
             sequence != ((flags & 2) != 0) || (!sequence && steps != declaredFrames) ||
             (sequence && sequenceData.Length != steps * 4) || (rate && rateData.Length != steps * 4)) return false;

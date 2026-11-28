@@ -24,7 +24,7 @@ internal static class PluginCapabilityManifest
         using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
         if (stream.Length > 4096) throw new InvalidDataException("Unsafe SDK manifest.");
         var bytes = new byte[4097];
-        int read = stream.ReadAtLeast(bytes, bytes.Length, throwIfEndOfStream: false);
+        int read = stream.ReadAtLeast(bytes, bytes.Length, false);
         if (read > 4096) throw new InvalidDataException("Unsafe SDK manifest.");
         using var doc = JsonDocument.Parse(bytes.AsMemory(0, read));
         var root = doc.RootElement;

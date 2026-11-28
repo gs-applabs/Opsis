@@ -80,20 +80,37 @@ internal static class Program
                 shell.Show();
                 Application.DoEvents();
                 var pageKeys = shell.PageKeys.ToArray();
-                Verify(pageKeys.Length >= 12, "main sidebar exposes expected native pages");
+                string[] requiredPages = ["Dashboard", "Theme", "Personalization", "Wallpaper", "Widgets", "DeskZones", "DeskContainers", "DeskStrip", "DeskMusicVisualizer", "Performance", "Automation", "Settings", "About"];
+                Verify(pageKeys.Distinct(StringComparer.Ordinal).Count() == pageKeys.Length, "sidebar keys are unique");
+                foreach (var required in requiredPages)
+                    Verify(pageKeys.Contains(required), "required sidebar page exists: " + required);
+                var binding = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic;
+                var navButtons = typeof(MainWindow).GetField("_navButtons", binding)?.GetValue(shell) as System.Collections.IDictionary
+                    ?? throw new InvalidOperationException("sidebar button map missing");
+                var content = typeof(MainWindow).GetField("_content", binding)?.GetValue(shell) as Control
+                    ?? throw new InvalidOperationException("page content host missing");
+                var currentKey = typeof(MainWindow).GetField("_currentPageKey", binding)
+                    ?? throw new InvalidOperationException("current page identity missing");
                 var pageTimings = new System.Collections.Generic.List<object>();
                 foreach (var key in pageKeys)
                 {
                     var elapsed = Stopwatch.StartNew();
-                    shell.NavigateTo(key);
+                    Verify(navButtons[key] is Button { Visible: true, Enabled: true }, "visible enabled sidebar button: " + key);
+                    var navButton = (Button)navButtons[key]!;
+                    if (navButton.Parent is ScrollableControl navScroll) navScroll.ScrollControlIntoView(navButton);
+                    navButton.PerformClick();
                     for (int tick = 0; tick < 6; tick++)
                     {
                         Application.DoEvents();
                         System.Threading.Thread.Sleep(15);
                     }
                     elapsed.Stop();
-                    var controls = AllControls(shell).ToArray();
-                    Verify(controls.Length > 10, "sidebar page " + key + " renders control tree");
+                    Verify(string.Equals(currentKey.GetValue(shell) as string, key, StringComparison.Ordinal), "sidebar click selects " + key);
+                    Verify(content.Controls.Count > 0 && !AllControls(content).Any(c => c.Name == "opsis-page-build-error"),
+                        "sidebar page " + key + " builds without error fallback");
+                    var controls = AllControls(content).ToArray();
+                    Verify(controls.Length > 0 && controls.Any(c => c.Visible && c.Width > 0 && c.Height > 0),
+                        "sidebar page " + key + " has visible usable content");
                     var scrollables = controls.OfType<ScrollableControl>().Where(c => c.AutoScroll).ToArray();
                     var buttons = controls.OfType<ButtonBase>().ToArray();
                     var inputs = controls.OfType<TextBoxBase>().Count() +

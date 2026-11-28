@@ -23,6 +23,8 @@ internal sealed class MusicOverlayPage : TableLayoutPanel
     private int activeSwatch;
     private readonly Color paletteSurface;
     private readonly string defaultDisplay;
+    private readonly bool greek;
+    private string L(string el, string en) => greek ? el : en;
     private readonly Button preview;
     private readonly Button reset;
     private readonly System.Windows.Forms.Timer stateRefresh = new() { Interval = 5000 };
@@ -35,7 +37,7 @@ internal sealed class MusicOverlayPage : TableLayoutPanel
         this.getController = getController;
         this.fonts = fonts;
         paletteSurface = surface;
-        string L(string el, string en) => greek ? el : en;
+        this.greek = greek;
         defaultDisplay = L("Κύρια οθόνη", "Primary monitor");
         AutoSize = true;
         AutoSizeMode = AutoSizeMode.GrowAndShrink;

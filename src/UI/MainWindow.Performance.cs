@@ -73,7 +73,8 @@ namespace MotionDesk.UI
                     if (answer == DialogResult.Yes) DiagnosticSessionService.Cancel();
                     return;
                 }
-                var owner = this;
+                var owner = panel.FindForm();
+                if (owner == null || owner.IsDisposed || !owner.IsHandleCreated) return;
                 void Preview(string json)
                 {
                     if (owner.IsDisposed || !owner.IsHandleCreated) return;

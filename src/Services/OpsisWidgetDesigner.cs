@@ -65,7 +65,7 @@ public static class OpsisWidgetDesigner
             if (PackagePaths.IsLink(item)) throw new InvalidDataException("Linked widget files are not supported.");
         using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
         var buffer = new byte[32769];
-        int count = stream.ReadAtLeast(buffer, buffer.Length, throwIfEndOfStream: false);
+        int count = stream.ReadAtLeast(buffer, buffer.Length, false);
         if (count > 32768) throw new InvalidDataException("Widget layout too large.");
         var layout = JsonSerializer.Deserialize<Layout>(buffer.AsSpan(0, count)) ??
             throw new InvalidDataException("Invalid widget layout.");

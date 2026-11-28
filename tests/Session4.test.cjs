@@ -9,7 +9,11 @@ const read = p => fs.readFileSync(path.join(root, p), 'utf8');
 test('#12 plugin permissions are declared, readable, and included in trust digest', () => {
   const declaration = read('src/Services/PluginCapabilityManifest.cs');
   assert.match(declaration, /opsis-permissions\.json/);
-  for(const cap of ['Network','Audio','LocalFiles']) assert.ok(declaration.includes(cap));
+  assert.match(declaration, /property\.Name\.ToLowerInvariant\(\) switch/);
+  for(const [input,canonical] of [['network','network'],['audio','audio'],['localfiles','local-files']])
+    assert.ok(declaration.includes('"'+input+'" => "'+canonical+'"'), input);
+  assert.match(declaration,/!seen\.Add\(key\)/);
+  assert.match(declaration,/if \(property\.Value\.GetBoolean\(\)\) caps\.Add\(key\)/);
   assert.match(declaration, /not an OS sandbox/i);
   assert.match(read('src/Services/PluginTrust.cs'), /opsis-permissions\.json/);
   assert.match(read('src/UI/MainWindow.cs'), /RevokePluginTrust/);

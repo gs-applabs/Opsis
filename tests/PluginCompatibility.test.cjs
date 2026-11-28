@@ -36,7 +36,10 @@ test('plugin host shares both contract and Opsis.UI singleton assemblies', () =>
   assert.match(host,/typeof\(IOpsisNewsCrawlerPlugin\)\.Assembly/);
   assert.match(host,/typeof\(Opsis\.UI\.FlatButton\)\.Assembly/);
   assert.match(host,/CompatibleHostAssembly\(name, sharedUiAssembly\)/);
-  assert.match(host,/requested\.Version > available\.Version/);
+  assert.match(host,/available\.Version >= requested\.Version/);
+  assert.match(host,/RequireDependencyIdentity\(requested, host\.GetName\(\)\)/);
+  assert.match(host,/AssemblyName\.ReferenceMatchesDefinition\(requested, available\)/);
+  assert.match(host,/token\.SequenceEqual\(available\.GetPublicKeyToken\(\)/);
 });
 
 test('host compatibility diagnostic reports both plugin IDs and registered feeds', () => {

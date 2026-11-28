@@ -1091,7 +1091,7 @@ namespace MotionDesk.UI
             {
                 LogPageError(key, ex);
                 _currentPageKey = key;
-                var errorPage = new Label { Text = "Page error: " + ex.Message, ForeColor = UiTheme.TextSecondary, AutoSize = true, Padding = new Padding(24) };
+                var errorPage = new Label { Name = "opsis-page-build-error", Text = "Page error: " + ex.Message, ForeColor = UiTheme.TextSecondary, AutoSize = true, Padding = new Padding(24) };
                 SetPage(key, errorPage);
             }
         }
