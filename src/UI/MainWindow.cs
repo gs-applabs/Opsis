@@ -2882,6 +2882,42 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                         "Opsis Gallery", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }));
 
+            var dataPackButton = NewHoverButton(StudioText("Import Gallery pack (images / widgets)", "Εισαγωγή πακέτου Gallery (εικόνες / widgets)"), () => { });
+            dataPackButton.Click += async (_, _) =>
+            {
+                if (!dataPackButton.Enabled) return;
+                using var picker = new OpenFileDialog { Filter = "Opsis Gallery (*.zip)|*.zip", CheckFileExists = true };
+                if (picker.ShowDialog(this) != DialogResult.OK) return;
+                if (MessageBox.Show(this, StudioText("Import declarative widgets and static images? Nothing will be executed or applied automatically.",
+                    "Εισαγωγή δηλωτικών widgets και στατικών εικόνων; Δεν θα εκτελεστεί ή εφαρμοστεί τίποτα αυτόματα."), "Opsis",
+                    MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes) return;
+                dataPackButton.Enabled = false;
+                string path = picker.FileName;
+                try
+                {
+                    int count = await Task.Run(() => OpsisEcosystemGallery.ImportGalleryPack(path));
+                    if (!dataPackButton.IsDisposed && !IsDisposed && !Disposing)
+                    {
+                        RefreshContributions();
+                        MessageBox.Show(this, count + StudioText(" assets imported.", " στοιχεία εισήχθησαν."), "Opsis");
+                    }
+                }
+                catch (Exception ex) { if (!IsDisposed && !Disposing) MessageBox.Show(this, ex.Message, "Opsis"); }
+                finally { if (!dataPackButton.IsDisposed) dataPackButton.Enabled = true; }
+            };
+            ecosystemCard.Controls.Add(dataPackButton);
+            ecosystemCard.Controls.Add(NewHoverButton(StudioText("Save contributed widget to Studio", "Αποθήκευση widget στο Studio"), () =>
+            {
+                if (ecosystemList.SelectedItems.Count != 1 || ecosystemList.SelectedItems[0].Tag is not OpsisEcosystemGallery.Item item) return;
+                try
+                {
+                    var layout = OpsisEcosystemGallery.ReadWidgetContribution(item);
+                    OpsisWidgetDesigner.Save(layout);
+                    MessageBox.Show(this, StudioText("Saved to Widget Layout Studio. Existing layouts are not overwritten.", "Αποθηκεύτηκε στο Widget Layout Studio. Δεν αντικαταστάθηκε υπάρχον σχέδιο."), "Opsis");
+                }
+                catch (Exception ex) { MessageBox.Show(this, ex.Message, "Opsis"); }
+            }));
+
             var recoveryCard = AddCardSection(panel, LocalizationManager.CurrentLanguage == "el"
                 ? "Recovery Hub — Ασφάλεια και Windows Updates" : "Recovery Hub — Safety and Windows Updates");
             AddText(recoveryCard, LocalizationManager.CurrentLanguage == "el"

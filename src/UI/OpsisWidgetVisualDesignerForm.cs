@@ -222,7 +222,7 @@ public sealed class OpsisWidgetVisualDesignerForm : Form
             "CPU" => "CPU 37%", "RAM" => "RAM 62%",
             "Battery" => "Battery 85%", _ => _text.Text
         };
-        try { _element.ForeColor = ColorTranslator.FromHtml(_color.Text); }
+        try { _element.ForeColor = TextContrast.Readable(ColorTranslator.FromHtml(_color.Text), _element.BackColor); }
         catch (ArgumentException) { _element.ForeColor = UiTheme.TextSecondary; }
         if (_previewFont == null || Math.Abs(_previewFont.Size - (float)_fontSize.Value) > 0.05f)
         {

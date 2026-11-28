@@ -826,6 +826,21 @@ try
     Check(OpsisEcosystemGallery.ImportWallpaperPack(addonZip) == 1 &&
         OpsisEcosystemGallery.Discover().Any(x => x.PluginId == "fixture.images" && x.Category == "Test"),
         "data-only wallpaper pack imported and categorized without applying wallpaper");
+    var widgetZip = Path.Combine(folder, "widget-gallery-fixture.zip");
+    using (var zip = System.IO.Compression.ZipFile.Open(widgetZip, System.IO.Compression.ZipArchiveMode.Create))
+    {
+        using (var writer = new StreamWriter(zip.CreateEntry("opsis-contributions.json").Open()))
+            writer.Write(JsonSerializer.Serialize(new OpsisEcosystemGallery.Manifest { PluginId = "fixture.widgets", Version = "1.0.0",
+                Contributions = new() { new() { Id = "clock1", Type = "widget", Title = "Fixture clock", Category = "Test", Asset = "widgets/clock.json" } } }));
+        using var entry = new StreamWriter(zip.CreateEntry("widgets/clock.json").Open());
+        entry.Write(JsonSerializer.Serialize(new OpsisWidgetDesigner.Layout { Name = "Gallery Fixture", Binding = "Clock" }));
+    }
+    bool widgetInImagePackDenied = false;
+    try { OpsisEcosystemGallery.ImportWallpaperPack(widgetZip); } catch (InvalidDataException) { widgetInImagePackDenied = true; }
+    Check(widgetInImagePackDenied, "R122 wallpaper-only importer remains strict");
+    Check(OpsisEcosystemGallery.ImportGalleryPack(widgetZip) == 1 &&
+        OpsisEcosystemGallery.ReadWidgetContribution(OpsisEcosystemGallery.Discover().Single(x => x.PluginId == "fixture.widgets")).Binding == "Clock",
+        "R122 native declarative widget pack installed and discovered");
     // optional: the real 200-image static pack (OPSIS_TEST_WEBP200=<path of Opsis-Abstract-Horizons-200-WebP.zip>)
     var webp200 = Environment.GetEnvironmentVariable("OPSIS_TEST_WEBP200");
     if (!string.IsNullOrEmpty(webp200) && File.Exists(webp200))

@@ -125,7 +125,7 @@ public static class OpsisEcosystemGallery
     /// </summary>
     public static OpsisWidgetDesigner.Layout ReadWidgetContribution(Item item)
     {
-        var extension = Path.GetExtension(item.AssetPath);
+        var extension = Path.GetExtension(item.AssetPath).ToLowerInvariant();
         if (!string.Equals(item.Type, "widget", StringComparison.OrdinalIgnoreCase) ||
             extension is not (".json" or ".ini"))
             throw new InvalidDataException("Only native JSON or supported Rainmeter INI widget metadata is permitted.");
@@ -146,11 +146,7 @@ public static class OpsisEcosystemGallery
             OpsisWidgetDesigner.Validate(data);
             return data;
         }
-        var widget = JsonSerializer.Deserialize<OpsisWidgetDesigner.Layout>(
-            File.ReadAllText(selected.AssetPath))
-            ?? throw new InvalidDataException("Widget contribution not valid JSON.");
-        OpsisWidgetDesigner.Validate(widget);
-        return widget;
+        return OpsisWidgetDesigner.ReadPortable(selected.AssetPath);
     }
 
     /// <summary>
@@ -179,14 +175,30 @@ public static class OpsisEcosystemGallery
     /// <summary>Install a data-only static wallpaper pack into the existing gallery.
     /// No scripts, DLLs, archives within archives or auto-application. Publish only
     /// after the complete manifest, bounded extraction and image checks succeed.</summary>
-    public static int ImportWallpaperPack(string zipPath)
+    public static int ImportWallpaperPack(string zipPath) => ImportDataPack(zipPath, allowWidgets: false);
+    public static int ImportGalleryPack(string zipPath) => ImportDataPack(zipPath, allowWidgets: true);
+
+    private static bool ValidPackAsset(Contribution item, bool allowWidgets)
+    {
+        if (!SafeRelative(item.Asset) || item.Asset.Count(c => c == '/') != 1 ||
+            !SafeToken(Path.GetFileName(item.Asset))) return false;
+        string extension = Path.GetExtension(item.Asset);
+        return item.Type == "wallpaper" && item.Asset.StartsWith("images/", StringComparison.Ordinal) &&
+                   PackImageExtensions.Contains(extension) ||
+               allowWidgets && item.Type == "widget" && item.Asset.StartsWith("widgets/", StringComparison.Ordinal) &&
+                   extension.Equals(".json", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static int ImportDataPack(string zipPath, bool allowWidgets)
     {
         if (!Path.GetExtension(zipPath).Equals(".zip", StringComparison.OrdinalIgnoreCase))
             throw new InvalidDataException("Expected a ZIP gallery pack.");
-        lock (PackGate)
+        if (!System.Threading.Monitor.TryEnter(PackGate))
+            throw new InvalidOperationException("Another Gallery import is running.");
+        try
         {
             using var archive = ZipFile.OpenRead(zipPath);
-            if (archive.Entries.Count < 2 || archive.Entries.Count > MaxPackImages + 1) throw new InvalidDataException("A gallery pack must contain one manifest and 1–200 images.");
+            if (archive.Entries.Count < 2 || archive.Entries.Count > MaxPackImages + 1) throw new InvalidDataException("A gallery pack must contain one manifest and 1–200 supported assets.");
             var entries = new Dictionary<string, ZipArchiveEntry>(StringComparer.OrdinalIgnoreCase);
             long total = 0;
             foreach (var entry in archive.Entries)
@@ -213,20 +225,21 @@ public static class OpsisEcosystemGallery
             var assets = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             foreach (var item in manifest.Contributions)
             {
-                if (item == null || !SafeToken(item.Id) || !ids.Add(item.Id) || item.Type != "wallpaper" ||
-                    !SafeRelative(item.Asset) || !assets.Add(item.Asset) || !entries.ContainsKey(item.Asset) ||
-                    !item.Asset.StartsWith("images/", StringComparison.Ordinal) || item.Asset.Count(c => c == '/') != 1 ||
-                    !SafeToken(Path.GetFileName(item.Asset)) || !PackImageExtensions.Contains(Path.GetExtension(item.Asset)) ||
+                if (item == null || !SafeToken(item.Id) || !ids.Add(item.Id) || !ValidPackAsset(item, allowWidgets) ||
+                    !assets.Add(item.Asset) || !entries.ContainsKey(item.Asset) ||
+                    (item.Type == "widget" && entries[item.Asset].Length > 32768) ||
                     string.IsNullOrWhiteSpace(item.Title) || item.Title.Length > 120 ||
                     string.IsNullOrWhiteSpace(item.Category) || item.Category.Length > 60 ||
                     (item.Author?.Length ?? 0) > 120 || (item.Description?.Length ?? 0) > 1024)
-                    throw new InvalidDataException("Invalid data-only wallpaper contribution.");
+                    throw new InvalidDataException("Invalid data-only Gallery contribution.");
             }
             if (Manifests().Any(x => string.Equals(x.Data.PluginId, manifest.PluginId, StringComparison.OrdinalIgnoreCase)))
                 throw new InvalidDataException("A gallery pack with this identity is already installed.");
             string root = Path.Combine(AppPaths.AppDataFolder, "gallery-packs");
             Directory.CreateDirectory(root);
-            if ((File.GetAttributes(root) & FileAttributes.ReparsePoint) != 0) throw new InvalidDataException("Linked gallery storage is not supported.");
+            if (!PackagePaths.IsExistingUnlinkedPath(AppPaths.AppDataFolder, root)) throw new InvalidDataException("Linked gallery storage is not supported.");
+            if (Directory.EnumerateDirectories(root).Take(200).Count() >= 200)
+                throw new InvalidDataException("Gallery pack quota reached.");
             // Staging is a sibling, so Gallery cannot discover a partial manifest.
             string stage = Path.Combine(AppPaths.AppDataFolder, ".gallery-stage-" + Guid.NewGuid().ToString("N"));
             string destination = Path.Combine(root, "pack-" + Guid.NewGuid().ToString("N"));
@@ -234,19 +247,30 @@ public static class OpsisEcosystemGallery
             try
             {
                 Directory.CreateDirectory(Path.Combine(stage, "images"));
+                if (allowWidgets) Directory.CreateDirectory(Path.Combine(stage, "widgets"));
                 var hashes = new HashSet<string>(StringComparer.Ordinal);
                 foreach (var item in manifest.Contributions)
                 {
                     byte[] data = ReadEntry(entries[item.Asset]);
                     string hash = Convert.ToHexString(SHA256.HashData(data));
-                    if (!hashes.Add(hash)) throw new InvalidDataException("Duplicate image contents in the pack.");
+                    if (!hashes.Add(hash)) throw new InvalidDataException("Duplicate asset contents in the pack.");
                     string extension = Path.GetExtension(item.Asset).ToLowerInvariant();
-                    using (var decoded = WallpaperPackImage.Decode(data, extension)) { }
-                    // Keep the original compressed media unchanged. Only the controlled
-                    // storage filename and its manifest path are rewritten.
-                    string safeName = "image-" + hashes.Count.ToString("D3") + (extension == ".jpeg" ? ".jpg" : extension);
-                    File.WriteAllBytes(Path.Combine(stage, "images", safeName), data);
-                    item.Asset = "images/" + safeName;
+                    if (item.Type == "widget")
+                    {
+                        var layout = JsonSerializer.Deserialize<OpsisWidgetDesigner.Layout>(data)
+                            ?? throw new InvalidDataException("Invalid widget contribution.");
+                        OpsisWidgetDesigner.Validate(layout);
+                        string name = "widget-" + hashes.Count.ToString("D3") + ".json";
+                        File.WriteAllBytes(Path.Combine(stage, "widgets", name), data);
+                        item.Asset = "widgets/" + name;
+                    }
+                    else
+                    {
+                        using (var decoded = WallpaperPackImage.Decode(data, extension)) { }
+                        string name = "image-" + hashes.Count.ToString("D3") + (extension == ".jpeg" ? ".jpg" : extension);
+                        File.WriteAllBytes(Path.Combine(stage, "images", name), data);
+                        item.Asset = "images/" + name;
+                    }
                 }
                 File.WriteAllText(Path.Combine(stage, "opsis-contributions.json"), JsonSerializer.Serialize(manifest));
                 Directory.Move(stage, destination);
@@ -254,6 +278,7 @@ public static class OpsisEcosystemGallery
             }
             finally { if (Directory.Exists(stage)) Directory.Delete(stage, true); }
         }
+        finally { System.Threading.Monitor.Exit(PackGate); }
     }
 
     private static byte[] ReadEntry(ZipArchiveEntry entry)

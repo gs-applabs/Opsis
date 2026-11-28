@@ -18,7 +18,7 @@ public sealed class OpsisCustomWidgetWindow : Form
     private static System.Windows.Forms.Timer? _refresh;
     private readonly bool _dynamic;
     private bool _hiddenForSession;
-    private bool _registered;
+    private bool _registered, _resourcesDisposed;
     private static bool Permitted => RuntimeSessionPolicy.IsPermitted(SessionBackgroundService.Widgets) &&
         !WindowsUpdateGuard.RequiresReview && !WindowsUpdateGuard.RuntimeHold;
     private static bool NeedsRefresh => Permitted && OpenWindows.Any(w => !w.IsDisposed && w.Visible && w._dynamic);
@@ -28,7 +28,7 @@ public sealed class OpsisCustomWidgetWindow : Form
         {
             if (window.IsDisposed) continue;
             if (!Permitted && window.Visible) { window._hiddenForSession = true; window.Hide(); }
-            else if (Permitted && window._hiddenForSession) { window._hiddenForSession = false; window.Show(); }
+            else if (Permitted && window._hiddenForSession) { window._hiddenForSession = false; window.Show(); window.UpdateText(); }
         }
         SyncRefresh();
     }
@@ -126,8 +126,9 @@ public sealed class OpsisCustomWidgetWindow : Form
 
     protected override void Dispose(bool disposing)
     {
-        if (disposing)
+        if (disposing && !_resourcesDisposed)
         {
+            _resourcesDisposed = true;
             if (_registered) { _registered = false; OpenWindows.Remove(this); ThemeManager.Changed -= RefreshTheme; SyncRefresh(); }
             _content?.Font.Dispose();
             foreach (var entry in _rows) entry.Label.Font.Dispose();

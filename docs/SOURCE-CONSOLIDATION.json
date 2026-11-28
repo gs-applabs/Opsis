@@ -1760,6 +1760,17 @@
           "src/UI/MainWindow.Experience.cs",
           "tests/Opsis.ExperienceSmoke/Program.cs"
         ]
+      },
+      "r122": {
+        "base_sha": "cda5ca8c0bd1a36fd172e3a4e70a7964b2d7bbfc",
+        "summary": "R122 G17/G10/G13/G05: generalized the existing data-only Gallery ZIP importer to opt-in mixed static images and native JSON widgets (existing image-only entrypoint remains strict); shared manifest, validation, generated paths, content dedup, stage/publication and quotas; 200 pack cap, single-flight imports, no automatic application/code execution. Main Gallery adds import and explicit save contributed widget into existing Widget Studio (no overwrite). Fixed custom widget double-dispose guard, refresh on session resume, editor contrast. Two smoke assertions prepared; not run. Marketplace online, icon/cursor packs, other declarative types, complete OpsisUI6 and Windows verification remain open. No new external dependency or Gallery owner. All 23 groups retained.",
+        "paths": [
+          "src/Services/OpsisEcosystemGallery.cs",
+          "src/UI/MainWindow.cs",
+          "src/UI/OpsisCustomWidgetWindow.cs",
+          "src/UI/OpsisWidgetVisualDesignerForm.cs",
+          "tests/Opsis.ExperienceSmoke/Program.cs"
+        ]
       }
     },
     "development_rule": {
@@ -2659,7 +2670,7 @@
     "active_backlog_policy": "Only incomplete or unresolved implementation requirements in proposals. Source-present and test-only rows in archived_qa, not active development. Archive is not release certification. All 100 IDs remain unique across both arrays. Reopen archived row only on concrete missing source or failed test.",
     "global_scope": {
       "rule": "## ΜΟΝΙΜΟΣ ΚΑΝΟΝΑΣ — ΠΑΝΤΑ ΟΛΕΣ ΟΙ ΕΚΚΡΕΜΟΤΗΤΕΣ, ΟΧΙ ΜΟΝΟ ΟΙ 100\n\nΚάθε ερώτηση του χρήστη για «εκκρεμότητες», «συνέχισε», «τι μένει» αφορά **ολόκληρο το OPSIS Desktop Customization 3.0.0.3200**: αρχικές 100, παλαιότερο roadmap/διορθώσεις, P0–P6, B01–B14, UI/Glass, Shell, Containers, SDK/plugins/companion compatibility, wallpapers/εικόνες/intro/ήχο, ανεξάρτητο add-on, installers, migration/rollback, διανομή, τελικές δοκιμές. Ποτέ μόνο ένα υποσύνολο χωρίς ρητό αίτημα. Το σύνολο παραμένει ενιαίο με σταθερά IDs, alias προς παλιά IDs, συγκεκριμένο owner/κενό και κατάσταση. **Εφαρμογή από τις ευκολότερες προς τις δυσκολότερες**, με ασφάλεια ως προϋπόθεση και χωρίς να ξαναγράφεται έτοιμη λειτουργία. Αρχείο ιστορικού/QA δεν αποτελεί ενεργό backlog. Ελέγχεται κάθε φορά ο τελευταίος ακριβής σωρευτικός SHA και η διασταύρωση με ιστορικές συνομιλίες, handoffs, πραγματικούς callers/UI/ρυθμίσεις, plugins και αρχεία. Ανεπαρκή ή μη προσβάσιμα τεκμήρια καταγράφονται ως blockers, όχι ως ολοκληρωμένα. Ο χρήστης δεν πρέπει να ξαναρωτήσει για ξεχασμένα υποσύνολα. Χρήση συνδεδεμένου GitHub για πραγματικές αλλαγές· πρόσθετα μόνο αν καλύπτουν πραγματική δυνατότητα που λείπει. Όλα τα tests στο τέλος, Inno Setup, καμία πρόωρη έκδοση. PERMANENT SELF-CONTAINED CORE REQUIREMENT (user, 2026-11-28): all Opsis capabilities and prerequisites must ship inside the core/installer except explicitly approved dependencies. Windhawk, Rainmeter, StartAllBack and other separately installed customization applications are reference/interoperability only, never prerequisites for claiming a feature complete. Optional feature parity must be implemented in existing Opsis owners or a justified internal owner, demand-loaded, reversible, no duplicate host. Native shell surface parity remains open when only a companion/overlay or Windows Settings shortcut exists. Legacy external CLI bridge retained as dormant source for historical compatibility/recovery and schema tests, not exposed by normal personalization UI; not counted as implementation. No automatic third-party installation, no unsupported native injection. DeskStrip remains the dock/pin owner; Taskbar shares pins and must yield to dock geometry, never implement a second independent dock or overwrite its settings.",
-      "source_sha": "5b6f03a7b4fc67975380d8fd29e3e3dc7da97a71",
+      "source_sha": "cda5ca8c0bd1a36fd172e3a4e70a7964b2d7bbfc",
       "scope_sources": [
         "docs/SOURCE-CONSOLIDATION.md B01–B14",
         "docs/REMAINING-TASKS-3.0.0.3200.md (all waves, SDK1–4, X1–16 and C1–12)",
@@ -2708,7 +2719,7 @@
           "status": "PARTIAL",
           "aliases": "100:1,9,24,38,41,50; B01/B04/B10/B12",
           "requirement": "Μετρήσεις CPU, last-frame remote, πραγματικό triptych, portrait density, preview ζωνών/profile windows",
-          "evidence": "Existing audit, renderer, zone and profile owners; no duplicate sampling/renderer; distinguish actual implementation vs tests. R106: reversible bulk suspend/restore of existing 18 session gates, changed-owner reconciliation; no new startup mode or measurements. R107: toolbar and automatic workspace wallpaper gates, total 20; explicit workspace observation preserved. Actual tests pending. R109: reduced startup mask before governor and independent weather overlay gate; no runtime validation or true containers-only host. R110: bounded optional transfer undo, single-flight transfers, safer container layout history restore; runtime/migration fixtures pending. R111: bounded Explorer capture, asynchronous UI, validated preference batch with rollback, RuntimeHold for Explorer/Taskbar; runtime pending. R112 shared bounded Start scan, live launcher uses saved pin ranking/group labels; live Tiles/Compact and native styling remain open. R114 literal Rainmeter variables and bounded single-flight Windhawk CLI; real provider and broader compatibility tests pending. R116 shared DeskStrip reservation and Taskbar collision-aware placement; actual multi-monitor tests pending. R121 composite visual editor, JSON portability and shared custom widget lifecycle/theme; runtime and sibling UI validation pending."
+          "evidence": "Existing audit, renderer, zone and profile owners; no duplicate sampling/renderer; distinguish actual implementation vs tests. R106: reversible bulk suspend/restore of existing 18 session gates, changed-owner reconciliation; no new startup mode or measurements. R107: toolbar and automatic workspace wallpaper gates, total 20; explicit workspace observation preserved. Actual tests pending. R109: reduced startup mask before governor and independent weather overlay gate; no runtime validation or true containers-only host. R110: bounded optional transfer undo, single-flight transfers, safer container layout history restore; runtime/migration fixtures pending. R111: bounded Explorer capture, asynchronous UI, validated preference batch with rollback, RuntimeHold for Explorer/Taskbar; runtime pending. R112 shared bounded Start scan, live launcher uses saved pin ranking/group labels; live Tiles/Compact and native styling remain open. R114 literal Rainmeter variables and bounded single-flight Windhawk CLI; real provider and broader compatibility tests pending. R116 shared DeskStrip reservation and Taskbar collision-aware placement; actual multi-monitor tests pending. R121 composite visual editor, JSON portability and shared custom widget lifecycle/theme; runtime and sibling UI validation pending. R122 single data-only Gallery pack importer extended to widgets/images and direct save to Widget Studio; other pack types/runtime pending."
         },
         {
           "id": "G06",
@@ -2748,7 +2759,7 @@
           "status": "PARTIAL",
           "aliases": "B06; S5; widgets.rainmeter-bridge",
           "requirement": "Rainmeter declarative measures/meters, images/fonts/variables; Windhawk mod-by-mod compatibility, self-contained equivalents",
-          "evidence": "Existing bounded INI importer and inventory, no arbitrary injection or untrusted scripts; no full engine. R114 literal Rainmeter variables and bounded single-flight Windhawk CLI; real provider and broader compatibility tests pending. R115 built-in taskbar presets and internal studio routes; external bridge not counted toward parity. Native surface parity remains pending."
+          "evidence": "Existing bounded INI importer and inventory, no arbitrary injection or untrusted scripts; no full engine. R114 literal Rainmeter variables and bounded single-flight Windhawk CLI; real provider and broader compatibility tests pending. R115 built-in taskbar presets and internal studio routes; external bridge not counted toward parity. Native surface parity remains pending. R122 single data-only Gallery pack importer extended to widgets/images and direct save to Widget Studio; other pack types/runtime pending."
         },
         {
           "id": "G11",
@@ -2772,7 +2783,7 @@
           "status": "PARTIAL",
           "aliases": "B10; X12; S3; C3/C4/C7/C8/C9/C11",
           "requirement": "Opsis.UI 6, secondary windows/themes, sidebar, menu/dialog, onboarding/history/help, shared tokens/settings edit/effects",
-          "evidence": "Existing Signature/legacy renderer and UI preview; sibling repo changes and actual surface checks pending. R121 composite visual editor, JSON portability and shared custom widget lifecycle/theme; runtime and sibling UI validation pending."
+          "evidence": "Existing Signature/legacy renderer and UI preview; sibling repo changes and actual surface checks pending. R121 composite visual editor, JSON portability and shared custom widget lifecycle/theme; runtime and sibling UI validation pending. R122 single data-only Gallery pack importer extended to widgets/images and direct save to Widget Studio; other pack types/runtime pending."
         },
         {
           "id": "G14",
@@ -2804,7 +2815,7 @@
           "status": "MISSING_OR_PARTIAL",
           "aliases": "theme.gallery-marketplace; X2/X5/X9; B06/B08",
           "requirement": "Marketplace, icon pack 2.0, widget sources/design/layout and secure contributions",
-          "evidence": "Existing gallery/importer and declarative designer; verify remaining catalog/SDK and package ownership. R121 composite visual editor, JSON portability and shared custom widget lifecycle/theme; runtime and sibling UI validation pending."
+          "evidence": "Existing gallery/importer and declarative designer; verify remaining catalog/SDK and package ownership. R121 composite visual editor, JSON portability and shared custom widget lifecycle/theme; runtime and sibling UI validation pending. R122 single data-only Gallery pack importer extended to widgets/images and direct save to Widget Studio; other pack types/runtime pending."
         },
         {
           "id": "G18",
