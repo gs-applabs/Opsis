@@ -1,7 +1,7 @@
 name: Opsis 3.0 RC exhaustive Windows VM audit
 on:
   push:
-    branches: [test/3.0.0.3200-rc-vm-audit, release/3.0.0.3200-rc2]
+    branches: [test/3.0.0.3200-rc-vm-audit, release/3.0.0.3200-rc2-r1]
   pull_request:
     branches: [feat/p2-win11-square-start-presets, test/3.0.0.3200-rc-vm-audit]
   workflow_dispatch:
@@ -35,7 +35,7 @@ jobs:
           python-version: '3.12'
       - name: Preserve original 2.8 settings and enforce release blockers
         run: |
-          if ($env:GITHUB_REF_NAME -eq 'release/3.0.0.3200-rc2') { $env:OPSIS_RC_VALIDATION = 'RC2' }
+          if ($env:GITHUB_REF_NAME -eq 'release/3.0.0.3200-rc2-r1') { $env:OPSIS_RC_VALIDATION = 'RC2' }
           python tests/integration/check_baseline_and_release.py
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Build actual 3.0.0.3200 candidate (command line version override only)

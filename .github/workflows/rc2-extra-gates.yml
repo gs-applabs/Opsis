@@ -1,11 +1,11 @@
-name: OPSIS RC2 supplemental recovery, security, assets and one-hour stress
+name: OPSIS RC2-R1 supplemental recovery, security, assets and one-hour stress
 on:
   push:
-    branches: [ci/opsis-rc2-extra-gates]
+    branches: [release/3.0.0.3200-rc2-r1]
 permissions:
   contents: read
 env:
-  RC2_SHA: '0e6264ca7c55f8313381c626f3c5407137f0710a'
+  RC2_SHA: '${{ github.sha }}'
 jobs:
   atomic-recovery:
     runs-on: windows-2025
@@ -13,7 +13,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: '0e6264ca7c55f8313381c626f3c5407137f0710a'
+          ref: '${{ github.sha }}'
           persist-credentials: false
       - uses: actions/setup-dotnet@v4
         with:
@@ -29,7 +29,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: '0e6264ca7c55f8313381c626f3c5407137f0710a'
+          ref: '${{ github.sha }}'
           persist-credentials: false
       - uses: actions/setup-python@v5
         with:
@@ -65,7 +65,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: '0e6264ca7c55f8313381c626f3c5407137f0710a'
+          ref: '${{ github.sha }}'
           persist-credentials: false
       - uses: actions/setup-dotnet@v4
         with:
@@ -97,7 +97,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: '0e6264ca7c55f8313381c626f3c5407137f0710a'
+          ref: '${{ github.sha }}'
           persist-credentials: false
       - uses: actions/setup-dotnet@v4
         with:

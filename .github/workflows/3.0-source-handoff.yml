@@ -1,7 +1,7 @@
 name: Opsis RC source-only Claude handoff
 on:
   push:
-    branches: [feat/p0-p1-unified-capability-switcher, release/3.0.0.3200-rc2]
+    branches: [feat/p0-p1-unified-capability-switcher, release/3.0.0.3200-rc2-r1]
   pull_request:
     branches: [test/3.0.0.3200-rc-vm-audit]
   workflow_dispatch:
@@ -21,7 +21,7 @@ jobs:
           python-version: '3.12'
       - name: Verify baseline and source-only archive
         run: |
-          if [ "${GITHUB_REF_NAME}" = "release/3.0.0.3200-rc2" ]; then export OPSIS_RC_VALIDATION=RC2; fi
+          if [ "${GITHUB_REF_NAME}" = "release/3.0.0.3200-rc2-r1" ]; then export OPSIS_RC_VALIDATION=RC2; fi
           python tests/integration/check_baseline_and_release.py
           python tools/build_source_handoff.py --output out/Opsis-3.0.0.3200-RC-source-no-wallpaper-media.zip
       - uses: actions/upload-artifact@v4

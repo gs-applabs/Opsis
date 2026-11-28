@@ -1,7 +1,7 @@
 name: Opsis 3.0 RC installer Windows VM E2E
 on:
   push:
-    branches: [test/3.0.0.3200-rc-vm-audit, release/3.0.0.3200-rc2]
+    branches: [test/3.0.0.3200-rc-vm-audit, release/3.0.0.3200-rc2-r1]
   pull_request:
     branches: [feat/p2-win11-square-start-presets, test/3.0.0.3200-rc-vm-audit]
   workflow_dispatch:
@@ -25,7 +25,7 @@ jobs:
           dotnet-version: 11.0.x
       - name: Enforce baseline and publish 3.0 RC binaries
         run: |
-          if ($env:GITHUB_REF_NAME -eq 'release/3.0.0.3200-rc2') { $env:OPSIS_RC_VALIDATION = 'RC2' }
+          if ($env:GITHUB_REF_NAME -eq 'release/3.0.0.3200-rc2-r1') { $env:OPSIS_RC_VALIDATION = 'RC2' }
           python tests/integration/check_baseline_and_release.py
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           dotnet restore Opsis.csproj --disable-parallel
@@ -78,13 +78,13 @@ jobs:
           $exe = Get-Item $env:OPSIS_RC_INSTALLER
           $hash = (Get-FileHash -LiteralPath $exe.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
           "$hash  $($exe.Name)" | Set-Content -Encoding ascii ($exe.FullName + '.sha256')
-          [pscustomobject]@{ version='3.0.0.3200'; channel='RC2'; commit=(git rev-parse HEAD); sourceHead='${{ github.event.pull_request.head.sha || github.sha }}'; runner='${{ matrix.os }}'; install='pass'; reinstall='pass'; uninstall='pass'; sha256=$hash; file=$exe.Name; bytes=$exe.Length } |
+          [pscustomobject]@{ version='3.0.0.3200'; channel='RC2-R1'; commit=(git rev-parse HEAD); sourceHead='${{ github.event.pull_request.head.sha || github.sha }}'; runner='${{ matrix.os }}'; install='pass'; reinstall='pass'; uninstall='pass'; sha256=$hash; file=$exe.Name; bytes=$exe.Length } |
             ConvertTo-Json | Set-Content Output/rc-installer-build.json
       - name: Upload tested RC installer and checksum
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: Opsis-3.0.0.3200-RC2-Installer-${{ matrix.os }}
+          name: Opsis-3.0.0.3200-RC2-R1-Installer-${{ matrix.os }}
           path: |
             Output/OpsisSetup-3.0.0.3200.exe
             Output/OpsisSetup-3.0.0.3200.exe.sha256
