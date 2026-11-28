@@ -15,7 +15,9 @@ namespace MotionDesk.Widgets
         private Opsis.Containers.PipeServer? _controlPipe;
         private readonly NotifyIcon _trayIcon = null!;
         private MainWindow? _mainWindow;
-        private readonly HotkeyManager _hotkeys = new();
+        private readonly HotkeyManager _hotkeys = new(); // mandatory recovery/show-window shortcut
+        private HotkeyManager? _optionalHotkeys;
+        private bool _desktopServicesReady;
         private HotkeyManager? _containerHotkeys;
         private System.Windows.Forms.Timer? _startupHealthyTimer, _pluginApprovalTimer;
         private DockWindowRestorer? _dockRestorer;
@@ -242,14 +244,12 @@ namespace MotionDesk.Widgets
 
             MainWindow.RegisterDesktopHotkeys(_hotkeys,
                 () => { if (_mainWindow is { IsDisposed: false } window) window.ToggleGamingMode(); else MainWindow.ToggleGamingWithoutWindow(); },
-                () => ShowMainWindow(), !safeMode && !reviewRequired);
+                () => ShowMainWindow(), false);
             if (!safeMode && !reviewRequired)
             {
                 ZoneSnapEngine.AllowOwnWindow = h => _mainWindow is { IsDisposed: false, IsHandleCreated: true } window && window.Handle == h;
                 ZoneSnapEngine.Start();
-                _hotkeys.RegisterCtrlAlt('F', () => DeskFlipEngine.Show());
             }
-            if (!safeMode) _hotkeys.RegisterCtrlAltShift(Keys.K, DesktopLauncher.Open);
             // 2.4.6.1: ενημέρωση χρήστη αν κάποια global συντόμευση ήταν ήδη πιασμένη (δεν θα δουλέψει).
 
 
@@ -267,15 +267,8 @@ namespace MotionDesk.Widgets
             else DesktopIconVisibilityEngine.Instance.RestoreIfHidden();
             ThemeManager.UiContext = _exitUi;
             AppActivity.Start(() => _nativeContainers?.HasActivityRules == true);
-            if (!safeMode && !reviewRequired)
-            {
-                if (AppSettings.Load().WindowRulesEnabled) WindowRulesEngine.Instance.Start();
-                if (AppSettings.Load().CursorFxEnabled)
-                {
-                    try { MotionDesk.UI.OpsisCursorFx.Start(); }
-                    catch (Exception e) { RotatingLogger.Write("Cursor FX startup: " + e.Message); }
-                }
-            }
+            _desktopServicesReady = !reviewRequired;
+            ReconcileDesktopServices();
             // No background thread or I/O during idle except a once-per-minute rule check.
             // Build fingerprint is read only every 15 minutes; no Windows file hashing in the timer.
             if (!safeMode)
@@ -319,7 +312,6 @@ namespace MotionDesk.Widgets
                 _experienceTimer.Start();
                 RefreshExperienceCadence();
             }
-            if (!safeMode && !reviewRequired) _hotCorners.Start();
             DesktopToolbar.RefreshSettings();
             if (!reviewRequired) ReplacementTaskbar.RefreshSettings();
             if (!safeMode) VirtualWorkspaces.Start();
@@ -556,6 +548,7 @@ namespace MotionDesk.Widgets
             Hold(WindowRulesEngine.Instance.Stop, "window rules");
             Hold(AutoTileService.Stop, "auto tile");
             Hold(ZoneSnapEngine.Stop, "zone hooks");
+            Hold(StopOptionalHotkeys, "optional hotkeys");
             Hold(_hotCorners.Stop, "hot corners");
             Hold(MotionDesk.UI.OpsisCursorFx.Stop, "cursor effects");
             Hold(() => MotionDesk.Appearance.AppearanceService.Instance.Stop(), "appearance");
@@ -806,6 +799,12 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
             var adaptive = new ToolStripMenuItem(T("Allow adaptive performance sampling", "Δειγματοληψία προσαρμοστικής απόδοσης"));
             var taskbar = new ToolStripMenuItem(T("Allow Opsis replacement taskbar", "Επιτρέπεται η taskbar του Opsis"));
             var zones = new ToolStripMenuItem(T("Allow automatic zone snapping", "Επιτρέπεται η αυτόματη προσκόλληση σε ζώνες"));
+            var shellOptions = new[] {
+                (SessionBackgroundService.HotCorners, new ToolStripMenuItem(T("Allow hot corners", "Επιτρέπονται οι ενεργές γωνίες"))),
+                (SessionBackgroundService.WindowRules, new ToolStripMenuItem(T("Allow window rules", "Επιτρέπονται οι κανόνες παραθύρων"))),
+                (SessionBackgroundService.CursorEffects, new ToolStripMenuItem(T("Allow cursor effects", "Επιτρέπονται τα εφέ δείκτη"))),
+                (SessionBackgroundService.DesktopHotkeys, new ToolStripMenuItem(T("Allow optional desktop shortcuts", "Επιτρέπονται οι προαιρετικές συντομεύσεις")))
+            };
             void Change(SessionBackgroundService flag, Action reconcile)
             {
                 if (SafeModeService.IsSafeMode || System.Threading.Volatile.Read(ref _exitStarted) != 0) return;
@@ -834,7 +833,7 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
             autoTile.Click += (_, _) =>
             {
                 if (WindowsUpdateGuard.RequiresReview || _compatibilityIsolationApplied) return;
-                Change(SessionBackgroundService.AutoTile, AutoTileService.RefreshSettings);
+                Change(SessionBackgroundService.AutoTile, () => { AutoTileService.RefreshSettings(); ReconcileDesktopServices(); });
             };
             adaptive.Click += (_, _) => Change(SessionBackgroundService.AdaptiveSampling, PerformanceGovernor.ReconcileSession);
             menu.DropDownItems.Add(wallpaper); menu.DropDownItems.Add(dock); menu.DropDownItems.Add(widgets); menu.DropDownItems.Add(music); menu.DropDownItems.Add(appearance);
@@ -853,6 +852,11 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                 });
             };
             menu.DropDownItems.Add(autoTile); menu.DropDownItems.Add(adaptive); menu.DropDownItems.Add(taskbar); menu.DropDownItems.Add(zones);
+            foreach (var (flag, item) in shellOptions)
+            {
+                item.Click += (_, _) => { if (!WindowsUpdateGuard.RequiresReview && !WindowsUpdateGuard.RuntimeHold && !_compatibilityIsolationApplied) Change(flag, ReconcileDesktopServices); };
+                menu.DropDownItems.Add(item);
+            }
             menu.DropDownOpening += (_, _) =>
             {
                 wallpaper.Checked = RuntimeSessionPolicy.IsPermitted(SessionBackgroundService.AnimatedWallpaper);
@@ -869,6 +873,8 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
                 taskbar.Enabled = !SafeModeService.IsSafeMode && !WindowsUpdateGuard.RequiresReview && !WindowsUpdateGuard.RuntimeHold && !_compatibilityIsolationApplied;
                 zones.Checked = RuntimeSessionPolicy.IsPermitted(SessionBackgroundService.ZoneSnap);
                 zones.Enabled = !SafeModeService.IsSafeMode && !WindowsUpdateGuard.RequiresReview && !WindowsUpdateGuard.RuntimeHold && !_compatibilityIsolationApplied;
+                foreach (var (flag, item) in shellOptions)
+                { item.Checked = RuntimeSessionPolicy.IsPermitted(flag); item.Enabled = zones.Enabled; }
                 wallpaper.Enabled = dock.Enabled = widgets.Enabled = music.Enabled = !SafeModeService.IsSafeMode;
             };
             return menu;
@@ -893,8 +899,49 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
             }
         }
 
+        private void StopOptionalHotkeys()
+        {
+            var keys = _optionalHotkeys;
+            _optionalHotkeys = null;
+            keys?.Dispose();
+        }
+
+        private void ReconcileDesktopServices()
+        {
+            if (!_desktopServicesReady || System.Threading.Volatile.Read(ref _exitStarted) != 0) return;
+            bool held = _compatibilityIsolationApplied || WindowsUpdateGuard.RequiresReview || WindowsUpdateGuard.RuntimeHold;
+            void Apply(Action action, string name)
+            { try { action(); } catch (Exception ex) { RotatingLogger.Write("Desktop service " + name + ": " + ex.Message); } }
+            if (held || SafeModeService.IsSafeMode)
+            {
+                Apply(_hotCorners.Stop, "hot corners");
+                Apply(WindowRulesEngine.Instance.Stop, "window rules");
+                Apply(MotionDesk.UI.OpsisCursorFx.Stop, "cursor effects");
+                Apply(StopOptionalHotkeys, "hotkeys");
+                return;
+            }
+            Apply(_hotCorners.ReconcileSession, "hot corners");
+            Apply(WindowRulesEngine.Instance.ReconcileSession, "window rules");
+            Apply(MotionDesk.UI.OpsisCursorFx.ReconcileSession, "cursor effects");
+            Apply(() =>
+            {
+                if (!RuntimeSessionPolicy.IsPermitted(SessionBackgroundService.DesktopHotkeys)) { StopOptionalHotkeys(); return; }
+                if (_optionalHotkeys != null) return;
+                var keys = new HotkeyManager();
+                try
+                {
+                    MainWindow.RegisterOptionalDesktopHotkeys(keys, () => { if (_mainWindow is { IsDisposed: false } window) window.ToggleGamingMode(); else MainWindow.ToggleGamingWithoutWindow(); });
+                    keys.RegisterCtrlAlt('F', () => DeskFlipEngine.Show());
+                    keys.RegisterCtrlAltShift(Keys.K, DesktopLauncher.Open);
+                    _optionalHotkeys = keys;
+                }
+                catch { keys.Dispose(); throw; }
+            }, "hotkeys");
+        }
+
         private void RefreshOptionalServices()
         {
+            ReconcileDesktopServices();
             RefreshSessionBackgroundServices();
             BackdropContrast.Refresh();
             WallpaperHostEngine.RefreshOptionalIfCreated();
@@ -1078,6 +1125,7 @@ WmvConversionService.PromptInstallFfmpeg(wmvFiles.Length);
             Step("usage alert timer", () => { _alertTimer?.Stop(); _alertTimer?.Dispose(); _alertTimer = null; });
             Step("save session", WorkspaceProfileService.SaveLastSessionOnce);
             Step("appearance restore", () => MotionDesk.Appearance.AppearanceService.Instance.Stop());
+            Step("optional hotkeys", StopOptionalHotkeys);
             Step("hotkeys", () => _hotkeys.Dispose());
             Step("zone hooks", () => { ZoneSnapEngine.Stop(); ZoneSnapEngine.AllowOwnWindow = null; });
             Step("wallpaper event", () => WallpaperHostEngine.Instance.StateChanged -= OnWallpaperStateChanged);

@@ -1181,7 +1181,12 @@ namespace MotionDesk.UI
         internal static void RegisterDesktopHotkeys(HotkeyManager keys, Action toggleGaming, Action showWindow, bool optionalAllowed)
         {
             keys.RegisterCtrlAlt('M', showWindow);
-            if (!optionalAllowed) return;
+            if (!optionalAllowed || !RuntimeSessionPolicy.IsPermitted(SessionBackgroundService.DesktopHotkeys) || WindowsUpdateGuard.RequiresReview || WindowsUpdateGuard.RuntimeHold) return;
+            RegisterOptionalDesktopHotkeys(keys, toggleGaming);
+        }
+
+        internal static void RegisterOptionalDesktopHotkeys(HotkeyManager keys, Action toggleGaming)
+        {
             keys.RegisterCtrlAlt('G', toggleGaming);
             keys.RegisterCtrlAltShift(Keys.Left, () => ZoneSnapEngine.MoveForegroundWindowToZone(ZoneSnapEngine.ZoneDirection.Left));
             keys.RegisterCtrlAltShift(Keys.Right, () => ZoneSnapEngine.MoveForegroundWindowToZone(ZoneSnapEngine.ZoneDirection.Right));

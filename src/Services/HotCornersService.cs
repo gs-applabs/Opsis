@@ -19,16 +19,20 @@ namespace MotionDesk.Services
             _openOpsis = openOpsis;
             _timer.Tick += (_, _) => Tick();
         }
-        public void Start() { if (!WindowsUpdateGuard.RequiresReview) _timer.Start(); }
-        public void Stop() => _timer.Stop();
+        internal static bool MayRun(bool saved, bool permitted, bool review, bool hold, bool remote) => saved && permitted && !review && !hold && !remote;
+        private static bool Admission => MayRun(AppSettings.Peek().HotCornersEnabled,
+            RuntimeSessionPolicy.IsPermitted(SessionBackgroundService.HotCorners), WindowsUpdateGuard.RequiresReview, WindowsUpdateGuard.RuntimeHold, SystemInformation.TerminalServerSession);
+        public void Start() { if (Admission) _timer.Start(); else Stop(); }
+        public void Stop() { _timer.Stop(); Reset(); }
+        internal void ReconcileSession() { if (Admission) Start(); else Stop(); }
         public void Dispose() { _timer.Stop(); _timer.Dispose(); }
 
         private void Tick()
         {
             var settings = AppSettings.Peek();
-            if (WindowsUpdateGuard.RuntimeHold || !settings.HotCornersEnabled || SystemInformation.TerminalServerSession)
+            if (!Admission)
             {
-                Reset();
+                Stop();
                 return;
             }
             if (settings.HotCornersPauseOnFullscreen && IsForegroundFullscreen()) { Reset(); return; }

@@ -62,6 +62,12 @@ try
     Check(RuntimeSessionPolicy.Allows(SessionBackgroundService.ZoneSnap, SessionBackgroundService.ZoneSnap, true, false) &&
         !RuntimeSessionPolicy.Allows(SessionBackgroundService.AutoTile, SessionBackgroundService.ZoneSnap, true, false),
         "P0 zone snapping independent of automatic tiling");
+    Check(HotCornersService.MayRun(true,true,false,false,false) && !HotCornersService.MayRun(false,true,false,false,false) &&
+        !HotCornersService.MayRun(true,false,false,false,false) && !HotCornersService.MayRun(true,true,false,false,true), "P0 hot corners timer only on admitted demand");
+    Check(WindowRulesEngine.MayRun(true,true,false,false,false) && !WindowRulesEngine.MayRun(true,true,false,false,true) &&
+        !WindowRulesEngine.MayRun(true,true,false,true,false) && !WindowRulesEngine.MayRun(true,false,false,false,false), "P0 automatic placement owners mutually exclusive");
+    Check(RuntimeSessionPolicy.Allows(SessionBackgroundService.DesktopHotkeys,SessionBackgroundService.DesktopHotkeys,true,false) &&
+        !RuntimeSessionPolicy.Allows(SessionBackgroundService.ZoneSnap,SessionBackgroundService.DesktopHotkeys,true,false), "P0 optional hotkeys separately admitted");
     var noDemand = AppActivity.SelectDemand(false,false,false,false,false,false,false,false,false,false);
     var dockDemand = AppActivity.SelectDemand(false,false,false,false,false,false,false,false,true,false);
     var widgetDemand = AppActivity.SelectDemand(false,true,false,false,false,false,false,false,false,false);
@@ -271,7 +277,7 @@ try
     Check(!RuntimeSessionPolicy.Allows(SessionBackgroundService.All, SessionBackgroundService.UsageAlerts, false, false) &&
         !RuntimeSessionPolicy.Allows(SessionBackgroundService.All, SessionBackgroundService.UsageAlerts, true, true) &&
         !RuntimeSessionPolicy.Allows(SessionBackgroundService.All, SessionBackgroundService.None, true, false) &&
-        !RuntimeSessionPolicy.Allows(SessionBackgroundService.All, (SessionBackgroundService)16384, true, false),
+        !RuntimeSessionPolicy.Allows(SessionBackgroundService.All, (SessionBackgroundService)262144, true, false),
         "R83 session selection cannot bypass saved opt-in, safe mode or known capabilities");
     var sessionPrefs = new AppSettings { RestoreWindowsAfterDocking = true, UsageAlertsEnabled = true };
     Check(MotionDesk.Widgets.TrayApplicationContext.SelectOptionalServices(sessionPrefs, false, SessionBackgroundService.DockRestore) == (true, false) &&

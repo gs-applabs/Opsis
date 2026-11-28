@@ -16,10 +16,13 @@ public static class OpsisCursorFx
 {
     private static CursorFxOverlay? _overlay;
     public static bool Running => _overlay is { IsDisposed: false };
+    internal static bool Admission => RuntimeSessionPolicy.Allows(SessionBackgroundService.CursorEffects, AppSettings.Peek().CursorFxEnabled, SafeModeService.IsSafeMode) &&
+        !WindowsUpdateGuard.RequiresReview && !WindowsUpdateGuard.RuntimeHold;
+    internal static void ReconcileSession() { if (Admission) Start(); else Stop(); }
 
     public static void Start()
     {
-        if (Running || SafeModeService.IsSafeMode || WindowsUpdateGuard.RequiresReview) return;
+        if (Running || !Admission) return;
         _overlay = new CursorFxOverlay();
         _overlay.Show();
     }
@@ -99,6 +102,7 @@ internal sealed class CursorFxOverlay : Form
     private void Tick()
     {
         if (IsDisposed) return;
+        if (!OpsisCursorFx.Admission) { OpsisCursorFx.Stop(); return; }
         try
         {
             var now = DateTime.UtcNow;

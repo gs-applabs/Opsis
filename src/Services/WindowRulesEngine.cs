@@ -50,8 +50,13 @@ public sealed class WindowRulesEngine : IDisposable
     public static WindowRulesEngine Instance { get; } = new();
 
     private WindowRulesEngine() => _timer.Tick += (_, _) => Evaluate();
-    public void Start() => _timer.Start();
+    internal static bool MayRun(bool saved, bool permitted, bool review, bool hold, bool autoTile) => saved && permitted && !review && !hold && !autoTile;
+    private static bool Admission => MayRun(AppSettings.Peek().WindowRulesEnabled,
+        RuntimeSessionPolicy.IsPermitted(SessionBackgroundService.WindowRules), WindowsUpdateGuard.RequiresReview, WindowsUpdateGuard.RuntimeHold,
+        RuntimeSessionPolicy.Allows(SessionBackgroundService.AutoTile, AppSettings.Peek().AutoTileEnabled, SafeModeService.IsSafeMode));
+    public void Start() { if (Admission) _timer.Start(); else Stop(); }
     public void Stop() => _timer.Stop();
+    internal void ReconcileSession() { if (Admission) Start(); else Stop(); }
 
     private static void Validate(Rule? rule)
     {
@@ -101,9 +106,12 @@ public sealed class WindowRulesEngine : IDisposable
 
     private void Evaluate()
     {
-        var settings = AppSettings.Peek();
-        if (!settings.WindowRulesEnabled || settings.AutoTileEnabled ||
-            WindowsUpdateGuard.RequiresReview || SafeModeService.IsSafeMode) return;
+        if (!Admission) { Stop(); return; }
+        // Retire closed/reused handles to bound the journal over long sessions.
+        foreach (var state in _applied.Values.ToArray())
+            if (!IsWindow(state.Handle) || GetWindowThreadProcessId(state.Handle, out var owner) == 0 || owner != state.ProcessId)
+                _applied.Remove(state.Handle);
+        if (_applied.Count >= 1024) return; // retain existing restoration records rather than losing them
         try
         {
             var hwnd = GetForegroundWindow();

@@ -22,8 +22,12 @@ internal enum SessionBackgroundService
     AdaptiveSampling = 2048,
     ReplacementTaskbar = 4096,
     ZoneSnap = 8192,
+    HotCorners = 16384,
+    WindowRules = 32768,
+    CursorEffects = 65536,
+    DesktopHotkeys = 131072,
     Background = DockRestore | UsageAlerts | DiscordPresence | ScheduledAutomations | PeriodicWallpaperAccent,
-    All = Background | AnimatedWallpaper | DeskStrip | Widgets | MusicVisualizer | AppearanceAutomatic | AutoTile | AdaptiveSampling | ReplacementTaskbar | ZoneSnap
+    All = Background | AnimatedWallpaper | DeskStrip | Widgets | MusicVisualizer | AppearanceAutomatic | AutoTile | AdaptiveSampling | ReplacementTaskbar | ZoneSnap | HotCorners | WindowRules | CursorEffects | DesktopHotkeys
 }
 
 internal static class RuntimeSessionPolicy
